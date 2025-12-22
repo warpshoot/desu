@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - DESU™︎</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <a href="../" class="back-link">← Back to Home</a>
+        <h1 class="page-title">Gallery</h1>
+    </header>
+
+    <main class="container">
+        <div class="gallery-grid" id="galleryGrid">
+            <!-- イラストがここに動的に追加されます -->
+            <!-- 現在は準備中 -->
+            <div class="placeholder">
+                <p class="placeholder-icon">🎨</p>
+                <p class="placeholder-text">イラストを追加してください</p>
+                <p class="placeholder-hint">images/ フォルダに画像を配置して、<br>gallery.js で読み込みます</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox">
+        <span class="lightbox-close" id="lightboxClose">×</span>
+        <img class="lightbox-image" id="lightboxImage" src="" alt="">
+    </div>
+
+    <footer>
+        <p>© 2025 warpshoot</p>
+    </footer>
+
+    <script src="gallery.js"></script>
+</body>
+</html>

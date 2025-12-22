@@ -1,61 +1,76 @@
-# DESU™︎ ep. 0
+# DESU™
 
-デスとサカナの物語を描くビジュアルノベル。
+ビジュアルノベルとイラストギャラリーの統合コンテンツ
 
-## 概要
+## 📖 Episodes
 
-Web技術(HTML/CSS/JavaScript)で作られたビジュアルノベルゲームです。
-キャラクターごとに異なる声のトーンと会話演出を楽しめます。
+エピソード形式のビジュアルノベル
 
-## 機能
+- **ep. 0**: はじまり ✅
+- **ep. 1**: Coming Soon
+- **ep. 2**: Coming Soon
 
-- テキストの一文字ずつ表示アニメーション
-- キャラクターごとの音声効果（Web Audio API）
-- 顔アイコン表示
-- 背景動画
-- レスポンシブデザイン（モバイル対応）
+## 🎨 Gallery
 
-## 起動方法
+DESUのイラスト作品集
 
-ローカルサーバーで起動してください：
+## 🚀 ローカル環境での実行
 
 ```bash
-# Pythonの場合
-python -m http.server 8000
+# HTTPサーバーを起動
+python3 -m http.server 8000
 
-# Node.jsの場合（http-server）
-npx http-server
+# ブラウザでアクセス
+# http://localhost:8000/
 ```
 
-ブラウザで `http://localhost:8000/visual-novel/` にアクセス。
-
-## 構成
+## 📁 ディレクトリ構造
 
 ```
-visual-novel/
-├── index.html      # メインHTML
-├── script.js       # ゲームロジック
-├── style.css       # スタイルシート
-└── images/         # 画像・動画アセット
-    ├── desu.jpg
-    ├── sakana.jpg
-    ├── desu01.mp4
-    └── ...
+desu/
+├── index.html          # メインページ
+├── style.css           # 共通スタイル
+├── ep0/                # エピソード0
+│   ├── index.html
+│   ├── style.css
+│   ├── script.js
+│   └── images/
+├── ep1/                # 将来のエピソード
+├── gallery/            # ギャラリー
+│   ├── index.html
+│   ├── style.css
+│   ├── gallery.js
+│   └── images/
+└── README.md
 ```
 
-## 操作方法
+## ✨ 機能
 
-- **クリック/タップ**: テキスト送り
-- テキスト表示中にクリック: スキップして全文表示
+### ビジュアルノベル
+- キャラクター別の音声効果
+- テキスト表示アニメーション
+- フェードイン/アウト演出
+- モバイル対応
 
-## キャラクター
+### ギャラリー
+- グリッドレイアウト
+- ライトボックス表示
+- レスポンシブ対応
 
-- **デス**: 主人公
-- **サカナ**: 相棒
+## 🌐 GitHub Pages
 
-## 技術スタック
+https://warpshoot.github.io/desu/
 
-- HTML5
-- CSS3
-- Vanilla JavaScript
-- Web Audio API
+## 📝 ギャラリーに画像を追加する方法
+
+1. 画像を `gallery/images/` に配置
+2. `gallery/gallery.js` の `images` 配列に追加：
+
+```javascript
+const images = [
+    { src: 'images/001.jpg', alt: 'DESU Illustration 1' },
+    { src: 'images/002.jpg', alt: 'DESU Illustration 2' },
+];
+```
+
+## © 2025 warpshoot
