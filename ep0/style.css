@@ -204,26 +204,28 @@ body {
 
 .choice-button {
     font-family: 'Yu Gothic', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
-    font-size: 24px;
-    padding: 20px 60px;
+    font-size: 60px;
+    width: 120px;
+    height: 120px;
     background-color: rgba(255, 255, 255, 0.1);
     color: #ffffff;
     border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 8px;
+    border-radius: 50%;
     cursor: pointer;
     transition: all 0.3s ease;
-    min-width: 300px;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .choice-button:hover {
     background-color: rgba(255, 255, 255, 0.2);
     border-color: rgba(255, 255, 255, 0.6);
-    transform: translateY(-2px);
+    transform: scale(1.1);
 }
 
 .choice-button:active {
-    transform: translateY(0);
+    transform: scale(1.0);
 }
 
 /* レスポンシブ対応 */
@@ -259,8 +261,8 @@ body {
     }
 
     .choice-button {
-        font-size: 20px;
-        padding: 15px 40px;
-        min-width: 250px;
+        font-size: 48px;
+        width: 100px;
+        height: 100px;
     }
 }
