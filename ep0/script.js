@@ -22,6 +22,9 @@ const faceIcon = document.getElementById('faceIcon');
 const nameDisplay = document.getElementById('nameDisplay');
 const textContent = document.getElementById('textContent');
 const continueIcon = document.getElementById('continueIcon');
+const choiceScreen = document.getElementById('choiceScreen');
+const replayButton = document.getElementById('replayButton');
+const backButton = document.getElementById('backButton');
 
 // 状態管理
 let currentDialogueIndex = 0;
@@ -79,6 +82,17 @@ function playTextSound(speaker) {
 function init() {
     // クリックイベント
     document.body.addEventListener('click', handleClick);
+
+    // 選択ボタンのイベントリスナー
+    replayButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleReplay();
+    });
+
+    backButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleBack();
+    });
 }
 
 // クリックハンドラー
@@ -231,7 +245,27 @@ function endStory() {
     fadeOverlay.classList.remove('fade-out');
     fadeOverlay.classList.add('fade-in');
 
-    // 2秒後にタイトル画面に戻る
+    // テキストウィンドウを非表示
+    continueIcon.classList.remove('show');
+
+    // 2秒後に選択画面を表示
+    setTimeout(() => {
+        choiceScreen.classList.add('show');
+        fadeOverlay.classList.remove('fade-in');
+        fadeOverlay.classList.add('fade-out');
+    }, 2000);
+}
+
+// もう一度見る
+function handleReplay() {
+    // 選択画面を非表示
+    choiceScreen.classList.remove('show');
+
+    // フェードインで黒画面にする
+    fadeOverlay.classList.remove('fade-out');
+    fadeOverlay.classList.add('fade-in');
+
+    // ゲーム状態をリセット
     setTimeout(() => {
         currentDialogueIndex = 0;
         previousSpeaker = null;
@@ -248,7 +282,13 @@ function endStory() {
         // フェードアウト
         fadeOverlay.classList.remove('fade-in');
         fadeOverlay.classList.add('fade-out');
-    }, 2000);
+    }, 1000);
+}
+
+// 戻る
+function handleBack() {
+    // index.html に遷移
+    window.location.href = '../index.html';
 }
 
 // ページ読み込み時に初期化
