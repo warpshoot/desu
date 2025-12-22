@@ -14,21 +14,20 @@ body {
 }
 
 header {
-    padding: 60px 20px 40px;
+    padding: 40px 20px 30px;
     text-align: center;
 }
 
-.site-title {
-    font-size: 72px;
-    font-weight: 300;
-    letter-spacing: 8px;
-    margin-bottom: 8px;
+.logo-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-.site-subtitle {
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 16px;
-    letter-spacing: 2px;
+.site-logo {
+    max-width: 200px;
+    height: auto;
+    filter: grayscale(100%);
 }
 
 .container {
@@ -50,43 +49,24 @@ header {
     color: rgba(255, 255, 255, 0.9);
 }
 
-/* Hero */
-.hero {
-    display: grid;
-    grid-template-columns: minmax(160px, 240px) 1fr;
-    gap: 30px;
-    align-items: center;
+/* Main Image Section */
+.main-image-section {
+    margin-bottom: 60px;
 }
 
-.hero-logo {
-    padding: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.04);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.hero-logo img {
-    width: 100%;
-    height: auto;
-    display: block;
-    filter: grayscale(100%);
-}
-
-.hero-main {
+.main-image-container {
     border-radius: 16px;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(255, 255, 255, 0.04);
+    max-width: 800px;
+    margin: 0 auto;
 }
 
-.hero-main img {
+.main-image-container img {
     width: 100%;
-    height: 100%;
+    height: auto;
     display: block;
-    object-fit: cover;
 }
 
 /* Episodes Grid */
@@ -146,8 +126,8 @@ header {
 /* Gallery Section */
 .gallery-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
 }
 
 .gallery-thumb {
@@ -158,6 +138,7 @@ header {
     cursor: pointer;
     overflow: hidden;
     transition: border-color 0.2s ease, transform 0.2s ease;
+    aspect-ratio: 1 / 1;
 }
 
 .gallery-thumb img {
@@ -186,16 +167,16 @@ footer {
 
 /* Responsive */
 @media (max-width: 768px) {
-    .site-title {
-        font-size: 48px;
-        letter-spacing: 4px;
-    }
-
-    .hero {
-        grid-template-columns: 1fr;
+    .site-logo {
+        max-width: 150px;
     }
 
     .episodes-grid {
         grid-template-columns: 1fr;
+    }
+
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 12px;
     }
 }
