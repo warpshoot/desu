@@ -14,12 +14,6 @@
     </header>
 
     <main class="container">
-        <section class="section main-image-section">
-            <div class="main-image-container">
-                <img id="featured-image" src="./ep0/images/IMG_1085.jpeg" alt="Featured artwork">
-            </div>
-        </section>
-
         <!-- Episodes Section -->
         <section class="section">
             <h2 class="section-title">Episodes</h2>
@@ -42,7 +36,7 @@
         <section class="section">
             <h2 class="section-title">Gallery</h2>
             <div class="gallery-grid">
-                <button class="gallery-thumb is-active" type="button" data-full="./ep0/images/IMG_1085.jpeg">
+                <button class="gallery-thumb" type="button" data-full="./ep0/images/IMG_1085.jpeg">
                     <img src="./ep0/images/IMG_1085.jpeg" alt="Gallery thumbnail 1">
                 </button>
                 <button class="gallery-thumb" type="button" data-full="./ep0/images/IMG_1088.jpeg">
@@ -58,14 +52,21 @@
         </section>
     </main>
 
+    <!-- Lightbox -->
+    <div id="lightbox" class="lightbox">
+        <img id="lightbox-image" src="" alt="Lightbox image">
+    </div>
+
     <footer>
         <p>© 2025 warpshoot</p>
     </footer>
 
     <script>
-        const featuredImage = document.getElementById('featured-image');
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImage = document.getElementById('lightbox-image');
         const galleryButtons = document.querySelectorAll('.gallery-thumb');
 
+        // Open lightbox
         galleryButtons.forEach((button) => {
             button.addEventListener('click', () => {
                 const targetSrc = button.dataset.full;
@@ -73,10 +74,14 @@
                     return;
                 }
 
-                featuredImage.src = targetSrc;
-                galleryButtons.forEach((item) => item.classList.remove('is-active'));
-                button.classList.add('is-active');
+                lightboxImage.src = targetSrc;
+                lightbox.classList.add('is-active');
             });
+        });
+
+        // Close lightbox
+        lightbox.addEventListener('click', () => {
+            lightbox.classList.remove('is-active');
         });
     </script>
 </body>
