@@ -173,6 +173,59 @@ body {
     text-align: center;
 }
 
+/* 選択画面 */
+.choice-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 15;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease-in-out;
+}
+
+.choice-screen.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.choice-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    align-items: center;
+}
+
+.choice-button {
+    font-family: 'Yu Gothic', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+    font-size: 24px;
+    padding: 20px 60px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 300px;
+    text-align: center;
+}
+
+.choice-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.6);
+    transform: translateY(-2px);
+}
+
+.choice-button:active {
+    transform: translateY(0);
+}
+
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
     .text-window {
@@ -203,5 +256,11 @@ body {
 
     .title-text {
         font-size: 36px;
+    }
+
+    .choice-button {
+        font-size: 20px;
+        padding: 15px 40px;
+        min-width: 250px;
     }
 }
