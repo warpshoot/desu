@@ -49,26 +49,6 @@ header {
     color: rgba(255, 255, 255, 0.9);
 }
 
-/* Main Image Section */
-.main-image-section {
-    margin-bottom: 60px;
-}
-
-.main-image-container {
-    border-radius: 16px;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.04);
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.main-image-container img {
-    width: 100%;
-    height: auto;
-    display: block;
-}
-
 /* Episodes Grid */
 .episodes-grid {
     display: grid;
@@ -153,16 +133,38 @@ header {
     transform: translateY(-2px);
 }
 
-.gallery-thumb.is-active {
-    border-color: rgba(255, 255, 255, 0.8);
-}
-
 footer {
     text-align: center;
     padding: 40px 20px;
     color: rgba(255, 255, 255, 0.5);
     font-size: 14px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Lightbox */
+.lightbox {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 1000;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.lightbox.is-active {
+    display: flex;
+}
+
+.lightbox img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
 }
 
 /* Responsive */
