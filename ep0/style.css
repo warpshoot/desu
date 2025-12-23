@@ -233,6 +233,7 @@ body {
     .text-window {
         height: 35%; /* 25%→35%に増やす */
         padding: 15px 20px;
+        padding-bottom: max(15px, env(safe-area-inset-bottom, 15px));
         gap: 15px;
     }
 
@@ -252,7 +253,7 @@ body {
 
     .continue-icon {
         font-size: 20px;
-        bottom: 10px;
+        bottom: calc(15px + env(safe-area-inset-bottom, 5px));
         right: 20px;
     }
 
