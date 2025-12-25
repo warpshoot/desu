@@ -898,42 +898,62 @@
 
         async function createGIF(frames, w, h, updateProgress) {
             return new Promise((resolve, reject) => {
-                const gif = new GIF({
-                    workers: 2,
-                    quality: 10,
-                    width: w,
-                    height: h,
-                    workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js'
-                });
-
-                frames.forEach(frameData => {
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = w;
-                    tempCanvas.height = h;
-                    const tempCtx = tempCanvas.getContext('2d');
-                    tempCtx.putImageData(frameData, 0, 0);
-
-                    gif.addFrame(tempCanvas, { delay: 50 });
-                });
-
-                // プログレスバー更新 (50% → 100%)
-                gif.on('progress', (progress) => {
-                    const percentage = 50 + Math.round(progress * 50);
-                    if (updateProgress) {
-                        updateProgress(percentage, `GIF変換中... ${percentage}%`);
+                try {
+                    // gif.jsが読み込まれているか確認
+                    if (typeof GIF === 'undefined') {
+                        throw new Error('gif.js が読み込まれていません');
                     }
-                });
 
-                gif.on('finished', blob => {
-                    if (updateProgress) {
-                        updateProgress(100, '完了！');
-                    }
-                    resolve(blob);
-                });
+                    const gif = new GIF({
+                        workers: 2,
+                        quality: 10,
+                        width: w,
+                        height: h,
+                        workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js',
+                        debug: false
+                    });
 
-                gif.on('error', err => reject(err));
+                    console.log('GIF生成開始:', { frames: frames.length, width: w, height: h });
 
-                gif.render();
+                    frames.forEach((frameData, index) => {
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = w;
+                        tempCanvas.height = h;
+                        const tempCtx = tempCanvas.getContext('2d');
+                        tempCtx.putImageData(frameData, 0, 0);
+
+                        gif.addFrame(tempCanvas, { delay: 50 });
+                        console.log(`フレーム ${index + 1}/${frames.length} 追加完了`);
+                    });
+
+                    // プログレスバー更新 (50% → 100%)
+                    gif.on('progress', (progress) => {
+                        const percentage = 50 + Math.round(progress * 50);
+                        console.log('GIF生成進行:', percentage + '%');
+                        if (updateProgress) {
+                            updateProgress(percentage, `GIF変換中... ${percentage}%`);
+                        }
+                    });
+
+                    gif.on('finished', blob => {
+                        console.log('GIF生成完了:', blob.size, 'bytes');
+                        if (updateProgress) {
+                            updateProgress(100, '完了！');
+                        }
+                        resolve(blob);
+                    });
+
+                    gif.on('error', err => {
+                        console.error('GIF生成エラー:', err);
+                        reject(err);
+                    });
+
+                    console.log('GIF render開始');
+                    gif.render();
+                } catch (err) {
+                    console.error('GIF生成初期化エラー:', err);
+                    reject(err);
+                }
             });
         }
 
@@ -1292,105 +1312,125 @@
 
             let blob, fileName;
 
-            if (glitchMode) {
-                // GIF生成
-                document.getElementById('generating').style.display = 'block';
+            try {
+                if (glitchMode) {
+                    // GIF生成
+                    document.getElementById('generating').style.display = 'block';
 
-                // プログレスバーをリセット
-                const progressFill = document.getElementById('progress-fill');
-                const progressText = document.getElementById('progress-text');
+                    // プログレスバーをリセット
+                    const progressFill = document.getElementById('progress-fill');
+                    const progressText = document.getElementById('progress-text');
 
-                function updateProgress(percent, text) {
-                    if (progressFill) progressFill.style.width = percent + '%';
-                    if (progressText) progressText.textContent = text;
-                }
-
-                updateProgress(0, '準備中...');
-                await new Promise(resolve => setTimeout(resolve, 100)); // UI更新を待つ
-
-                updateProgress(10, '画像データ読み込み中...');
-                const imgData = ctx.getImageData(x, y, w, h);
-                await new Promise(resolve => setTimeout(resolve, 50));
-
-                // 背景透過処理
-                if (transparent) {
-                    updateProgress(20, '背景透過処理中...');
-                    const data = imgData.data;
-                    const bgR = isDarkMode ? 0 : 255;
-                    const bgG = isDarkMode ? 0 : 255;
-                    const bgB = isDarkMode ? 0 : 255;
-
-                    for (let i = 0; i < data.length; i += 4) {
-                        if (data[i] === bgR && data[i + 1] === bgG && data[i + 2] === bgB) {
-                            data[i + 3] = 0;
-                        }
+                    function updateProgress(percent, text) {
+                        if (progressFill) progressFill.style.width = percent + '%';
+                        if (progressText) progressText.textContent = text;
                     }
-                    await new Promise(resolve => setTimeout(resolve, 50));
-                }
 
-                updateProgress(30, 'グリッチフレーム生成中...');
-                await new Promise(resolve => setTimeout(resolve, 50));
+                    console.log('GIF保存開始:', { x, y, w, h, transparent });
 
-                const frames = generateGlitchFrames(imgData, transparent);
+                    updateProgress(0, '準備中...');
+                    await new Promise(resolve => setTimeout(resolve, 100)); // UI更新を待つ
 
-                updateProgress(50, 'GIF変換中...');
-                blob = await createGIF(frames, w, h, updateProgress);
-                fileName = `desu_${Date.now()}.gif`;
-
-                document.getElementById('generating').style.display = 'none';
-            } else {
-                // PNG生成（従来通り）
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = w;
-                tempCanvas.height = h;
-                const tempCtx = tempCanvas.getContext('2d');
-
-                if (transparent) {
+                    updateProgress(10, '画像データ読み込み中...');
                     const imgData = ctx.getImageData(x, y, w, h);
-                    const data = imgData.data;
-                    const bgR = isDarkMode ? 0 : 255;
-                    const bgG = isDarkMode ? 0 : 255;
-                    const bgB = isDarkMode ? 0 : 255;
+                    console.log('画像データ取得:', imgData.width, 'x', imgData.height);
+                    await new Promise(resolve => setTimeout(resolve, 50));
 
-                    for (let i = 0; i < data.length; i += 4) {
-                        if (data[i] === bgR && data[i + 1] === bgG && data[i + 2] === bgB) {
-                            data[i + 3] = 0;
+                    // 背景透過処理
+                    if (transparent) {
+                        updateProgress(20, '背景透過処理中...');
+                        const data = imgData.data;
+                        const bgR = isDarkMode ? 0 : 255;
+                        const bgG = isDarkMode ? 0 : 255;
+                        const bgB = isDarkMode ? 0 : 255;
+
+                        for (let i = 0; i < data.length; i += 4) {
+                            if (data[i] === bgR && data[i + 1] === bgG && data[i + 2] === bgB) {
+                                data[i + 3] = 0;
+                            }
                         }
+                        await new Promise(resolve => setTimeout(resolve, 50));
                     }
-                    tempCtx.putImageData(imgData, 0, 0);
+
+                    updateProgress(30, 'グリッチフレーム生成中...');
+                    await new Promise(resolve => setTimeout(resolve, 50));
+
+                    const frames = generateGlitchFrames(imgData, transparent);
+                    console.log('グリッチフレーム生成完了:', frames.length, 'フレーム');
+
+                    updateProgress(50, 'GIF変換中...');
+                    blob = await createGIF(frames, w, h, updateProgress);
+                    fileName = `desu_${Date.now()}.gif`;
+                    console.log('GIF生成完了');
+
+                    document.getElementById('generating').style.display = 'none';
                 } else {
-                    tempCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h);
+                    // PNG生成（従来通り）
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = w;
+                    tempCanvas.height = h;
+                    const tempCtx = tempCanvas.getContext('2d');
+
+                    if (transparent) {
+                        const imgData = ctx.getImageData(x, y, w, h);
+                        const data = imgData.data;
+                        const bgR = isDarkMode ? 0 : 255;
+                        const bgG = isDarkMode ? 0 : 255;
+                        const bgB = isDarkMode ? 0 : 255;
+
+                        for (let i = 0; i < data.length; i += 4) {
+                            if (data[i] === bgR && data[i + 1] === bgG && data[i + 2] === bgB) {
+                                data[i + 3] = 0;
+                            }
+                        }
+                        tempCtx.putImageData(imgData, 0, 0);
+                    } else {
+                        tempCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h);
+                    }
+
+                    blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+                    fileName = `desu_${Date.now()}.png`;
                 }
 
-                blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
-                fileName = `desu_${Date.now()}.png`;
-            }
-
-            // 共有 or ダウンロード
-            if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName)] })) {
-                try {
-                    const file = new File([blob], fileName);
-                    await navigator.share({
-                        files: [file],
-                        title: 'DESU Paint'
-                    });
-                    exitSaveMode();
-                    return;
-                } catch (err) {
-                    if (err.name !== 'AbortError') {
-                        console.log('Share failed, trying fallback:', err);
-                    } else {
+                // 共有 or ダウンロード
+                if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName)] })) {
+                    try {
+                        const file = new File([blob], fileName);
+                        await navigator.share({
+                            files: [file],
+                            title: 'DESU Paint'
+                        });
                         exitSaveMode();
                         return;
+                    } catch (err) {
+                        if (err.name !== 'AbortError') {
+                            console.log('Share failed, trying fallback:', err);
+                        } else {
+                            exitSaveMode();
+                            return;
+                        }
                     }
                 }
+
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+                exitSaveMode();
+            } catch (err) {
+                console.error('保存エラー:', err);
+                document.getElementById('generating').style.display = 'none';
+
+                const progressText = document.getElementById('progress-text');
+                if (progressText) {
+                    progressText.textContent = 'エラー: ' + err.message;
+                }
+
+                setTimeout(() => {
+                    alert('保存に失敗しました。コンソールを確認してください。\nエラー: ' + err.message);
+                    exitSaveMode();
+                }, 500);
             }
-
-            const url = URL.createObjectURL(blob);
-            window.open(url, '_blank');
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-            exitSaveMode();
         }
 
         // ============================================
