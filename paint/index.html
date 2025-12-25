@@ -999,13 +999,15 @@
                     }
 
                     const gif = new GIF({
-                        workers: 2,
-                        quality: 10,
+                        workers: 1,
+                        quality: 20,
                         width: w,
                         height: h,
                         workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js',
-                        debug: false
+                        debug: true
                     });
+
+                    console.log('GIF設定:', { workers: 1, quality: 20, width: w, height: h });
 
                     console.log('GIF生成開始:', { frames: frames.length, width: w, height: h });
 
@@ -1020,6 +1022,12 @@
                         console.log(`フレーム ${index + 1}/${frames.length} 追加完了`);
                     });
 
+                    // タイムアウト設定（30秒）
+                    const timeout = setTimeout(() => {
+                        console.error('GIF生成タイムアウト（30秒）');
+                        reject(new Error('GIF生成がタイムアウトしました'));
+                    }, 30000);
+
                     // プログレスバー更新 (50% → 100%)
                     gif.on('progress', (progress) => {
                         const percentage = 50 + Math.round(progress * 50);
@@ -1030,6 +1038,7 @@
                     });
 
                     gif.on('finished', blob => {
+                        clearTimeout(timeout);
                         console.log('GIF生成完了:', blob.size, 'bytes');
                         if (updateProgress) {
                             updateProgress(100, '完了！');
@@ -1038,8 +1047,19 @@
                     });
 
                     gif.on('error', err => {
+                        clearTimeout(timeout);
                         console.error('GIF生成エラー:', err);
                         reject(err);
+                    });
+
+                    gif.on('start', () => {
+                        console.log('GIF render実際に開始');
+                    });
+
+                    gif.on('abort', () => {
+                        clearTimeout(timeout);
+                        console.error('GIF生成が中断されました');
+                        reject(new Error('GIF生成が中断されました'));
                     });
 
                     console.log('GIF render開始');
