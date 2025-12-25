@@ -384,6 +384,50 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* デバッグログ表示 */
+        #debug-log {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            background: rgba(0, 0, 0, 0.95);
+            color: #0f0;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 8px;
+            overflow-y: auto;
+            z-index: 999;
+            border-top: 2px solid #0f0;
+        }
+
+        #debug-log.visible {
+            display: block;
+        }
+
+        #debug-log div {
+            margin: 2px 0;
+            word-wrap: break-word;
+        }
+
+        #debug-toggle {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 255, 0, 0.3);
+            border: 2px solid #0f0;
+            border-radius: 50%;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body class="light">
@@ -471,6 +515,10 @@
         <div id="progress-text">準備中...</div>
     </div>
 
+    <!-- デバッグログ -->
+    <div id="debug-toggle">🐛</div>
+    <div id="debug-log"></div>
+
     <!-- gif.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
 
@@ -478,6 +526,49 @@
         // ============================================
         // DESU™ Paint - iPad専用版 v4 (GIF振動機能追加)
         // ============================================
+
+        // デバッグログ機能
+        const debugLog = document.getElementById('debug-log');
+        const debugToggle = document.getElementById('debug-toggle');
+        let debugVisible = false;
+
+        debugToggle.addEventListener('click', () => {
+            debugVisible = !debugVisible;
+            if (debugVisible) {
+                debugLog.classList.add('visible');
+            } else {
+                debugLog.classList.remove('visible');
+            }
+        });
+
+        function log(...args) {
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+
+            console.log(...args);
+
+            const div = document.createElement('div');
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            debugLog.appendChild(div);
+            debugLog.scrollTop = debugLog.scrollHeight;
+        }
+
+        // 元のconsole.logを上書き
+        const originalLog = console.log;
+        const originalError = console.error;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            log(...args);
+        };
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            const div = document.createElement('div');
+            div.style.color = '#f00';
+            div.textContent = `[${new Date().toLocaleTimeString()}] ERROR: ${args.join(' ')}`;
+            debugLog.appendChild(div);
+            debugLog.scrollTop = debugLog.scrollHeight;
+        };
 
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
