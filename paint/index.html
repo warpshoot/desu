@@ -999,15 +999,14 @@
                     }
 
                     const gif = new GIF({
-                        workers: 1,
+                        workers: 0,  // メインスレッドで実行（workerを使わない）
                         quality: 20,
                         width: w,
                         height: h,
-                        workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js',
                         debug: true
                     });
 
-                    console.log('GIF設定:', { workers: 1, quality: 20, width: w, height: h });
+                    console.log('GIF設定:', { workers: 0, quality: 20, width: w, height: h, note: 'メインスレッドで実行' });
 
                     console.log('GIF生成開始:', { frames: frames.length, width: w, height: h });
 
