@@ -541,33 +541,36 @@
             }
         });
 
-        function log(...args) {
-            const message = args.map(arg =>
-                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-            ).join(' ');
+        // 元のconsole.logとconsole.errorを保存
+        const originalLog = console.log;
+        const originalError = console.error;
 
-            console.log(...args);
-
+        function addToDebugLog(message, isError = false) {
             const div = document.createElement('div');
+            if (isError) {
+                div.style.color = '#f00';
+            }
             div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
             debugLog.appendChild(div);
             debugLog.scrollTop = debugLog.scrollHeight;
         }
 
-        // 元のconsole.logを上書き
-        const originalLog = console.log;
-        const originalError = console.error;
+        // console.logを上書き
         console.log = function(...args) {
             originalLog.apply(console, args);
-            log(...args);
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            addToDebugLog(message, false);
         };
+
+        // console.errorを上書き
         console.error = function(...args) {
             originalError.apply(console, args);
-            const div = document.createElement('div');
-            div.style.color = '#f00';
-            div.textContent = `[${new Date().toLocaleTimeString()}] ERROR: ${args.join(' ')}`;
-            debugLog.appendChild(div);
-            debugLog.scrollTop = debugLog.scrollHeight;
+            const message = 'ERROR: ' + args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            addToDebugLog(message, true);
         };
 
         const canvas = document.getElementById('canvas');
