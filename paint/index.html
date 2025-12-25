@@ -351,6 +351,7 @@
             border-radius: 4px;
             margin-top: 16px;
             overflow: hidden;
+            position: relative;
         }
 
         #progress-fill {
@@ -365,6 +366,23 @@
             margin-top: 8px;
             font-size: 13px;
             opacity: 0.8;
+        }
+
+        /* スピナーアニメーション */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: -4px;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -446,11 +464,11 @@
     <canvas id="selection-canvas"></canvas>
     <div id="flash"></div>
     <div id="generating">
-        <div>GIF生成中...</div>
+        <div><span class="spinner"></span>GIF生成中...</div>
         <div id="progress-bar">
             <div id="progress-fill"></div>
         </div>
-        <div id="progress-text">0%</div>
+        <div id="progress-text">準備中...</div>
     </div>
 
     <!-- gif.js CDN -->
@@ -878,7 +896,7 @@
             ];
         }
 
-        async function createGIF(frames, w, h) {
+        async function createGIF(frames, w, h, updateProgress) {
             return new Promise((resolve, reject) => {
                 const gif = new GIF({
                     workers: 2,
@@ -898,16 +916,21 @@
                     gif.addFrame(tempCanvas, { delay: 50 });
                 });
 
-                // プログレスバー更新
+                // プログレスバー更新 (50% → 100%)
                 gif.on('progress', (progress) => {
-                    const percentage = Math.round(progress * 100);
-                    const progressFill = document.getElementById('progress-fill');
-                    const progressText = document.getElementById('progress-text');
-                    if (progressFill) progressFill.style.width = percentage + '%';
-                    if (progressText) progressText.textContent = percentage + '%';
+                    const percentage = 50 + Math.round(progress * 50);
+                    if (updateProgress) {
+                        updateProgress(percentage, `GIF変換中... ${percentage}%`);
+                    }
                 });
 
-                gif.on('finished', blob => resolve(blob));
+                gif.on('finished', blob => {
+                    if (updateProgress) {
+                        updateProgress(100, '完了！');
+                    }
+                    resolve(blob);
+                });
+
                 gif.on('error', err => reject(err));
 
                 gif.render();
@@ -1276,13 +1299,22 @@
                 // プログレスバーをリセット
                 const progressFill = document.getElementById('progress-fill');
                 const progressText = document.getElementById('progress-text');
-                if (progressFill) progressFill.style.width = '0%';
-                if (progressText) progressText.textContent = '0%';
 
+                function updateProgress(percent, text) {
+                    if (progressFill) progressFill.style.width = percent + '%';
+                    if (progressText) progressText.textContent = text;
+                }
+
+                updateProgress(0, '準備中...');
+                await new Promise(resolve => setTimeout(resolve, 100)); // UI更新を待つ
+
+                updateProgress(10, '画像データ読み込み中...');
                 const imgData = ctx.getImageData(x, y, w, h);
+                await new Promise(resolve => setTimeout(resolve, 50));
 
                 // 背景透過処理
                 if (transparent) {
+                    updateProgress(20, '背景透過処理中...');
                     const data = imgData.data;
                     const bgR = isDarkMode ? 0 : 255;
                     const bgG = isDarkMode ? 0 : 255;
@@ -1293,10 +1325,16 @@
                             data[i + 3] = 0;
                         }
                     }
+                    await new Promise(resolve => setTimeout(resolve, 50));
                 }
 
+                updateProgress(30, 'グリッチフレーム生成中...');
+                await new Promise(resolve => setTimeout(resolve, 50));
+
                 const frames = generateGlitchFrames(imgData, transparent);
-                blob = await createGIF(frames, w, h);
+
+                updateProgress(50, 'GIF変換中...');
+                blob = await createGIF(frames, w, h, updateProgress);
                 fileName = `desu_${Date.now()}.gif`;
 
                 document.getElementById('generating').style.display = 'none';
