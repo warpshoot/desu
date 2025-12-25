@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>DESU™ Paint</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: none;
+            background: #1a1a1a;
+        }
+
+        body.light {
+            background: #e0e0e0;
+        }
+
+        #canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            image-rendering: pixelated;
+            image-rendering: -webkit-optimize-contrast;
+            touch-action: none;
+            transform-origin: 0 0;
+        }
+
+        /* 投げ縄用オーバーレイキャンバス */
+        #lasso-canvas {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        /* 左下ツールバー */
+        #toolbar-left {
+            position: fixed;
+            left: 12px;
+            bottom: 120px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        /* 右上ツールバー */
+        #toolbar-right {
+            position: fixed;
+            top: max(12px, env(safe-area-inset-top));
+            right: 12px;
+            display: flex;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .tool-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            border: 2px solid #666;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.1s;
+            color: #333;
+        }
+
+        .tool-btn svg {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .tool-btn svg .filled {
+            fill: currentColor;
+            stroke: none;
+        }
+
+        body.dark .tool-btn {
+            background: rgba(40, 40, 40, 0.9);
+            border-color: #888;
+            color: #fff;
+        }
+
+        .tool-btn:active {
+            transform: scale(0.92);
+        }
+
+        .tool-btn.active {
+            background: #333;
+            border-color: #fff;
+            color: #fff;
+        }
+
+        body.dark .tool-btn.active {
+            background: #fff;
+            border-color: #333;
+            color: #333;
+        }
+
+        /* 縦スライダー */
+        #size-slider-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            width: 48px;
+        }
+
+        #brushSize {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100px;
+            height: 6px;
+            background: #888;
+            border-radius: 3px;
+            transform: rotate(-90deg);
+            transform-origin: center center;
+            margin: 47px 0;
+        }
+
+        body.dark #brushSize {
+            background: #888;
+        }
+
+        #brushSize::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: #333;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+
+        body.dark #brushSize::-webkit-slider-thumb {
+            background: #fff;
+            border-color: #333;
+        }
+
+        #sizeDisplay {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 4px 8px;
+            border-radius: 6px;
+            min-width: 32px;
+            text-align: center;
+        }
+
+        body.dark #sizeDisplay {
+            color: #fff;
+            background: rgba(40, 40, 40, 0.9);
+        }
+
+        /* ズームリセットボタン（ズーム中のみ表示） */
+        #resetZoomBtn {
+            display: none;
+            position: fixed;
+            bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
+            right: max(20px, calc(env(safe-area-inset-right) + 12px));
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 2px solid #666;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #333;
+        }
+
+        #resetZoomBtn svg {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        body.dark #resetZoomBtn {
+            background: rgba(40, 40, 40, 0.9);
+            border-color: #888;
+            color: #fff;
+        }
+
+        #resetZoomBtn.visible {
+            display: flex;
+        }
+
+        /* 保存モーダル */
+        #save-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 200;
+        }
+
+        #save-ui {
+            display: none;
+            position: fixed;
+            top: max(12px, env(safe-area-inset-top));
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 16px 24px;
+            border-radius: 12px;
+            z-index: 201;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        body.dark #save-ui {
+            background: rgba(30, 30, 30, 0.95);
+            color: #fff;
+        }
+
+        #save-ui h3 {
+            font-size: 14px;
+            margin-bottom: 12px;
+            font-weight: normal;
+            color: #666;
+        }
+
+        body.dark #save-ui h3 {
+            color: #aaa;
+        }
+
+        #save-ui label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        #save-ui input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .save-btn {
+            padding: 10px 20px;
+            margin: 0 4px;
+            border: 1px solid #333;
+            background: #fff;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        body.dark .save-btn {
+            background: #444;
+            border-color: #888;
+            color: #fff;
+        }
+
+        .save-btn:active {
+            transform: scale(0.96);
+        }
+
+        .save-btn.primary {
+            background: #333;
+            color: #fff;
+        }
+
+        body.dark .save-btn.primary {
+            background: #fff;
+            color: #333;
+        }
+
+        /* 選択範囲キャンバス */
+        #selection-canvas {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 199;
+        }
+
+        /* フラッシュエフェクト */
+        #flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 300;
+            transition: opacity 0.1s;
+        }
+
+        /* 生成中インジケーター */
+        #generating {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 20px 40px;
+            border-radius: 12px;
+            z-index: 250;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body class="light">
+    <canvas id="canvas"></canvas>
+    <canvas id="lasso-canvas"></canvas>
+
+    <!-- 左下ツールバー -->
+    <div id="toolbar-left">
+        <div class="tool-btn active" id="penBtn" data-tool="pen">
+            <svg viewBox="0 0 24 24">
+                <path d="M4 18 Q8 8 12 12 Q16 16 20 6" fill="none"/>
+            </svg>
+        </div>
+        <div class="tool-btn" id="fillBtn" data-tool="fill">
+            <svg viewBox="0 0 24 24">
+                <path d="M6 8 L10 4 L18 12 L14 16 Z" class="filled"/>
+                <path d="M16 16 Q18 18 17 21 Q16 24 15 21 Q14 18 16 16 Z" class="filled"/>
+            </svg>
+        </div>
+        <div class="tool-btn" id="colorBtn">
+            <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="8" id="colorCircle" class="filled"/>
+            </svg>
+        </div>
+        <div id="size-slider-container">
+            <input type="range" id="brushSize" min="1" max="20" value="1">
+            <span id="sizeDisplay">1</span>
+        </div>
+    </div>
+
+    <!-- 右上ツールバー -->
+    <div id="toolbar-right">
+        <div class="tool-btn" id="saveBtn">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 4 L12 16 M6 12 L12 18 L18 12"/>
+                <path d="M4 20 L20 20"/>
+            </svg>
+        </div>
+        <div class="tool-btn" id="clearBtn">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34"/>
+            </svg>
+        </div>
+        <div class="tool-btn" id="invertBtn">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 4 A8 8 0 0 0 12 20 Z"/>
+                <path d="M12 4 A8 8 0 0 1 12 20 Z" class="filled"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- ズームリセットボタン -->
+    <div id="resetZoomBtn">
+        <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="8"/>
+            <path d="M12 7 L12 17 M7 12 L17 12"/>
+        </svg>
+    </div>
+
+    <!-- 保存UI -->
+    <div id="save-overlay"></div>
+    <div id="save-ui">
+        <h3>範囲をドラッグして選択</h3>
+        <label>
+            <input type="checkbox" id="transparentBg">
+            背景透過
+        </label>
+        <label>
+            <input type="checkbox" id="glitchMode" checked>
+            💀
+        </label>
+        <div>
+            <button class="save-btn primary" id="saveAllBtn">全体を保存</button>
+            <button class="save-btn" id="cancelSaveBtn">閉じる</button>
+        </div>
+    </div>
+
+    <canvas id="selection-canvas"></canvas>
+    <div id="flash"></div>
+    <div id="generating">生成中...</div>
+
+    <!-- gif.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+
+    <script>
+        // ============================================
+        // DESU™ Paint - iPad専用版 v4 (GIF振動機能追加)
+        // ============================================
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const lassoCanvas = document.getElementById('lasso-canvas');
+        const lassoCtx = lassoCanvas.getContext('2d');
+
+        // --- 状態 ---
+        let isDarkMode = false;
+        let currentTool = 'pen';  // 'pen' or 'fill'
+        let currentColor = 'black';  // 'black' or 'white'
+        let isDrawing = false;
+        let lastX = 0, lastY = 0;
+
+        // ズーム/パン
+        let scale = 1;
+        let translateX = 0, translateY = 0;
+
+        // 色ごとのブラシサイズ保持
+        const colorSizes = { black: 1, white: 5 };
+
+        // undo/redo用（ImageBitmap方式）
+        let undoStack = [];
+        let redoStack = [];
+        const MAX_HISTORY = 15;
+
+        // ポインター管理
+        let activePointers = new Map();
+        let pencilDetected = false;
+
+        // タップ判定用
+        let touchStartTime = 0;
+        let touchStartPos = null;
+        let maxFingers = 0;
+        let strokeMade = false;
+
+        // ピンチ用
+        let lastPinchDist = 0;
+        let lastPinchCenter = { x: 0, y: 0 };
+        let initialPinchDist = 0;
+        let initialPinchCenter = { x: 0, y: 0 };
+        let isPinching = false;
+
+        // 投げ縄用
+        let lassoPoints = [];
+        let isLassoing = false;
+
+        // 保存モード
+        let isSaveMode = false;
+        let selectionStart = null;
+        let selectionEnd = null;
+
+        // ============================================
+        // 初期化
+        // ============================================
+
+        function initCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            lassoCanvas.width = window.innerWidth;
+            lassoCanvas.height = window.innerHeight;
+
+            const selCanvas = document.getElementById('selection-canvas');
+            selCanvas.width = window.innerWidth;
+            selCanvas.height = window.innerHeight;
+
+            applyTransform();
+            updateColorButton();
+            saveState();
+        }
+
+        function applyTransform() {
+            canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+
+            const resetBtn = document.getElementById('resetZoomBtn');
+            if (Math.abs(scale - 1) > 0.01 || Math.abs(translateX) > 1 || Math.abs(translateY) > 1) {
+                resetBtn.classList.add('visible');
+            } else {
+                resetBtn.classList.remove('visible');
+            }
+        }
+
+        function getCanvasPoint(clientX, clientY) {
+            return {
+                x: Math.floor((clientX - translateX) / scale),
+                y: Math.floor((clientY - translateY) / scale)
+            };
+        }
+
+        // 現在の描画色を取得
+        function getDrawColor() {
+            if (currentColor === 'black') {
+                return isDarkMode ? '#fff' : '#000';
+            } else {
+                return isDarkMode ? '#000' : '#fff';
+            }
+        }
+
+        // 色ボタンの表示更新
+        function updateColorButton() {
+            const circle = document.getElementById('colorCircle');
+
+            // 黒選択時は塗りつぶし、白選択時は白抜き（ストロークのみ）
+            if (currentColor === 'black') {
+                circle.classList.add('filled');
+                circle.style.stroke = 'none';
+            } else {
+                circle.classList.remove('filled');
+                circle.style.stroke = 'currentColor';
+                circle.style.strokeWidth = '2';
+            }
+        }
+
+        // ============================================
+        // 描画エンジン（2値・ブレゼンハム）
+        // ============================================
+
+        function drawLine(x1, y1, x2, y2) {
+            const size = colorSizes[currentColor];
+            ctx.fillStyle = getDrawColor();
+
+            const r = Math.floor(size / 2);
+            let dx = Math.abs(x2 - x1), sx = x1 < x2 ? 1 : -1;
+            let dy = -Math.abs(y2 - y1), sy = y1 < y2 ? 1 : -1;
+            let err = dx + dy;
+
+            while (true) {
+                if (size === 1) {
+                    ctx.fillRect(x1, y1, 1, 1);
+                } else {
+                    ctx.fillRect(x1 - r, y1 - r, size, size);
+                }
+
+                if (x1 === x2 && y1 === y2) break;
+                const e2 = 2 * err;
+                if (e2 >= dy) { err += dy; x1 += sx; }
+                if (e2 <= dx) { err += dx; y1 += sy; }
+            }
+        }
+
+        // ============================================
+        // 塗りつぶし（スキャンライン法）
+        // ============================================
+
+        function floodFill(startX, startY) {
+            const w = canvas.width, h = canvas.height;
+
+            if (startX < 0 || startX >= w || startY < 0 || startY >= h) return;
+
+            const imgData = ctx.getImageData(0, 0, w, h);
+            const data = imgData.data;
+
+            const idx = (startY * w + startX) * 4;
+            const targetR = data[idx], targetG = data[idx + 1], targetB = data[idx + 2];
+
+            // 塗りつぶし色を決定
+            const fillColorHex = getDrawColor();
+            const fillColor = fillColorHex === '#fff' || fillColorHex === '#FFF'
+                ? [255, 255, 255]
+                : [0, 0, 0];
+
+            if (targetR === fillColor[0] && targetG === fillColor[1] && targetB === fillColor[2]) return;
+
+            const matchTarget = (i) => data[i] === targetR && data[i + 1] === targetG && data[i + 2] === targetB;
+            const setPixel = (i) => {
+                data[i] = fillColor[0];
+                data[i + 1] = fillColor[1];
+                data[i + 2] = fillColor[2];
+                data[i + 3] = 255;
+            };
+
+            const stack = [[startX, startY]];
+
+            while (stack.length > 0) {
+                let [x, y] = stack.pop();
+                let i = (y * w + x) * 4;
+
+                while (x >= 0 && matchTarget(i)) {
+                    x--;
+                    i -= 4;
+                }
+                x++;
+                i += 4;
+
+                let spanAbove = false, spanBelow = false;
+
+                while (x < w && matchTarget(i)) {
+                    setPixel(i);
+
+                    if (y > 0) {
+                        const above = i - w * 4;
+                        if (matchTarget(above)) {
+                            if (!spanAbove) {
+                                stack.push([x, y - 1]);
+                                spanAbove = true;
+                            }
+                        } else {
+                            spanAbove = false;
+                        }
+                    }
+
+                    if (y < h - 1) {
+                        const below = i + w * 4;
+                        if (matchTarget(below)) {
+                            if (!spanBelow) {
+                                stack.push([x, y + 1]);
+                                spanBelow = true;
+                            }
+                        } else {
+                            spanBelow = false;
+                        }
+                    }
+
+                    x++;
+                    i += 4;
+                }
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        // ============================================
+        // 投げ縄塗りつぶし
+        // ============================================
+
+        function startLasso(x, y) {
+            isLassoing = true;
+            lassoPoints = [{ x, y }];
+            lassoCanvas.style.display = 'block';
+            lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+        }
+
+        function updateLasso(x, y) {
+            if (!isLassoing) return;
+
+            lassoPoints.push({ x, y });
+
+            // 青い線で軌跡を描画
+            lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+            lassoCtx.strokeStyle = '#0066ff';
+            lassoCtx.lineWidth = 2;
+            lassoCtx.beginPath();
+            lassoCtx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+            for (let i = 1; i < lassoPoints.length; i++) {
+                lassoCtx.lineTo(lassoPoints[i].x, lassoPoints[i].y);
+            }
+            // 始点に戻る線（プレビュー）
+            lassoCtx.lineTo(lassoPoints[0].x, lassoPoints[0].y);
+            lassoCtx.stroke();
+        }
+
+        function finishLasso() {
+            if (!isLassoing || lassoPoints.length < 3) {
+                isLassoing = false;
+                lassoPoints = [];
+                lassoCanvas.style.display = 'none';
+                return false;
+            }
+
+            // 画面座標からキャンバス座標に変換
+            const canvasPoints = lassoPoints.map(p => getCanvasPoint(p.x, p.y));
+
+            // 投げ縄の内側を塗りつぶし
+            fillPolygon(canvasPoints);
+
+            isLassoing = false;
+            lassoPoints = [];
+            lassoCanvas.style.display = 'none';
+            lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+
+            return true;
+        }
+
+        function fillPolygon(points) {
+            if (points.length < 3) return;
+
+            ctx.fillStyle = getDrawColor();
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // アンチエイリアスで発生した中間色を2値化
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                const val = avg > 127 ? 255 : 0;
+                data[i] = val;
+                data[i + 1] = val;
+                data[i + 2] = val;
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        // ============================================
+        // undo/redo（ImageBitmap方式）
+        // ============================================
+
+        async function saveState() {
+            const bitmap = await createImageBitmap(canvas);
+            undoStack.push(bitmap);
+
+            if (undoStack.length > MAX_HISTORY) {
+                undoStack.shift().close();
+            }
+
+            redoStack.forEach(b => b.close());
+            redoStack = [];
+        }
+
+        function undo() {
+            if (undoStack.length <= 1) return;
+
+            const current = undoStack.pop();
+            redoStack.push(current);
+
+            const prev = undoStack[undoStack.length - 1];
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(prev, 0, 0);
+        }
+
+        function redo() {
+            if (redoStack.length === 0) return;
+
+            const next = redoStack.pop();
+            undoStack.push(next);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(next, 0, 0);
+        }
+
+        // ============================================
+        // GIF生成（ピクセル振動）
+        // ============================================
+
+        function generateGlitchFrames(imgData, transparent) {
+            const w = imgData.width;
+            const h = imgData.height;
+            const data = imgData.data;
+
+            // 背景色判定用
+            const bgR = isDarkMode ? 0 : 255;
+            const bgG = isDarkMode ? 0 : 255;
+            const bgB = isDarkMode ? 0 : 255;
+
+            // 黒ドット（描画部分）の座標を収集
+            const pixels = [];
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const i = (y * w + x) * 4;
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+
+                    // 背景色でない = 描画部分
+                    if (r !== bgR || g !== bgG || b !== bgB) {
+                        pixels.push({ x, y, r, g, b });
+                    }
+                }
+            }
+
+            // フレーム生成関数
+            function createFrame(seed) {
+                const frameData = new Uint8ClampedArray(data);
+                const frameCopy = new ImageData(frameData, w, h);
+                const targetPixels = [...pixels];
+
+                // 30%をランダム選択
+                const count = Math.floor(pixels.length * 0.3);
+                const shuffled = targetPixels.sort(() => (Math.random() * seed) - 0.5).slice(0, count);
+
+                // 8方向のオフセット
+                const offsets = [
+                    [-1, -1], [0, -1], [1, -1],
+                    [-1,  0],          [1,  0],
+                    [-1,  1], [0,  1], [1,  1]
+                ];
+
+                shuffled.forEach(p => {
+                    const offset = offsets[Math.floor(Math.random() * seed * 1000) % offsets.length];
+                    const newX = p.x + offset[0];
+                    const newY = p.y + offset[1];
+
+                    if (newX >= 0 && newX < w && newY >= 0 && newY < h) {
+                        const oldIdx = (p.y * w + p.x) * 4;
+                        const newIdx = (newY * w + newX) * 4;
+
+                        // 元の位置を背景色で塗りつぶし
+                        frameData[oldIdx] = bgR;
+                        frameData[oldIdx + 1] = bgG;
+                        frameData[oldIdx + 2] = bgB;
+                        if (transparent) frameData[oldIdx + 3] = 0;
+
+                        // 新しい位置に描画
+                        frameData[newIdx] = p.r;
+                        frameData[newIdx + 1] = p.g;
+                        frameData[newIdx + 2] = p.b;
+                        frameData[newIdx + 3] = 255;
+                    }
+                });
+
+                return new ImageData(frameData, w, h);
+            }
+
+            // 3フレーム生成（元絵、振動1、振動2）
+            return [
+                imgData,
+                createFrame(0.5),
+                createFrame(0.8)
+            ];
+        }
+
+        async function createGIF(frames, w, h) {
+            return new Promise((resolve, reject) => {
+                const gif = new GIF({
+                    workers: 2,
+                    quality: 10,
+                    width: w,
+                    height: h,
+                    workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js'
+                });
+
+                frames.forEach(frameData => {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = w;
+                    tempCanvas.height = h;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.putImageData(frameData, 0, 0);
+
+                    gif.addFrame(tempCanvas, { delay: 50 });
+                });
+
+                gif.on('finished', blob => resolve(blob));
+                gif.on('error', err => reject(err));
+
+                gif.render();
+            });
+        }
+
+        // ============================================
+        // ポインターイベント
+        // ============================================
+
+        canvas.addEventListener('pointerdown', (e) => {
+            if (isSaveMode) return;
+
+            e.preventDefault();
+            canvas.setPointerCapture(e.pointerId);
+            activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            if (e.pointerType === 'pen') {
+                pencilDetected = true;
+            }
+
+            if (activePointers.size === 1) {
+                touchStartTime = Date.now();
+                touchStartPos = { x: e.clientX, y: e.clientY };
+                maxFingers = 1;
+                isPinching = false;
+                strokeMade = false;
+            }
+            maxFingers = Math.max(maxFingers, activePointers.size);
+
+            // 2本指 = ピンチ/パン準備
+            if (activePointers.size === 2) {
+                isDrawing = false;
+                isLassoing = false;
+                lassoCanvas.style.display = 'none';
+                isPinching = false;
+                const pts = Array.from(activePointers.values());
+                lastPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+                lastPinchCenter = {
+                    x: (pts[0].x + pts[1].x) / 2,
+                    y: (pts[0].y + pts[1].y) / 2
+                };
+                initialPinchDist = lastPinchDist;
+                initialPinchCenter = { x: lastPinchCenter.x, y: lastPinchCenter.y };
+                return;
+            }
+
+            const canDraw = e.pointerType === 'pen' || (e.pointerType === 'touch' && !pencilDetected);
+
+            if (activePointers.size === 1 && canDraw) {
+                const p = getCanvasPoint(e.clientX, e.clientY);
+
+                if (currentTool === 'pen') {
+                    isDrawing = true;
+                    lastX = p.x;
+                    lastY = p.y;
+                    drawLine(p.x, p.y, p.x, p.y);
+                } else if (currentTool === 'fill') {
+                    // バケツツール: タップか投げ縄か、pointerupで判定
+                    startLasso(e.clientX, e.clientY);
+                }
+            }
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (!activePointers.has(e.pointerId)) return;
+            if (isSaveMode) return;
+
+            e.preventDefault();
+            activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            // 2本指 = ピンチズーム / パン
+            if (activePointers.size === 2) {
+                const pts = Array.from(activePointers.values());
+                const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+                const center = {
+                    x: (pts[0].x + pts[1].x) / 2,
+                    y: (pts[0].y + pts[1].y) / 2
+                };
+
+                const distDelta = Math.abs(dist - initialPinchDist);
+                const centerDelta = Math.hypot(center.x - initialPinchCenter.x, center.y - initialPinchCenter.y);
+
+                if (distDelta > 10 || centerDelta > 10) {
+                    isPinching = true;
+                }
+
+                if (isPinching) {
+                    const zoomFactor = dist / lastPinchDist;
+                    const oldScale = scale;
+                    scale = Math.max(0.1, Math.min(20, scale * zoomFactor));
+
+                    translateX = center.x - (center.x - translateX) * (scale / oldScale);
+                    translateY = center.y - (center.y - translateY) * (scale / oldScale);
+
+                    translateX += center.x - lastPinchCenter.x;
+                    translateY += center.y - lastPinchCenter.y;
+
+                    applyTransform();
+                }
+
+                lastPinchDist = dist;
+                lastPinchCenter = center;
+
+                return;
+            }
+
+            // 描画
+            if (isDrawing && activePointers.size === 1) {
+                const p = getCanvasPoint(e.clientX, e.clientY);
+                drawLine(lastX, lastY, p.x, p.y);
+                lastX = p.x;
+                lastY = p.y;
+                strokeMade = true;
+            }
+
+            // 投げ縄
+            if (isLassoing && activePointers.size === 1) {
+                updateLasso(e.clientX, e.clientY);
+                strokeMade = true;
+            }
+        });
+
+        canvas.addEventListener('pointerup', (e) => {
+            if (isSaveMode) return;
+
+            e.preventDefault();
+
+            // 描画終了
+            if (isDrawing) {
+                saveState();
+                strokeMade = true;
+            }
+
+            // 投げ縄終了
+            if (isLassoing) {
+                // 移動距離で判定: 短い = タップ、長い = 投げ縄
+                const startP = lassoPoints[0];
+                const totalDist = lassoPoints.reduce((acc, p, i) => {
+                    if (i === 0) return 0;
+                    const prev = lassoPoints[i - 1];
+                    return acc + Math.hypot(p.x - prev.x, p.y - prev.y);
+                }, 0);
+
+                if (totalDist < 20) {
+                    // タップ = 通常の塗りつぶし
+                    const p = getCanvasPoint(startP.x, startP.y);
+                    floodFill(p.x, p.y);
+                    saveState();
+                    strokeMade = true;
+                } else {
+                    // 投げ縄塗りつぶし
+                    if (finishLasso()) {
+                        saveState();
+                        strokeMade = true;
+                    }
+                }
+
+                isLassoing = false;
+                lassoPoints = [];
+                lassoCanvas.style.display = 'none';
+                lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+            }
+
+            activePointers.delete(e.pointerId);
+
+            // 全指離した時のタップ判定
+            if (activePointers.size === 0) {
+                const duration = Date.now() - touchStartTime;
+
+                if (maxFingers >= 2 && duration < 400 && !isPinching && !strokeMade) {
+                    if (maxFingers === 2) undo();
+                    if (maxFingers === 3) redo();
+                }
+
+                maxFingers = 0;
+                touchStartPos = null;
+                strokeMade = false;
+                isPinching = false;
+            }
+
+            isDrawing = false;
+        });
+
+        canvas.addEventListener('pointercancel', (e) => {
+            activePointers.delete(e.pointerId);
+            isDrawing = false;
+            isLassoing = false;
+            isPinching = false;
+            lassoCanvas.style.display = 'none';
+        });
+
+        // ============================================
+        // UIイベント
+        // ============================================
+
+        // ツール切り替え
+        document.querySelectorAll('[data-tool]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentTool = btn.dataset.tool;
+                document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // 色切り替え
+        document.getElementById('colorBtn').addEventListener('click', () => {
+            currentColor = currentColor === 'black' ? 'white' : 'black';
+            updateColorButton();
+
+            // サイズを色に応じて復元
+            document.getElementById('brushSize').value = colorSizes[currentColor];
+            document.getElementById('sizeDisplay').textContent = colorSizes[currentColor];
+        });
+
+        // ブラシサイズ
+        document.getElementById('brushSize').addEventListener('input', (e) => {
+            const size = parseInt(e.target.value);
+            colorSizes[currentColor] = size;
+            document.getElementById('sizeDisplay').textContent = size;
+        });
+
+        // クリア
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            ctx.fillStyle = isDarkMode ? '#000' : '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            saveState();
+        });
+
+        // 反転
+        document.getElementById('invertBtn').addEventListener('click', () => {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark');
+            document.body.classList.toggle('light');
+
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = 255 - data[i];
+                data[i + 1] = 255 - data[i + 1];
+                data[i + 2] = 255 - data[i + 2];
+            }
+            ctx.putImageData(imgData, 0, 0);
+
+            updateColorButton();
+            saveState();
+        });
+
+        // ズームリセット
+        document.getElementById('resetZoomBtn').addEventListener('click', () => {
+            scale = 1;
+            translateX = 0;
+            translateY = 0;
+            applyTransform();
+        });
+
+        // ============================================
+        // 保存機能
+        // ============================================
+
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            isSaveMode = true;
+            document.getElementById('save-overlay').style.display = 'block';
+            document.getElementById('save-ui').style.display = 'block';
+            document.getElementById('selection-canvas').style.display = 'block';
+            document.getElementById('toolbar-left').style.display = 'none';
+            document.getElementById('toolbar-right').style.display = 'none';
+            document.getElementById('resetZoomBtn').style.display = 'none';
+        });
+
+        function exitSaveMode() {
+            isSaveMode = false;
+            document.getElementById('save-overlay').style.display = 'none';
+            document.getElementById('save-ui').style.display = 'none';
+            document.getElementById('selection-canvas').style.display = 'none';
+            document.getElementById('generating').style.display = 'none';
+            document.getElementById('toolbar-left').style.display = 'flex';
+            document.getElementById('toolbar-right').style.display = 'flex';
+            applyTransform();
+
+            const selCanvas = document.getElementById('selection-canvas');
+            const selCtx = selCanvas.getContext('2d');
+            selCtx.clearRect(0, 0, selCanvas.width, selCanvas.height);
+
+            selectionStart = null;
+            selectionEnd = null;
+        }
+
+        document.getElementById('cancelSaveBtn').addEventListener('click', exitSaveMode);
+
+        document.getElementById('saveAllBtn').addEventListener('click', () => {
+            saveRegion(0, 0, canvas.width, canvas.height);
+        });
+
+        const overlay = document.getElementById('save-overlay');
+
+        overlay.addEventListener('pointerdown', (e) => {
+            if (!isSaveMode) return;
+            selectionStart = { x: e.clientX, y: e.clientY };
+            selectionEnd = { x: e.clientX, y: e.clientY };
+        });
+
+        overlay.addEventListener('pointermove', (e) => {
+            if (!isSaveMode || !selectionStart) return;
+            selectionEnd = { x: e.clientX, y: e.clientY };
+
+            const selCanvas = document.getElementById('selection-canvas');
+            const selCtx = selCanvas.getContext('2d');
+            selCtx.clearRect(0, 0, selCanvas.width, selCanvas.height);
+
+            selCtx.strokeStyle = isDarkMode ? '#fff' : '#000';
+            selCtx.lineWidth = 2;
+            selCtx.setLineDash([8, 8]);
+            selCtx.strokeRect(
+                selectionStart.x,
+                selectionStart.y,
+                selectionEnd.x - selectionStart.x,
+                selectionEnd.y - selectionStart.y
+            );
+        });
+
+        overlay.addEventListener('pointerup', (e) => {
+            if (!isSaveMode || !selectionStart) return;
+
+            const x1 = Math.floor((Math.min(selectionStart.x, selectionEnd.x) - translateX) / scale);
+            const y1 = Math.floor((Math.min(selectionStart.y, selectionEnd.y) - translateY) / scale);
+            const x2 = Math.floor((Math.max(selectionStart.x, selectionEnd.x) - translateX) / scale);
+            const y2 = Math.floor((Math.max(selectionStart.y, selectionEnd.y) - translateY) / scale);
+
+            const w = x2 - x1;
+            const h = y2 - y1;
+
+            if (w > 5 && h > 5) {
+                const cx = Math.max(0, Math.min(x1, canvas.width));
+                const cy = Math.max(0, Math.min(y1, canvas.height));
+                const cw = Math.min(w, canvas.width - cx);
+                const ch = Math.min(h, canvas.height - cy);
+
+                if (cw > 0 && ch > 0) {
+                    saveRegion(cx, cy, cw, ch);
+                }
+            }
+
+            selectionStart = null;
+            selectionEnd = null;
+
+            const selCanvas = document.getElementById('selection-canvas');
+            const selCtx = selCanvas.getContext('2d');
+            selCtx.clearRect(0, 0, selCanvas.width, selCanvas.height);
+        });
+
+        async function saveRegion(x, y, w, h) {
+            const glitchMode = document.getElementById('glitchMode').checked;
+            const transparent = document.getElementById('transparentBg').checked;
+
+            const flash = document.getElementById('flash');
+            flash.style.opacity = '0.7';
+            setTimeout(() => { flash.style.opacity = '0'; }, 100);
+
+            let blob, fileName;
+
+            if (glitchMode) {
+                // GIF生成
+                document.getElementById('generating').style.display = 'block';
+
+                const imgData = ctx.getImageData(x, y, w, h);
+
+                // 背景透過処理
+                if (transparent) {
+                    const data = imgData.data;
+                    const bgR = isDarkMode ? 0 : 255;
+                    const bgG = isDarkMode ? 0 : 255;
+                    const bgB = isDarkMode ? 0 : 255;
+
+                    for (let i = 0; i < data.length; i += 4) {
+                        if (data[i] === bgR && data[i + 1] === bgG && data[i + 2] === bgB) {
+                            data[i + 3] = 0;
+                        }
+                    }
+                }
+
+                const frames = generateGlitchFrames(imgData, transparent);
+                blob = await createGIF(frames, w, h);
+                fileName = `desu_${Date.now()}.gif`;
+
+                document.getElementById('generating').style.display = 'none';
+            } else {
+                // PNG生成（従来通り）
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = w;
+                tempCanvas.height = h;
+                const tempCtx = tempCanvas.getContext('2d');
+
+                if (transparent) {
+                    const imgData = ctx.getImageData(x, y, w, h);
+                    const data = imgData.data;
+                    const bgR = isDarkMode ? 0 : 255;
+                    const bgG = isDarkMode ? 0 : 255;
+                    const bgB = isDarkMode ? 0 : 255;
+
+                    for (let i = 0; i < data.length; i += 4) {
+                        if (data[i] === bgR && data[i + 1] === bgG && data[i + 2] === bgB) {
+                            data[i + 3] = 0;
+                        }
+                    }
+                    tempCtx.putImageData(imgData, 0, 0);
+                } else {
+                    tempCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h);
+                }
+
+                blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+                fileName = `desu_${Date.now()}.png`;
+            }
+
+            // 共有 or ダウンロード
+            if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName)] })) {
+                try {
+                    const file = new File([blob], fileName);
+                    await navigator.share({
+                        files: [file],
+                        title: 'DESU Paint'
+                    });
+                    exitSaveMode();
+                    return;
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.log('Share failed, trying fallback:', err);
+                    } else {
+                        exitSaveMode();
+                        return;
+                    }
+                }
+            }
+
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            exitSaveMode();
+        }
+
+        // ============================================
+        // 画面回転対応
+        // ============================================
+
+        window.addEventListener('orientationchange', () => {
+            setTimeout(async () => {
+                const bitmap = await createImageBitmap(canvas);
+
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+
+                lassoCanvas.width = window.innerWidth;
+                lassoCanvas.height = window.innerHeight;
+
+                ctx.fillStyle = isDarkMode ? '#000' : '#fff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(bitmap, 0, 0);
+                bitmap.close();
+
+                const selCanvas = document.getElementById('selection-canvas');
+                selCanvas.width = window.innerWidth;
+                selCanvas.height = window.innerHeight;
+
+                applyTransform();
+            }, 100);
+        });
+
+        // ============================================
+        // 起動
+        // ============================================
+
+        initCanvas();
+    </script>
+</body>
+</html>
