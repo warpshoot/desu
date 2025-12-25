@@ -520,7 +520,7 @@
     <div id="debug-log"></div>
 
     <!-- gif.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+    <script src="https://unpkg.com/gif.js@0.2.0/dist/gif.js"></script>
 
     <script>
         // ============================================
@@ -999,14 +999,14 @@
                     }
 
                     const gif = new GIF({
-                        workers: 0,  // メインスレッドで実行（workerを使わない）
-                        quality: 20,
+                        workers: 1,
+                        quality: 10,
                         width: w,
                         height: h,
-                        debug: true
+                        workerScript: 'https://unpkg.com/gif.js@0.2.0/dist/gif.worker.js'
                     });
 
-                    console.log('GIF設定:', { workers: 0, quality: 20, width: w, height: h, note: 'メインスレッドで実行' });
+                    console.log('GIF設定:', { workers: 1, quality: 10, width: w, height: h });
 
                     console.log('GIF生成開始:', { frames: frames.length, width: w, height: h });
 
