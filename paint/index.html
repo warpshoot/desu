@@ -973,15 +973,29 @@
                 }
             }
 
+            // シード可能な疑似乱数生成器
+            function seededRandom(seed) {
+                let x = Math.sin(seed++) * 10000;
+                return x - Math.floor(x);
+            }
+
             // フレーム生成関数
             function createFrame(seed) {
                 const frameData = new Uint8ClampedArray(data);
                 const frameCopy = new ImageData(frameData, w, h);
                 const targetPixels = [...pixels];
 
+                let randomSeed = seed * 1000;
+
+                // Fisher-Yatesシャッフル（シード使用）
+                for (let i = targetPixels.length - 1; i > 0; i--) {
+                    const j = Math.floor(seededRandom(randomSeed++) * (i + 1));
+                    [targetPixels[i], targetPixels[j]] = [targetPixels[j], targetPixels[i]];
+                }
+
                 // 30%をランダム選択
                 const count = Math.floor(pixels.length * 0.3);
-                const shuffled = targetPixels.sort(() => (Math.random() * seed) - 0.5).slice(0, count);
+                const shuffled = targetPixels.slice(0, count);
 
                 // 8方向のオフセット
                 const offsets = [
@@ -991,7 +1005,7 @@
                 ];
 
                 shuffled.forEach(p => {
-                    const offset = offsets[Math.floor(Math.random() * seed * 1000) % offsets.length];
+                    const offset = offsets[Math.floor(seededRandom(randomSeed++) * offsets.length)];
                     const newX = p.x + offset[0];
                     const newY = p.y + offset[1];
 
