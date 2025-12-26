@@ -602,7 +602,7 @@
         </label>
 
         <div>
-            <button class="save-btn primary" id="saveAllBtn">全体を保存</button>
+            <button class="save-btn" id="saveAllBtn">全体を保存</button>
             <button class="save-btn primary" id="confirmSelectionBtn" style="display:none;">確定</button>
             <button class="save-btn" id="redoSelectionBtn" style="display:none;">やり直し</button>
             <button class="save-btn" id="cancelSaveBtn">閉じる</button>
@@ -1110,16 +1110,18 @@
                 return x - Math.floor(x);
             }
 
-            // ノイズレベルに応じたパーセンテージ設定
+            // ノイズレベルに応じたパーセンテージ設定と動作
             const noiseLevelSettings = {
-                1: [0.1, 0.3, 0.3],      // 弱: 10%, 30%, 30%
-                2: [0.3, 0.6, 0.6],      // 中: 30%, 60%, 60%
-                3: [0.7, 0.95, 1.0]      // 強: 70%, 95%, 100% (原型崩壊)
+                1: { mode: 'normal', percentages: [0.1, 0.3, 0.3] },           // 弱: 10%, 30%, 30% (1px移動)
+                2: { mode: 'large-offset', percentages: [1.0, 1.0, 1.0] },     // 中: 100% (2-5px移動)
+                3: { mode: 'random-position', percentages: [0.7, 0.85, 1.0] }  // 強: 70%, 85%, 100% (完全ランダム配置)
             };
-            const noisePercentages = noiseLevelSettings[noiseLevel] || noiseLevelSettings[1];
+            const noiseSetting = noiseLevelSettings[noiseLevel] || noiseLevelSettings[1];
+            const noisePercentages = noiseSetting.percentages;
+            const noiseMode = noiseSetting.mode;
 
             // フレーム生成関数（異なる偏り方とノイズ量）
-            function createFrame(seed, mode, noisePercentage = 0.3) {
+            function createFrame(seed, distributionMode, noisePercentage = 0.3, glitchMode = 'normal') {
                 const frameData = new Uint8ClampedArray(data);
                 const frameCopy = new ImageData(frameData, w, h);
                 const targetPixels = [...pixels];
@@ -1127,16 +1129,16 @@
                 let randomSeed = seed * 1000;
 
                 // モードによって異なる分布方法を使用
-                if (mode === 'bottom-bias') {
+                if (distributionMode === 'bottom-bias') {
                     // 下側に偏るノイズ（元のsort方式）
                     targetPixels.sort(() => seededRandom(randomSeed++) - 0.5);
-                } else if (mode === 'uniform') {
+                } else if (distributionMode === 'uniform') {
                     // 均等分布（Fisher-Yatesシャッフル）
                     for (let i = targetPixels.length - 1; i > 0; i--) {
                         const j = Math.floor(seededRandom(randomSeed++) * (i + 1));
                         [targetPixels[i], targetPixels[j]] = [targetPixels[j], targetPixels[i]];
                     }
-                } else if (mode === 'top-bias') {
+                } else if (distributionMode === 'top-bias') {
                     // 上側に偏るノイズ（逆順sort）
                     targetPixels.sort(() => 0.5 - seededRandom(randomSeed++));
                 }
@@ -1145,19 +1147,12 @@
                 const count = Math.floor(pixels.length * noisePercentage);
                 const shuffled = targetPixels.slice(0, count);
 
-                // 8方向のオフセット
-                const offsets = [
-                    [-1, -1], [0, -1], [1, -1],
-                    [-1,  0],          [1,  0],
-                    [-1,  1], [0,  1], [1,  1]
-                ];
+                if (glitchMode === 'random-position') {
+                    // レベル3: 完全ランダム配置
+                    shuffled.forEach(p => {
+                        const newX = Math.floor(seededRandom(randomSeed++) * w);
+                        const newY = Math.floor(seededRandom(randomSeed++) * h);
 
-                shuffled.forEach(p => {
-                    const offset = offsets[Math.floor(seededRandom(randomSeed++) * offsets.length)];
-                    const newX = p.x + offset[0];
-                    const newY = p.y + offset[1];
-
-                    if (newX >= 0 && newX < w && newY >= 0 && newY < h) {
                         const oldIdx = (p.y * w + p.x) * 4;
                         const newIdx = (newY * w + newX) * 4;
 
@@ -1172,17 +1167,75 @@
                         frameData[newIdx + 1] = p.g;
                         frameData[newIdx + 2] = p.b;
                         frameData[newIdx + 3] = 255;
-                    }
-                });
+                    });
+                } else if (glitchMode === 'large-offset') {
+                    // レベル2: 2～5ピクセルのランダム距離移動
+                    shuffled.forEach(p => {
+                        const distance = Math.floor(seededRandom(randomSeed++) * 4) + 2; // 2～5
+                        const angle = seededRandom(randomSeed++) * Math.PI * 2;
+                        const offsetX = Math.round(Math.cos(angle) * distance);
+                        const offsetY = Math.round(Math.sin(angle) * distance);
+
+                        const newX = p.x + offsetX;
+                        const newY = p.y + offsetY;
+
+                        if (newX >= 0 && newX < w && newY >= 0 && newY < h) {
+                            const oldIdx = (p.y * w + p.x) * 4;
+                            const newIdx = (newY * w + newX) * 4;
+
+                            // 元の位置を背景色で塗りつぶし
+                            frameData[oldIdx] = bgR;
+                            frameData[oldIdx + 1] = bgG;
+                            frameData[oldIdx + 2] = bgB;
+                            if (transparent) frameData[oldIdx + 3] = 0;
+
+                            // 新しい位置に描画
+                            frameData[newIdx] = p.r;
+                            frameData[newIdx + 1] = p.g;
+                            frameData[newIdx + 2] = p.b;
+                            frameData[newIdx + 3] = 255;
+                        }
+                    });
+                } else {
+                    // レベル1: 通常の8方向1ピクセル移動
+                    const offsets = [
+                        [-1, -1], [0, -1], [1, -1],
+                        [-1,  0],          [1,  0],
+                        [-1,  1], [0,  1], [1,  1]
+                    ];
+
+                    shuffled.forEach(p => {
+                        const offset = offsets[Math.floor(seededRandom(randomSeed++) * offsets.length)];
+                        const newX = p.x + offset[0];
+                        const newY = p.y + offset[1];
+
+                        if (newX >= 0 && newX < w && newY >= 0 && newY < h) {
+                            const oldIdx = (p.y * w + p.x) * 4;
+                            const newIdx = (newY * w + newX) * 4;
+
+                            // 元の位置を背景色で塗りつぶし
+                            frameData[oldIdx] = bgR;
+                            frameData[oldIdx + 1] = bgG;
+                            frameData[oldIdx + 2] = bgB;
+                            if (transparent) frameData[oldIdx + 3] = 0;
+
+                            // 新しい位置に描画
+                            frameData[newIdx] = p.r;
+                            frameData[newIdx + 1] = p.g;
+                            frameData[newIdx + 2] = p.b;
+                            frameData[newIdx + 3] = 255;
+                        }
+                    });
+                }
 
                 return new ImageData(frameData, w, h);
             }
 
             // 3フレーム生成（異なる偏り方とノイズ量）
             return [
-                createFrame(0.2, 'uniform', noisePercentages[0]),      // 少量ノイズ
-                createFrame(0.5, 'bottom-bias', noisePercentages[1]),  // 下側に偏るノイズ
-                createFrame(0.8, 'top-bias', noisePercentages[2])      // 上側に偏るノイズ
+                createFrame(0.2, 'uniform', noisePercentages[0], noiseMode),      // フレーム1
+                createFrame(0.5, 'bottom-bias', noisePercentages[1], noiseMode),  // フレーム2
+                createFrame(0.8, 'top-bias', noisePercentages[2], noiseMode)      // フレーム3
             ];
         }
 
