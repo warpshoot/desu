@@ -2076,36 +2076,39 @@
                     fileName = `desu_${Date.now()}.png`;
                 }
 
-                // iOS Safari対応：download属性でダウンロード
+                // iOS Safari対応：共有またはダウンロード
                 const url = URL.createObjectURL(blob);
+
+                // iOS向け: navigator.shareで共有（タップイベント内で実行）
+                if (navigator.share && /iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                    try {
+                        const file = new File([blob], fileName, { type: blob.type });
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            const shouldShare = confirm('共有メニューから保存しますか？\n（キャンセルで直接ダウンロード）');
+                            if (shouldShare) {
+                                await navigator.share({
+                                    files: [file],
+                                    title: 'DESU™ PAINT',
+                                    text: fileName
+                                });
+                                URL.revokeObjectURL(url);
+                                exitSaveMode();
+                                return; // 共有成功で終了
+                            }
+                        }
+                    } catch (err) {
+                        console.log('Share API利用不可:', err);
+                        // エラー時は下のダウンロード処理に進む
+                    }
+                }
+
+                // 直接ダウンロード（共有しなかった場合 or 非iOS）
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = fileName;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
-
-                // iOS向け: navigator.shareも試みる（GIF保存成功率向上）
-                if (navigator.share && /iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                    try {
-                        const file = new File([blob], fileName, { type: blob.type });
-                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                            // shareボタンを表示するか、ユーザーに選択肢を提供
-                            setTimeout(async () => {
-                                const shouldShare = confirm('共有メニューから保存しますか？\n（GIFアニメーションが確実に保存されます）');
-                                if (shouldShare) {
-                                    await navigator.share({
-                                        files: [file],
-                                        title: 'DESU™ PAINT',
-                                        text: fileName
-                                    });
-                                }
-                            }, 500);
-                        }
-                    } catch (err) {
-                        console.log('Share API利用不可:', err);
-                    }
-                }
 
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
 
