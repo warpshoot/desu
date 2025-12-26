@@ -1016,11 +1016,11 @@
                 return new ImageData(frameData, w, h);
             }
 
-            // 3フレーム生成（元絵、振動1、振動2）
+            // 3フレーム生成（ノイズ1、ノイズ2、ノイズ3）
             return [
-                imgData,
-                createFrame(0.5),
-                createFrame(0.8)
+                createFrame(0.3),
+                createFrame(0.6),
+                createFrame(0.9)
             ];
         }
 
