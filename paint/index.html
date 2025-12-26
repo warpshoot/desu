@@ -21,11 +21,7 @@
             height: 100%;
             overflow: hidden;
             touch-action: none;
-            background: #1a1a1a;
-        }
-
-        body.light {
-            background: #e0e0e0;
+            background: #4d4d4d;
         }
 
         #canvas {
@@ -560,13 +556,9 @@
         debugActivator.addEventListener('pointerdown', (e) => {
             e.preventDefault();
             debugActivatorTimer = setTimeout(() => {
-                debugButtonVisible = !debugButtonVisible;
-                if (debugButtonVisible) {
+                if (!debugButtonVisible) {
+                    debugButtonVisible = true;
                     debugToggle.classList.add('visible');
-                } else {
-                    debugToggle.classList.remove('visible');
-                    debugLog.classList.remove('visible');
-                    debugVisible = false;
                 }
                 debugActivatorTimer = null;
             }, 500);
@@ -586,24 +578,31 @@
             }
         });
 
-        // デバッグボタン長押し（500ms）でログ表示切り替え
+        // デバッグボタン：クリック（短押し）でログ表示切り替え、長押し（500ms）でボタン非表示
         debugToggle.addEventListener('pointerdown', (e) => {
             e.preventDefault();
             debugToggleTimer = setTimeout(() => {
-                debugVisible = !debugVisible;
-                if (debugVisible) {
-                    debugLog.classList.add('visible');
-                } else {
-                    debugLog.classList.remove('visible');
-                }
+                // 長押し → ボタン非表示
+                debugButtonVisible = false;
+                debugToggle.classList.remove('visible');
+                debugLog.classList.remove('visible');
+                debugVisible = false;
                 debugToggleTimer = null;
             }, 500);
         });
 
         debugToggle.addEventListener('pointerup', () => {
             if (debugToggleTimer) {
+                // 短押し → ログ表示切り替え
                 clearTimeout(debugToggleTimer);
                 debugToggleTimer = null;
+
+                debugVisible = !debugVisible;
+                if (debugVisible) {
+                    debugLog.classList.add('visible');
+                } else {
+                    debugLog.classList.remove('visible');
+                }
             }
         });
 
@@ -1018,8 +1017,8 @@
                 return x - Math.floor(x);
             }
 
-            // フレーム生成関数（3つの異なる偏り方）
-            function createFrame(seed, mode) {
+            // フレーム生成関数（異なる偏り方とノイズ量）
+            function createFrame(seed, mode, noisePercentage = 0.3) {
                 const frameData = new Uint8ClampedArray(data);
                 const frameCopy = new ImageData(frameData, w, h);
                 const targetPixels = [...pixels];
@@ -1041,8 +1040,8 @@
                     targetPixels.sort(() => 0.5 - seededRandom(randomSeed++));
                 }
 
-                // 30%をランダム選択
-                const count = Math.floor(pixels.length * 0.3);
+                // 指定された割合でランダム選択
+                const count = Math.floor(pixels.length * noisePercentage);
                 const shuffled = targetPixels.slice(0, count);
 
                 // 8方向のオフセット
@@ -1078,11 +1077,12 @@
                 return new ImageData(frameData, w, h);
             }
 
-            // 3フレーム生成（3つの異なる偏り方）
+            // 4フレーム生成（異なる偏り方とノイズ量）
             return [
-                createFrame(0.3, 'bottom-bias'),  // 下側に偏るノイズ
-                createFrame(0.6, 'uniform'),      // 均等分布ノイズ
-                createFrame(0.9, 'top-bias')      // 上側に偏るノイズ
+                createFrame(0.2, 'uniform', 0.1),   // 少量ノイズ（10%）
+                createFrame(0.4, 'bottom-bias'),    // 下側に偏るノイズ（30%）
+                createFrame(0.6, 'uniform'),        // 均等分布ノイズ（30%）
+                createFrame(0.8, 'top-bias')        // 上側に偏るノイズ（30%）
             ];
         }
 
