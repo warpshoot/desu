@@ -322,6 +322,17 @@
             border-color: #fff;
         }
 
+        /* 確定モード時はオプション部分を非表示 */
+        #save-ui.in-confirmation-mode .option-group,
+        #save-ui.in-confirmation-mode label,
+        #save-ui.in-confirmation-mode #saveAllBtn {
+            display: none;
+        }
+
+        #save-ui.in-confirmation-mode h3 {
+            margin-bottom: 16px;
+        }
+
         .save-btn {
             padding: 10px 20px;
             margin: 0 4px;
@@ -592,8 +603,8 @@
 
         <div>
             <button class="save-btn primary" id="saveAllBtn">全体を保存</button>
-            <button class="save-btn primary" id="saveSelectionBtn" style="display:none;">選択範囲を保存</button>
-            <button class="save-btn" id="clearSelectionBtn" style="display:none;">選択クリア</button>
+            <button class="save-btn primary" id="confirmSelectionBtn" style="display:none;">確定</button>
+            <button class="save-btn" id="redoSelectionBtn" style="display:none;">やり直し</button>
             <button class="save-btn" id="cancelSaveBtn">閉じる</button>
         </div>
     </div>
@@ -1529,13 +1540,14 @@
             document.getElementById('save-overlay').style.display = 'none';
             document.getElementById('save-ui').style.display = 'none';
             document.getElementById('save-ui').classList.remove('hidden-during-selection');
+            document.getElementById('save-ui').classList.remove('in-confirmation-mode');
             document.getElementById('selection-canvas').style.display = 'none';
             document.getElementById('generating').style.display = 'none';
             document.getElementById('toolbar-left').style.display = 'flex';
             document.getElementById('toolbar-right').style.display = 'flex';
             document.getElementById('resetZoomBtn').style.display = '';  // インラインスタイルをクリア
-            document.getElementById('saveSelectionBtn').style.display = 'none';
-            document.getElementById('clearSelectionBtn').style.display = 'none';
+            document.getElementById('confirmSelectionBtn').style.display = 'none';
+            document.getElementById('redoSelectionBtn').style.display = 'none';
             applyTransform();
 
             const selCanvas = document.getElementById('selection-canvas');
@@ -1553,19 +1565,22 @@
             saveRegion(0, 0, canvas.width, canvas.height);
         });
 
-        document.getElementById('saveSelectionBtn').addEventListener('click', () => {
+        document.getElementById('confirmSelectionBtn').addEventListener('click', () => {
             if (confirmedSelection) {
                 saveRegion(confirmedSelection.x, confirmedSelection.y, confirmedSelection.w, confirmedSelection.h);
             }
         });
 
-        document.getElementById('clearSelectionBtn').addEventListener('click', () => {
+        document.getElementById('redoSelectionBtn').addEventListener('click', () => {
             // 選択範囲をクリア
             confirmedSelection = null;
 
+            // 確定モードを解除
+            document.getElementById('save-ui').classList.remove('in-confirmation-mode');
+
             // ボタンを非表示
-            document.getElementById('saveSelectionBtn').style.display = 'none';
-            document.getElementById('clearSelectionBtn').style.display = 'none';
+            document.getElementById('confirmSelectionBtn').style.display = 'none';
+            document.getElementById('redoSelectionBtn').style.display = 'none';
 
             // 選択矩形をクリア
             const selCanvas = document.getElementById('selection-canvas');
@@ -1607,13 +1622,17 @@
                 };
                 const ratio = aspectRatios[selectedAspect];
 
+                // 符号を保存
+                const signW = rectW < 0 ? -1 : 1;
+                const signH = rectH < 0 ? -1 : 1;
+
                 // 幅と高さの短い方を基準にして縦横比を維持
                 if (Math.abs(rectW) / Math.abs(rectH) > ratio) {
                     // 幅が長すぎる → 高さに合わせる
-                    rectW = rectH * ratio * (rectW < 0 ? -1 : 1);
+                    rectW = Math.abs(rectH) * ratio * signW;
                 } else {
                     // 高さが長すぎる → 幅に合わせる
-                    rectH = rectW / ratio * (rectH < 0 ? -1 : 1);
+                    rectH = Math.abs(rectW) / ratio * signH;
                 }
             }
 
@@ -1641,10 +1660,14 @@
                 };
                 const ratio = aspectRatios[selectedAspect];
 
+                // 符号を保存
+                const signW = rectW < 0 ? -1 : 1;
+                const signH = rectH < 0 ? -1 : 1;
+
                 if (Math.abs(rectW) / Math.abs(rectH) > ratio) {
-                    rectW = rectH * ratio * (rectW < 0 ? -1 : 1);
+                    rectW = Math.abs(rectH) * ratio * signW;
                 } else {
-                    rectH = rectW / ratio * (rectH < 0 ? -1 : 1);
+                    rectH = Math.abs(rectW) / ratio * signH;
                 }
             }
 
@@ -1666,12 +1689,13 @@
                     // 選択範囲を確定（保存はしない）
                     confirmedSelection = { x: cx, y: cy, w: cw, h: ch };
 
-                    // 選択範囲保存ボタンとクリアボタンを表示
-                    document.getElementById('saveSelectionBtn').style.display = 'inline-block';
-                    document.getElementById('clearSelectionBtn').style.display = 'inline-block';
-
-                    // モーダルを再表示
+                    // 確定モードに入る
+                    document.getElementById('save-ui').classList.add('in-confirmation-mode');
                     document.getElementById('save-ui').classList.remove('hidden-during-selection');
+
+                    // 確定・やり直しボタンを表示
+                    document.getElementById('confirmSelectionBtn').style.display = 'inline-block';
+                    document.getElementById('redoSelectionBtn').style.display = 'inline-block';
                 }
             }
 
