@@ -21,11 +21,7 @@
             height: 100%;
             overflow: hidden;
             touch-action: none;
-            background: #1a1a1a;
-        }
-
-        body.light {
-            background: #e0e0e0;
+            background: #4d4d4d;
         }
 
         #canvas {
@@ -560,13 +556,9 @@
         debugActivator.addEventListener('pointerdown', (e) => {
             e.preventDefault();
             debugActivatorTimer = setTimeout(() => {
-                debugButtonVisible = !debugButtonVisible;
-                if (debugButtonVisible) {
+                if (!debugButtonVisible) {
+                    debugButtonVisible = true;
                     debugToggle.classList.add('visible');
-                } else {
-                    debugToggle.classList.remove('visible');
-                    debugLog.classList.remove('visible');
-                    debugVisible = false;
                 }
                 debugActivatorTimer = null;
             }, 500);
@@ -586,24 +578,31 @@
             }
         });
 
-        // デバッグボタン長押し（500ms）でログ表示切り替え
+        // デバッグボタン：クリック（短押し）でログ表示切り替え、長押し（500ms）でボタン非表示
         debugToggle.addEventListener('pointerdown', (e) => {
             e.preventDefault();
             debugToggleTimer = setTimeout(() => {
-                debugVisible = !debugVisible;
-                if (debugVisible) {
-                    debugLog.classList.add('visible');
-                } else {
-                    debugLog.classList.remove('visible');
-                }
+                // 長押し → ボタン非表示
+                debugButtonVisible = false;
+                debugToggle.classList.remove('visible');
+                debugLog.classList.remove('visible');
+                debugVisible = false;
                 debugToggleTimer = null;
             }, 500);
         });
 
         debugToggle.addEventListener('pointerup', () => {
             if (debugToggleTimer) {
+                // 短押し → ログ表示切り替え
                 clearTimeout(debugToggleTimer);
                 debugToggleTimer = null;
+
+                debugVisible = !debugVisible;
+                if (debugVisible) {
+                    debugLog.classList.add('visible');
+                } else {
+                    debugLog.classList.remove('visible');
+                }
             }
         });
 
