@@ -1077,11 +1077,10 @@
                 return new ImageData(frameData, w, h);
             }
 
-            // 4フレーム生成（異なる偏り方とノイズ量）
+            // 3フレーム生成（異なる偏り方とノイズ量）
             return [
                 createFrame(0.2, 'uniform', 0.1),   // 少量ノイズ（10%）
-                createFrame(0.4, 'bottom-bias'),    // 下側に偏るノイズ（30%）
-                createFrame(0.6, 'uniform'),        // 均等分布ノイズ（30%）
+                createFrame(0.5, 'bottom-bias'),    // 下側に偏るノイズ（30%）
                 createFrame(0.8, 'top-bias')        // 上側に偏るノイズ（30%）
             ];
         }
