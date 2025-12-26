@@ -519,8 +519,8 @@
     <div id="debug-toggle">🐛</div>
     <div id="debug-log"></div>
 
-    <!-- gif.js CDN -->
-    <script src="https://unpkg.com/gif.js@0.2.0/dist/gif.js"></script>
+    <!-- gifenc CDN (worker不要、軽量、確実) -->
+    <script src="https://unpkg.com/gifenc@1.0.3/dist/gifenc.min.js"></script>
 
     <script>
         // ============================================
@@ -991,83 +991,56 @@
         }
 
         async function createGIF(frames, w, h, updateProgress) {
-            return new Promise((resolve, reject) => {
-                try {
-                    // gif.jsが読み込まれているか確認
-                    if (typeof GIF === 'undefined') {
-                        throw new Error('gif.js が読み込まれていません');
-                    }
-
-                    const gif = new GIF({
-                        workers: 1,
-                        quality: 10,
-                        width: w,
-                        height: h,
-                        workerScript: 'https://unpkg.com/gif.js@0.2.0/dist/gif.worker.js'
-                    });
-
-                    console.log('GIF設定:', { workers: 1, quality: 10, width: w, height: h });
-
-                    console.log('GIF生成開始:', { frames: frames.length, width: w, height: h });
-
-                    frames.forEach((frameData, index) => {
-                        const tempCanvas = document.createElement('canvas');
-                        tempCanvas.width = w;
-                        tempCanvas.height = h;
-                        const tempCtx = tempCanvas.getContext('2d');
-                        tempCtx.putImageData(frameData, 0, 0);
-
-                        gif.addFrame(tempCanvas, { delay: 50 });
-                        console.log(`フレーム ${index + 1}/${frames.length} 追加完了`);
-                    });
-
-                    // タイムアウト設定（30秒）
-                    const timeout = setTimeout(() => {
-                        console.error('GIF生成タイムアウト（30秒）');
-                        reject(new Error('GIF生成がタイムアウトしました'));
-                    }, 30000);
-
-                    // プログレスバー更新 (50% → 100%)
-                    gif.on('progress', (progress) => {
-                        const percentage = 50 + Math.round(progress * 50);
-                        console.log('GIF生成進行:', percentage + '%');
-                        if (updateProgress) {
-                            updateProgress(percentage, `GIF変換中... ${percentage}%`);
-                        }
-                    });
-
-                    gif.on('finished', blob => {
-                        clearTimeout(timeout);
-                        console.log('GIF生成完了:', blob.size, 'bytes');
-                        if (updateProgress) {
-                            updateProgress(100, '完了！');
-                        }
-                        resolve(blob);
-                    });
-
-                    gif.on('error', err => {
-                        clearTimeout(timeout);
-                        console.error('GIF生成エラー:', err);
-                        reject(err);
-                    });
-
-                    gif.on('start', () => {
-                        console.log('GIF render実際に開始');
-                    });
-
-                    gif.on('abort', () => {
-                        clearTimeout(timeout);
-                        console.error('GIF生成が中断されました');
-                        reject(new Error('GIF生成が中断されました'));
-                    });
-
-                    console.log('GIF render開始');
-                    gif.render();
-                } catch (err) {
-                    console.error('GIF生成初期化エラー:', err);
-                    reject(err);
+            try {
+                // gifencが読み込まれているか確認
+                if (typeof gifenc === 'undefined') {
+                    throw new Error('gifenc が読み込まれていません');
                 }
-            });
+
+                console.log('GIF生成開始 (gifenc):', { frames: frames.length, width: w, height: h });
+
+                updateProgress(50, 'GIFエンコード中...');
+                await new Promise(resolve => setTimeout(resolve, 50));
+
+                const gif = gifenc.GIFEncoder();
+
+                for (let i = 0; i < frames.length; i++) {
+                    const frameData = frames[i];
+                    console.log(`フレーム ${i + 1}/${frames.length} 処理中`);
+
+                    updateProgress(50 + Math.floor((i / frames.length) * 40), `フレーム ${i + 1}/${frames.length} エンコード中...`);
+                    await new Promise(resolve => setTimeout(resolve, 10));
+
+                    // ImageDataからRGBAデータを取得
+                    const rgba = frameData.data;
+
+                    // パレット生成（256色に減色）
+                    const palette = gifenc.quantize(rgba, 256);
+
+                    // パレットインデックスに変換
+                    const index = gifenc.applyPalette(rgba, palette);
+
+                    // フレーム追加（50ms delay）
+                    gif.writeFrame(index, w, h, { palette, delay: 50 });
+                }
+
+                updateProgress(95, '最終処理中...');
+                await new Promise(resolve => setTimeout(resolve, 50));
+
+                // GIFデータ生成
+                const buffer = gif.finish();
+
+                // Blobに変換
+                const blob = new Blob([buffer], { type: 'image/gif' });
+
+                console.log('GIF生成完了:', blob.size, 'bytes');
+                updateProgress(100, '完了！');
+
+                return blob;
+            } catch (err) {
+                console.error('GIF生成エラー:', err);
+                throw err;
+            }
         }
 
         // ============================================
