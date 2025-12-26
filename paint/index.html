@@ -322,6 +322,12 @@
             border-color: #fff;
         }
 
+        .option-btn.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+
         /* 確定モード時はオプション部分を非表示 */
         #save-ui.in-confirmation-mode .option-group,
         #save-ui.in-confirmation-mode label,
@@ -1576,6 +1582,34 @@
                 btn.classList.add('active');
                 selectedNoise = parseInt(btn.dataset.noise);
             });
+        });
+
+        // 背景透過チェックボックスの変更監視
+        document.getElementById('transparentBg').addEventListener('change', (e) => {
+            const isTransparent = e.target.checked;
+            const noiseButtons = document.querySelectorAll('[data-noise]');
+
+            if (isTransparent) {
+                // 背景透過ON: ノイズ1/2/3を無効化
+                noiseButtons.forEach(btn => {
+                    const noiseValue = parseInt(btn.dataset.noise);
+                    if (noiseValue > 0) {
+                        btn.classList.add('disabled');
+                    }
+                });
+
+                // 現在の選択がノイズ1/2/3の場合、自動的にノイズ0に切り替え
+                if (selectedNoise > 0) {
+                    selectedNoise = 0;
+                    noiseButtons.forEach(b => b.classList.remove('active'));
+                    document.querySelector('[data-noise="0"]').classList.add('active');
+                }
+            } else {
+                // 背景透過OFF: すべてのノイズボタンを有効化
+                noiseButtons.forEach(btn => {
+                    btn.classList.remove('disabled');
+                });
+            }
         });
 
         document.getElementById('saveBtn').addEventListener('click', () => {
