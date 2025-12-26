@@ -508,6 +508,134 @@
             height: 60px;
             z-index: 999;
         }
+
+        /* クレジットボタン */
+        #credit-btn {
+            position: fixed;
+            top: max(12px, env(safe-area-inset-top));
+            left: 12px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.2s;
+        }
+
+        #credit-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.8);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        body.dark #credit-btn {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        body.dark #credit-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* クレジットモーダル */
+        #credit-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #credit-modal.visible {
+            display: flex;
+        }
+
+        #credit-content {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 32px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        body.dark #credit-content {
+            background: rgba(30, 30, 30, 0.95);
+            color: #fff;
+        }
+
+        #credit-content h2 {
+            font-size: 24px;
+            margin-bottom: 16px;
+            font-weight: bold;
+        }
+
+        #credit-logo {
+            width: 120px;
+            height: 120px;
+            margin: 16px auto;
+            cursor: pointer;
+        }
+
+        #credit-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #credit-author {
+            font-size: 16px;
+            margin-top: 16px;
+        }
+
+        #credit-author a {
+            color: #333;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        body.dark #credit-author a {
+            color: #fff;
+        }
+
+        #credit-author a:hover {
+            text-decoration: underline;
+        }
+
+        #credit-close {
+            margin-top: 24px;
+            padding: 10px 24px;
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        body.dark #credit-close {
+            background: #fff;
+            color: #333;
+        }
+
+        #credit-close:active {
+            transform: scale(0.96);
+        }
     </style>
 </head>
 <body class="light">
@@ -629,6 +757,21 @@
     <div id="debug-activator"></div>
     <div id="debug-toggle">🐛</div>
     <div id="debug-log"></div>
+
+    <!-- クレジットボタンとモーダル -->
+    <div id="credit-btn">?</div>
+    <div id="credit-modal">
+        <div id="credit-content">
+            <h2>DESU™ PAINT</h2>
+            <a href="https://warpshoot.github.io/desu/" target="_blank" id="credit-logo">
+                <img src="https://warpshoot.github.io/desu/logo.gif" alt="DESU PAINT Logo">
+            </a>
+            <div id="credit-author">
+                by <a href="https://warpshoot.github.io/" target="_blank">wpy</a>
+            </div>
+            <button id="credit-close">閉じる</button>
+        </div>
+    </div>
 
     <!-- gif.js CDN -->
     <script src="https://unpkg.com/gif.js@0.2.0/dist/gif.js"></script>
@@ -1551,6 +1694,25 @@
             translateX = 0;
             translateY = 0;
             applyTransform();
+        });
+
+        // ============================================
+        // クレジット機能
+        // ============================================
+
+        document.getElementById('credit-btn').addEventListener('click', () => {
+            document.getElementById('credit-modal').classList.add('visible');
+        });
+
+        document.getElementById('credit-close').addEventListener('click', () => {
+            document.getElementById('credit-modal').classList.remove('visible');
+        });
+
+        // モーダル背景クリックで閉じる
+        document.getElementById('credit-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'credit-modal') {
+                document.getElementById('credit-modal').classList.remove('visible');
+            }
         });
 
         // ============================================
