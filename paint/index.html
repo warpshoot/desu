@@ -592,6 +592,8 @@
 
         <div>
             <button class="save-btn primary" id="saveAllBtn">全体を保存</button>
+            <button class="save-btn primary" id="saveSelectionBtn" style="display:none;">選択範囲を保存</button>
+            <button class="save-btn" id="clearSelectionBtn" style="display:none;">選択クリア</button>
             <button class="save-btn" id="cancelSaveBtn">閉じる</button>
         </div>
     </div>
@@ -770,6 +772,7 @@
         let isSaveMode = false;
         let selectionStart = null;
         let selectionEnd = null;
+        let confirmedSelection = null;  // 確定した選択範囲 {x, y, w, h}
         let selectedAspect = 'free';  // 'free', '1:1', '4:5', '16:9', '9:16'
         let selectedScale = 1;        // 1, 2, 3
         let selectedNoise = 1;        // 0, 1, 2, 3
@@ -1098,9 +1101,9 @@
 
             // ノイズレベルに応じたパーセンテージ設定
             const noiseLevelSettings = {
-                1: [0.1, 0.3, 0.3],   // 弱: 10%, 30%, 30%
-                2: [0.2, 0.5, 0.5],   // 中: 20%, 50%, 50%
-                3: [0.3, 0.7, 0.7]    // 強: 30%, 70%, 70%
+                1: [0.1, 0.3, 0.3],      // 弱: 10%, 30%, 30%
+                2: [0.3, 0.6, 0.6],      // 中: 30%, 60%, 60%
+                3: [0.7, 0.95, 1.0]      // 強: 70%, 95%, 100% (原型崩壊)
             };
             const noisePercentages = noiseLevelSettings[noiseLevel] || noiseLevelSettings[1];
 
@@ -1531,6 +1534,8 @@
             document.getElementById('toolbar-left').style.display = 'flex';
             document.getElementById('toolbar-right').style.display = 'flex';
             document.getElementById('resetZoomBtn').style.display = '';  // インラインスタイルをクリア
+            document.getElementById('saveSelectionBtn').style.display = 'none';
+            document.getElementById('clearSelectionBtn').style.display = 'none';
             applyTransform();
 
             const selCanvas = document.getElementById('selection-canvas');
@@ -1539,12 +1544,33 @@
 
             selectionStart = null;
             selectionEnd = null;
+            confirmedSelection = null;
         }
 
         document.getElementById('cancelSaveBtn').addEventListener('click', exitSaveMode);
 
         document.getElementById('saveAllBtn').addEventListener('click', () => {
             saveRegion(0, 0, canvas.width, canvas.height);
+        });
+
+        document.getElementById('saveSelectionBtn').addEventListener('click', () => {
+            if (confirmedSelection) {
+                saveRegion(confirmedSelection.x, confirmedSelection.y, confirmedSelection.w, confirmedSelection.h);
+            }
+        });
+
+        document.getElementById('clearSelectionBtn').addEventListener('click', () => {
+            // 選択範囲をクリア
+            confirmedSelection = null;
+
+            // ボタンを非表示
+            document.getElementById('saveSelectionBtn').style.display = 'none';
+            document.getElementById('clearSelectionBtn').style.display = 'none';
+
+            // 選択矩形をクリア
+            const selCanvas = document.getElementById('selection-canvas');
+            const selCtx = selCanvas.getContext('2d');
+            selCtx.clearRect(0, 0, selCanvas.width, selCanvas.height);
         });
 
         const overlay = document.getElementById('save-overlay');
@@ -1637,16 +1663,20 @@
                 const ch = Math.min(h, canvas.height - cy);
 
                 if (cw > 0 && ch > 0) {
-                    saveRegion(cx, cy, cw, ch);
+                    // 選択範囲を確定（保存はしない）
+                    confirmedSelection = { x: cx, y: cy, w: cw, h: ch };
+
+                    // 選択範囲保存ボタンとクリアボタンを表示
+                    document.getElementById('saveSelectionBtn').style.display = 'inline-block';
+                    document.getElementById('clearSelectionBtn').style.display = 'inline-block';
+
+                    // モーダルを再表示
+                    document.getElementById('save-ui').classList.remove('hidden-during-selection');
                 }
             }
 
             selectionStart = null;
             selectionEnd = null;
-
-            const selCanvas = document.getElementById('selection-canvas');
-            const selCtx = selCanvas.getContext('2d');
-            selCtx.clearRect(0, 0, selCanvas.width, selCanvas.height);
         });
 
         async function saveRegion(x, y, w, h) {
