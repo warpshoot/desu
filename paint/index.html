@@ -266,12 +266,60 @@
             justify-content: center;
             gap: 8px;
             font-size: 14px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
 
         #save-ui input[type="checkbox"] {
             width: 18px;
             height: 18px;
+        }
+
+        .option-group {
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .option-group-label {
+            font-size: 11px;
+            color: #999;
+            margin-bottom: 4px;
+        }
+
+        body.dark .option-group-label {
+            color: #666;
+        }
+
+        .option-buttons {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+        }
+
+        .option-btn {
+            padding: 4px 10px;
+            border: 1px solid #999;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        body.dark .option-btn {
+            background: rgba(60, 60, 60, 0.5);
+            border-color: #666;
+        }
+
+        .option-btn.active {
+            background: #333;
+            color: #fff;
+            border-color: #333;
+        }
+
+        body.dark .option-btn.active {
+            background: #fff;
+            color: #333;
+            border-color: #fff;
         }
 
         .save-btn {
@@ -506,14 +554,42 @@
     <div id="save-overlay"></div>
     <div id="save-ui">
         <h3>範囲をドラッグして選択</h3>
+
+        <div class="option-group">
+            <div class="option-group-label">縦横比</div>
+            <div class="option-buttons">
+                <button class="option-btn active" data-aspect="free">自由</button>
+                <button class="option-btn" data-aspect="1:1">1:1</button>
+                <button class="option-btn" data-aspect="4:5">4:5</button>
+                <button class="option-btn" data-aspect="16:9">16:9</button>
+                <button class="option-btn" data-aspect="9:16">9:16</button>
+            </div>
+        </div>
+
+        <div class="option-group">
+            <div class="option-group-label">倍率</div>
+            <div class="option-buttons">
+                <button class="option-btn active" data-scale="1">1x</button>
+                <button class="option-btn" data-scale="2">2x</button>
+                <button class="option-btn" data-scale="3">3x</button>
+            </div>
+        </div>
+
+        <div class="option-group">
+            <div class="option-group-label">ノイズ</div>
+            <div class="option-buttons">
+                <button class="option-btn" data-noise="0">0</button>
+                <button class="option-btn active" data-noise="1">1</button>
+                <button class="option-btn" data-noise="2">2</button>
+                <button class="option-btn" data-noise="3">3</button>
+            </div>
+        </div>
+
         <label>
             <input type="checkbox" id="transparentBg">
             背景透過
         </label>
-        <label>
-            <input type="checkbox" id="glitchMode" checked>
-            💀
-        </label>
+
         <div>
             <button class="save-btn primary" id="saveAllBtn">全体を保存</button>
             <button class="save-btn" id="cancelSaveBtn">閉じる</button>
@@ -694,6 +770,9 @@
         let isSaveMode = false;
         let selectionStart = null;
         let selectionEnd = null;
+        let selectedAspect = 'free';  // 'free', '1:1', '4:5', '16:9', '9:16'
+        let selectedScale = 1;        // 1, 2, 3
+        let selectedNoise = 1;        // 0, 1, 2, 3
 
         // ============================================
         // 初期化
@@ -985,7 +1064,7 @@
         // GIF生成（ピクセル振動）
         // ============================================
 
-        function generateGlitchFrames(imgData, transparent) {
+        function generateGlitchFrames(imgData, transparent, noiseLevel = 1) {
             const w = imgData.width;
             const h = imgData.height;
             const data = imgData.data;
@@ -1016,6 +1095,14 @@
                 let x = Math.sin(seed++) * 10000;
                 return x - Math.floor(x);
             }
+
+            // ノイズレベルに応じたパーセンテージ設定
+            const noiseLevelSettings = {
+                1: [0.1, 0.3, 0.3],   // 弱: 10%, 30%, 30%
+                2: [0.2, 0.5, 0.5],   // 中: 20%, 50%, 50%
+                3: [0.3, 0.7, 0.7]    // 強: 30%, 70%, 70%
+            };
+            const noisePercentages = noiseLevelSettings[noiseLevel] || noiseLevelSettings[1];
 
             // フレーム生成関数（異なる偏り方とノイズ量）
             function createFrame(seed, mode, noisePercentage = 0.3) {
@@ -1079,9 +1166,9 @@
 
             // 3フレーム生成（異なる偏り方とノイズ量）
             return [
-                createFrame(0.2, 'uniform', 0.1),   // 少量ノイズ（10%）
-                createFrame(0.5, 'bottom-bias'),    // 下側に偏るノイズ（30%）
-                createFrame(0.8, 'top-bias')        // 上側に偏るノイズ（30%）
+                createFrame(0.2, 'uniform', noisePercentages[0]),      // 少量ノイズ
+                createFrame(0.5, 'bottom-bias', noisePercentages[1]),  // 下側に偏るノイズ
+                createFrame(0.8, 'top-bias', noisePercentages[2])      // 上側に偏るノイズ
             ];
         }
 
@@ -1397,6 +1484,33 @@
         // 保存機能
         // ============================================
 
+        // 縦横比選択
+        document.querySelectorAll('[data-aspect]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-aspect]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedAspect = btn.dataset.aspect;
+            });
+        });
+
+        // 倍率選択
+        document.querySelectorAll('[data-scale]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-scale]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedScale = parseInt(btn.dataset.scale);
+            });
+        });
+
+        // ノイズ強度選択
+        document.querySelectorAll('[data-noise]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-noise]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedNoise = parseInt(btn.dataset.noise);
+            });
+        });
+
         document.getElementById('saveBtn').addEventListener('click', () => {
             isSaveMode = true;
             document.getElementById('save-overlay').style.display = 'block';
@@ -1452,24 +1566,66 @@
             const selCtx = selCanvas.getContext('2d');
             selCtx.clearRect(0, 0, selCanvas.width, selCanvas.height);
 
+            // 縦横比に基づいて矩形を調整
+            let rectX = selectionStart.x;
+            let rectY = selectionStart.y;
+            let rectW = selectionEnd.x - selectionStart.x;
+            let rectH = selectionEnd.y - selectionStart.y;
+
+            if (selectedAspect !== 'free') {
+                const aspectRatios = {
+                    '1:1': 1 / 1,
+                    '4:5': 4 / 5,
+                    '16:9': 16 / 9,
+                    '9:16': 9 / 16
+                };
+                const ratio = aspectRatios[selectedAspect];
+
+                // 幅と高さの短い方を基準にして縦横比を維持
+                if (Math.abs(rectW) / Math.abs(rectH) > ratio) {
+                    // 幅が長すぎる → 高さに合わせる
+                    rectW = rectH * ratio * (rectW < 0 ? -1 : 1);
+                } else {
+                    // 高さが長すぎる → 幅に合わせる
+                    rectH = rectW / ratio * (rectH < 0 ? -1 : 1);
+                }
+            }
+
             selCtx.strokeStyle = isDarkMode ? '#fff' : '#000';
             selCtx.lineWidth = 2;
             selCtx.setLineDash([8, 8]);
-            selCtx.strokeRect(
-                selectionStart.x,
-                selectionStart.y,
-                selectionEnd.x - selectionStart.x,
-                selectionEnd.y - selectionStart.y
-            );
+            selCtx.strokeRect(rectX, rectY, rectW, rectH);
         });
 
         overlay.addEventListener('pointerup', (e) => {
             if (!isSaveMode || !selectionStart) return;
 
-            const x1 = Math.floor((Math.min(selectionStart.x, selectionEnd.x) - translateX) / scale);
-            const y1 = Math.floor((Math.min(selectionStart.y, selectionEnd.y) - translateY) / scale);
-            const x2 = Math.floor((Math.max(selectionStart.x, selectionEnd.x) - translateX) / scale);
-            const y2 = Math.floor((Math.max(selectionStart.y, selectionEnd.y) - translateY) / scale);
+            // 縦横比に基づいて矩形を調整（pointermoveと同じロジック）
+            let rectX = selectionStart.x;
+            let rectY = selectionStart.y;
+            let rectW = selectionEnd.x - selectionStart.x;
+            let rectH = selectionEnd.y - selectionStart.y;
+
+            if (selectedAspect !== 'free') {
+                const aspectRatios = {
+                    '1:1': 1 / 1,
+                    '4:5': 4 / 5,
+                    '16:9': 16 / 9,
+                    '9:16': 9 / 16
+                };
+                const ratio = aspectRatios[selectedAspect];
+
+                if (Math.abs(rectW) / Math.abs(rectH) > ratio) {
+                    rectW = rectH * ratio * (rectW < 0 ? -1 : 1);
+                } else {
+                    rectH = rectW / ratio * (rectH < 0 ? -1 : 1);
+                }
+            }
+
+            const x1 = Math.floor((Math.min(rectX, rectX + rectW) - translateX) / scale);
+            const y1 = Math.floor((Math.min(rectY, rectY + rectH) - translateY) / scale);
+            const x2 = Math.floor((Math.max(rectX, rectX + rectW) - translateX) / scale);
+            const y2 = Math.floor((Math.max(rectY, rectY + rectH) - translateY) / scale);
 
             const w = x2 - x1;
             const h = y2 - y1;
@@ -1494,8 +1650,9 @@
         });
 
         async function saveRegion(x, y, w, h) {
-            const glitchMode = document.getElementById('glitchMode').checked;
             const transparent = document.getElementById('transparentBg').checked;
+            const noiseLevel = selectedNoise;  // 0, 1, 2, 3
+            const outputScale = selectedScale;  // 1, 2, 3
 
             const flash = document.getElementById('flash');
             flash.style.opacity = '0.7';
@@ -1504,7 +1661,7 @@
             let blob, fileName;
 
             try {
-                if (glitchMode) {
+                if (noiseLevel > 0) {
                     // GIF生成
                     document.getElementById('generating').style.display = 'block';
 
@@ -1546,21 +1703,48 @@
                     updateProgress(30, 'グリッチフレーム生成中...');
                     await new Promise(resolve => setTimeout(resolve, 50));
 
-                    const frames = generateGlitchFrames(imgData, transparent);
+                    const frames = generateGlitchFrames(imgData, transparent, noiseLevel);
                     console.log('グリッチフレーム生成完了:', frames.length, 'フレーム');
 
                     updateProgress(50, 'GIF変換中...');
-                    blob = await createGIF(frames, w, h, updateProgress);
+
+                    // 倍率を適用した出力サイズ
+                    const outputW = w * outputScale;
+                    const outputH = h * outputScale;
+
+                    // フレームを拡大
+                    const scaledFrames = frames.map(frameData => {
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = w;
+                        tempCanvas.height = h;
+                        const tempCtx = tempCanvas.getContext('2d');
+                        tempCtx.putImageData(frameData, 0, 0);
+
+                        const scaledCanvas = document.createElement('canvas');
+                        scaledCanvas.width = outputW;
+                        scaledCanvas.height = outputH;
+                        const scaledCtx = scaledCanvas.getContext('2d');
+                        scaledCtx.imageSmoothingEnabled = false;  // ピクセル感を維持
+                        scaledCtx.drawImage(tempCanvas, 0, 0, outputW, outputH);
+
+                        return scaledCtx.getImageData(0, 0, outputW, outputH);
+                    });
+
+                    blob = await createGIF(scaledFrames, outputW, outputH, updateProgress);
                     fileName = `desu_${Date.now()}.gif`;
                     console.log('GIF生成完了');
 
                     document.getElementById('generating').style.display = 'none';
                 } else {
-                    // PNG生成（従来通り）
+                    // PNG生成（ノイズ0の静止画）
+                    const outputW = w * outputScale;
+                    const outputH = h * outputScale;
+
                     const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = w;
-                    tempCanvas.height = h;
+                    tempCanvas.width = outputW;
+                    tempCanvas.height = outputH;
                     const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.imageSmoothingEnabled = false;  // ピクセル感を維持
 
                     if (transparent) {
                         const imgData = ctx.getImageData(x, y, w, h);
@@ -1574,9 +1758,15 @@
                                 data[i + 3] = 0;
                             }
                         }
-                        tempCtx.putImageData(imgData, 0, 0);
+
+                        // 拡大して描画
+                        const sourceCanvas = document.createElement('canvas');
+                        sourceCanvas.width = w;
+                        sourceCanvas.height = h;
+                        sourceCanvas.getContext('2d').putImageData(imgData, 0, 0);
+                        tempCtx.drawImage(sourceCanvas, 0, 0, outputW, outputH);
                     } else {
-                        tempCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h);
+                        tempCtx.drawImage(canvas, x, y, w, h, 0, 0, outputW, outputH);
                     }
 
                     blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
