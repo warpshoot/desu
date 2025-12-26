@@ -553,25 +553,64 @@
         const debugActivator = document.getElementById('debug-activator');
         let debugVisible = false;
         let debugButtonVisible = false;
+        let debugActivatorTimer = null;
+        let debugToggleTimer = null;
 
-        // 左下タップでデバッグボタン表示
-        debugActivator.addEventListener('click', () => {
-            debugButtonVisible = !debugButtonVisible;
-            if (debugButtonVisible) {
-                debugToggle.classList.add('visible');
-            } else {
-                debugToggle.classList.remove('visible');
-                debugLog.classList.remove('visible');
-                debugVisible = false;
+        // 左下長押し（500ms）でデバッグボタン表示
+        debugActivator.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            debugActivatorTimer = setTimeout(() => {
+                debugButtonVisible = !debugButtonVisible;
+                if (debugButtonVisible) {
+                    debugToggle.classList.add('visible');
+                } else {
+                    debugToggle.classList.remove('visible');
+                    debugLog.classList.remove('visible');
+                    debugVisible = false;
+                }
+                debugActivatorTimer = null;
+            }, 500);
+        });
+
+        debugActivator.addEventListener('pointerup', () => {
+            if (debugActivatorTimer) {
+                clearTimeout(debugActivatorTimer);
+                debugActivatorTimer = null;
             }
         });
 
-        debugToggle.addEventListener('click', () => {
-            debugVisible = !debugVisible;
-            if (debugVisible) {
-                debugLog.classList.add('visible');
-            } else {
-                debugLog.classList.remove('visible');
+        debugActivator.addEventListener('pointercancel', () => {
+            if (debugActivatorTimer) {
+                clearTimeout(debugActivatorTimer);
+                debugActivatorTimer = null;
+            }
+        });
+
+        // デバッグボタン長押し（500ms）でログ表示切り替え
+        debugToggle.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            debugToggleTimer = setTimeout(() => {
+                debugVisible = !debugVisible;
+                if (debugVisible) {
+                    debugLog.classList.add('visible');
+                } else {
+                    debugLog.classList.remove('visible');
+                }
+                debugToggleTimer = null;
+            }, 500);
+        });
+
+        debugToggle.addEventListener('pointerup', () => {
+            if (debugToggleTimer) {
+                clearTimeout(debugToggleTimer);
+                debugToggleTimer = null;
+            }
+        });
+
+        debugToggle.addEventListener('pointercancel', () => {
+            if (debugToggleTimer) {
+                clearTimeout(debugToggleTimer);
+                debugToggleTimer = null;
             }
         });
 
@@ -979,18 +1018,27 @@
                 return x - Math.floor(x);
             }
 
-            // フレーム生成関数
-            function createFrame(seed) {
+            // フレーム生成関数（3つの異なる偏り方）
+            function createFrame(seed, mode) {
                 const frameData = new Uint8ClampedArray(data);
                 const frameCopy = new ImageData(frameData, w, h);
                 const targetPixels = [...pixels];
 
                 let randomSeed = seed * 1000;
 
-                // Fisher-Yatesシャッフル（シード使用）
-                for (let i = targetPixels.length - 1; i > 0; i--) {
-                    const j = Math.floor(seededRandom(randomSeed++) * (i + 1));
-                    [targetPixels[i], targetPixels[j]] = [targetPixels[j], targetPixels[i]];
+                // モードによって異なる分布方法を使用
+                if (mode === 'bottom-bias') {
+                    // 下側に偏るノイズ（元のsort方式）
+                    targetPixels.sort(() => seededRandom(randomSeed++) - 0.5);
+                } else if (mode === 'uniform') {
+                    // 均等分布（Fisher-Yatesシャッフル）
+                    for (let i = targetPixels.length - 1; i > 0; i--) {
+                        const j = Math.floor(seededRandom(randomSeed++) * (i + 1));
+                        [targetPixels[i], targetPixels[j]] = [targetPixels[j], targetPixels[i]];
+                    }
+                } else if (mode === 'top-bias') {
+                    // 上側に偏るノイズ（逆順sort）
+                    targetPixels.sort(() => 0.5 - seededRandom(randomSeed++));
                 }
 
                 // 30%をランダム選択
@@ -1030,11 +1078,11 @@
                 return new ImageData(frameData, w, h);
             }
 
-            // 3フレーム生成（ノイズ1、ノイズ2、ノイズ3）
+            // 3フレーム生成（3つの異なる偏り方）
             return [
-                createFrame(0.3),
-                createFrame(0.6),
-                createFrame(0.9)
+                createFrame(0.3, 'bottom-bias'),  // 下側に偏るノイズ
+                createFrame(0.6, 'uniform'),      // 均等分布ノイズ
+                createFrame(0.9, 'top-bias')      // 上側に偏るノイズ
             ];
         }
 
@@ -1369,6 +1417,7 @@
             document.getElementById('generating').style.display = 'none';
             document.getElementById('toolbar-left').style.display = 'flex';
             document.getElementById('toolbar-right').style.display = 'flex';
+            document.getElementById('resetZoomBtn').style.display = '';  // インラインスタイルをクリア
             applyTransform();
 
             const selCanvas = document.getElementById('selection-canvas');
