@@ -29,7 +29,7 @@ body {
 
 .arowana {
     position: absolute;
-    width: 200px;
+    width: 600px;
     height: auto;
     opacity: 0.15;
     animation: swim 60s infinite linear;
@@ -37,7 +37,7 @@ body {
 
 @keyframes swim {
     0% {
-        left: -250px;
+        left: -700px;
         top: 20%;
     }
     25% {
@@ -58,8 +58,15 @@ body {
 
 @media (max-width: 768px) {
     .arowana {
-        width: 120px;
+        width: 400px;
         opacity: 0.1;
+    }
+
+    @keyframes swim {
+        0% {
+            left: -500px;
+            top: 20%;
+        }
     }
 }
 
