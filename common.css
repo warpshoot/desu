@@ -135,16 +135,20 @@ header {
     z-index: 100;
 }
 
-.logo-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+.logo-link {
+    display: inline-block;
+    transition: opacity 0.3s ease;
+}
+
+.logo-link:hover {
+    opacity: 0.7;
 }
 
 .site-logo {
     max-width: 150px;
     height: auto;
     filter: grayscale(100%);
+    display: block;
 }
 
 /* Fixed Footer */
