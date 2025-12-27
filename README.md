@@ -73,4 +73,4 @@ const images = [
 ];
 ```
 
-## © 2025 warpshoot
+## © 2025 [wpy](https://warpshoot.github.io/)

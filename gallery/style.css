@@ -144,6 +144,16 @@ footer {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+footer a {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+footer a:hover {
+    color: #fff;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .page-title {
