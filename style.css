@@ -37,7 +37,7 @@ body {
 
 @keyframes swim {
     0% {
-        right: -900px;
+        right: -100px;
         top: 20%;
     }
     25% {
