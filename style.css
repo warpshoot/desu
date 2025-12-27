@@ -305,6 +305,16 @@ footer {
     z-index: 1;
 }
 
+footer a {
+    color: rgba(0, 0, 0, 0.7);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+footer a:hover {
+    color: #000;
+}
+
 /* Lightbox */
 .lightbox {
     display: none;
