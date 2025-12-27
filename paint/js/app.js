@@ -925,10 +925,6 @@ document.getElementById('credit-btn').addEventListener('click', () => {
     document.getElementById('credit-modal').classList.add('visible');
 });
 
-document.getElementById('credit-close').addEventListener('click', () => {
-    document.getElementById('credit-modal').classList.remove('visible');
-});
-
 // モーダル背景クリックで閉じる
 document.getElementById('credit-modal').addEventListener('click', (e) => {
     if (e.target.id === 'credit-modal') {
