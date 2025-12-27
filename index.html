@@ -38,9 +38,9 @@
     <main class="container">
         <!-- Random Illustration Display -->
         <section class="random-illustration-section">
-            <div class="random-illustration-container" id="randomIllustrationContainer">
+            <a href="./gallery/" class="random-illustration-container">
                 <img id="randomIllustration" src="" alt="DESU Illustration" class="random-illustration">
-            </div>
+            </a>
         </section>
 
         <!-- Episodes Section -->
@@ -73,17 +73,8 @@
 
         // Display random illustration
         const randomIllustration = document.getElementById('randomIllustration');
-        const randomIllustrationContainer = document.getElementById('randomIllustrationContainer');
         const randomIndex = Math.floor(Math.random() * galleryImages.length);
         randomIllustration.src = galleryImages[randomIndex];
-
-        // Make random illustration clickable for lightbox
-        randomIllustrationContainer.addEventListener('click', () => {
-            const lightbox = document.getElementById('lightbox');
-            const lightboxImage = document.getElementById('lightbox-image');
-            lightboxImage.src = galleryImages[randomIndex];
-            lightbox.classList.add('is-active');
-        });
 
         // Hamburger menu
         const hamburger = document.getElementById('hamburger');
