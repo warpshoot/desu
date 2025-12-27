@@ -608,23 +608,3 @@ body.dark #credit-author a {
 #credit-author a:hover {
     text-decoration: underline;
 }
-
-#credit-close {
-    margin-top: 24px;
-    padding: 10px 24px;
-    background: #333;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-body.dark #credit-close {
-    background: #fff;
-    color: #333;
-}
-
-#credit-close:active {
-    transform: scale(0.96);
-}
