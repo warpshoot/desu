@@ -33,7 +33,6 @@ body {
     height: auto;
     opacity: 0.15;
     animation: swim 60s infinite linear;
-    transform: scaleX(-1); /* 画像を左右反転 */
 }
 
 @keyframes swim {
