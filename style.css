@@ -29,11 +29,17 @@ body {
 }
 
 .random-illustration-container {
+    display: block;
     width: 100%;
     max-width: 800px;
     height: 600px;
     overflow: hidden;
-    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.3s ease;
+}
+
+.random-illustration-container:hover {
+    opacity: 0.8;
 }
 
 .random-illustration {
