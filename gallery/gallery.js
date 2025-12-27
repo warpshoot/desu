@@ -1,10 +1,9 @@
 // ギャラリー画像リスト（後で画像を追加したらここに追記）
 const images = [
-    { src: '../ep0/images/desu00.png', alt: 'DESU Illustration 1' },
-    { src: '../ep0/images/desu.jpg', alt: 'DESU Illustration 2' },
-    { src: '../ep0/images/sakana.jpg', alt: 'DESU Illustration 3' },
-    { src: '../ep0/images/IMG_1085.jpeg', alt: 'DESU Illustration 4' },
-    { src: '../ep0/images/IMG_1088.jpeg', alt: 'DESU Illustration 5' },
+    { src: '../images/desu000.png', alt: 'DESU Illustration 1' },
+    { src: '../images/desu001.png', alt: 'DESU Illustration 2' },
+    { src: '../images/desu002.png', alt: 'DESU Illustration 3' },
+    { src: '../images/desu003.gif', alt: 'DESU Illustration 4' },
 ];
 
 // DOM要素

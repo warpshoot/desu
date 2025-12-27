@@ -29,7 +29,7 @@ body {
     position: relative;
     aspect-ratio: 1;
     overflow: hidden;
-    border-radius: 8px;
+    border-radius: 0;
     cursor: pointer;
     background: rgba(0, 0, 0, 0.02);
     border: 1px solid rgba(0, 0, 0, 0.1);
