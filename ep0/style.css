@@ -120,8 +120,10 @@ body {
 
 /* 進行可能マーク */
 .continue-icon {
-    margin-top: 8px;
-    text-align: right;
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
     font-size: 24px;
     color: #ffffff;
     opacity: 0;
@@ -251,7 +253,7 @@ body {
 
     .continue-icon {
         font-size: 20px;
-        margin-top: 5px;
+        right: 15px;
     }
 
     .title-text {
