@@ -91,7 +91,7 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 /* 名前表示 */
@@ -121,8 +121,9 @@ body {
 
 /* 進行可能マーク */
 .continue-icon {
-    margin-top: 5px;
-    text-align: right;
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
     font-size: 24px;
     color: #ffffff;
     opacity: 0;
@@ -252,7 +253,8 @@ body {
 
     .continue-icon {
         font-size: 20px;
-        margin-top: 3px;
+        right: 15px;
+        bottom: max(20px, env(safe-area-inset-bottom, 20px));
     }
 
     .title-text {
