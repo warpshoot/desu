@@ -121,9 +121,8 @@ body {
 
 /* 進行可能マーク */
 .continue-icon {
-    position: absolute;
-    bottom: 15px;
-    right: 30px;
+    margin-top: 5px;
+    text-align: right;
     font-size: 24px;
     color: #ffffff;
     opacity: 0;
@@ -253,8 +252,7 @@ body {
 
     .continue-icon {
         font-size: 20px;
-        bottom: calc(15px + env(safe-area-inset-bottom, 5px));
-        right: 20px;
+        margin-top: 3px;
     }
 
     .title-text {
