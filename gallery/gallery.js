@@ -48,7 +48,7 @@ function closeLightbox() {
 // イベントリスナー
 lightboxClose.addEventListener('click', closeLightbox);
 lightbox.addEventListener('click', (e) => {
-    if (e.target === lightbox) {
+    if (e.target === lightbox || e.target === lightboxImage) {
         closeLightbox();
     }
 });
