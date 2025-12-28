@@ -116,7 +116,6 @@ body {
     font-size: 18px;
     line-height: 1.8;
     color: #ffffff;
-    min-height: 50px;
 }
 
 /* 進行可能マーク */
@@ -126,12 +125,12 @@ body {
     font-size: 24px;
     color: #ffffff;
     opacity: 0;
-    animation: blink 1s ease-in-out infinite;
     pointer-events: none;
 }
 
 .continue-icon.show {
     opacity: 1;
+    animation: blink 1s ease-in-out infinite;
 }
 
 @keyframes blink {
