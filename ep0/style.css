@@ -233,7 +233,7 @@ body {
 /* タブレット（iPad横画面など） */
 @media (max-width: 1024px) {
     .text-window {
-        height: 30%;
+        height: 40%;
     }
 }
 
