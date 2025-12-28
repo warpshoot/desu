@@ -254,7 +254,7 @@ body {
     .continue-icon {
         font-size: 20px;
         right: 15px;
-        bottom: max(20px, env(safe-area-inset-bottom, 20px));
+        bottom: 60px;
     }
 
     .title-text {
