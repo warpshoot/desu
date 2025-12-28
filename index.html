@@ -39,7 +39,7 @@
         <!-- Random Illustration Display -->
         <section class="random-illustration-section">
             <a href="./gallery/" class="random-illustration-container">
-                <img id="randomIllustration" src="" alt="DESU Illustration" class="random-illustration">
+                <img src="./images/desu_main.png" alt="DESU Illustration" class="random-illustration">
             </a>
         </section>
 
@@ -63,19 +63,6 @@
     </footer>
 
     <script>
-        // Gallery images (same as gallery.js)
-        const galleryImages = [
-            './images/desu000.png',
-            './images/desu001.png',
-            './images/desu002.png',
-            './images/desu003.gif'
-        ];
-
-        // Display random illustration
-        const randomIllustration = document.getElementById('randomIllustration');
-        const randomIndex = Math.floor(Math.random() * galleryImages.length);
-        randomIllustration.src = galleryImages[randomIndex];
-
         // Hamburger menu
         const hamburger = document.getElementById('hamburger');
         const navMenu = document.getElementById('navMenu');
