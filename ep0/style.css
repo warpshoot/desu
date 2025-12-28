@@ -229,9 +229,18 @@ body {
 }
 
 /* レスポンシブ対応 */
+
+/* タブレット（iPad横画面など） */
+@media (max-width: 1024px) {
+    .text-window {
+        height: 30%;
+    }
+}
+
+/* モバイル */
 @media (max-width: 768px) {
     .text-window {
-        height: 35%; /* 25%→35%に増やす */
+        height: 35%;
         padding: 15px 20px;
         padding-bottom: max(15px, env(safe-area-inset-bottom, 15px));
         gap: 15px;
