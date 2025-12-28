@@ -708,7 +708,7 @@ canvas.addEventListener('pointerdown', (e) => {
         return;
     }
 
-    const canDraw = e.pointerType === 'pen' || (e.pointerType === 'touch' && !pencilDetected);
+    const canDraw = e.pointerType === 'pen' || e.pointerType === 'mouse' || (e.pointerType === 'touch' && !pencilDetected);
 
     if (activePointers.size === 1 && canDraw) {
         const p = getCanvasPoint(e.clientX, e.clientY);
