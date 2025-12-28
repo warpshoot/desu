@@ -126,12 +126,12 @@ body {
     font-size: 24px;
     color: #ffffff;
     opacity: 0;
-    animation: blink 1s ease-in-out infinite;
     pointer-events: none;
 }
 
 .continue-icon.show {
     opacity: 1;
+    animation: blink 1s ease-in-out infinite;
 }
 
 @keyframes blink {
