@@ -37,16 +37,26 @@
 
     <main class="container">
         <section class="characters-section">
+            <!-- Character Icon Navigation -->
+            <div class="character-icons">
+                <button class="character-icon active" data-character="desu">
+                    <img src="desu_icon.jpg" alt="デス">
+                </button>
+                <button class="character-icon" data-character="sakana">
+                    <img src="sakana_icon.jpg" alt="サカナ">
+                </button>
+            </div>
+
             <div class="characters-grid">
                 <!-- デス -->
-                <div class="character-card">
+                <div class="character-card" data-character="desu">
                     <img src="desu.png" alt="デス" class="character-image">
                     <h2 class="character-name">デス</h2>
                     <p class="character-description">魂回収のバイトに励む若者</p>
                 </div>
 
                 <!-- サカナ -->
-                <div class="character-card">
+                <div class="character-card" data-character="sakana" style="display: none;">
                     <img src="sakana.png" alt="サカナ" class="character-image">
                     <h2 class="character-name">サカナ</h2>
                     <p class="character-description">デスが連れてる魚</p>
@@ -75,6 +85,29 @@
                 hamburger.classList.remove('active');
                 navMenu.classList.remove('active');
             }
+        });
+
+        // Character tab switching
+        const characterIcons = document.querySelectorAll('.character-icon');
+        const characterCards = document.querySelectorAll('.character-card');
+
+        characterIcons.forEach(icon => {
+            icon.addEventListener('click', () => {
+                const character = icon.dataset.character;
+
+                // Update icon active state
+                characterIcons.forEach(i => i.classList.remove('active'));
+                icon.classList.add('active');
+
+                // Show selected character card
+                characterCards.forEach(card => {
+                    if (card.dataset.character === character) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
         });
     </script>
 </body>
