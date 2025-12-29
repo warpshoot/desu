@@ -66,7 +66,7 @@ body {
     bottom: env(safe-area-inset-bottom, 0);
     left: 0;
     width: 100%;
-    height: 20%;
+    height: 30%;
     background-color: rgba(0, 0, 0, 0.7);
     z-index: 5;
     padding: 20px 40px;
@@ -91,7 +91,7 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 /* 名前表示 */
@@ -116,23 +116,23 @@ body {
     font-size: 18px;
     line-height: 1.8;
     color: #ffffff;
-    min-height: 50px;
 }
 
 /* 進行可能マーク */
 .continue-icon {
     position: absolute;
-    bottom: 15px;
-    right: 30px;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
     font-size: 24px;
     color: #ffffff;
     opacity: 0;
-    animation: blink 1s ease-in-out infinite;
     pointer-events: none;
 }
 
 .continue-icon.show {
     opacity: 1;
+    animation: blink 1s ease-in-out infinite;
 }
 
 @keyframes blink {
@@ -229,9 +229,11 @@ body {
 }
 
 /* レスポンシブ対応 */
+
+/* モバイル */
 @media (max-width: 768px) {
     .text-window {
-        height: 35%; /* 25%→35%に増やす */
+        height: 35%;
         padding: 15px 20px;
         padding-bottom: max(15px, env(safe-area-inset-bottom, 15px));
         gap: 15px;
@@ -253,8 +255,7 @@ body {
 
     .continue-icon {
         font-size: 20px;
-        bottom: calc(15px + env(safe-area-inset-bottom, 5px));
-        right: 20px;
+        right: 15px;
     }
 
     .title-text {

@@ -708,7 +708,7 @@ canvas.addEventListener('pointerdown', (e) => {
         return;
     }
 
-    const canDraw = e.pointerType === 'pen' || (e.pointerType === 'touch' && !pencilDetected);
+    const canDraw = e.pointerType === 'pen' || e.pointerType === 'mouse' || (e.pointerType === 'touch' && !pencilDetected);
 
     if (activePointers.size === 1 && canDraw) {
         const p = getCanvasPoint(e.clientX, e.clientY);
@@ -923,10 +923,6 @@ document.getElementById('resetZoomBtn').addEventListener('click', () => {
 
 document.getElementById('credit-btn').addEventListener('click', () => {
     document.getElementById('credit-modal').classList.add('visible');
-});
-
-document.getElementById('credit-close').addEventListener('click', () => {
-    document.getElementById('credit-modal').classList.remove('visible');
 });
 
 // モーダル背景クリックで閉じる

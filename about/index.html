@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DESU™︎</title>
-    <link rel="stylesheet" href="common.css">
+    <title>About - DESU™︎</title>
+    <link rel="stylesheet" href="../common.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Arowana Background Animation -->
     <div class="arowana-container">
-        <img src="./images/sakana.gif" alt="" class="arowana">
+        <img src="../images/sakana.gif" alt="" class="arowana">
     </div>
 
     <!-- Hamburger Menu -->
@@ -23,32 +23,34 @@
     <!-- Navigation Menu -->
     <nav class="nav-menu" id="navMenu">
         <ul class="nav-list">
-            <li><a href="./gallery/">Gallery</a></li>
-            <li><a href="./paint/">DESU PAIN+</a></li>
-            <li><a href="./about/">About</a></li>
+            <li><a href="../gallery/">Gallery</a></li>
+            <li><a href="../paint/">DESU PAIN+</a></li>
+            <li><a href="../about/">About</a></li>
         </ul>
     </nav>
 
     <header>
-        <a href="./" class="logo-link">
-            <img src="./desu_logo.png" alt="DESU™" class="site-logo">
+        <a href="../" class="logo-link">
+            <img src="../desu_logo.png" alt="DESU™" class="site-logo">
         </a>
     </header>
 
     <main class="container">
-        <!-- Main Illustration -->
-        <section class="main-illustration-section">
-            <a href="./gallery/" class="main-illustration-link">
-                <img src="./images/desu_main.png" alt="DESU Illustration" class="main-illustration">
-            </a>
-        </section>
+        <section class="characters-section">
+            <div class="characters-grid">
+                <!-- デス -->
+                <div class="character-card">
+                    <img src="desu.png" alt="デス" class="character-image">
+                    <h2 class="character-name">デス</h2>
+                    <p class="character-description">魂回収のバイトに励む若者</p>
+                </div>
 
-        <!-- Episodes Section -->
-        <section class="section">
-            <div class="episodes-grid">
-                <a href="./ep0/" class="episode-card">
-                    <div class="episode-number">Episode 0</div>
-                </a>
+                <!-- サカナ -->
+                <div class="character-card">
+                    <img src="sakana.png" alt="サカナ" class="character-image">
+                    <h2 class="character-name">サカナ</h2>
+                    <p class="character-description">デスが連れてる魚</p>
+                </div>
             </div>
         </section>
     </main>
