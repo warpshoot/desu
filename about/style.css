@@ -16,7 +16,7 @@ body {
 
 /* Characters Section */
 .characters-section {
-    padding: 2rem 1rem;
+    padding: 1rem 1rem 2rem;
     max-width: 1200px;
     margin: 0 auto;
     position: relative;
@@ -35,7 +35,7 @@ body {
 /* Character Card */
 .character-card {
     background: transparent;
-    padding: 2rem;
+    padding: 0 2rem 2rem;
     text-align: center;
     transition: opacity 0.3s ease;
 }
@@ -45,9 +45,8 @@ body {
 }
 
 .character-image {
-    width: 250px;
-    height: 250px;
-    object-fit: contain;
+    width: 400px;
+    height: auto;
     margin-bottom: 1.5rem;
     display: block;
     margin-left: auto;
@@ -80,8 +79,8 @@ body {
     }
 
     .character-image {
-        width: 200px;
-        height: 200px;
+        width: 300px;
+        height: auto;
     }
 
     .character-name {
@@ -109,8 +108,8 @@ body {
     }
 
     .character-image {
-        width: 180px;
-        height: 180px;
+        width: 280px;
+        height: auto;
     }
 
     .character-name {
