@@ -23,7 +23,7 @@ body {
 
 /* Random Illustration Display */
 .random-illustration-section {
-    margin-bottom: 0px;
+    margin-bottom: 20px;
     display: flex;
     justify-content: center;
 }
