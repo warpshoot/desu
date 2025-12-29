@@ -36,10 +36,10 @@
     </header>
 
     <main class="container">
-        <!-- Random Illustration Display -->
-        <section class="random-illustration-section">
-            <a href="./gallery/" class="random-illustration-container">
-                <img src="./images/desu_main.png" alt="DESU Illustration" class="random-illustration">
+        <!-- Main Illustration -->
+        <section class="main-illustration-section">
+            <a href="./gallery/" class="main-illustration-link">
+                <img src="./images/desu_main.png" alt="DESU Illustration" class="main-illustration">
             </a>
         </section>
 
@@ -52,11 +52,6 @@
             </div>
         </section>
     </main>
-
-    <!-- Lightbox -->
-    <div id="lightbox" class="lightbox">
-        <img id="lightbox-image" src="" alt="Lightbox image">
-    </div>
 
     <footer>
         <p>© 2025 <a href="https://warpshoot.github.io/" target="_blank">wpy</a></p>
@@ -78,14 +73,6 @@
                 hamburger.classList.remove('active');
                 navMenu.classList.remove('active');
             }
-        });
-
-        const lightbox = document.getElementById('lightbox');
-        const lightboxImage = document.getElementById('lightbox-image');
-
-        // Close lightbox
-        lightbox.addEventListener('click', () => {
-            lightbox.classList.remove('is-active');
         });
     </script>
 </body>
