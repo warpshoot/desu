@@ -331,6 +331,63 @@ function fillPolygon(points, color) {
     ctx.fill();
 }
 
+function getBounds(points) {
+    const xs = points.map(p => p.x);
+    const ys = points.map(p => p.y);
+    const minX = Math.max(0, Math.floor(Math.min(...xs)) - 1);
+    const minY = Math.max(0, Math.floor(Math.min(...ys)) - 1);
+    const maxX = Math.min(canvas.width, Math.ceil(Math.max(...xs)) + 1);
+    const maxY = Math.min(canvas.height, Math.ceil(Math.max(...ys)) + 1);
+    return {
+        minX,
+        minY,
+        width: maxX - minX,
+        height: maxY - minY
+    };
+}
+
+// Point-in-polygon test (ray casting algorithm)
+function isPointInPolygon(x, y, points) {
+    let inside = false;
+    for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+        const xi = points[i].x, yi = points[i].y;
+        const xj = points[j].x, yj = points[j].y;
+
+        const intersect = ((yi > y) !== (yj > y))
+            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+// Fill polygon with transparency, no anti-aliasing (pixel-by-pixel)
+function fillPolygonNoAA(points, r, g, b, alpha) {
+    if (points.length < 3) return;
+
+    const bounds = getBounds(points);
+    const imgData = ctx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
+    const data = imgData.data;
+
+    for (let py = 0; py < bounds.height; py++) {
+        for (let px = 0; px < bounds.width; px++) {
+            const canvasX = bounds.minX + px;
+            const canvasY = bounds.minY + py;
+
+            if (isPointInPolygon(canvasX, canvasY, points)) {
+                const i = (py * bounds.width + px) * 4;
+
+                // Alpha blend: new = old * (1 - alpha) + new * alpha
+                data[i] = data[i] * (1 - alpha) + r * alpha;
+                data[i + 1] = data[i + 1] * (1 - alpha) + g * alpha;
+                data[i + 2] = data[i + 2] * (1 - alpha) + b * alpha;
+                // Alpha channel stays at 255 (opaque)
+            }
+        }
+    }
+
+    ctx.putImageData(imgData, bounds.minX, bounds.minY);
+}
+
 // ============================================
 // undo/redo（ImageBitmap方式）
 // ============================================
@@ -502,24 +559,13 @@ canvas.addEventListener('pointerup', (e) => {
 
             if (canvasPoints.length >= 3) {
                 if (currentTool === 'sketch') {
-                    // 10%透明度のグレー
-                    ctx.globalAlpha = 0.1;
-                    fillPolygon(canvasPoints, '#808080');
-                    ctx.globalAlpha = 1.0;
+                    // 10%透明度のグレー、アンチエイリアスなし
+                    fillPolygonNoAA(canvasPoints, 128, 128, 128, 0.1);
                     saveState();
                     strokeMade = true;
                 } else if (currentTool === 'eraser') {
-                    // destination-outで完全に消去（アンチエイリアスの縁も消える）
-                    ctx.globalCompositeOperation = 'destination-out';
-                    ctx.fillStyle = '#000';
-                    ctx.beginPath();
-                    ctx.moveTo(canvasPoints[0].x, canvasPoints[0].y);
-                    for (let i = 1; i < canvasPoints.length; i++) {
-                        ctx.lineTo(canvasPoints[i].x, canvasPoints[i].y);
-                    }
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.globalCompositeOperation = 'source-over';
+                    // 白で塗りつぶし（アンチエイリアスなしなので2値化不要）
+                    fillPolygonNoAA(canvasPoints, 255, 255, 255, 1.0);
                     saveState();
                     strokeMade = true;
                 }
