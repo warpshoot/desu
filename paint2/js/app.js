@@ -559,8 +559,8 @@ canvas.addEventListener('pointerup', (e) => {
 
             if (canvasPoints.length >= 3) {
                 if (currentTool === 'sketch') {
-                    // 10%透明度のグレー、アンチエイリアスなし
-                    fillPolygonNoAA(canvasPoints, 128, 128, 128, 0.1);
+                    // 20%透明度のグレー、アンチエイリアスなし
+                    fillPolygonNoAA(canvasPoints, 128, 128, 128, 0.2);
                     saveState();
                     strokeMade = true;
                 } else if (currentTool === 'eraser') {
@@ -691,6 +691,7 @@ function exitSaveMode() {
     document.getElementById('toolbar-right').style.display = 'flex';
     document.getElementById('resetZoomBtn').style.display = '';  // インラインスタイルをクリア
     document.getElementById('confirmSelectionBtn').style.display = 'none';
+    document.getElementById('copyClipboardBtn').style.display = 'none';
     document.getElementById('redoSelectionBtn').style.display = 'none';
     applyTransform();
 
@@ -715,6 +716,12 @@ document.getElementById('confirmSelectionBtn').addEventListener('click', () => {
     }
 });
 
+document.getElementById('copyClipboardBtn').addEventListener('click', async () => {
+    if (confirmedSelection) {
+        await copyToClipboard(confirmedSelection.x, confirmedSelection.y, confirmedSelection.w, confirmedSelection.h);
+    }
+});
+
 document.getElementById('redoSelectionBtn').addEventListener('click', () => {
     // 選択範囲をクリア
     confirmedSelection = null;
@@ -724,6 +731,7 @@ document.getElementById('redoSelectionBtn').addEventListener('click', () => {
 
     // ボタンを非表示
     document.getElementById('confirmSelectionBtn').style.display = 'none';
+    document.getElementById('copyClipboardBtn').style.display = 'none';
     document.getElementById('redoSelectionBtn').style.display = 'none';
 
     // 選択矩形をクリア
@@ -837,8 +845,9 @@ overlay.addEventListener('pointerup', (e) => {
             document.getElementById('save-ui').classList.add('in-confirmation-mode');
             document.getElementById('save-ui').classList.remove('hidden-during-selection');
 
-            // 確定・やり直しボタンを表示
+            // 確定・やり直し・コピーボタンを表示
             document.getElementById('confirmSelectionBtn').style.display = 'inline-block';
+            document.getElementById('copyClipboardBtn').style.display = 'inline-block';
             document.getElementById('redoSelectionBtn').style.display = 'inline-block';
         }
     }
@@ -901,6 +910,66 @@ async function saveRegion(x, y, w, h) {
         console.error('保存エラー:', err);
         alert('保存に失敗しました: ' + err.message);
         exitSaveMode();
+    }
+}
+
+async function copyToClipboard(x, y, w, h) {
+    const transparent = document.getElementById('transparentBg').checked;
+    const outputScale = selectedScale;
+
+    const flash = document.getElementById('flash');
+    flash.style.opacity = '0.7';
+    setTimeout(() => { flash.style.opacity = '0'; }, 100);
+
+    try {
+        const outputW = w * outputScale;
+        const outputH = h * outputScale;
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = outputW;
+        tempCanvas.height = outputH;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.imageSmoothingEnabled = false;
+
+        if (transparent) {
+            const imgData = ctx.getImageData(x, y, w, h);
+            const data = imgData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i] === 255 && data[i + 1] === 255 && data[i + 2] === 255) {
+                    data[i + 3] = 0;
+                }
+            }
+
+            const sourceCanvas = document.createElement('canvas');
+            sourceCanvas.width = w;
+            sourceCanvas.height = h;
+            sourceCanvas.getContext('2d').putImageData(imgData, 0, 0);
+            tempCtx.drawImage(sourceCanvas, 0, 0, outputW, outputH);
+        } else {
+            tempCtx.drawImage(canvas, x, y, w, h, 0, 0, outputW, outputH);
+        }
+
+        const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+
+        await navigator.clipboard.write([
+            new ClipboardItem({
+                'image/png': blob
+            })
+        ]);
+
+        // コピー成功のフィードバック（ボタンテキストを一時的に変更）
+        const copyBtn = document.getElementById('copyClipboardBtn');
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'コピーしました！';
+        setTimeout(() => {
+            copyBtn.textContent = originalText;
+        }, 1500);
+
+        // モーダルは閉じない
+    } catch (err) {
+        console.error('クリップボードコピーエラー:', err);
+        alert('クリップボードへのコピーに失敗しました: ' + err.message);
     }
 }
 
