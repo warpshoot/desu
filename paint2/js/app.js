@@ -331,6 +331,21 @@ function fillPolygon(points, color) {
     ctx.fill();
 }
 
+function getBounds(points) {
+    const xs = points.map(p => p.x);
+    const ys = points.map(p => p.y);
+    const minX = Math.max(0, Math.floor(Math.min(...xs)) - 1);
+    const minY = Math.max(0, Math.floor(Math.min(...ys)) - 1);
+    const maxX = Math.min(canvas.width, Math.ceil(Math.max(...xs)) + 1);
+    const maxY = Math.min(canvas.height, Math.ceil(Math.max(...ys)) + 1);
+    return {
+        minX,
+        minY,
+        width: maxX - minX,
+        height: maxY - minY
+    };
+}
+
 // ============================================
 // undo/redo（ImageBitmap方式）
 // ============================================
@@ -509,17 +524,23 @@ canvas.addEventListener('pointerup', (e) => {
                     saveState();
                     strokeMade = true;
                 } else if (currentTool === 'eraser') {
-                    // destination-outで完全に消去（アンチエイリアスの縁も消える）
-                    ctx.globalCompositeOperation = 'destination-out';
-                    ctx.fillStyle = '#000';
-                    ctx.beginPath();
-                    ctx.moveTo(canvasPoints[0].x, canvasPoints[0].y);
-                    for (let i = 1; i < canvasPoints.length; i++) {
-                        ctx.lineTo(canvasPoints[i].x, canvasPoints[i].y);
+                    // 白で塗りつぶし
+                    fillPolygon(canvasPoints, '#fff');
+
+                    // アンチエイリアス除去：投げ縄範囲のみ2値化
+                    const bounds = getBounds(canvasPoints);
+                    const imgData = ctx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
+                    const data = imgData.data;
+
+                    for (let i = 0; i < data.length; i += 4) {
+                        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                        const val = avg > 127 ? 255 : 0;
+                        data[i] = val;
+                        data[i + 1] = val;
+                        data[i + 2] = val;
                     }
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.globalCompositeOperation = 'source-over';
+
+                    ctx.putImageData(imgData, bounds.minX, bounds.minY);
                     saveState();
                     strokeMade = true;
                 }
