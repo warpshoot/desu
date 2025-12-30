@@ -26,6 +26,20 @@ html, body {
     transform-origin: 0 0;
 }
 
+/* 透明アタリレイヤー用キャンバス */
+#overlay-canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    image-rendering: pixelated;
+    image-rendering: -webkit-optimize-contrast;
+    touch-action: none;
+    pointer-events: none;
+    transform-origin: 0 0;
+    z-index: 10;
+}
+
 /* 投げ縄用オーバーレイキャンバス */
 #lasso-canvas {
     display: none;

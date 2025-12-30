@@ -10,6 +10,7 @@
 </head>
 <body class="light">
     <canvas id="canvas"></canvas>
+    <canvas id="overlay-canvas"></canvas>
     <canvas id="lasso-canvas"></canvas>
 
     <!-- 左下ツールバー -->
@@ -25,6 +26,12 @@
                 <path d="M16 16 Q18 18 17 21 Q16 24 15 21 Q14 18 16 16 Z" class="filled"/>
             </svg>
         </div>
+        <div class="tool-btn" id="sketchBtn" data-tool="sketch">
+            <svg viewBox="0 0 24 24">
+                <path d="M6 8 L10 4 L18 12 L14 16 Z" fill="none" opacity="0.3"/>
+                <path d="M16 16 Q18 18 17 21 Q16 24 15 21 Q14 18 16 16 Z" fill="none" opacity="0.3"/>
+            </svg>
+        </div>
         <div class="tool-btn" id="colorBtn">
             <svg viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="8" id="colorCircle" class="filled"/>
@@ -38,6 +45,16 @@
 
     <!-- 右上ツールバー -->
     <div id="toolbar-right">
+        <div class="tool-btn active" id="toggleMainLayer" title="メインレイヤー表示切替">
+            <svg viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" class="filled"/>
+            </svg>
+        </div>
+        <div class="tool-btn active" id="toggleSketchLayer" title="アタリレイヤー表示切替">
+            <svg viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" fill="none" opacity="0.3" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        </div>
         <div class="tool-btn" id="saveBtn">
             <svg viewBox="0 0 24 24">
                 <path d="M12 4 L12 16 M6 12 L12 18 L18 12"/>

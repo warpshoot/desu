@@ -106,13 +106,17 @@ console.error = function(...args) {
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const overlayCanvas = document.getElementById('overlay-canvas');
+const overlayCtx = overlayCanvas.getContext('2d', { willReadFrequently: true });
 const lassoCanvas = document.getElementById('lasso-canvas');
 const lassoCtx = lassoCanvas.getContext('2d');
 
 // --- 状態 ---
 let isDarkMode = false;
-let currentTool = 'pen';  // 'pen' or 'fill'
+let currentTool = 'pen';  // 'pen', 'fill', or 'sketch'
 let currentColor = 'black';  // 'black' or 'white'
+let mainLayerVisible = true;
+let sketchLayerVisible = true;
 let isDrawing = false;
 let lastX = 0, lastY = 0;
 
@@ -168,6 +172,9 @@ function initCanvas() {
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    overlayCanvas.width = window.innerWidth;
+    overlayCanvas.height = window.innerHeight;
+
     lassoCanvas.width = window.innerWidth;
     lassoCanvas.height = window.innerHeight;
 
@@ -181,7 +188,9 @@ function initCanvas() {
 }
 
 function applyTransform() {
-    canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    const transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    canvas.style.transform = transform;
+    overlayCanvas.style.transform = transform;
 
     const resetBtn = document.getElementById('resetZoomBtn');
     if (Math.abs(scale - 1) > 0.01 || Math.abs(translateX) > 1 || Math.abs(translateY) > 1) {
@@ -405,6 +414,22 @@ function fillPolygon(points) {
         data[i + 2] = val;
     }
     ctx.putImageData(imgData, 0, 0);
+}
+
+function fillPolygonSketch(points) {
+    if (points.length < 3) return;
+
+    // 10%透明度のグレー (rgba(128, 128, 128, 0.1))
+    overlayCtx.globalAlpha = 0.1;
+    overlayCtx.fillStyle = '#808080';
+    overlayCtx.beginPath();
+    overlayCtx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        overlayCtx.lineTo(points[i].x, points[i].y);
+    }
+    overlayCtx.closePath();
+    overlayCtx.fill();
+    overlayCtx.globalAlpha = 1.0;
 }
 
 // ============================================
@@ -718,8 +743,8 @@ canvas.addEventListener('pointerdown', (e) => {
             lastX = p.x;
             lastY = p.y;
             drawLine(p.x, p.y, p.x, p.y);
-        } else if (currentTool === 'fill') {
-            // バケツツール: タップか投げ縄か、pointerupで判定
+        } else if (currentTool === 'fill' || currentTool === 'sketch') {
+            // バケツツール/スケッチツール: タップか投げ縄か、pointerupで判定
             startLasso(e.clientX, e.clientY);
         }
     }
@@ -806,16 +831,28 @@ canvas.addEventListener('pointerup', (e) => {
         }, 0);
 
         if (totalDist < 20) {
-            // タップ = 通常の塗りつぶし
-            const p = getCanvasPoint(startP.x, startP.y);
-            floodFill(p.x, p.y);
-            saveState();
-            strokeMade = true;
-        } else {
-            // 投げ縄塗りつぶし
-            if (finishLasso()) {
+            // タップ = 通常の塗りつぶし (fill tool only)
+            if (currentTool === 'fill') {
+                const p = getCanvasPoint(startP.x, startP.y);
+                floodFill(p.x, p.y);
                 saveState();
                 strokeMade = true;
+            }
+            // スケッチツールでのタップは何もしない
+        } else {
+            // 投げ縄塗りつぶし
+            const canvasPoints = lassoPoints.map(p => getCanvasPoint(p.x, p.y));
+
+            if (canvasPoints.length >= 3) {
+                if (currentTool === 'fill') {
+                    fillPolygon(canvasPoints);
+                    saveState();
+                    strokeMade = true;
+                } else if (currentTool === 'sketch') {
+                    fillPolygonSketch(canvasPoints);
+                    saveState();
+                    strokeMade = true;
+                }
             }
         }
 
@@ -915,6 +952,19 @@ document.getElementById('resetZoomBtn').addEventListener('click', () => {
     translateX = 0;
     translateY = 0;
     applyTransform();
+});
+
+// レイヤー表示切り替え
+document.getElementById('toggleMainLayer').addEventListener('click', () => {
+    mainLayerVisible = !mainLayerVisible;
+    canvas.style.display = mainLayerVisible ? 'block' : 'none';
+    document.getElementById('toggleMainLayer').classList.toggle('active', mainLayerVisible);
+});
+
+document.getElementById('toggleSketchLayer').addEventListener('click', () => {
+    sketchLayerVisible = !sketchLayerVisible;
+    overlayCanvas.style.display = sketchLayerVisible ? 'block' : 'none';
+    document.getElementById('toggleSketchLayer').classList.toggle('active', sketchLayerVisible);
 });
 
 // ============================================
@@ -1285,8 +1335,15 @@ async function saveRegion(x, y, w, h) {
                 sourceCanvas.height = h;
                 sourceCanvas.getContext('2d').putImageData(imgData, 0, 0);
                 tempCtx.drawImage(sourceCanvas, 0, 0, outputW, outputH);
+
+                // 透明レイヤーも合成
+                tempCtx.drawImage(overlayCanvas, x, y, w, h, 0, 0, outputW, outputH);
             } else {
+                // メインレイヤーを描画
                 tempCtx.drawImage(canvas, x, y, w, h, 0, 0, outputW, outputH);
+
+                // 透明レイヤーも合成
+                tempCtx.drawImage(overlayCanvas, x, y, w, h, 0, 0, outputW, outputH);
             }
 
             blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
@@ -1328,9 +1385,13 @@ async function saveRegion(x, y, w, h) {
 window.addEventListener('orientationchange', () => {
     setTimeout(async () => {
         const bitmap = await createImageBitmap(canvas);
+        const overlayBitmap = await createImageBitmap(overlayCanvas);
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+
+        overlayCanvas.width = window.innerWidth;
+        overlayCanvas.height = window.innerHeight;
 
         lassoCanvas.width = window.innerWidth;
         lassoCanvas.height = window.innerHeight;
@@ -1339,6 +1400,9 @@ window.addEventListener('orientationchange', () => {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(bitmap, 0, 0);
         bitmap.close();
+
+        overlayCtx.drawImage(overlayBitmap, 0, 0);
+        overlayBitmap.close();
 
         const selCanvas = document.getElementById('selection-canvas');
         selCanvas.width = window.innerWidth;
