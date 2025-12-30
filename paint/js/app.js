@@ -1013,6 +1013,7 @@ function exitSaveMode() {
     document.getElementById('toolbar-right').style.display = 'flex';
     document.getElementById('resetZoomBtn').style.display = '';  // インラインスタイルをクリア
     document.getElementById('confirmSelectionBtn').style.display = 'none';
+    document.getElementById('copySelectionBtn').style.display = 'none';
     document.getElementById('redoSelectionBtn').style.display = 'none';
     applyTransform();
 
@@ -1037,6 +1038,70 @@ document.getElementById('confirmSelectionBtn').addEventListener('click', () => {
     }
 });
 
+document.getElementById('copySelectionBtn').addEventListener('click', async () => {
+    if (!confirmedSelection) return;
+
+    const btn = document.getElementById('copySelectionBtn');
+    const originalText = btn.textContent;
+
+    try {
+        const { x, y, w, h } = confirmedSelection;
+        const transparent = document.getElementById('transparentBg').checked;
+        const outputScale = selectedScale;
+
+        // 出力サイズ
+        const outputW = w * outputScale;
+        const outputH = h * outputScale;
+
+        // 一時キャンバスを作成
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = outputW;
+        tempCanvas.height = outputH;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.imageSmoothingEnabled = false;
+
+        if (transparent) {
+            const imgData = ctx.getImageData(x, y, w, h);
+            const data = imgData.data;
+            const bgR = isDarkMode ? 0 : 255;
+            const bgG = isDarkMode ? 0 : 255;
+            const bgB = isDarkMode ? 0 : 255;
+
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i] === bgR && data[i + 1] === bgG && data[i + 2] === bgB) {
+                    data[i + 3] = 0;
+                }
+            }
+
+            const sourceCanvas = document.createElement('canvas');
+            sourceCanvas.width = w;
+            sourceCanvas.height = h;
+            sourceCanvas.getContext('2d').putImageData(imgData, 0, 0);
+            tempCtx.drawImage(sourceCanvas, 0, 0, outputW, outputH);
+        } else {
+            tempCtx.drawImage(canvas, x, y, w, h, 0, 0, outputW, outputH);
+        }
+
+        // Blobに変換してクリップボードにコピー
+        const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+        await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+        ]);
+
+        // ボタンのテキストを変更
+        btn.textContent = 'コピーしました！';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 1500);
+    } catch (err) {
+        console.error('クリップボードへのコピーエラー:', err);
+        btn.textContent = 'コピー失敗';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 1500);
+    }
+});
+
 document.getElementById('redoSelectionBtn').addEventListener('click', () => {
     // 選択範囲をクリア
     confirmedSelection = null;
@@ -1046,6 +1111,7 @@ document.getElementById('redoSelectionBtn').addEventListener('click', () => {
 
     // ボタンを非表示
     document.getElementById('confirmSelectionBtn').style.display = 'none';
+    document.getElementById('copySelectionBtn').style.display = 'none';
     document.getElementById('redoSelectionBtn').style.display = 'none';
 
     // 選択矩形をクリア
@@ -1159,8 +1225,9 @@ overlay.addEventListener('pointerup', (e) => {
             document.getElementById('save-ui').classList.add('in-confirmation-mode');
             document.getElementById('save-ui').classList.remove('hidden-during-selection');
 
-            // 確定・やり直しボタンを表示
+            // 確定・コピー・やり直しボタンを表示
             document.getElementById('confirmSelectionBtn').style.display = 'inline-block';
+            document.getElementById('copySelectionBtn').style.display = 'inline-block';
             document.getElementById('redoSelectionBtn').style.display = 'inline-block';
         }
     }
