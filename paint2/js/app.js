@@ -509,7 +509,17 @@ canvas.addEventListener('pointerup', (e) => {
                     saveState();
                     strokeMade = true;
                 } else if (currentTool === 'eraser') {
-                    fillPolygon(canvasPoints, '#fff');
+                    // destination-outで完全に消去（アンチエイリアスの縁も消える）
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.moveTo(canvasPoints[0].x, canvasPoints[0].y);
+                    for (let i = 1; i < canvasPoints.length; i++) {
+                        ctx.lineTo(canvasPoints[i].x, canvasPoints[i].y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.globalCompositeOperation = 'source-over';
                     saveState();
                     strokeMade = true;
                 }
@@ -724,7 +734,7 @@ overlay.addEventListener('pointermove', (e) => {
         }
     }
 
-    selCtx.strokeStyle = isDarkMode ? '#fff' : '#000';
+    selCtx.strokeStyle = '#000';
     selCtx.lineWidth = 2;
     selCtx.setLineDash([8, 8]);
     selCtx.strokeRect(rectX, rectY, rectW, rectH);
