@@ -883,6 +883,24 @@ document.getElementById('brushSize').addEventListener('input', (e) => {
     document.getElementById('sizeDisplay').textContent = size;
 });
 
+// ノイズ生成
+document.getElementById('noiseBtn').addEventListener('click', () => {
+    // ランダムにノイズレベルを選択（1, 2, 3）
+    const randomNoiseLevel = Math.floor(Math.random() * 3) + 1;
+
+    // 現在のキャンバスから画像データを取得
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    // ノイズフレームを生成（背景透過なし）
+    const frames = generateGlitchFrames(imgData, false, randomNoiseLevel);
+
+    // 最初のフレームをキャンバスに描画
+    ctx.putImageData(frames[0], 0, 0);
+
+    // undo履歴に追加
+    saveState();
+});
+
 // クリア
 document.getElementById('clearBtn').addEventListener('click', () => {
     ctx.fillStyle = isDarkMode ? '#000' : '#fff';
