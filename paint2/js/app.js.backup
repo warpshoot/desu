@@ -190,6 +190,56 @@ function getCanvasPoint(clientX, clientY) {
     };
 }
 
+// 現在の描画色を取得
+function getDrawColor() {
+    if (currentColor === 'black') {
+        return isDarkMode ? '#fff' : '#000';
+    } else {
+        return isDarkMode ? '#000' : '#fff';
+    }
+}
+
+// 色ボタンの表示更新
+function updateColorButton() {
+    const circle = document.getElementById('colorCircle');
+
+    // 黒選択時は塗りつぶし、白選択時は白抜き（ストロークのみ）
+    if (currentColor === 'black') {
+        circle.classList.add('filled');
+        circle.style.stroke = 'none';
+    } else {
+        circle.classList.remove('filled');
+        circle.style.stroke = 'currentColor';
+        circle.style.strokeWidth = '2';
+    }
+}
+
+// ============================================
+// 描画エンジン（2値・ブレゼンハム）
+// ============================================
+
+function drawLine(x1, y1, x2, y2) {
+    const size = colorSizes[currentColor];
+    ctx.fillStyle = getDrawColor();
+
+    const r = Math.floor(size / 2);
+    let dx = Math.abs(x2 - x1), sx = x1 < x2 ? 1 : -1;
+    let dy = -Math.abs(y2 - y1), sy = y1 < y2 ? 1 : -1;
+    let err = dx + dy;
+
+    while (true) {
+        if (size === 1) {
+            ctx.fillRect(x1, y1, 1, 1);
+        } else {
+            ctx.fillRect(x1 - r, y1 - r, size, size);
+        }
+
+        if (x1 === x2 && y1 === y2) break;
+        const e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x1 += sx; }
+        if (e2 <= dx) { err += dx; y1 += sy; }
+    }
+}
 
 // ============================================
 // 塗りつぶし（スキャンライン法）
@@ -372,6 +422,224 @@ function redo() {
 // GIF生成（ピクセル振動）
 // ============================================
 
+function generateGlitchFrames(imgData, transparent, noiseLevel = 1) {
+    const w = imgData.width;
+    const h = imgData.height;
+    const data = imgData.data;
+
+    // 背景色判定用
+    const bgR = isDarkMode ? 0 : 255;
+    const bgG = isDarkMode ? 0 : 255;
+    const bgB = isDarkMode ? 0 : 255;
+
+    // 黒ドット（描画部分）の座標を収集
+    const pixels = [];
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const i = (y * w + x) * 4;
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+
+            // 背景色でない = 描画部分
+            if (r !== bgR || g !== bgG || b !== bgB) {
+                pixels.push({ x, y, r, g, b });
+            }
+        }
+    }
+
+    // シード可能な疑似乱数生成器
+    function seededRandom(seed) {
+        let x = Math.sin(seed++) * 10000;
+        return x - Math.floor(x);
+    }
+
+    // ノイズレベルに応じたパーセンテージ設定と動作
+    const noiseLevelSettings = {
+        1: { mode: 'normal', percentages: [0.1, 0.3, 0.3] },           // 弱: 10%, 30%, 30% (1px移動)
+        2: { mode: 'large-offset', percentages: [1.0, 1.0, 1.0] },     // 中: 100% (2-5px移動)
+        3: { mode: 'random-position', percentages: [0.7, 0.85, 1.0] }  // 強: 70%, 85%, 100% (完全ランダム配置)
+    };
+    const noiseSetting = noiseLevelSettings[noiseLevel] || noiseLevelSettings[1];
+    const noisePercentages = noiseSetting.percentages;
+    const noiseMode = noiseSetting.mode;
+
+    // フレーム生成関数（異なる偏り方とノイズ量）
+    function createFrame(seed, distributionMode, noisePercentage = 0.3, glitchMode = 'normal') {
+        const frameData = new Uint8ClampedArray(data);
+        const frameCopy = new ImageData(frameData, w, h);
+        const targetPixels = [...pixels];
+
+        let randomSeed = seed * 1000;
+
+        // モードによって異なる分布方法を使用
+        if (distributionMode === 'bottom-bias') {
+            // 下側に偏るノイズ（元のsort方式）
+            targetPixels.sort(() => seededRandom(randomSeed++) - 0.5);
+        } else if (distributionMode === 'uniform') {
+            // 均等分布（Fisher-Yatesシャッフル）
+            for (let i = targetPixels.length - 1; i > 0; i--) {
+                const j = Math.floor(seededRandom(randomSeed++) * (i + 1));
+                [targetPixels[i], targetPixels[j]] = [targetPixels[j], targetPixels[i]];
+            }
+        } else if (distributionMode === 'top-bias') {
+            // 上側に偏るノイズ（逆順sort）
+            targetPixels.sort(() => 0.5 - seededRandom(randomSeed++));
+        }
+
+        // 指定された割合でランダム選択
+        const count = Math.floor(pixels.length * noisePercentage);
+        const shuffled = targetPixels.slice(0, count);
+
+        if (glitchMode === 'random-position') {
+            // レベル3: 完全ランダム配置
+            shuffled.forEach(p => {
+                const newX = Math.floor(seededRandom(randomSeed++) * w);
+                const newY = Math.floor(seededRandom(randomSeed++) * h);
+
+                const oldIdx = (p.y * w + p.x) * 4;
+                const newIdx = (newY * w + newX) * 4;
+
+                // 元の位置を背景色で塗りつぶし
+                frameData[oldIdx] = bgR;
+                frameData[oldIdx + 1] = bgG;
+                frameData[oldIdx + 2] = bgB;
+                if (transparent) frameData[oldIdx + 3] = 0;
+
+                // 新しい位置に描画
+                frameData[newIdx] = p.r;
+                frameData[newIdx + 1] = p.g;
+                frameData[newIdx + 2] = p.b;
+                frameData[newIdx + 3] = 255;
+            });
+        } else if (glitchMode === 'large-offset') {
+            // レベル2: 2～5ピクセルのランダム距離移動
+            shuffled.forEach(p => {
+                const distance = Math.floor(seededRandom(randomSeed++) * 4) + 2; // 2～5
+                const angle = seededRandom(randomSeed++) * Math.PI * 2;
+                const offsetX = Math.round(Math.cos(angle) * distance);
+                const offsetY = Math.round(Math.sin(angle) * distance);
+
+                const newX = p.x + offsetX;
+                const newY = p.y + offsetY;
+
+                if (newX >= 0 && newX < w && newY >= 0 && newY < h) {
+                    const oldIdx = (p.y * w + p.x) * 4;
+                    const newIdx = (newY * w + newX) * 4;
+
+                    // 元の位置を背景色で塗りつぶし
+                    frameData[oldIdx] = bgR;
+                    frameData[oldIdx + 1] = bgG;
+                    frameData[oldIdx + 2] = bgB;
+                    if (transparent) frameData[oldIdx + 3] = 0;
+
+                    // 新しい位置に描画
+                    frameData[newIdx] = p.r;
+                    frameData[newIdx + 1] = p.g;
+                    frameData[newIdx + 2] = p.b;
+                    frameData[newIdx + 3] = 255;
+                }
+            });
+        } else {
+            // レベル1: 通常の8方向1ピクセル移動
+            const offsets = [
+                [-1, -1], [0, -1], [1, -1],
+                [-1,  0],          [1,  0],
+                [-1,  1], [0,  1], [1,  1]
+            ];
+
+            shuffled.forEach(p => {
+                const offset = offsets[Math.floor(seededRandom(randomSeed++) * offsets.length)];
+                const newX = p.x + offset[0];
+                const newY = p.y + offset[1];
+
+                if (newX >= 0 && newX < w && newY >= 0 && newY < h) {
+                    const oldIdx = (p.y * w + p.x) * 4;
+                    const newIdx = (newY * w + newX) * 4;
+
+                    // 元の位置を背景色で塗りつぶし
+                    frameData[oldIdx] = bgR;
+                    frameData[oldIdx + 1] = bgG;
+                    frameData[oldIdx + 2] = bgB;
+                    if (transparent) frameData[oldIdx + 3] = 0;
+
+                    // 新しい位置に描画
+                    frameData[newIdx] = p.r;
+                    frameData[newIdx + 1] = p.g;
+                    frameData[newIdx + 2] = p.b;
+                    frameData[newIdx + 3] = 255;
+                }
+            });
+        }
+
+        return new ImageData(frameData, w, h);
+    }
+
+    // 3フレーム生成（異なる偏り方とノイズ量）
+    return [
+        createFrame(0.2, 'uniform', noisePercentages[0], noiseMode),      // フレーム1
+        createFrame(0.5, 'bottom-bias', noisePercentages[1], noiseMode),  // フレーム2
+        createFrame(0.8, 'top-bias', noisePercentages[2], noiseMode)      // フレーム3
+    ];
+}
+
+async function createGIF(frames, w, h, updateProgress) {
+    return new Promise((resolve, reject) => {
+        try {
+            if (typeof GIF === 'undefined') {
+                throw new Error('gif.js が読み込まれていません');
+            }
+
+            const gif = new GIF({
+                workers: 1,
+                quality: 10,
+                width: w,
+                height: h,
+                workerScript: './gif.worker.js'  // 同一オリジン
+            });
+
+            console.log('GIF設定:', { workers: 1, quality: 10, width: w, height: h, workerScript: './gif.worker.js' });
+
+            frames.forEach((frameData, index) => {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = w;
+                tempCanvas.height = h;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.putImageData(frameData, 0, 0);
+
+                gif.addFrame(tempCanvas, { delay: 50 });
+                console.log(`フレーム ${index + 1}/${frames.length} 追加完了`);
+            });
+
+            gif.on('progress', (progress) => {
+                const percentage = 50 + Math.round(progress * 50);
+                console.log('GIF生成進行:', percentage + '%');
+                if (updateProgress) {
+                    updateProgress(percentage, `GIF変換中... ${percentage}%`);
+                }
+            });
+
+            gif.on('finished', blob => {
+                console.log('GIF生成完了:', blob.size, 'bytes');
+                if (updateProgress) {
+                    updateProgress(100, '完了！');
+                }
+                resolve(blob);
+            });
+
+            gif.on('error', err => {
+                console.error('GIF生成エラー:', err);
+                reject(err);
+            });
+
+            console.log('GIF render開始');
+            gif.render();
+        } catch (err) {
+            console.error('GIF生成初期化エラー:', err);
+            reject(err);
+        }
+    });
+}
 
 // ============================================
 // ポインターイベント
@@ -465,6 +733,15 @@ canvas.addEventListener('pointermove', (e) => {
         return;
     }
 
+    // 描画
+    if (isDrawing && activePointers.size === 1) {
+        const p = getCanvasPoint(e.clientX, e.clientY);
+        drawLine(lastX, lastY, p.x, p.y);
+        lastX = p.x;
+        lastY = p.y;
+        strokeMade = true;
+    }
+
     // 投げ縄
     if (isLassoing && activePointers.size === 1) {
         updateLasso(e.clientX, e.clientY);
@@ -476,6 +753,12 @@ canvas.addEventListener('pointerup', (e) => {
     if (isSaveMode) return;
 
     e.preventDefault();
+
+    // 描画終了
+    if (isDrawing) {
+        saveState();
+        strokeMade = true;
+    }
 
     // 投げ縄終了
     if (isLassoing) {
@@ -538,10 +821,13 @@ canvas.addEventListener('pointerup', (e) => {
         strokeMade = false;
         isPinching = false;
     }
+
+    isDrawing = false;
 });
 
 canvas.addEventListener('pointercancel', (e) => {
     activePointers.delete(e.pointerId);
+    isDrawing = false;
     isLassoing = false;
     isPinching = false;
     lassoCanvas.style.display = 'none';
@@ -793,44 +1079,135 @@ overlay.addEventListener('pointerup', (e) => {
 
 async function saveRegion(x, y, w, h) {
     const transparent = document.getElementById('transparentBg').checked;
-    const outputScale = selectedScale;
+    const outputScale = selectedScale;  // 1, 2, 3
 
     const flash = document.getElementById('flash');
     flash.style.opacity = '0.7';
     setTimeout(() => { flash.style.opacity = '0'; }, 100);
 
+    let blob, fileName;
+
     try {
-        const outputW = w * outputScale;
-        const outputH = h * outputScale;
+        // PNG生成（静止画）
+            // GIF生成
+            document.getElementById('generating').style.display = 'block';
 
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = outputW;
-        tempCanvas.height = outputH;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.imageSmoothingEnabled = false;
+            // プログレスバーをリセット
+            const progressFill = document.getElementById('progress-fill');
+            const progressText = document.getElementById('progress-text');
 
-        if (transparent) {
-            const imgData = ctx.getImageData(x, y, w, h);
-            const data = imgData.data;
-
-            for (let i = 0; i < data.length; i += 4) {
-                if (data[i] === 255 && data[i + 1] === 255 && data[i + 2] === 255) {
-                    data[i + 3] = 0;
-                }
+            function updateProgress(percent, text) {
+                if (progressFill) progressFill.style.width = percent + '%';
+                if (progressText) progressText.textContent = text;
             }
 
-            const sourceCanvas = document.createElement('canvas');
-            sourceCanvas.width = w;
-            sourceCanvas.height = h;
-            sourceCanvas.getContext('2d').putImageData(imgData, 0, 0);
-            tempCtx.drawImage(sourceCanvas, 0, 0, outputW, outputH);
+            console.log('GIF保存開始:', { x, y, w, h, transparent });
+
+            updateProgress(0, '準備中...');
+            await new Promise(resolve => setTimeout(resolve, 100)); // UI更新を待つ
+
+            updateProgress(10, '画像データ読み込み中...');
+            const imgData = ctx.getImageData(x, y, w, h);
+            console.log('画像データ取得:', imgData.width, 'x', imgData.height);
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            // 背景透過処理
+            if (transparent) {
+                updateProgress(20, '背景透過処理中...');
+                const data = imgData.data;
+                const bgR = isDarkMode ? 0 : 255;
+                const bgG = isDarkMode ? 0 : 255;
+                const bgB = isDarkMode ? 0 : 255;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    if (data[i] === bgR && data[i + 1] === bgG && data[i + 2] === bgB) {
+                        data[i + 3] = 0;
+                    }
+                }
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+
+            updateProgress(30, 'グリッチフレーム生成中...');
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            const frames = generateGlitchFrames(imgData, transparent, noiseLevel);
+            console.log('グリッチフレーム生成完了:', frames.length, 'フレーム');
+
+            updateProgress(50, 'GIF変換中...');
+
+            // 倍率を適用した出力サイズ
+            const outputW = w * outputScale;
+            const outputH = h * outputScale;
+
+            // フレームを拡大
+            const scaledFrames = frames.map(frameData => {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = w;
+                tempCanvas.height = h;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.putImageData(frameData, 0, 0);
+
+                const scaledCanvas = document.createElement('canvas');
+                scaledCanvas.width = outputW;
+                scaledCanvas.height = outputH;
+                const scaledCtx = scaledCanvas.getContext('2d');
+                scaledCtx.imageSmoothingEnabled = false;  // ピクセル感を維持
+                scaledCtx.drawImage(tempCanvas, 0, 0, outputW, outputH);
+
+                return scaledCtx.getImageData(0, 0, outputW, outputH);
+            });
+
+            blob = await createGIF(scaledFrames, outputW, outputH, updateProgress);
+            fileName = `desu_${Date.now()}.gif`;
+            console.log('GIF生成完了');
+
+            document.getElementById('generating').style.display = 'none';
         } else {
-            tempCtx.drawImage(canvas, x, y, w, h, 0, 0, outputW, outputH);
+            // PNG生成（ノイズ0の静止画）
+            const outputW = w * outputScale;
+            const outputH = h * outputScale;
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = outputW;
+            tempCanvas.height = outputH;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.imageSmoothingEnabled = false;  // ピクセル感を維持
+
+            if (transparent) {
+                const imgData = ctx.getImageData(x, y, w, h);
+                const data = imgData.data;
+                const bgR = isDarkMode ? 0 : 255;
+                const bgG = isDarkMode ? 0 : 255;
+                const bgB = isDarkMode ? 0 : 255;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    if (data[i] === bgR && data[i + 1] === bgG && data[i + 2] === bgB) {
+                        data[i + 3] = 0;
+                    }
+                }
+
+                // 拡大して描画
+                const sourceCanvas = document.createElement('canvas');
+                sourceCanvas.width = w;
+                sourceCanvas.height = h;
+                sourceCanvas.getContext('2d').putImageData(imgData, 0, 0);
+                tempCtx.drawImage(sourceCanvas, 0, 0, outputW, outputH);
+
+                // 透明レイヤーも合成
+                tempCtx.drawImage(overlayCanvas, x, y, w, h, 0, 0, outputW, outputH);
+            } else {
+                // メインレイヤーを描画
+                tempCtx.drawImage(canvas, x, y, w, h, 0, 0, outputW, outputH);
+
+                // 透明レイヤーも合成
+                tempCtx.drawImage(overlayCanvas, x, y, w, h, 0, 0, outputW, outputH);
+            }
+
+            blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+            fileName = `desu_${Date.now()}.png`;
         }
 
-        const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
-        const fileName = 'desu_sketch_' + Date.now() + '.png';
-
+        // iOS Safari対応：download属性で直接ダウンロード
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -840,11 +1217,21 @@ async function saveRegion(x, y, w, h) {
         document.body.removeChild(a);
 
         setTimeout(() => URL.revokeObjectURL(url), 1000);
+
         exitSaveMode();
     } catch (err) {
         console.error('保存エラー:', err);
-        alert('保存に失敗しました: ' + err.message);
-        exitSaveMode();
+        document.getElementById('generating').style.display = 'none';
+
+        const progressText = document.getElementById('progress-text');
+        if (progressText) {
+            progressText.textContent = 'エラー: ' + err.message;
+        }
+
+        setTimeout(() => {
+            alert('保存に失敗しました。コンソールを確認してください。\nエラー: ' + err.message);
+            exitSaveMode();
+        }, 500);
     }
 }
 
@@ -855,17 +1242,24 @@ async function saveRegion(x, y, w, h) {
 window.addEventListener('orientationchange', () => {
     setTimeout(async () => {
         const bitmap = await createImageBitmap(canvas);
+        const overlayBitmap = await createImageBitmap(overlayCanvas);
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
+        overlayCanvas.width = window.innerWidth;
+        overlayCanvas.height = window.innerHeight;
+
         lassoCanvas.width = window.innerWidth;
         lassoCanvas.height = window.innerHeight;
 
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = isDarkMode ? '#000' : '#fff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(bitmap, 0, 0);
         bitmap.close();
+
+        overlayCtx.drawImage(overlayBitmap, 0, 0);
+        overlayBitmap.close();
 
         const selCanvas = document.getElementById('selection-canvas');
         selCanvas.width = window.innerWidth;

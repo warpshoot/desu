@@ -5,56 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>DESU™ PAIN+ for iPad</title>
+    <title>DESU™ sketch for iPad</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="light">
     <canvas id="canvas"></canvas>
-    <canvas id="overlay-canvas"></canvas>
     <canvas id="lasso-canvas"></canvas>
 
     <!-- 左下ツールバー -->
     <div id="toolbar-left">
-        <div class="tool-btn active" id="penBtn" data-tool="pen">
-            <svg viewBox="0 0 24 24">
-                <path d="M4 18 Q8 8 12 12 Q16 16 20 6" fill="none"/>
-            </svg>
-        </div>
-        <div class="tool-btn" id="fillBtn" data-tool="fill">
-            <svg viewBox="0 0 24 24">
-                <path d="M6 8 L10 4 L18 12 L14 16 Z" class="filled"/>
-                <path d="M16 16 Q18 18 17 21 Q16 24 15 21 Q14 18 16 16 Z" class="filled"/>
-            </svg>
-        </div>
-        <div class="tool-btn" id="sketchBtn" data-tool="sketch">
+        <div class="tool-btn active" id="sketchBtn" data-tool="sketch">
             <svg viewBox="0 0 24 24">
                 <path d="M6 8 L10 4 L18 12 L14 16 Z" fill="none" opacity="0.3"/>
                 <path d="M16 16 Q18 18 17 21 Q16 24 15 21 Q14 18 16 16 Z" fill="none" opacity="0.3"/>
             </svg>
         </div>
-        <div class="tool-btn" id="colorBtn">
+        <div class="tool-btn" id="eraserBtn" data-tool="eraser">
             <svg viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="8" id="colorCircle" class="filled"/>
+                <path d="M6 8 L10 4 L18 12 L14 16 Z" class="filled"/>
+                <path d="M16 16 Q18 18 17 21 Q16 24 15 21 Q14 18 16 16 Z" class="filled"/>
             </svg>
-        </div>
-        <div id="size-slider-container">
-            <input type="range" id="brushSize" min="1" max="20" value="1">
-            <span id="sizeDisplay">1</span>
         </div>
     </div>
 
     <!-- 右上ツールバー -->
     <div id="toolbar-right">
-        <div class="tool-btn active" id="toggleMainLayer" title="メインレイヤー表示切替">
-            <svg viewBox="0 0 24 24">
-                <rect x="6" y="6" width="12" height="12" class="filled"/>
-            </svg>
-        </div>
-        <div class="tool-btn active" id="toggleSketchLayer" title="アタリレイヤー表示切替">
-            <svg viewBox="0 0 24 24">
-                <rect x="6" y="6" width="12" height="12" fill="none" opacity="0.3" stroke="currentColor" stroke-width="2"/>
-            </svg>
-        </div>
         <div class="tool-btn" id="saveBtn">
             <svg viewBox="0 0 24 24">
                 <path d="M12 4 L12 16 M6 12 L12 18 L18 12"/>
@@ -64,12 +39,6 @@
         <div class="tool-btn" id="clearBtn">
             <svg viewBox="0 0 24 24">
                 <path d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34"/>
-            </svg>
-        </div>
-        <div class="tool-btn" id="invertBtn">
-            <svg viewBox="0 0 24 24">
-                <path d="M12 4 A8 8 0 0 0 12 20 Z"/>
-                <path d="M12 4 A8 8 0 0 1 12 20 Z" class="filled"/>
             </svg>
         </div>
     </div>
@@ -107,16 +76,6 @@
             </div>
         </div>
 
-        <div class="option-group">
-            <div class="option-group-label">ノイズ</div>
-            <div class="option-buttons">
-                <button class="option-btn" data-noise="0">0</button>
-                <button class="option-btn active" data-noise="1">1</button>
-                <button class="option-btn" data-noise="2">2</button>
-                <button class="option-btn" data-noise="3">3</button>
-            </div>
-        </div>
-
         <label>
             <input type="checkbox" id="transparentBg">
             背景透過
@@ -149,9 +108,9 @@
     <div id="credit-btn">?</div>
     <div id="credit-modal">
         <div id="credit-content">
-            <h2>DESU™ PAIN+ for iPad</h2>
+            <h2>DESU™ sketch for iPad</h2>
             <a href="https://warpshoot.github.io/desu/" target="_blank" id="credit-logo">
-                <img src="https://warpshoot.github.io/desu/paint/logo.gif" alt="DESU PAIN+ Logo">
+                <img src="https://warpshoot.github.io/desu/paint/logo.gif" alt="DESU sketch Logo">
             </a>
             <div id="credit-author">
                 by <a href="https://warpshoot.github.io/" target="_blank">wpy</a>
@@ -159,8 +118,6 @@
         </div>
     </div>
 
-    <!-- gif.js CDN -->
-    <script src="https://unpkg.com/gif.js@0.2.0/dist/gif.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
