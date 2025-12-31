@@ -377,6 +377,7 @@
         container.addEventListener('click', fire);
         container.addEventListener('touchstart', (e) => {
           e.preventDefault();
+          fire(e);
         }, { passive: false });
 
       } catch (err) {
