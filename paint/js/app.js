@@ -470,6 +470,9 @@ function generateGlitchFrames(imgData, transparent, noiseLevel = 1) {
             // 背景色でない = 描画部分
             if (r !== bgR || g !== bgG || b !== bgB) {
                 pixels.push({ x, y, r, g, b });
+            } else if (Math.random() < 0.05) {
+                // 背景の5%にもノイズを適用
+                pixels.push({ x, y, r, g, b });
             }
         }
     }
