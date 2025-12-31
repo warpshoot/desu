@@ -544,18 +544,8 @@
     // カメラ起動
     async function startCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'environment',
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          },
-          audio: false
-        });
-        video.srcObject = stream;
-        startScreen.classList.add('hidden');
-
         // DeviceOrientation パーミッション要求（iOS 13+）
+        // ★重要: カメラの前に要求してユーザージェスチャーのコンテキストを維持
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
           try {
             console.log('Requesting DeviceOrientation permission...');
@@ -567,7 +557,7 @@
               console.log('DeviceOrientation permission granted');
             } else {
               console.warn('DeviceOrientation permission denied or not granted:', permission);
-              alert('端末の傾き検出を有効にするには、設定でモーションとオリエンテーションへのアクセスを許可してください。');
+              alert('端末の傾き検出が無効になっています。一部の機能が制限されます。');
             }
           } catch (err) {
             console.error('DeviceOrientation permission error:', err);
@@ -576,6 +566,18 @@
         } else {
           permissionStatus = 'No Permission API';
         }
+
+        // カメラのパーミッション要求
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+        video.srcObject = stream;
+        startScreen.classList.add('hidden');
 
         // MediaPipeセグメンテーション開始
         initSegmentation();
