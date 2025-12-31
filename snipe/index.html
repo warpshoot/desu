@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Sniper Scope</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      touch-action: manipulation;
+    }
+
+    #container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    #video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #scope-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    #reticle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(80vw, 80vh);
+      height: min(80vw, 80vh);
+    }
+
+    /* スコープの黒縁（ビネット） */
+    #vignette {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(
+        circle at center,
+        transparent 30%,
+        rgba(0,0,0,0.3) 45%,
+        rgba(0,0,0,0.7) 55%,
+        rgba(0,0,0,0.95) 65%,
+        #000 70%
+      );
+      pointer-events: none;
+    }
+
+    /* 射撃エフェクト */
+    #muzzle-flash {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, rgba(255,200,100,0.8) 0%, rgba(255,100,50,0.4) 30%, transparent 60%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.05s;
+    }
+
+    #muzzle-flash.fire {
+      opacity: 1;
+    }
+
+    /* 画面揺れ用 */
+    #container.recoil {
+      animation: recoil 0.15s ease-out;
+    }
+
+    @keyframes recoil {
+      0% { transform: translate(0, 0); }
+      20% { transform: translate(0, 8px); }
+      40% { transform: translate(-2px, 4px); }
+      60% { transform: translate(2px, 2px); }
+      100% { transform: translate(0, 0); }
+    }
+
+    /* タップ位置のヒットマーカー */
+    .hit-marker {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      pointer-events: none;
+      animation: hitFade 0.3s ease-out forwards;
+    }
+
+    @keyframes hitFade {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(0.5);
+      }
+      50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    /* 開始ボタン */
+    #start-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+
+    #start-btn {
+      padding: 20px 50px;
+      font-size: 24px;
+      background: #333;
+      color: #0f0;
+      border: 2px solid #0f0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: monospace;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    #start-btn:active {
+      background: #0f0;
+      color: #000;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* 距離表示（フレーバー） */
+    #hud {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      color: rgba(0, 255, 0, 0.7);
+      font-family: monospace;
+      font-size: 12px;
+      pointer-events: none;
+      text-shadow: 0 0 5px rgba(0,255,0,0.5);
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <video id="video" autoplay playsinline muted></video>
+
+    <div id="scope-overlay">
+      <div id="vignette"></div>
+
+      <svg id="reticle" viewBox="0 0 200 200">
+        <!-- メインのクロスヘア -->
+        <g stroke="rgba(0,0,0,0.6)" stroke-width="3">
+          <line x1="100" y1="0" x2="100" y2="85"/>
+          <line x1="100" y1="115" x2="100" y2="200"/>
+          <line x1="0" y1="100" x2="85" y2="100"/>
+          <line x1="115" y1="100" x2="200" y2="100"/>
+        </g>
+        <g stroke="rgba(0,255,0,0.8)" stroke-width="1.5">
+          <line x1="100" y1="0" x2="100" y2="85"/>
+          <line x1="100" y1="115" x2="100" y2="200"/>
+          <line x1="0" y1="100" x2="85" y2="100"/>
+          <line x1="115" y1="100" x2="200" y2="100"/>
+        </g>
+
+        <!-- 中心のドット -->
+        <circle cx="100" cy="100" r="2" fill="rgba(255,0,0,0.9)"/>
+
+        <!-- ミルドット（距離目盛り） -->
+        <g fill="rgba(0,255,0,0.6)">
+          <circle cx="100" cy="70" r="1.5"/>
+          <circle cx="100" cy="55" r="1.5"/>
+          <circle cx="100" cy="40" r="1.5"/>
+          <circle cx="100" cy="130" r="1.5"/>
+          <circle cx="100" cy="145" r="1.5"/>
+          <circle cx="100" cy="160" r="1.5"/>
+          <circle cx="70" cy="100" r="1.5"/>
+          <circle cx="55" cy="100" r="1.5"/>
+          <circle cx="40" cy="100" r="1.5"/>
+          <circle cx="130" cy="100" r="1.5"/>
+          <circle cx="145" cy="100" r="1.5"/>
+          <circle cx="160" cy="100" r="1.5"/>
+        </g>
+
+        <!-- レンジファインダー目盛り -->
+        <g stroke="rgba(0,255,0,0.4)" stroke-width="0.5">
+          <line x1="85" y1="105" x2="85" y2="110"/>
+          <line x1="90" y1="105" x2="90" y2="108"/>
+          <line x1="95" y1="105" x2="95" y2="108"/>
+          <line x1="105" y1="105" x2="105" y2="108"/>
+          <line x1="110" y1="105" x2="110" y2="108"/>
+          <line x1="115" y1="105" x2="115" y2="110"/>
+        </g>
+      </svg>
+
+      <div id="muzzle-flash"></div>
+    </div>
+
+    <div id="hud">
+      <div>WIND: 2.3 MPH</div>
+      <div>ELEV: +1.2 MOA</div>
+      <div>RNG: --- M</div>
+    </div>
+
+    <div id="start-screen">
+      <button id="start-btn">ENGAGE</button>
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const container = document.getElementById('container');
+    const startScreen = document.getElementById('start-screen');
+    const startBtn = document.getElementById('start-btn');
+    const muzzleFlash = document.getElementById('muzzle-flash');
+    const scopeOverlay = document.getElementById('scope-overlay');
+
+    // 射撃音を生成（Web Audio API）
+    let audioCtx = null;
+
+    function createGunshot() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      const now = audioCtx.currentTime;
+
+      // ノイズバースト（爆発音）
+      const noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.15, audioCtx.sampleRate);
+      const noiseData = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < noiseData.length; i++) {
+        noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.02));
+      }
+
+      const noiseSource = audioCtx.createBufferSource();
+      noiseSource.buffer = noiseBuffer;
+
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'lowpass';
+      noiseFilter.frequency.value = 1000;
+
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.8, now);
+      noiseGain.gain.exponentialDecayTo?.(0.01, now + 0.15) || noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+      noiseSource.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noiseSource.start(now);
+
+      // 低音のサンプ（銃の重み）
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(80, now);
+      osc.frequency.exponentialRampToValueAtTime(30, now + 0.1);
+
+      const oscGain = audioCtx.createGain();
+      oscGain.gain.setValueAtTime(0.5, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+      osc.connect(oscGain);
+      oscGain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.2);
+
+      // クリック音（トリガー/メカニカル音）
+      const clickOsc = audioCtx.createOscillator();
+      clickOsc.type = 'square';
+      clickOsc.frequency.value = 2000;
+
+      const clickGain = audioCtx.createGain();
+      clickGain.gain.setValueAtTime(0.1, now);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+
+      clickOsc.connect(clickGain);
+      clickGain.connect(audioCtx.destination);
+      clickOsc.start(now);
+      clickOsc.stop(now + 0.03);
+    }
+
+    // 振動
+    function vibrate() {
+      if (navigator.vibrate) {
+        navigator.vibrate([50, 30, 20]);
+      }
+    }
+
+    // ヒットマーカー表示
+    function showHitMarker(x, y) {
+      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      marker.classList.add('hit-marker');
+      marker.style.left = x + 'px';
+      marker.style.top = y + 'px';
+      marker.setAttribute('viewBox', '0 0 40 40');
+      marker.innerHTML = `
+        <g stroke="white" stroke-width="2">
+          <line x1="8" y1="8" x2="15" y2="15"/>
+          <line x1="32" y1="8" x2="25" y2="15"/>
+          <line x1="8" y1="32" x2="15" y2="25"/>
+          <line x1="32" y1="32" x2="25" y2="25"/>
+        </g>
+      `;
+      container.appendChild(marker);
+      setTimeout(() => marker.remove(), 300);
+    }
+
+    // 射撃！
+    function fire(e) {
+      // マズルフラッシュ
+      muzzleFlash.classList.add('fire');
+      setTimeout(() => muzzleFlash.classList.remove('fire'), 80);
+
+      // リコイル
+      container.classList.add('recoil');
+      setTimeout(() => container.classList.remove('recoil'), 150);
+
+      // 音
+      createGunshot();
+
+      // 振動
+      vibrate();
+
+      // ヒットマーカー（中央に表示）
+      const rect = container.getBoundingClientRect();
+      showHitMarker(rect.width / 2, rect.height / 2);
+    }
+
+    // カメラ起動
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+        video.srcObject = stream;
+        startScreen.classList.add('hidden');
+
+        // タップで射撃
+        container.addEventListener('click', fire);
+        container.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+        }, { passive: false });
+
+      } catch (err) {
+        console.error('Camera error:', err);
+        alert('カメラへのアクセスを許可してください');
+      }
+    }
+
+    startBtn.addEventListener('click', startCamera);
+
+    // HUD更新（フレーバー）
+    setInterval(() => {
+      const wind = (2 + Math.random() * 0.6 - 0.3).toFixed(1);
+      const elev = (1 + Math.random() * 0.4 - 0.2).toFixed(1);
+      const rng = Math.floor(150 + Math.random() * 50);
+      document.getElementById('hud').innerHTML = `
+        <div>WIND: ${wind} MPH</div>
+        <div>ELEV: +${elev} MOA</div>
+        <div>RNG: ${rng} M</div>
+      `;
+    }, 2000);
+  </script>
+
+</body>
+</html>
