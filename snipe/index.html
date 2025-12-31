@@ -34,6 +34,16 @@
       object-fit: cover;
     }
 
+    #segmentation-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
     #scope-overlay {
       position: absolute;
       top: 0;
@@ -167,30 +177,27 @@
       position: absolute;
       bottom: 20px;
       left: 20px;
-      color: rgba(0, 255, 0, 0.7);
+      color: rgba(255, 255, 255, 0.9);
       font-family: monospace;
       font-size: 12px;
       pointer-events: none;
-      text-shadow: 0 0 5px rgba(0,255,0,0.5);
+      text-shadow: 0 0 5px rgba(0,0,0,0.8);
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
 </head>
 <body>
   <div id="container">
     <video id="video" autoplay playsinline muted></video>
+    <canvas id="segmentation-canvas"></canvas>
 
     <div id="scope-overlay">
       <div id="vignette"></div>
 
       <svg id="reticle" viewBox="0 0 200 200">
         <!-- メインのクロスヘア -->
-        <g stroke="rgba(0,0,0,0.6)" stroke-width="3">
-          <line x1="100" y1="0" x2="100" y2="85"/>
-          <line x1="100" y1="115" x2="100" y2="200"/>
-          <line x1="0" y1="100" x2="85" y2="100"/>
-          <line x1="115" y1="100" x2="200" y2="100"/>
-        </g>
-        <g stroke="rgba(0,255,0,0.8)" stroke-width="1.5">
+        <g stroke="rgba(0,0,0,0.8)" stroke-width="1">
           <line x1="100" y1="0" x2="100" y2="85"/>
           <line x1="100" y1="115" x2="100" y2="200"/>
           <line x1="0" y1="100" x2="85" y2="100"/>
@@ -198,10 +205,10 @@
         </g>
 
         <!-- 中心のドット -->
-        <circle cx="100" cy="100" r="2" fill="rgba(255,0,0,0.9)"/>
+        <circle cx="100" cy="100" r="2" fill="rgba(255,0,0,0.9)" id="center-dot"/>
 
         <!-- ミルドット（距離目盛り） -->
-        <g fill="rgba(0,255,0,0.6)">
+        <g fill="rgba(0,0,0,0.6)">
           <circle cx="100" cy="70" r="1.5"/>
           <circle cx="100" cy="55" r="1.5"/>
           <circle cx="100" cy="40" r="1.5"/>
@@ -217,7 +224,7 @@
         </g>
 
         <!-- レンジファインダー目盛り -->
-        <g stroke="rgba(0,255,0,0.4)" stroke-width="0.5">
+        <g stroke="rgba(0,0,0,0.5)" stroke-width="0.5">
           <line x1="85" y1="105" x2="85" y2="110"/>
           <line x1="90" y1="105" x2="90" y2="108"/>
           <line x1="95" y1="105" x2="95" y2="108"/>
@@ -248,6 +255,13 @@
     const startBtn = document.getElementById('start-btn');
     const muzzleFlash = document.getElementById('muzzle-flash');
     const scopeOverlay = document.getElementById('scope-overlay');
+    const segmentationCanvas = document.getElementById('segmentation-canvas');
+    const segmentationCtx = segmentationCanvas.getContext('2d');
+    const centerDot = document.getElementById('center-dot');
+
+    // 人物検出状態
+    let isPersonDetected = false;
+    let selfieSegmentation = null;
 
     // 射撃音を生成（Web Audio API）
     let audioCtx = null;
@@ -359,6 +373,89 @@
       showHitMarker(rect.width / 2, rect.height / 2);
     }
 
+    // MediaPipeセグメンテーション初期化
+    function initSegmentation() {
+      selfieSegmentation = new SelfieSegmentation({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+      });
+
+      selfieSegmentation.setOptions({
+        modelSelection: 1, // 0: 一般モデル, 1: ランドスケープモデル（高精度）
+        selfieMode: false
+      });
+
+      selfieSegmentation.onResults(onSegmentationResults);
+    }
+
+    // セグメンテーション結果の処理
+    function onSegmentationResults(results) {
+      // Canvasのサイズを調整
+      segmentationCanvas.width = results.image.width;
+      segmentationCanvas.height = results.image.height;
+
+      segmentationCtx.clearRect(0, 0, segmentationCanvas.width, segmentationCanvas.height);
+
+      // セグメンテーションマスクから輪郭を抽出
+      const mask = results.segmentationMask;
+      const imageData = segmentationCtx.createImageData(segmentationCanvas.width, segmentationCanvas.height);
+
+      // マスクから輪郭を検出して描画
+      for (let i = 0; i < mask.width; i++) {
+        for (let j = 0; j < mask.height; j++) {
+          const index = j * mask.width + i;
+          const pixel = mask.data[index];
+
+          // エッジ検出（周囲のピクセルと比較）
+          let isEdge = false;
+          if (pixel > 128) { // 人物領域
+            // 周囲8方向をチェック
+            const neighbors = [
+              (j > 0) ? mask.data[(j-1) * mask.width + i] : 0,
+              (j < mask.height - 1) ? mask.data[(j+1) * mask.width + i] : 0,
+              (i > 0) ? mask.data[j * mask.width + (i-1)] : 0,
+              (i < mask.width - 1) ? mask.data[j * mask.width + (i+1)] : 0
+            ];
+
+            isEdge = neighbors.some(n => n < 128);
+          }
+
+          const imageIndex = index * 4;
+          if (isEdge) {
+            // 輪郭線を赤色で描画
+            imageData.data[imageIndex] = 255;     // R
+            imageData.data[imageIndex + 1] = 0;   // G
+            imageData.data[imageIndex + 2] = 0;   // B
+            imageData.data[imageIndex + 3] = 200; // A
+          }
+        }
+      }
+
+      segmentationCtx.putImageData(imageData, 0, 0);
+
+      // 中央の点が人物領域内にあるかチェック
+      const centerX = Math.floor(mask.width / 2);
+      const centerY = Math.floor(mask.height / 2);
+      const centerIndex = centerY * mask.width + centerX;
+      const centerPixel = mask.data[centerIndex];
+
+      isPersonDetected = centerPixel > 128;
+
+      // 中央の点の色を変更
+      if (isPersonDetected) {
+        centerDot.setAttribute('fill', 'rgba(0,255,0,0.9)'); // 緑
+      } else {
+        centerDot.setAttribute('fill', 'rgba(255,0,0,0.9)'); // 赤
+      }
+    }
+
+    // カメラフレームをセグメンテーション処理
+    async function processFrame() {
+      if (selfieSegmentation && video.readyState >= 2) {
+        await selfieSegmentation.send({ image: video });
+      }
+      requestAnimationFrame(processFrame);
+    }
+
     // カメラ起動
     async function startCamera() {
       try {
@@ -372,6 +469,14 @@
         });
         video.srcObject = stream;
         startScreen.classList.add('hidden');
+
+        // MediaPipeセグメンテーション開始
+        initSegmentation();
+
+        // ビデオが再生開始したらフレーム処理を開始
+        video.addEventListener('loadeddata', () => {
+          processFrame();
+        });
 
         // タップで射撃
         container.addEventListener('click', fire);
@@ -388,17 +493,33 @@
 
     startBtn.addEventListener('click', startCamera);
 
-    // HUD更新（フレーバー）
+    // 端末の傾きデータ
+    let deviceData = {
+      pitch: 0,
+      roll: 0,
+      azimuth: 0
+    };
+
+    // DeviceOrientation APIで傾きを取得
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', (e) => {
+        // beta: 前後の傾き (-180 to 180)
+        // gamma: 左右の傾き (-90 to 90)
+        // alpha: 方位 (0 to 360)
+        deviceData.pitch = e.beta ? e.beta.toFixed(1) : 0;
+        deviceData.roll = e.gamma ? e.gamma.toFixed(1) : 0;
+        deviceData.azimuth = e.alpha ? e.alpha.toFixed(0) : 0;
+      });
+    }
+
+    // HUD更新（リアルタイム傾きデータ）
     setInterval(() => {
-      const wind = (2 + Math.random() * 0.6 - 0.3).toFixed(1);
-      const elev = (1 + Math.random() * 0.4 - 0.2).toFixed(1);
-      const rng = Math.floor(150 + Math.random() * 50);
       document.getElementById('hud').innerHTML = `
-        <div>WIND: ${wind} MPH</div>
-        <div>ELEV: +${elev} MOA</div>
-        <div>RNG: ${rng} M</div>
+        <div>PITCH: ${deviceData.pitch}°</div>
+        <div>ROLL: ${deviceData.roll}°</div>
+        <div>AZIMUTH: ${deviceData.azimuth}°</div>
       `;
-    }, 2000);
+    }, 100);
   </script>
 
 </body>
