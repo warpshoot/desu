@@ -183,6 +183,19 @@
       pointer-events: none;
       text-shadow: 0 0 5px rgba(0,0,0,0.8);
     }
+
+    /* ステータス表示 */
+    #status {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      color: rgba(255, 255, 255, 0.7);
+      font-family: monospace;
+      font-size: 10px;
+      pointer-events: none;
+      text-shadow: 0 0 5px rgba(0,0,0,0.8);
+      text-align: right;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
@@ -243,6 +256,12 @@
       <div>RNG: --- M</div>
     </div>
 
+    <div id="status">
+      <div>MODEL: Loading...</div>
+      <div>DETECT: Inactive</div>
+      <div>ORIENT: Inactive</div>
+    </div>
+
     <div id="start-screen">
       <button id="start-btn">ENGAGE</button>
     </div>
@@ -258,10 +277,25 @@
     const segmentationCanvas = document.getElementById('segmentation-canvas');
     const segmentationCtx = segmentationCanvas.getContext('2d');
     const centerDot = document.getElementById('center-dot');
+    const statusDiv = document.getElementById('status');
 
     // 人物検出状態
     let isPersonDetected = false;
     let selfieSegmentation = null;
+    let modelLoaded = false;
+    let frameCount = 0;
+    let fps = 0;
+    let lastFpsUpdate = Date.now();
+    let orientationEventCount = 0;
+
+    // ステータス更新関数
+    function updateStatus(model, detect, orient) {
+      statusDiv.innerHTML = `
+        <div>MODEL: ${model}</div>
+        <div>DETECT: ${detect}</div>
+        <div>ORIENT: ${orient}</div>
+      `;
+    }
 
     // 射撃音を生成（Web Audio API）
     let audioCtx = null;
@@ -375,76 +409,110 @@
 
     // MediaPipeセグメンテーション初期化
     function initSegmentation() {
-      selfieSegmentation = new SelfieSegmentation({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
-      });
+      try {
+        updateStatus('Loading...', 'Inactive', orientationEventCount > 0 ? 'Active' : 'Inactive');
 
-      selfieSegmentation.setOptions({
-        modelSelection: 1, // 0: 一般モデル, 1: ランドスケープモデル（高精度）
-        selfieMode: false
-      });
+        selfieSegmentation = new SelfieSegmentation({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+        });
 
-      selfieSegmentation.onResults(onSegmentationResults);
+        selfieSegmentation.setOptions({
+          modelSelection: 1, // 0: 一般モデル, 1: ランドスケープモデル（高精度）
+          selfieMode: false
+        });
+
+        selfieSegmentation.onResults(onSegmentationResults);
+
+        console.log('MediaPipe initialized');
+      } catch (err) {
+        console.error('MediaPipe init error:', err);
+        updateStatus('Error', 'Inactive', deviceData.pitch !== 0 ? 'Active' : 'Inactive');
+      }
     }
 
     // セグメンテーション結果の処理
     function onSegmentationResults(results) {
-      // Canvasのサイズを調整
-      segmentationCanvas.width = results.image.width;
-      segmentationCanvas.height = results.image.height;
+      try {
+        if (!modelLoaded) {
+          modelLoaded = true;
+          console.log('Model loaded successfully');
+        }
 
-      segmentationCtx.clearRect(0, 0, segmentationCanvas.width, segmentationCanvas.height);
+        frameCount++;
 
-      // セグメンテーションマスクから輪郭を抽出
-      const mask = results.segmentationMask;
-      const imageData = segmentationCtx.createImageData(segmentationCanvas.width, segmentationCanvas.height);
+        // FPS計算（1秒ごと）
+        const now = Date.now();
+        if (now - lastFpsUpdate >= 1000) {
+          fps = frameCount;
+          frameCount = 0;
+          lastFpsUpdate = now;
+        }
 
-      // マスクから輪郭を検出して描画
-      for (let i = 0; i < mask.width; i++) {
-        for (let j = 0; j < mask.height; j++) {
-          const index = j * mask.width + i;
-          const pixel = mask.data[index];
+        // Canvasのサイズを調整
+        segmentationCanvas.width = video.videoWidth;
+        segmentationCanvas.height = video.videoHeight;
 
-          // エッジ検出（周囲のピクセルと比較）
-          let isEdge = false;
-          if (pixel > 128) { // 人物領域
-            // 周囲8方向をチェック
-            const neighbors = [
-              (j > 0) ? mask.data[(j-1) * mask.width + i] : 0,
-              (j < mask.height - 1) ? mask.data[(j+1) * mask.width + i] : 0,
-              (i > 0) ? mask.data[j * mask.width + (i-1)] : 0,
-              (i < mask.width - 1) ? mask.data[j * mask.width + (i+1)] : 0
-            ];
+        segmentationCtx.clearRect(0, 0, segmentationCanvas.width, segmentationCanvas.height);
 
-            isEdge = neighbors.some(n => n < 128);
-          }
+        // セグメンテーションマスクを一時Canvasに描画
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = segmentationCanvas.width;
+        tempCanvas.height = segmentationCanvas.height;
 
-          const imageIndex = index * 4;
-          if (isEdge) {
-            // 輪郭線を赤色で描画
-            imageData.data[imageIndex] = 255;     // R
-            imageData.data[imageIndex + 1] = 0;   // G
-            imageData.data[imageIndex + 2] = 0;   // B
-            imageData.data[imageIndex + 3] = 200; // A
+        tempCtx.drawImage(results.segmentationMask, 0, 0, tempCanvas.width, tempCanvas.height);
+        const maskData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+
+        // 輪郭線を検出して描画
+        const outputData = segmentationCtx.createImageData(segmentationCanvas.width, segmentationCanvas.height);
+        const width = maskData.width;
+        const height = maskData.height;
+
+        for (let y = 1; y < height - 1; y++) {
+          for (let x = 1; x < width - 1; x++) {
+            const idx = (y * width + x) * 4;
+            const pixel = maskData.data[idx]; // R channel (grayscale)
+
+            if (pixel > 128) { // 人物領域
+              // 周囲をチェック（エッジ検出）
+              const top = maskData.data[((y - 1) * width + x) * 4];
+              const bottom = maskData.data[((y + 1) * width + x) * 4];
+              const left = maskData.data[(y * width + (x - 1)) * 4];
+              const right = maskData.data[(y * width + (x + 1)) * 4];
+
+              if (top < 128 || bottom < 128 || left < 128 || right < 128) {
+                // エッジ検出 - 赤い輪郭線を描画
+                outputData.data[idx] = 255;     // R
+                outputData.data[idx + 1] = 0;   // G
+                outputData.data[idx + 2] = 0;   // B
+                outputData.data[idx + 3] = 255; // A
+              }
+            }
           }
         }
-      }
 
-      segmentationCtx.putImageData(imageData, 0, 0);
+        segmentationCtx.putImageData(outputData, 0, 0);
 
-      // 中央の点が人物領域内にあるかチェック
-      const centerX = Math.floor(mask.width / 2);
-      const centerY = Math.floor(mask.height / 2);
-      const centerIndex = centerY * mask.width + centerX;
-      const centerPixel = mask.data[centerIndex];
+        // 中央の点が人物領域内にあるかチェック
+        const centerX = Math.floor(width / 2);
+        const centerY = Math.floor(height / 2);
+        const centerIdx = (centerY * width + centerX) * 4;
+        const centerPixel = maskData.data[centerIdx];
 
-      isPersonDetected = centerPixel > 128;
+        isPersonDetected = centerPixel > 128;
 
-      // 中央の点の色を変更
-      if (isPersonDetected) {
-        centerDot.setAttribute('fill', 'rgba(0,255,0,0.9)'); // 緑
-      } else {
-        centerDot.setAttribute('fill', 'rgba(255,0,0,0.9)'); // 赤
+        // 中央の点の色を変更
+        if (isPersonDetected) {
+          centerDot.setAttribute('fill', 'rgba(0,255,0,0.9)'); // 緑
+        } else {
+          centerDot.setAttribute('fill', 'rgba(255,0,0,0.9)'); // 赤
+        }
+
+        // ステータス更新
+        updateStatus('Ready', `${fps}fps`, orientationEventCount > 0 ? 'Active' : 'Inactive');
+      } catch (err) {
+        console.error('Segmentation error:', err);
+        updateStatus('Error', 'Failed', deviceData.pitch !== 0 ? 'Active' : 'Inactive');
       }
     }
 
@@ -469,6 +537,18 @@
         });
         video.srcObject = stream;
         startScreen.classList.add('hidden');
+
+        // DeviceOrientation パーミッション要求（iOS 13+）
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          try {
+            const permission = await DeviceOrientationEvent.requestPermission();
+            if (permission === 'granted') {
+              console.log('DeviceOrientation permission granted');
+            }
+          } catch (err) {
+            console.error('DeviceOrientation permission error:', err);
+          }
+        }
 
         // MediaPipeセグメンテーション開始
         initSegmentation();
@@ -503,22 +583,35 @@
     // DeviceOrientation APIで傾きを取得
     if (window.DeviceOrientationEvent) {
       window.addEventListener('deviceorientation', (e) => {
+        orientationEventCount++;
+
         // beta: 前後の傾き (-180 to 180)
         // gamma: 左右の傾き (-90 to 90)
         // alpha: 方位 (0 to 360)
-        deviceData.pitch = e.beta ? e.beta.toFixed(1) : 0;
-        deviceData.roll = e.gamma ? e.gamma.toFixed(1) : 0;
-        deviceData.azimuth = e.alpha ? e.alpha.toFixed(0) : 0;
-      });
+        if (e.beta !== null) deviceData.pitch = e.beta.toFixed(1);
+        if (e.gamma !== null) deviceData.roll = e.gamma.toFixed(1);
+        if (e.alpha !== null) deviceData.azimuth = e.alpha.toFixed(0);
+
+        // 最初のイベントをログ出力
+        if (orientationEventCount === 1) {
+          console.log('DeviceOrientation event received:', e.alpha, e.beta, e.gamma);
+        }
+      }, true);
+    } else {
+      console.warn('DeviceOrientationEvent not supported');
     }
 
     // HUD更新（リアルタイム傾きデータ）
     setInterval(() => {
-      document.getElementById('hud').innerHTML = `
-        <div>PITCH: ${deviceData.pitch}°</div>
-        <div>ROLL: ${deviceData.roll}°</div>
-        <div>AZIMUTH: ${deviceData.azimuth}°</div>
-      `;
+      const hudContent = orientationEventCount > 0
+        ? `<div>PITCH: ${deviceData.pitch}°</div>
+           <div>ROLL: ${deviceData.roll}°</div>
+           <div>AZIMUTH: ${deviceData.azimuth}°</div>`
+        : `<div>PITCH: N/A</div>
+           <div>ROLL: N/A</div>
+           <div>AZIMUTH: N/A</div>`;
+
+      document.getElementById('hud').innerHTML = hudContent;
     }, 100);
   </script>
 
