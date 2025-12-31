@@ -167,11 +167,11 @@
       position: absolute;
       bottom: 20px;
       left: 20px;
-      color: rgba(0, 255, 0, 0.7);
+      color: rgba(255, 255, 255, 0.9);
       font-family: monospace;
       font-size: 12px;
       pointer-events: none;
-      text-shadow: 0 0 5px rgba(0,255,0,0.5);
+      text-shadow: 0 0 5px rgba(0,0,0,0.8);
     }
   </style>
 </head>
@@ -184,13 +184,7 @@
 
       <svg id="reticle" viewBox="0 0 200 200">
         <!-- メインのクロスヘア -->
-        <g stroke="rgba(0,0,0,0.6)" stroke-width="3">
-          <line x1="100" y1="0" x2="100" y2="85"/>
-          <line x1="100" y1="115" x2="100" y2="200"/>
-          <line x1="0" y1="100" x2="85" y2="100"/>
-          <line x1="115" y1="100" x2="200" y2="100"/>
-        </g>
-        <g stroke="rgba(0,255,0,0.8)" stroke-width="1.5">
+        <g stroke="rgba(0,0,0,0.8)" stroke-width="1">
           <line x1="100" y1="0" x2="100" y2="85"/>
           <line x1="100" y1="115" x2="100" y2="200"/>
           <line x1="0" y1="100" x2="85" y2="100"/>
@@ -198,10 +192,10 @@
         </g>
 
         <!-- 中心のドット -->
-        <circle cx="100" cy="100" r="2" fill="rgba(255,0,0,0.9)"/>
+        <circle cx="100" cy="100" r="2" fill="rgba(255,0,0,0.9)" id="center-dot"/>
 
         <!-- ミルドット（距離目盛り） -->
-        <g fill="rgba(0,255,0,0.6)">
+        <g fill="rgba(0,0,0,0.6)">
           <circle cx="100" cy="70" r="1.5"/>
           <circle cx="100" cy="55" r="1.5"/>
           <circle cx="100" cy="40" r="1.5"/>
@@ -217,7 +211,7 @@
         </g>
 
         <!-- レンジファインダー目盛り -->
-        <g stroke="rgba(0,255,0,0.4)" stroke-width="0.5">
+        <g stroke="rgba(0,0,0,0.5)" stroke-width="0.5">
           <line x1="85" y1="105" x2="85" y2="110"/>
           <line x1="90" y1="105" x2="90" y2="108"/>
           <line x1="95" y1="105" x2="95" y2="108"/>
@@ -388,17 +382,33 @@
 
     startBtn.addEventListener('click', startCamera);
 
-    // HUD更新（フレーバー）
+    // 端末の傾きデータ
+    let deviceData = {
+      pitch: 0,
+      roll: 0,
+      azimuth: 0
+    };
+
+    // DeviceOrientation APIで傾きを取得
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', (e) => {
+        // beta: 前後の傾き (-180 to 180)
+        // gamma: 左右の傾き (-90 to 90)
+        // alpha: 方位 (0 to 360)
+        deviceData.pitch = e.beta ? e.beta.toFixed(1) : 0;
+        deviceData.roll = e.gamma ? e.gamma.toFixed(1) : 0;
+        deviceData.azimuth = e.alpha ? e.alpha.toFixed(0) : 0;
+      });
+    }
+
+    // HUD更新（リアルタイム傾きデータ）
     setInterval(() => {
-      const wind = (2 + Math.random() * 0.6 - 0.3).toFixed(1);
-      const elev = (1 + Math.random() * 0.4 - 0.2).toFixed(1);
-      const rng = Math.floor(150 + Math.random() * 50);
       document.getElementById('hud').innerHTML = `
-        <div>WIND: ${wind} MPH</div>
-        <div>ELEV: +${elev} MOA</div>
-        <div>RNG: ${rng} M</div>
+        <div>PITCH: ${deviceData.pitch}°</div>
+        <div>ROLL: ${deviceData.roll}°</div>
+        <div>AZIMUTH: ${deviceData.azimuth}°</div>
       `;
-    }, 2000);
+    }, 100);
   </script>
 
 </body>
