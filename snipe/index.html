@@ -196,6 +196,19 @@
       text-shadow: 0 0 5px rgba(0,0,0,0.8);
       text-align: right;
     }
+
+    /* デバッグ情報 */
+    #debug {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: rgba(255, 255, 0, 0.8);
+      font-family: monospace;
+      font-size: 9px;
+      pointer-events: none;
+      text-shadow: 0 0 5px rgba(0,0,0,0.8);
+      max-width: 300px;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
@@ -262,6 +275,8 @@
       <div>ORIENT: Inactive</div>
     </div>
 
+    <div id="debug"></div>
+
     <div id="start-screen">
       <button id="start-btn">ENGAGE</button>
     </div>
@@ -278,6 +293,7 @@
     const segmentationCtx = segmentationCanvas.getContext('2d');
     const centerDot = document.getElementById('center-dot');
     const statusDiv = document.getElementById('status');
+    const debugDiv = document.getElementById('debug');
 
     // 人物検出状態
     let isPersonDetected = false;
@@ -580,6 +596,28 @@
       azimuth: 0
     };
 
+    // デバッグ情報を更新
+    function updateDebugInfo() {
+      const isHTTPS = window.location.protocol === 'https:';
+      const hasDeviceOrientation = typeof DeviceOrientationEvent !== 'undefined';
+      const hasPermissionAPI = hasDeviceOrientation && typeof DeviceOrientationEvent.requestPermission === 'function';
+      const userAgent = navigator.userAgent;
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
+
+      debugDiv.innerHTML = `
+        <div>HTTPS: ${isHTTPS ? 'YES' : 'NO (Required!)'}</div>
+        <div>Mobile: ${isMobile ? 'YES' : 'NO (Required!)'}</div>
+        <div>DeviceOrientation: ${hasDeviceOrientation ? 'Supported' : 'Not Supported'}</div>
+        <div>Permission API: ${hasPermissionAPI ? 'YES (iOS 13+)' : 'NO'}</div>
+        <div>Events: ${orientationEventCount}</div>
+        <div style="font-size: 8px; margin-top: 5px;">${userAgent.substring(0, 50)}...</div>
+      `;
+    }
+
+    // 初回更新
+    updateDebugInfo();
+    setInterval(updateDebugInfo, 1000);
+
     // DeviceOrientation APIで傾きを取得
     if (window.DeviceOrientationEvent) {
       window.addEventListener('deviceorientation', (e) => {
@@ -597,6 +635,8 @@
           console.log('DeviceOrientation event received:', e.alpha, e.beta, e.gamma);
         }
       }, true);
+
+      console.log('DeviceOrientation listener registered');
     } else {
       console.warn('DeviceOrientationEvent not supported');
     }
