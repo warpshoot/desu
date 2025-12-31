@@ -885,14 +885,14 @@ document.getElementById('brushSize').addEventListener('input', (e) => {
 
 // ノイズ生成
 document.getElementById('noiseBtn').addEventListener('click', () => {
-    // ランダムにノイズレベルを選択（1, 2, 3）
-    const randomNoiseLevel = Math.floor(Math.random() * 3) + 1;
+    // ノイズレベルは1固定（重ねがけで調整可能）
+    const noiseLevel = 1;
 
     // 現在のキャンバスから画像データを取得
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
     // ノイズフレームを生成（背景透過なし）
-    const frames = generateGlitchFrames(imgData, false, randomNoiseLevel);
+    const frames = generateGlitchFrames(imgData, false, noiseLevel);
 
     // 最初のフレームをキャンバスに描画
     ctx.putImageData(frames[0], 0, 0);
