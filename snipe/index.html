@@ -303,6 +303,7 @@
     let fps = 0;
     let lastFpsUpdate = Date.now();
     let orientationEventCount = 0;
+    let permissionStatus = 'Not Requested';
 
     // ステータス更新関数
     function updateStatus(model, detect, orient) {
@@ -557,13 +558,23 @@
         // DeviceOrientation パーミッション要求（iOS 13+）
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
           try {
+            console.log('Requesting DeviceOrientation permission...');
             const permission = await DeviceOrientationEvent.requestPermission();
+            permissionStatus = permission; // 'granted', 'denied', or 'default'
+            console.log('DeviceOrientation permission:', permission);
+
             if (permission === 'granted') {
               console.log('DeviceOrientation permission granted');
+            } else {
+              console.warn('DeviceOrientation permission denied or not granted:', permission);
+              alert('端末の傾き検出を有効にするには、設定でモーションとオリエンテーションへのアクセスを許可してください。');
             }
           } catch (err) {
             console.error('DeviceOrientation permission error:', err);
+            permissionStatus = 'Error: ' + err.message;
           }
+        } else {
+          permissionStatus = 'No Permission API';
         }
 
         // MediaPipeセグメンテーション開始
@@ -609,6 +620,7 @@
         <div>Mobile: ${isMobile ? 'YES' : 'NO (Required!)'}</div>
         <div>DeviceOrientation: ${hasDeviceOrientation ? 'Supported' : 'Not Supported'}</div>
         <div>Permission API: ${hasPermissionAPI ? 'YES (iOS 13+)' : 'NO'}</div>
+        <div>Permission: ${permissionStatus}</div>
         <div>Events: ${orientationEventCount}</div>
         <div style="font-size: 8px; margin-top: 5px;">${userAgent.substring(0, 50)}...</div>
       `;
