@@ -304,6 +304,11 @@
     let lastFpsUpdate = Date.now();
     let orientationEventCount = 0;
     let permissionStatus = 'Not Requested';
+    let locationData = {
+      lat: 'N/A',
+      lon: 'N/A',
+      altitude: 'N/A'
+    };
 
     // ステータス更新関数
     function updateStatus(model, detect, orient) {
@@ -602,6 +607,22 @@
 
     startBtn.addEventListener('click', startCamera);
 
+    // 位置情報取得
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(
+        (position) => {
+          locationData.lat = position.coords.latitude.toFixed(6);
+          locationData.lon = position.coords.longitude.toFixed(6);
+          locationData.altitude = position.coords.altitude ? position.coords.altitude.toFixed(1) + 'm' : 'N/A';
+          console.log('Location updated:', locationData);
+        },
+        (error) => {
+          console.warn('Geolocation error:', error);
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+
     // 端末の傾きデータ
     let deviceData = {
       pitch: 0,
@@ -655,17 +676,20 @@
       console.warn('DeviceOrientationEvent not supported');
     }
 
-    // HUD更新（リアルタイム傾きデータ）
+    // HUD更新（時刻、場所、天気）
     setInterval(() => {
-      const hudContent = orientationEventCount > 0
-        ? `<div>PITCH: ${deviceData.pitch}°</div>
-           <div>ROLL: ${deviceData.roll}°</div>
-           <div>AZIMUTH: ${deviceData.azimuth}°</div>`
-        : `<div>PITCH: N/A</div>
-           <div>ROLL: N/A</div>
-           <div>AZIMUTH: N/A</div>`;
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-      document.getElementById('hud').innerHTML = hudContent;
+      // 天気（模擬データ - 外部API未実装）
+      const weather = 'Clear';
+      const temp = '22°C';
+
+      document.getElementById('hud').innerHTML = `
+        <div>TIME: ${timeStr}</div>
+        <div>LAT: ${locationData.lat}</div>
+        <div>LON: ${locationData.lon}</div>
+      `;
     }, 100);
   </script>
 
