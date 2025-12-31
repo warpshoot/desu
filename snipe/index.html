@@ -34,6 +34,16 @@
       object-fit: cover;
     }
 
+    #segmentation-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
     #scope-overlay {
       position: absolute;
       top: 0;
@@ -174,10 +184,13 @@
       text-shadow: 0 0 5px rgba(0,0,0,0.8);
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
 </head>
 <body>
   <div id="container">
     <video id="video" autoplay playsinline muted></video>
+    <canvas id="segmentation-canvas"></canvas>
 
     <div id="scope-overlay">
       <div id="vignette"></div>
@@ -242,6 +255,13 @@
     const startBtn = document.getElementById('start-btn');
     const muzzleFlash = document.getElementById('muzzle-flash');
     const scopeOverlay = document.getElementById('scope-overlay');
+    const segmentationCanvas = document.getElementById('segmentation-canvas');
+    const segmentationCtx = segmentationCanvas.getContext('2d');
+    const centerDot = document.getElementById('center-dot');
+
+    // 人物検出状態
+    let isPersonDetected = false;
+    let selfieSegmentation = null;
 
     // 射撃音を生成（Web Audio API）
     let audioCtx = null;
@@ -353,6 +373,89 @@
       showHitMarker(rect.width / 2, rect.height / 2);
     }
 
+    // MediaPipeセグメンテーション初期化
+    function initSegmentation() {
+      selfieSegmentation = new SelfieSegmentation({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+      });
+
+      selfieSegmentation.setOptions({
+        modelSelection: 1, // 0: 一般モデル, 1: ランドスケープモデル（高精度）
+        selfieMode: false
+      });
+
+      selfieSegmentation.onResults(onSegmentationResults);
+    }
+
+    // セグメンテーション結果の処理
+    function onSegmentationResults(results) {
+      // Canvasのサイズを調整
+      segmentationCanvas.width = results.image.width;
+      segmentationCanvas.height = results.image.height;
+
+      segmentationCtx.clearRect(0, 0, segmentationCanvas.width, segmentationCanvas.height);
+
+      // セグメンテーションマスクから輪郭を抽出
+      const mask = results.segmentationMask;
+      const imageData = segmentationCtx.createImageData(segmentationCanvas.width, segmentationCanvas.height);
+
+      // マスクから輪郭を検出して描画
+      for (let i = 0; i < mask.width; i++) {
+        for (let j = 0; j < mask.height; j++) {
+          const index = j * mask.width + i;
+          const pixel = mask.data[index];
+
+          // エッジ検出（周囲のピクセルと比較）
+          let isEdge = false;
+          if (pixel > 128) { // 人物領域
+            // 周囲8方向をチェック
+            const neighbors = [
+              (j > 0) ? mask.data[(j-1) * mask.width + i] : 0,
+              (j < mask.height - 1) ? mask.data[(j+1) * mask.width + i] : 0,
+              (i > 0) ? mask.data[j * mask.width + (i-1)] : 0,
+              (i < mask.width - 1) ? mask.data[j * mask.width + (i+1)] : 0
+            ];
+
+            isEdge = neighbors.some(n => n < 128);
+          }
+
+          const imageIndex = index * 4;
+          if (isEdge) {
+            // 輪郭線を赤色で描画
+            imageData.data[imageIndex] = 255;     // R
+            imageData.data[imageIndex + 1] = 0;   // G
+            imageData.data[imageIndex + 2] = 0;   // B
+            imageData.data[imageIndex + 3] = 200; // A
+          }
+        }
+      }
+
+      segmentationCtx.putImageData(imageData, 0, 0);
+
+      // 中央の点が人物領域内にあるかチェック
+      const centerX = Math.floor(mask.width / 2);
+      const centerY = Math.floor(mask.height / 2);
+      const centerIndex = centerY * mask.width + centerX;
+      const centerPixel = mask.data[centerIndex];
+
+      isPersonDetected = centerPixel > 128;
+
+      // 中央の点の色を変更
+      if (isPersonDetected) {
+        centerDot.setAttribute('fill', 'rgba(0,255,0,0.9)'); // 緑
+      } else {
+        centerDot.setAttribute('fill', 'rgba(255,0,0,0.9)'); // 赤
+      }
+    }
+
+    // カメラフレームをセグメンテーション処理
+    async function processFrame() {
+      if (selfieSegmentation && video.readyState >= 2) {
+        await selfieSegmentation.send({ image: video });
+      }
+      requestAnimationFrame(processFrame);
+    }
+
     // カメラ起動
     async function startCamera() {
       try {
@@ -366,6 +469,14 @@
         });
         video.srcObject = stream;
         startScreen.classList.add('hidden');
+
+        // MediaPipeセグメンテーション開始
+        initSegmentation();
+
+        // ビデオが再生開始したらフレーム処理を開始
+        video.addEventListener('loadeddata', () => {
+          processFrame();
+        });
 
         // タップで射撃
         container.addEventListener('click', fire);
