@@ -1470,20 +1470,81 @@ document.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
     switch(e.key.toLowerCase()) {
+        case 'b':
+            // ペンツール（Photoshop準拠）
+            document.getElementById('penBtn').click();
+            break;
+
+        case 'g':
+            // 塗りつぶしツール
+            document.getElementById('fillBtn').click();
+            break;
+
+        case 'e':
+            // 消しゴム（背景色に切り替え + ペンツール）
+            const eraserColor = isDarkMode ? 'black' : 'white';
+            if (currentColor !== eraserColor) {
+                document.getElementById('colorBtn').click();
+            }
+            if (currentTool !== 'pen') {
+                document.getElementById('penBtn').click();
+            }
+            break;
+
         case 'x':
             // 色切り替え
             document.getElementById('colorBtn').click();
             break;
 
-        case 'p':
-            // ペンツール
-            document.getElementById('penBtn').click();
+        case 'd':
+            // デフォルトカラー（黒に戻す）
+            if (currentColor !== 'black') {
+                document.getElementById('colorBtn').click();
+            }
             break;
 
-        case 'e':
-        case 'g':
-            // 塗りつぶしツール
-            document.getElementById('fillBtn').click();
+        case '[':
+            // ブラシサイズ縮小
+            {
+                const currentSize = colorSizes[currentColor];
+                if (currentSize > 1) {
+                    const newSize = currentSize - 1;
+                    colorSizes[currentColor] = newSize;
+                    document.getElementById('brushSize').value = newSize;
+                    document.getElementById('sizeDisplay').textContent = newSize;
+                }
+            }
+            break;
+
+        case ']':
+            // ブラシサイズ拡大
+            {
+                const currentSize = colorSizes[currentColor];
+                if (currentSize < 20) {
+                    const newSize = currentSize + 1;
+                    colorSizes[currentColor] = newSize;
+                    document.getElementById('brushSize').value = newSize;
+                    document.getElementById('sizeDisplay').textContent = newSize;
+                }
+            }
+            break;
+
+        case 'tab':
+            // ツールバー表示/非表示
+            e.preventDefault();
+            const toolbarLeft = document.getElementById('toolbar-left');
+            const toolbarRight = document.getElementById('toolbar-right');
+            const creditBtn = document.getElementById('credit-btn');
+
+            if (toolbarLeft.style.display === 'none') {
+                toolbarLeft.style.display = 'flex';
+                toolbarRight.style.display = 'flex';
+                creditBtn.style.display = 'flex';
+            } else {
+                toolbarLeft.style.display = 'none';
+                toolbarRight.style.display = 'none';
+                creditBtn.style.display = 'none';
+            }
             break;
 
         case 'delete':
