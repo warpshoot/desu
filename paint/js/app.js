@@ -1437,6 +1437,74 @@ window.addEventListener('orientationchange', () => {
 });
 
 // ============================================
+// キーボードショートカット
+// ============================================
+
+document.addEventListener('keydown', (e) => {
+    // 保存モード中は無効
+    if (isSaveMode) return;
+
+    // Cmd/Ctrl + S: 保存モード
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        document.getElementById('saveBtn').click();
+        return;
+    }
+
+    // Cmd/Ctrl + Shift + Z: Redo
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        redo();
+        return;
+    }
+
+    // Cmd/Ctrl + Z: Undo
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        undo();
+        return;
+    }
+
+    // 以下、修飾キーなしのショートカット
+    // 修飾キーが押されている場合はスキップ
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    switch(e.key.toLowerCase()) {
+        case 'x':
+            // 色切り替え
+            document.getElementById('colorBtn').click();
+            break;
+
+        case 'p':
+            // ペンツール
+            document.getElementById('penBtn').click();
+            break;
+
+        case 'e':
+            // 塗りつぶしツール
+            document.getElementById('fillBtn').click();
+            break;
+
+        case 'delete':
+        case 'backspace':
+            // クリア
+            e.preventDefault();
+            document.getElementById('clearBtn').click();
+            break;
+
+        case 'i':
+            // 反転
+            document.getElementById('invertBtn').click();
+            break;
+
+        case 'n':
+            // ノイズ
+            document.getElementById('noiseBtn').click();
+            break;
+    }
+});
+
+// ============================================
 // 起動
 // ============================================
 
