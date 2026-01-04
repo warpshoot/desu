@@ -1437,6 +1437,136 @@ window.addEventListener('orientationchange', () => {
 });
 
 // ============================================
+// キーボードショートカット
+// ============================================
+
+document.addEventListener('keydown', (e) => {
+    // 保存モード中は無効
+    if (isSaveMode) return;
+
+    // Cmd/Ctrl + S: 保存モード
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        document.getElementById('saveBtn').click();
+        return;
+    }
+
+    // Cmd/Ctrl + Shift + Z: Redo
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        redo();
+        return;
+    }
+
+    // Cmd/Ctrl + Z: Undo
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        undo();
+        return;
+    }
+
+    // 以下、修飾キーなしのショートカット
+    // 修飾キーが押されている場合はスキップ
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    switch(e.key.toLowerCase()) {
+        case 'b':
+            // ペンツール（Photoshop準拠）
+            document.getElementById('penBtn').click();
+            break;
+
+        case 'g':
+            // 塗りつぶしツール
+            document.getElementById('fillBtn').click();
+            break;
+
+        case 'e':
+            // 消しゴム（背景色に切り替え + ペンツール）
+            const eraserColor = isDarkMode ? 'black' : 'white';
+            if (currentColor !== eraserColor) {
+                document.getElementById('colorBtn').click();
+            }
+            if (currentTool !== 'pen') {
+                document.getElementById('penBtn').click();
+            }
+            break;
+
+        case 'x':
+            // 色切り替え
+            document.getElementById('colorBtn').click();
+            break;
+
+        case 'd':
+            // デフォルトカラー（黒に戻す）
+            if (currentColor !== 'black') {
+                document.getElementById('colorBtn').click();
+            }
+            break;
+
+        case '[':
+            // ブラシサイズ縮小
+            {
+                const currentSize = colorSizes[currentColor];
+                if (currentSize > 1) {
+                    const newSize = currentSize - 1;
+                    colorSizes[currentColor] = newSize;
+                    document.getElementById('brushSize').value = newSize;
+                    document.getElementById('sizeDisplay').textContent = newSize;
+                }
+            }
+            break;
+
+        case ']':
+            // ブラシサイズ拡大
+            {
+                const currentSize = colorSizes[currentColor];
+                if (currentSize < 20) {
+                    const newSize = currentSize + 1;
+                    colorSizes[currentColor] = newSize;
+                    document.getElementById('brushSize').value = newSize;
+                    document.getElementById('sizeDisplay').textContent = newSize;
+                }
+            }
+            break;
+
+        case 'tab':
+            // ツールバー表示/非表示
+            e.preventDefault();
+            const toolbarLeft = document.getElementById('toolbar-left');
+            const toolbarRight = document.getElementById('toolbar-right');
+            const creditBtn = document.getElementById('credit-btn');
+
+            if (toolbarLeft.style.display === 'none') {
+                toolbarLeft.style.display = 'flex';
+                toolbarRight.style.display = 'flex';
+                creditBtn.style.display = 'flex';
+            } else {
+                toolbarLeft.style.display = 'none';
+                toolbarRight.style.display = 'none';
+                creditBtn.style.display = 'none';
+            }
+            break;
+
+        case 'delete':
+        case 'backspace':
+            // クリア
+            e.preventDefault();
+            document.getElementById('clearBtn').click();
+            break;
+
+        case 'i':
+            // 反転
+            document.getElementById('invertBtn').click();
+            break;
+
+        case 'n':
+            // ノイズ
+            document.getElementById('noiseBtn').click();
+            break;
+    }
+});
+
+// ============================================
 // 起動
 // ============================================
 
