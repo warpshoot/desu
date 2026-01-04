@@ -1481,6 +1481,7 @@ document.addEventListener('keydown', (e) => {
             break;
 
         case 'e':
+        case 'g':
             // 塗りつぶしツール
             document.getElementById('fillBtn').click();
             break;
