@@ -85,8 +85,9 @@ body {
 /* Episodes Grid */
 .episodes-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(250px, 250px));
     gap: 20px;
+    justify-content: start;
 }
 
 .episode-card {

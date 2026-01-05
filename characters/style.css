@@ -14,6 +14,15 @@ body {
     overflow-x: hidden;
 }
 
+/* Section Title */
+.section-title {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    margin-bottom: 30px;
+    color: #000;
+}
+
 /* Characters Section */
 .characters-section {
     padding: 1rem 1rem 2rem;
