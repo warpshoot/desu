@@ -158,7 +158,7 @@ nav {
     margin-bottom: 0.5rem;
 }
 
-button.tab-button {
+.tab-button {
     background: transparent;
     border: none;
     color: #000;
@@ -175,9 +175,10 @@ button.tab-button {
     text-align: center;
     z-index: 1;
     transition: color 0.2s ease 0.15s;
+    text-decoration: none;
 }
 
-button.tab-button::before {
+.tab-button::before {
     content: "";
     position: absolute;
     top: 0;
@@ -190,22 +191,22 @@ button.tab-button::before {
     pointer-events: none;
 }
 
-button.tab-button:hover::before,
-button.tab-button.active::before {
+.tab-button:hover::before,
+.tab-button.active::before {
     width: 100%;
 }
 
-button.tab-button:hover,
-button.tab-button.active {
+.tab-button:hover,
+.tab-button.active {
     color: #fff;
 }
 
-button.tab-button:hover .label,
-button.tab-button.active .label {
+.tab-button:hover .label,
+.tab-button.active .label {
     color: #fff;
 }
 
-button.tab-button .label {
+.tab-button .label {
     position: relative;
     z-index: 2;
     display: block;
