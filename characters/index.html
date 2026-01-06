@@ -2,101 +2,81 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Characters - DESU™</title>
     <link rel="stylesheet" href="../style.css">
 </head>
 <body>
+    <div class="header-fade"></div>
+
     <!-- Arowana Background Animation -->
     <div class="arowana-container">
         <img src="../images/sakana.gif" alt="" class="arowana">
     </div>
 
-    <!-- Hamburger Menu -->
-    <button class="hamburger" id="hamburger" aria-label="Menu">
-        <span></span>
-        <span></span>
-        <span></span>
-    </button>
+    <div class="layout">
+        <div class="header">
+            <div class="title-wrap">
+                <a href="../">
+                    <img src="../desu_logo.png" alt="DESU™" class="site-logo">
+                </a>
+            </div>
+            <nav>
+                <a href="../episodes/" class="tab-button"><span class="label">Episodes</span></a>
+                <a href="../characters/" class="tab-button active"><span class="label">Characters</span></a>
+                <a href="../tools/" class="tab-button"><span class="label">Tools</span></a>
+            </nav>
+        </div>
 
-    <!-- Navigation Menu -->
-    <nav class="nav-menu" id="navMenu">
-        <ul class="nav-list">
-            <li><a href="../episodes/">Episodes</a></li>
-            <li><a href="../characters/">Characters</a></li>
-            <li><a href="../tools/">Tools</a></li>
-        </ul>
-    </nav>
+        <div class="main">
+            <div class="content-inner">
+                <section class="characters-section">
+                    <h1 class="section-title">Characters</h1>
+                    <!-- Character Icon Navigation -->
+                    <div class="character-icons">
+                        <button class="character-icon active" data-character="desu">
+                            <img src="desu_icon.jpg" alt="デス">
+                        </button>
+                        <button class="character-icon" data-character="sakana">
+                            <img src="sakana_icon.jpg" alt="サカナ">
+                        </button>
+                        <button class="character-icon" data-character="shi">
+                            <img src="shi_icon.jpg" alt="し">
+                        </button>
+                    </div>
 
-    <header>
-        <a href="../" class="logo-link">
-            <img src="../desu_logo.png" alt="DESU™" class="site-logo">
-        </a>
-    </header>
+                    <div class="characters-grid">
+                        <!-- デス -->
+                        <div class="character-card" data-character="desu">
+                            <img src="desu.png" alt="デス" class="character-image">
+                            <h2 class="character-name">デス</h2>
+                            <p class="character-description">魂回収のバイトに励む若者</p>
+                        </div>
 
-    <main class="container">
-        <section class="characters-section">
-            <h1 class="section-title">Characters</h1>
-            <!-- Character Icon Navigation -->
-            <div class="character-icons">
-                <button class="character-icon active" data-character="desu">
-                    <img src="desu_icon.jpg" alt="デス">
-                </button>
-                <button class="character-icon" data-character="sakana">
-                    <img src="sakana_icon.jpg" alt="サカナ">
-                </button>
-                <button class="character-icon" data-character="shi">
-                    <img src="shi_icon.jpg" alt="し">
-                </button>
+                        <!-- サカナ -->
+                        <div class="character-card" data-character="sakana" style="display: none;">
+                            <img src="sakana.png" alt="サカナ" class="character-image">
+                            <h2 class="character-name">サカナ</h2>
+                            <p class="character-description">デスが連れてる魚</p>
+                        </div>
+
+                        <!-- し -->
+                        <div class="character-card" data-character="shi" style="display: none;">
+                            <img src="shi.png" alt="し" class="character-image">
+                            <h2 class="character-name">し</h2>
+                            <p class="character-description">歩み寄る死</p>
+                        </div>
+                    </div>
+                </section>
             </div>
 
-            <div class="characters-grid">
-                <!-- デス -->
-                <div class="character-card" data-character="desu">
-                    <img src="desu.png" alt="デス" class="character-image">
-                    <h2 class="character-name">デス</h2>
-                    <p class="character-description">魂回収のバイトに励む若者</p>
-                </div>
-
-                <!-- サカナ -->
-                <div class="character-card" data-character="sakana" style="display: none;">
-                    <img src="sakana.png" alt="サカナ" class="character-image">
-                    <h2 class="character-name">サカナ</h2>
-                    <p class="character-description">デスが連れてる魚</p>
-                </div>
-
-                <!-- し -->
-                <div class="character-card" data-character="shi" style="display: none;">
-                    <img src="shi.png" alt="し" class="character-image">
-                    <h2 class="character-name">し</h2>
-                    <p class="character-description">歩み寄る死</p>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer>
-        <p>© 2026 <a href="https://warpshoot.github.io/" target="_blank">wpy</a></p>
-    </footer>
+            <div class="footer">&copy; 2026 <a href="https://warpshoot.github.io/" target="_blank">wpy</a></div>
+            <div class="footer-fade"></div>
+        </div>
+    </div>
 
     <script>
-        // Hamburger menu
-        const hamburger = document.getElementById('hamburger');
-        const navMenu = document.getElementById('navMenu');
-
-        hamburger.addEventListener('click', () => {
-            hamburger.classList.toggle('active');
-            navMenu.classList.toggle('active');
-        });
-
-        // Close menu when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!hamburger.contains(e.target) && !navMenu.contains(e.target)) {
-                hamburger.classList.remove('active');
-                navMenu.classList.remove('active');
-            }
-        });
-
         // Character tab switching
         const characterIcons = document.querySelectorAll('.character-icon');
         const characterCards = document.querySelectorAll('.character-card');

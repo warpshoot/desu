@@ -3,74 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DESU™ Tools</title>
+    <title>Tools - DESU™</title>
     <link rel="stylesheet" href="../style.css">
 </head>
 <body>
+    <div class="header-fade"></div>
+
     <!-- Arowana Background Animation -->
     <div class="arowana-container">
         <img src="../images/sakana.gif" alt="" class="arowana">
     </div>
 
-    <!-- Hamburger Menu -->
-    <button class="hamburger" id="hamburger" aria-label="Menu">
-        <span></span>
-        <span></span>
-        <span></span>
-    </button>
-
-    <!-- Navigation Menu -->
-    <nav class="nav-menu" id="navMenu">
-        <ul class="nav-list">
-            <li><a href="../episodes/">Episodes</a></li>
-            <li><a href="../characters/">Characters</a></li>
-            <li><a href="../tools/">Tools</a></li>
-        </ul>
-    </nav>
-
-    <header>
-        <a href="../" class="logo-link">
-            <img src="../desu_logo.png" alt="DESU™" class="site-logo">
-        </a>
-    </header>
-
-    <main class="container">
-        <section class="section">
-            <h1 class="section-title">Tools</h1>
-            <div class="episodes-grid">
-                <a href="../paint/" class="episode-card">
-                    <div class="episode-number">PAINT</div>
-                    <div class="episode-title">2値ペンとノイジーなgif生成が特徴の軽快なラクガキツール</div>
-                </a>
-                <a href="../sketch/" class="episode-card">
-                    <div class="episode-number">SKETCH</div>
-                    <div class="episode-title">投げ縄スケッチに特化した軽妙なラクガキツール</div>
+    <div class="layout">
+        <div class="header">
+            <div class="title-wrap">
+                <a href="../">
+                    <img src="../desu_logo.png" alt="DESU™" class="site-logo">
                 </a>
             </div>
-        </section>
-    </main>
+            <nav>
+                <a href="../episodes/" class="tab-button"><span class="label">Episodes</span></a>
+                <a href="../characters/" class="tab-button"><span class="label">Characters</span></a>
+                <a href="../tools/" class="tab-button active"><span class="label">Tools</span></a>
+            </nav>
+        </div>
 
-    <footer>
-        <p>© 2026 <a href="https://warpshoot.github.io/" target="_blank">wpy</a></p>
-    </footer>
+        <div class="main">
+            <div class="content-inner">
+                <section class="section">
+                    <h1 class="section-title">Tools</h1>
+                    <div class="episodes-grid">
+                        <a href="../paint/" class="episode-card">
+                            <div class="episode-number">PAINT</div>
+                            <div class="episode-title">2値ペンとノイジーなgif生成が特徴の軽快なラクガキツール</div>
+                        </a>
+                        <a href="../sketch/" class="episode-card">
+                            <div class="episode-number">SKETCH</div>
+                            <div class="episode-title">投げ縄スケッチに特化した軽妙なラクガキツール</div>
+                        </a>
+                    </div>
+                </section>
+            </div>
 
-    <script>
-        // Hamburger menu
-        const hamburger = document.getElementById('hamburger');
-        const navMenu = document.getElementById('navMenu');
-
-        hamburger.addEventListener('click', () => {
-            hamburger.classList.toggle('active');
-            navMenu.classList.toggle('active');
-        });
-
-        // Close menu when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!hamburger.contains(e.target) && !navMenu.contains(e.target)) {
-                hamburger.classList.remove('active');
-                navMenu.classList.remove('active');
-            }
-        });
-    </script>
+            <div class="footer">&copy; 2026 <a href="https://warpshoot.github.io/" target="_blank">wpy</a></div>
+            <div class="footer-fade"></div>
+        </div>
+    </div>
 </body>
 </html>
