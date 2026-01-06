@@ -642,6 +642,10 @@ nav {
         padding: 15px;
     }
 
+    .main {
+        padding-top: 100px;
+    }
+
     .site-logo {
         max-width: 120px;
     }
