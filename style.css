@@ -361,7 +361,7 @@ nav {
    =================================== */
 .episodes-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: 1fr;
     gap: 20px;
     justify-content: center;
 }
@@ -650,11 +650,6 @@ nav {
     .arowana {
         width: 500px;
         opacity: 0.1;
-    }
-
-    /* Episodes Grid */
-    .episodes-grid {
-        grid-template-columns: 1fr;
     }
 
     /* Characters */
