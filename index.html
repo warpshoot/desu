@@ -7,70 +7,180 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="header-fade"></div>
+
     <!-- Arowana Background Animation -->
     <div class="arowana-container">
         <img src="./images/sakana.gif" alt="" class="arowana">
     </div>
 
-    <!-- Hamburger Menu -->
-    <button class="hamburger" id="hamburger" aria-label="Menu">
-        <span></span>
-        <span></span>
-        <span></span>
-    </button>
-
-    <!-- Navigation Menu -->
-    <nav class="nav-menu" id="navMenu">
-        <ul class="nav-list">
-            <li><a href="./episodes/">Episodes</a></li>
-            <li><a href="./characters/">Characters</a></li>
-            <li><a href="./tools/">Tools</a></li>
-        </ul>
-    </nav>
-
-    <header>
-        <a href="./" class="logo-link">
-            <img src="./desu_logo.png" alt="DESU™" class="site-logo">
-        </a>
-    </header>
-
-    <main class="container">
-        <!-- Main Illustration -->
-        <section class="main-illustration-section">
-            <div class="main-illustration-container">
-                <img src="./images/desu_main.png" alt="DESU Illustration" class="main-illustration">
+    <div class="layout">
+        <div class="header">
+            <div class="title-wrap">
+                <img src="./desu_logo.png" alt="DESU™" class="site-logo" id="desu-logo">
             </div>
-        </section>
+            <nav>
+                <button class="tab-button active" data-tab="home"><span class="label">Home</span></button>
+                <button class="tab-button" data-tab="episodes"><span class="label">Episodes</span></button>
+                <button class="tab-button" data-tab="characters"><span class="label">Characters</span></button>
+                <button class="tab-button" data-tab="tools"><span class="label">Tools</span></button>
+            </nav>
+        </div>
 
-        <!-- Updates Section -->
-        <section class="updates-section">
-            <h2 class="updates-title">update</h2>
-            <ul class="updates-list">
-                <li>20250105 : Episode 1追加</li>
-            </ul>
-        </section>
-    </main>
+        <div class="main">
+            <!-- Home Tab -->
+            <div id="home" class="tab-content active">
+                <div class="content-inner">
+                    <!-- Main Illustration -->
+                    <section class="main-illustration-section">
+                        <div class="main-illustration-container">
+                            <img src="./images/desu_main.png" alt="DESU Illustration" class="main-illustration">
+                        </div>
+                    </section>
 
-    <footer>
-        <p>© 2026 <a href="https://warpshoot.github.io/" target="_blank">wpy</a></p>
-    </footer>
+                    <!-- Updates Section -->
+                    <section class="updates-section">
+                        <h2 class="updates-title">update</h2>
+                        <ul class="updates-list">
+                            <li>20250105 : Episode 1追加</li>
+                        </ul>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Episodes Tab -->
+            <div id="episodes" class="tab-content">
+                <div class="content-inner">
+                    <section class="section">
+                        <h1 class="section-title">Episodes</h1>
+                        <div class="episodes-grid">
+                            <a href="./episodes/ep0/" class="episode-card">
+                                <div class="episode-number">0</div>
+                            </a>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Characters Tab -->
+            <div id="characters" class="tab-content">
+                <div class="content-inner">
+                    <section class="characters-section">
+                        <h1 class="section-title">Characters</h1>
+                        <!-- Character Icon Navigation -->
+                        <div class="character-icons">
+                            <button class="character-icon active" data-character="desu">
+                                <img src="./characters/desu_icon.jpg" alt="デス">
+                            </button>
+                            <button class="character-icon" data-character="sakana">
+                                <img src="./characters/sakana_icon.jpg" alt="サカナ">
+                            </button>
+                            <button class="character-icon" data-character="shi">
+                                <img src="./characters/shi_icon.jpg" alt="し">
+                            </button>
+                        </div>
+
+                        <div class="characters-grid">
+                            <!-- デス -->
+                            <div class="character-card" data-character="desu">
+                                <img src="./characters/desu.png" alt="デス" class="character-image">
+                                <h2 class="character-name">デス</h2>
+                                <p class="character-description">魂回収のバイトに励む若者</p>
+                            </div>
+
+                            <!-- サカナ -->
+                            <div class="character-card" data-character="sakana" style="display: none;">
+                                <img src="./characters/sakana.png" alt="サカナ" class="character-image">
+                                <h2 class="character-name">サカナ</h2>
+                                <p class="character-description">デスが連れてる魚</p>
+                            </div>
+
+                            <!-- し -->
+                            <div class="character-card" data-character="shi" style="display: none;">
+                                <img src="./characters/shi.png" alt="し" class="character-image">
+                                <h2 class="character-name">し</h2>
+                                <p class="character-description">歩み寄る死</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Tools Tab -->
+            <div id="tools" class="tab-content">
+                <div class="content-inner">
+                    <section class="section">
+                        <h1 class="section-title">Tools</h1>
+                        <div class="episodes-grid">
+                            <a href="./paint/" class="episode-card">
+                                <div class="episode-number">PAINT</div>
+                                <div class="episode-title">2値ペンとノイジーなgif生成が特徴の軽快なラクガキツール</div>
+                            </a>
+                            <a href="./sketch/" class="episode-card">
+                                <div class="episode-number">SKETCH</div>
+                                <div class="episode-title">投げ縄スケッチに特化した軽妙なラクガキツール</div>
+                            </a>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <div class="footer">&copy; 2026 <a href="https://warpshoot.github.io/" target="_blank">wpy</a></div>
+            <div class="footer-fade"></div>
+        </div>
+    </div>
 
     <script>
-        // Hamburger menu
-        const hamburger = document.getElementById('hamburger');
-        const navMenu = document.getElementById('navMenu');
+        // Tab switching
+        const buttons = document.querySelectorAll('.tab-button');
+        const tabs = document.querySelectorAll('.tab-content');
+        let currentTab = 'home';
 
-        hamburger.addEventListener('click', () => {
-            hamburger.classList.toggle('active');
-            navMenu.classList.toggle('active');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const selectedTab = btn.dataset.tab;
+                if (currentTab === selectedTab) return;
+
+                buttons.forEach(b => b.classList.remove('active'));
+                tabs.forEach(t => t.classList.remove('active'));
+
+                btn.classList.add('active');
+                const tab = document.getElementById(selectedTab);
+                if (tab) tab.classList.add('active');
+
+                currentTab = selectedTab;
+            });
         });
 
-        // Close menu when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!hamburger.contains(e.target) && !navMenu.contains(e.target)) {
-                hamburger.classList.remove('active');
-                navMenu.classList.remove('active');
+        // Logo click to reload
+        document.addEventListener("DOMContentLoaded", () => {
+            const desuLogo = document.getElementById("desu-logo");
+            if (desuLogo) {
+                desuLogo.addEventListener("click", () => location.reload());
             }
+        });
+
+        // Character tab switching
+        const characterIcons = document.querySelectorAll('.character-icon');
+        const characterCards = document.querySelectorAll('.character-card');
+
+        characterIcons.forEach(icon => {
+            icon.addEventListener('click', () => {
+                const character = icon.dataset.character;
+
+                // Update icon active state
+                characterIcons.forEach(i => i.classList.remove('active'));
+                icon.classList.add('active');
+
+                // Show selected character card
+                characterCards.forEach(card => {
+                    if (card.dataset.character === character) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
         });
     </script>
 </body>
