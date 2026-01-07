@@ -403,6 +403,10 @@ nav {
     margin-bottom: 12px;
 }
 
+.episode-number:last-child {
+    margin-bottom: 0;
+}
+
 .episode-title {
     font-size: 16px;
     color: rgba(255, 255, 255, 0.7);
