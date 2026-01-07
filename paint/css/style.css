@@ -700,6 +700,13 @@ body.help-mode .tool-tooltip {
     display: block;
 }
 
+/* ヘルプモード時にツールバーとクレジットボタンをモーダルより前面に */
+body.help-mode #toolbar-left,
+body.help-mode #toolbar-right,
+body.help-mode #credit-btn {
+    z-index: 400;
+}
+
 /* サイズスライダーコンテナの吹き出し位置調整 */
 #size-slider-container {
     position: relative;
