@@ -672,6 +672,19 @@ body.dark .tool-tooltip::after {
     transform: translateX(-50%);
 }
 
+/* 右上ツールバーの各ボタンで吹き出しの位置をずらす */
+#toolbar-right .tool-btn:nth-child(1) .tool-tooltip-bottom {
+    top: 60px;
+}
+
+#toolbar-right .tool-btn:nth-child(2) .tool-tooltip-bottom {
+    top: 90px;
+}
+
+#toolbar-right .tool-btn:nth-child(3) .tool-tooltip-bottom {
+    top: 120px;
+}
+
 .tool-tooltip-bottom::before {
     right: auto;
     left: 50%;
