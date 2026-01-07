@@ -665,34 +665,41 @@ body.dark .tool-tooltip::after {
     border-right-color: rgba(40, 40, 40, 0.95);
 }
 
-/* 左側に表示する吹き出し（右上ツール用） */
-.tool-tooltip-left {
-    left: auto;
-    right: 60px;
+/* 下側に表示する吹き出し（右上ツール用） */
+.tool-tooltip-bottom {
+    left: 50%;
+    top: 60px;
+    transform: translateX(-50%);
 }
 
-.tool-tooltip-left::before {
+.tool-tooltip-bottom::before {
     right: auto;
-    left: 100%;
+    left: 50%;
+    top: auto;
+    bottom: 100%;
+    transform: translateX(-50%);
     border-right-color: transparent;
-    border-left-color: #ddd;
+    border-bottom-color: #ddd;
 }
 
-body.dark .tool-tooltip-left::before {
-    border-left-color: #555;
+body.dark .tool-tooltip-bottom::before {
+    border-bottom-color: #555;
 }
 
-.tool-tooltip-left::after {
+.tool-tooltip-bottom::after {
     right: auto;
-    left: 100%;
+    left: 50%;
+    top: auto;
+    bottom: 100%;
+    transform: translateX(-50%);
     border-right-color: transparent;
-    border-left-color: rgba(255, 255, 255, 0.95);
+    border-bottom-color: rgba(255, 255, 255, 0.95);
     margin-right: 0;
-    margin-left: -1px;
+    margin-bottom: -1px;
 }
 
-body.dark .tool-tooltip-left::after {
-    border-left-color: rgba(40, 40, 40, 0.95);
+body.dark .tool-tooltip-bottom::after {
+    border-bottom-color: rgba(40, 40, 40, 0.95);
 }
 
 /* ヘルプモード時に吹き出しを表示 */
