@@ -939,17 +939,21 @@ document.getElementById('resetZoomBtn').addEventListener('click', () => {
 });
 
 // ============================================
-// クレジット機能
+// クレジット機能とヘルプモード
 // ============================================
 
 document.getElementById('credit-btn').addEventListener('click', () => {
     document.getElementById('credit-modal').classList.add('visible');
+    // ヘルプモード有効化（ツールチップ表示）
+    document.body.classList.add('help-mode');
 });
 
 // モーダル背景クリックで閉じる
 document.getElementById('credit-modal').addEventListener('click', (e) => {
     if (e.target.id === 'credit-modal') {
         document.getElementById('credit-modal').classList.remove('visible');
+        // ヘルプモード無効化
+        document.body.classList.remove('help-mode');
     }
 });
 
@@ -1453,6 +1457,13 @@ document.addEventListener('keydown', (e) => {
 
     // Cmd/Ctrl + Shift + Z: Redo
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        redo();
+        return;
+    }
+
+    // Cmd/Ctrl + Y: Redo（代替ショートカット）
+    if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
         e.preventDefault();
         redo();
         return;

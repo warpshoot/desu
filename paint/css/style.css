@@ -58,6 +58,7 @@ html, body {
 }
 
 .tool-btn {
+    position: relative;
     width: 48px;
     height: 48px;
     border-radius: 12px;
@@ -607,4 +608,103 @@ body.dark #credit-author a {
 
 #credit-author a:hover {
     text-decoration: underline;
+}
+
+/* ツールチップ（ヘルプモード時のみ表示） */
+.tool-tooltip {
+    display: none;
+    position: absolute;
+    left: 60px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.95);
+    color: #333;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border: 1px solid #ddd;
+    z-index: 400;
+    pointer-events: none;
+}
+
+body.dark .tool-tooltip {
+    background: rgba(40, 40, 40, 0.95);
+    color: #fff;
+    border-color: #555;
+}
+
+/* 右側に表示する吹き出し（左下ツール用）の矢印 */
+.tool-tooltip::before {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-right-color: #ddd;
+}
+
+body.dark .tool-tooltip::before {
+    border-right-color: #555;
+}
+
+.tool-tooltip::after {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: rgba(255, 255, 255, 0.95);
+    margin-right: -1px;
+}
+
+body.dark .tool-tooltip::after {
+    border-right-color: rgba(40, 40, 40, 0.95);
+}
+
+/* 左側に表示する吹き出し（右上ツール用） */
+.tool-tooltip-left {
+    left: auto;
+    right: 60px;
+}
+
+.tool-tooltip-left::before {
+    right: auto;
+    left: 100%;
+    border-right-color: transparent;
+    border-left-color: #ddd;
+}
+
+body.dark .tool-tooltip-left::before {
+    border-left-color: #555;
+}
+
+.tool-tooltip-left::after {
+    right: auto;
+    left: 100%;
+    border-right-color: transparent;
+    border-left-color: rgba(255, 255, 255, 0.95);
+    margin-right: 0;
+    margin-left: -1px;
+}
+
+body.dark .tool-tooltip-left::after {
+    border-left-color: rgba(40, 40, 40, 0.95);
+}
+
+/* ヘルプモード時に吹き出しを表示 */
+body.help-mode .tool-tooltip {
+    display: block;
+}
+
+/* サイズスライダーコンテナの吹き出し位置調整 */
+#size-slider-container {
+    position: relative;
+}
+
+#size-slider-container .tool-tooltip {
+    top: 50%;
 }
