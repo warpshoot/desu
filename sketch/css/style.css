@@ -549,9 +549,17 @@ body.dark #credit-btn:hover {
     height: 100%;
     background: #fff;
     z-index: 300;
-    align-items: flex-end;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: center;
     padding: 20px;
+}
+
+/* モバイル縦表示時のみ右下に配置 */
+@media (max-width: 768px) and (orientation: portrait) {
+    #credit-modal {
+        align-items: flex-end;
+        justify-content: flex-end;
+    }
 }
 
 #credit-modal.visible {
@@ -728,13 +736,15 @@ body.help-mode #credit-btn {
     transform: translateY(0);
 }
 
-/* 右上ツールバーの各ボタンで吹き出しの位置をずらす */
+/* 右上ツールバーの各ボタンで吹き出しの位置をずらす（縦と横にずらす） */
 #toolbar-right .tool-btn:nth-child(1) .tool-tooltip-bottom {
     top: 60px;
+    left: calc(50% - 20px); /* 左にずらす */
 }
 
 #toolbar-right .tool-btn:nth-child(2) .tool-tooltip-bottom {
     top: 90px;
+    left: calc(50% + 20px); /* 右にずらす */
 }
 
 /* レスポンシブ調整 - クレジットモーダル */
