@@ -1,8 +1,9 @@
 // ギャラリー画像リスト（後で画像を追加したらここに追記）
 const images = [
-    // 例：
-    // { src: 'images/001.jpg', alt: 'DESU Illustration 1' },
-    // { src: 'images/002.jpg', alt: 'DESU Illustration 2' },
+    { src: '../images/desu000.png', alt: 'DESU Illustration 1' },
+    { src: '../images/desu001.png', alt: 'DESU Illustration 2' },
+    { src: '../images/desu002.png', alt: 'DESU Illustration 3' },
+    { src: '../images/desu003.gif', alt: 'DESU Illustration 4' },
 ];
 
 // DOM要素
@@ -47,7 +48,7 @@ function closeLightbox() {
 // イベントリスナー
 lightboxClose.addEventListener('click', closeLightbox);
 lightbox.addEventListener('click', (e) => {
-    if (e.target === lightbox) {
+    if (e.target === lightbox || e.target === lightboxImage) {
         closeLightbox();
     }
 });
@@ -61,3 +62,20 @@ document.addEventListener('keydown', (e) => {
 
 // ページ読み込み時に初期化
 window.addEventListener('load', initGallery);
+
+// Hamburger menu
+const hamburger = document.getElementById('hamburger');
+const navMenu = document.getElementById('navMenu');
+
+hamburger.addEventListener('click', () => {
+    hamburger.classList.toggle('active');
+    navMenu.classList.toggle('active');
+});
+
+// Close menu when clicking outside
+document.addEventListener('click', (e) => {
+    if (!hamburger.contains(e.target) && !navMenu.contains(e.target)) {
+        hamburger.classList.remove('active');
+        navMenu.classList.remove('active');
+    }
+});

@@ -3,82 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DESU™︎</title>
+    <title>DESU™</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header>
-        <div class="logo-container">
-            <img src="./desu_logo.png" alt="DESU™" class="site-logo">
-        </div>
-    </header>
+    <div class="header-fade"></div>
 
-    <main class="container">
-        <!-- Episodes Section -->
-        <section class="section">
-            <h2 class="section-title">Episodes</h2>
-            <div class="episodes-grid">
-                <a href="./ep0/" class="episode-card">
-                    <div class="episode-number">ep. 0</div>
-                </a>
-                <div class="episode-card coming-soon">
-                    <div class="episode-number">ep. 1</div>
-                    <div class="episode-status">Coming Soon</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Gallery Section -->
-        <section class="section">
-            <h2 class="section-title">Gallery</h2>
-            <div class="gallery-grid">
-                <button class="gallery-thumb" type="button" data-full="./ep0/images/IMG_1085.jpeg">
-                    <img src="./ep0/images/IMG_1085.jpeg" alt="Gallery thumbnail 1">
-                </button>
-                <button class="gallery-thumb" type="button" data-full="./ep0/images/IMG_1088.jpeg">
-                    <img src="./ep0/images/IMG_1088.jpeg" alt="Gallery thumbnail 2">
-                </button>
-                <button class="gallery-thumb" type="button" data-full="./ep0/images/desu.jpg">
-                    <img src="./ep0/images/desu.jpg" alt="Gallery thumbnail 3">
-                </button>
-                <button class="gallery-thumb" type="button" data-full="./ep0/images/sakana.jpg">
-                    <img src="./ep0/images/sakana.jpg" alt="Gallery thumbnail 4">
-                </button>
-            </div>
-        </section>
-    </main>
-
-    <!-- Lightbox -->
-    <div id="lightbox" class="lightbox">
-        <img id="lightbox-image" src="" alt="Lightbox image">
+    <!-- Arowana Background Animation -->
+    <div class="arowana-container">
+        <img src="./images/sakana.gif" alt="" class="arowana">
     </div>
 
-    <footer>
-        <p>© 2025 warpshoot</p>
-    </footer>
+    <div class="layout">
+        <div class="header">
+            <div class="title-wrap">
+                <a href="./">
+                    <img src="./desu_logo.png" alt="DESU™" class="site-logo">
+                </a>
+            </div>
+            <nav>
+                <a href="./episodes/" class="tab-button"><span class="label">Episodes</span></a>
+                <a href="./characters/" class="tab-button"><span class="label">Characters</span></a>
+                <a href="./tools/" class="tab-button"><span class="label">Tools</span></a>
+            </nav>
+        </div>
 
-    <script>
-        const lightbox = document.getElementById('lightbox');
-        const lightboxImage = document.getElementById('lightbox-image');
-        const galleryButtons = document.querySelectorAll('.gallery-thumb');
+        <div class="main">
+            <div class="content-inner">
+                <!-- Main Illustration -->
+                <section class="main-illustration-section">
+                    <div class="main-illustration-container">
+                        <img src="./images/desu_main.png" alt="DESU Illustration" class="main-illustration">
+                    </div>
+                </section>
 
-        // Open lightbox
-        galleryButtons.forEach((button) => {
-            button.addEventListener('click', () => {
-                const targetSrc = button.dataset.full;
-                if (!targetSrc) {
-                    return;
-                }
+                <!-- Updates Section -->
+                <section class="updates-section">
+                    <h2 class="updates-title">update</h2>
+                    <ul class="updates-list">
+                        <li>20250105 : Episode 1追加</li>
+                    </ul>
+                </section>
+            </div>
 
-                lightboxImage.src = targetSrc;
-                lightbox.classList.add('is-active');
-            });
-        });
-
-        // Close lightbox
-        lightbox.addEventListener('click', () => {
-            lightbox.classList.remove('is-active');
-        });
-    </script>
+            <div class="footer">&copy; 2026 <a href="https://warpshoot.github.io/" target="_blank">wpy</a></div>
+            <div class="footer-fade"></div>
+        </div>
+    </div>
 </body>
 </html>
