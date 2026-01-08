@@ -138,6 +138,14 @@ let initialPinchDist = 0;
 let initialPinchCenter = { x: 0, y: 0 };
 let isPinching = false;
 
+// 手のひらモード（スペースキー）
+let isSpacePressed = false;
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let panStartTranslateX = 0;
+let panStartTranslateY = 0;
+
 // 投げ縄用
 let lassoPoints = [];
 let isLassoing = false;
@@ -471,6 +479,17 @@ canvas.addEventListener('pointerdown', (e) => {
         return;
     }
 
+    // 手のひらモード（スペースキー押下中）
+    if (activePointers.size === 1 && isSpacePressed) {
+        isPanning = true;
+        panStartX = e.clientX;
+        panStartY = e.clientY;
+        panStartTranslateX = translateX;
+        panStartTranslateY = translateY;
+        canvas.style.cursor = 'grabbing';
+        return;
+    }
+
     const canDraw = e.pointerType === 'pen' || e.pointerType === 'mouse' || (e.pointerType === 'touch' && !pencilDetected);
 
     if (activePointers.size === 1 && canDraw) {
@@ -522,6 +541,14 @@ canvas.addEventListener('pointermove', (e) => {
         return;
     }
 
+    // 手のひらモード（スペースキーでパン）
+    if (isPanning && activePointers.size === 1) {
+        translateX = panStartTranslateX + (e.clientX - panStartX);
+        translateY = panStartTranslateY + (e.clientY - panStartY);
+        applyTransform();
+        return;
+    }
+
     // 投げ縄
     if (isLassoing && activePointers.size === 1) {
         updateLasso(e.clientX, e.clientY);
@@ -533,6 +560,12 @@ canvas.addEventListener('pointerup', (e) => {
     if (isSaveMode) return;
 
     e.preventDefault();
+
+    // 手のひらモード終了
+    if (isPanning) {
+        isPanning = false;
+        canvas.style.cursor = isSpacePressed ? 'grab' : '';
+    }
 
     // 投げ縄終了
     if (isLassoing) {
@@ -632,19 +665,41 @@ document.getElementById('resetZoomBtn').addEventListener('click', () => {
 });
 
 // ============================================
-// クレジット機能
+// クレジット機能とヘルプモード
 // ============================================
 
-document.getElementById('credit-btn').addEventListener('click', () => {
+document.getElementById('credit-btn').addEventListener('click', (e) => {
+    e.stopPropagation(); // イベント伝播を止める
     document.getElementById('credit-modal').classList.add('visible');
+    // ヘルプモード有効化（ツールチップ表示）
+    document.body.classList.add('help-mode');
 });
 
 // モーダル背景クリックで閉じる
 document.getElementById('credit-modal').addEventListener('click', (e) => {
     if (e.target.id === 'credit-modal') {
         document.getElementById('credit-modal').classList.remove('visible');
+        // ヘルプモード無効化
+        document.body.classList.remove('help-mode');
     }
 });
+
+// ヘルプモード時、モーダル外（ツールバーや？ボタン含む）のクリックで復帰
+document.addEventListener('click', (e) => {
+    if (!document.body.classList.contains('help-mode')) return;
+
+    const modal = document.getElementById('credit-modal');
+    const creditContent = document.getElementById('credit-content');
+
+    // credit-content内のクリックは無視
+    if (creditContent.contains(e.target)) return;
+
+    // それ以外の場所（ツール、？ボタン、モーダル背景など）ならヘルプモード解除
+    e.preventDefault();
+    e.stopPropagation();
+    modal.classList.remove('visible');
+    document.body.classList.remove('help-mode');
+}, true); // キャプチャフェーズで処理（ツールボタンのリスナーより先に実行）
 
 // ============================================
 // 保存機能
@@ -998,6 +1053,89 @@ window.addEventListener('orientationchange', () => {
 
         applyTransform();
     }, 100);
+});
+
+// ============================================
+// キーボードショートカット
+// ============================================
+
+document.addEventListener('keydown', (e) => {
+    // 保存UIやモーダル表示中は無効（スペースキーを除く）
+    if (e.key !== ' ' && (document.getElementById('save-ui').style.display === 'block' ||
+        document.getElementById('credit-modal').classList.contains('visible'))) {
+        return;
+    }
+
+    // スペースキー: 手のひらモード開始
+    if (e.key === ' ' && !isSpacePressed) {
+        e.preventDefault();
+        isSpacePressed = true;
+        if (!isPanning) {
+            canvas.style.cursor = 'grab';
+        }
+        return;
+    }
+
+    // Cmd/Ctrl + S: 保存モード
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        document.getElementById('saveBtn').click();
+        return;
+    }
+
+    // Cmd/Ctrl + Shift + Z: Redo
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        redo();
+        return;
+    }
+
+    // Cmd/Ctrl + Y: Redo（代替ショートカット）
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'y') {
+        e.preventDefault();
+        redo();
+        return;
+    }
+
+    // Cmd/Ctrl + Z: Undo
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        undo();
+        return;
+    }
+
+    // 以下、修飾キーなしのショートカット
+    // 修飾キーが押されている場合はスキップ
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    switch(e.key.toLowerCase()) {
+        case 'b':
+            // スケッチツール
+            document.getElementById('sketchBtn').click();
+            break;
+
+        case 'e':
+            // 消しゴム
+            document.getElementById('eraserBtn').click();
+            break;
+
+        case 'delete':
+        case 'backspace':
+            // クリア
+            e.preventDefault();
+            document.getElementById('clearBtn').click();
+            break;
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    // スペースキー: 手のひらモード終了
+    if (e.key === ' ') {
+        e.preventDefault();
+        isSpacePressed = false;
+        isPanning = false;
+        canvas.style.cursor = '';
+    }
 });
 
 // ============================================

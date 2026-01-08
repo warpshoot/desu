@@ -142,6 +142,14 @@ let strokeMade = false;
 let lastPinchDist = 0;
 let lastPinchCenter = { x: 0, y: 0 };
 let initialPinchDist = 0;
+
+// 手のひらモード（スペースキー）
+let isSpacePressed = false;
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let panStartTranslateX = 0;
+let panStartTranslateY = 0;
 let initialPinchCenter = { x: 0, y: 0 };
 let isPinching = false;
 
@@ -711,6 +719,17 @@ canvas.addEventListener('pointerdown', (e) => {
         return;
     }
 
+    // 手のひらモード（スペースキー押下中）
+    if (activePointers.size === 1 && isSpacePressed) {
+        isPanning = true;
+        panStartX = e.clientX;
+        panStartY = e.clientY;
+        panStartTranslateX = translateX;
+        panStartTranslateY = translateY;
+        canvas.style.cursor = 'grabbing';
+        return;
+    }
+
     const canDraw = e.pointerType === 'pen' || e.pointerType === 'mouse' || (e.pointerType === 'touch' && !pencilDetected);
 
     if (activePointers.size === 1 && canDraw) {
@@ -771,6 +790,14 @@ canvas.addEventListener('pointermove', (e) => {
         return;
     }
 
+    // 手のひらモード（スペースキーでパン）
+    if (isPanning && activePointers.size === 1) {
+        translateX = panStartTranslateX + (e.clientX - panStartX);
+        translateY = panStartTranslateY + (e.clientY - panStartY);
+        applyTransform();
+        return;
+    }
+
     // 描画
     if (isDrawing && activePointers.size === 1) {
         const p = getCanvasPoint(e.clientX, e.clientY);
@@ -791,6 +818,12 @@ canvas.addEventListener('pointerup', (e) => {
     if (isSaveMode) return;
 
     e.preventDefault();
+
+    // 手のひらモード終了
+    if (isPanning) {
+        isPanning = false;
+        canvas.style.cursor = isSpacePressed ? 'grab' : '';
+    }
 
     // 描画終了
     if (isDrawing) {
@@ -1463,8 +1496,18 @@ window.addEventListener('orientationchange', () => {
 // ============================================
 
 document.addEventListener('keydown', (e) => {
-    // 保存モード中は無効
-    if (isSaveMode) return;
+    // 保存モード中は無効（スペースキーを除く）
+    if (isSaveMode && e.key !== ' ') return;
+
+    // スペースキー: 手のひらモード開始
+    if (e.key === ' ' && !isSpacePressed) {
+        e.preventDefault();
+        isSpacePressed = true;
+        if (!isPanning) {
+            canvas.style.cursor = 'grab';
+        }
+        return;
+    }
 
     // Cmd/Ctrl + S: 保存モード
     if ((e.metaKey || e.ctrlKey) && e.key === 's') {
@@ -1482,13 +1525,6 @@ document.addEventListener('keydown', (e) => {
 
     // Cmd/Ctrl + Y: Redo（代替ショートカット）
     if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'y') {
-        e.preventDefault();
-        redo();
-        return;
-    }
-
-    // Cmd/Ctrl + Shift + Y: Redo（代替ショートカット2）
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'y') {
         e.preventDefault();
         redo();
         return;
@@ -1599,6 +1635,16 @@ document.addEventListener('keydown', (e) => {
             // ノイズ
             document.getElementById('noiseBtn').click();
             break;
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    // スペースキー: 手のひらモード終了
+    if (e.key === ' ') {
+        e.preventDefault();
+        isSpacePressed = false;
+        isPanning = false;
+        canvas.style.cursor = '';
     }
 });
 
