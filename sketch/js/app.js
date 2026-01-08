@@ -138,6 +138,14 @@ let initialPinchDist = 0;
 let initialPinchCenter = { x: 0, y: 0 };
 let isPinching = false;
 
+// 手のひらモード（スペースキー）
+let isSpacePressed = false;
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let panStartTranslateX = 0;
+let panStartTranslateY = 0;
+
 // 投げ縄用
 let lassoPoints = [];
 let isLassoing = false;
@@ -471,6 +479,17 @@ canvas.addEventListener('pointerdown', (e) => {
         return;
     }
 
+    // 手のひらモード（スペースキー押下中）
+    if (activePointers.size === 1 && isSpacePressed) {
+        isPanning = true;
+        panStartX = e.clientX;
+        panStartY = e.clientY;
+        panStartTranslateX = translateX;
+        panStartTranslateY = translateY;
+        canvas.style.cursor = 'grabbing';
+        return;
+    }
+
     const canDraw = e.pointerType === 'pen' || e.pointerType === 'mouse' || (e.pointerType === 'touch' && !pencilDetected);
 
     if (activePointers.size === 1 && canDraw) {
@@ -522,6 +541,14 @@ canvas.addEventListener('pointermove', (e) => {
         return;
     }
 
+    // 手のひらモード（スペースキーでパン）
+    if (isPanning && activePointers.size === 1) {
+        translateX = panStartTranslateX + (e.clientX - panStartX);
+        translateY = panStartTranslateY + (e.clientY - panStartY);
+        applyTransform();
+        return;
+    }
+
     // 投げ縄
     if (isLassoing && activePointers.size === 1) {
         updateLasso(e.clientX, e.clientY);
@@ -533,6 +560,12 @@ canvas.addEventListener('pointerup', (e) => {
     if (isSaveMode) return;
 
     e.preventDefault();
+
+    // 手のひらモード終了
+    if (isPanning) {
+        isPanning = false;
+        canvas.style.cursor = isSpacePressed ? 'grab' : '';
+    }
 
     // 投げ縄終了
     if (isLassoing) {
@@ -1027,9 +1060,19 @@ window.addEventListener('orientationchange', () => {
 // ============================================
 
 document.addEventListener('keydown', (e) => {
-    // 保存UIやモーダル表示中は無効
-    if (document.getElementById('save-ui').style.display === 'block' ||
-        document.getElementById('credit-modal').classList.contains('visible')) {
+    // 保存UIやモーダル表示中は無効（スペースキーを除く）
+    if (e.key !== ' ' && (document.getElementById('save-ui').style.display === 'block' ||
+        document.getElementById('credit-modal').classList.contains('visible'))) {
+        return;
+    }
+
+    // スペースキー: 手のひらモード開始
+    if (e.key === ' ' && !isSpacePressed) {
+        e.preventDefault();
+        isSpacePressed = true;
+        if (!isPanning) {
+            canvas.style.cursor = 'grab';
+        }
         return;
     }
 
@@ -1054,13 +1097,6 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    // Cmd/Ctrl + Shift + Y: Redo（代替ショートカット2）
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'y') {
-        e.preventDefault();
-        redo();
-        return;
-    }
-
     // Cmd/Ctrl + Z: Undo
     if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
         e.preventDefault();
@@ -1073,8 +1109,8 @@ document.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
     switch(e.key.toLowerCase()) {
-        case 'd':
-            // デフォルトツール（スケッチ）
+        case 'b':
+            // スケッチツール
             document.getElementById('sketchBtn').click();
             break;
 
@@ -1083,17 +1119,22 @@ document.addEventListener('keydown', (e) => {
             document.getElementById('eraserBtn').click();
             break;
 
-        case 's':
-            // 保存
-            document.getElementById('saveBtn').click();
-            break;
-
         case 'delete':
         case 'backspace':
             // クリア
             e.preventDefault();
             document.getElementById('clearBtn').click();
             break;
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    // スペースキー: 手のひらモード終了
+    if (e.key === ' ') {
+        e.preventDefault();
+        isSpacePressed = false;
+        isPanning = false;
+        canvas.style.cursor = '';
     }
 });
 
