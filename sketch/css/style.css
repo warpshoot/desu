@@ -717,6 +717,17 @@ body.help-mode #credit-btn {
     z-index: 400;
 }
 
+/* 左下ツールバーの各ボタンで吹き出しの位置をずらす（縦方向に配置） */
+#toolbar-left .tool-btn:nth-child(1) .tool-tooltip {
+    top: 24px; /* 1つ目のボタンの中心 */
+    transform: translateY(0);
+}
+
+#toolbar-left .tool-btn:nth-child(2) .tool-tooltip {
+    top: 80px; /* 2つ目のボタンの中心（48px + 8px gap + 24px） */
+    transform: translateY(0);
+}
+
 /* 右上ツールバーの各ボタンで吹き出しの位置をずらす */
 #toolbar-right .tool-btn:nth-child(1) .tool-tooltip-bottom {
     top: 60px;
