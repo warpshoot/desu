@@ -957,6 +957,21 @@ document.getElementById('credit-modal').addEventListener('click', (e) => {
     }
 });
 
+// ヘルプモード時、モーダル外（ツールバーや？ボタン含む）のクリックで復帰
+document.addEventListener('click', (e) => {
+    if (!document.body.classList.contains('help-mode')) return;
+
+    const modal = document.getElementById('credit-modal');
+    const creditContent = document.getElementById('credit-content');
+
+    // credit-content内のクリックは無視
+    if (creditContent.contains(e.target)) return;
+
+    // それ以外の場所（ツール、？ボタン、モーダル背景など）ならヘルプモード解除
+    modal.classList.remove('visible');
+    document.body.classList.remove('help-mode');
+});
+
 // ============================================
 // 保存機能
 // ============================================
@@ -1463,7 +1478,14 @@ document.addEventListener('keydown', (e) => {
     }
 
     // Cmd/Ctrl + Y: Redo（代替ショートカット）
-    if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'y') {
+        e.preventDefault();
+        redo();
+        return;
+    }
+
+    // Cmd/Ctrl + Shift + Y: Redo（代替ショートカット2）
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'y') {
         e.preventDefault();
         redo();
         return;
