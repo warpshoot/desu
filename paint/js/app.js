@@ -969,9 +969,11 @@ document.addEventListener('click', (e) => {
     if (creditContent.contains(e.target)) return;
 
     // それ以外の場所（ツール、？ボタン、モーダル背景など）ならヘルプモード解除
+    e.preventDefault();
+    e.stopPropagation();
     modal.classList.remove('visible');
     document.body.classList.remove('help-mode');
-});
+}, true); // キャプチャフェーズで処理（ツールボタンのリスナーより先に実行）
 
 // ============================================
 // 保存機能
