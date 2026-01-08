@@ -942,7 +942,8 @@ document.getElementById('resetZoomBtn').addEventListener('click', () => {
 // クレジット機能とヘルプモード
 // ============================================
 
-document.getElementById('credit-btn').addEventListener('click', () => {
+document.getElementById('credit-btn').addEventListener('click', (e) => {
+    e.stopPropagation(); // イベント伝播を止める
     document.getElementById('credit-modal').classList.add('visible');
     // ヘルプモード有効化（ツールチップ表示）
     document.body.classList.add('help-mode');
