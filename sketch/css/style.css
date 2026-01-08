@@ -1,0 +1,771 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
+    background: #4d4d4d;
+}
+
+#canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    image-rendering: pixelated;
+    image-rendering: -webkit-optimize-contrast;
+    touch-action: none;
+    transform-origin: 0 0;
+}
+
+/* 投げ縄用オーバーレイキャンバス */
+#lasso-canvas {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 50;
+}
+
+/* 左下ツールバー */
+#toolbar-left {
+    position: fixed;
+    left: 12px;
+    bottom: 120px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+}
+
+/* 右上ツールバー */
+#toolbar-right {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top));
+    right: 12px;
+    display: flex;
+    gap: 8px;
+    z-index: 100;
+}
+
+.tool-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    border: 2px solid #666;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.1s;
+    color: #333;
+}
+
+.tool-btn svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.tool-btn svg .filled {
+    fill: currentColor;
+    stroke: none;
+}
+
+body.dark .tool-btn {
+    background: rgba(40, 40, 40, 0.9);
+    border-color: #888;
+    color: #fff;
+}
+
+.tool-btn:active {
+    transform: scale(0.92);
+}
+
+.tool-btn.active {
+    background: #333;
+    border-color: #fff;
+    color: #fff;
+}
+
+body.dark .tool-btn.active {
+    background: #fff;
+    border-color: #333;
+    color: #333;
+}
+
+/* 縦スライダー */
+#size-slider-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    width: 48px;
+}
+
+#brushSize {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100px;
+    height: 6px;
+    background: #888;
+    border-radius: 3px;
+    transform: rotate(-90deg);
+    transform-origin: center center;
+    margin: 47px 0;
+}
+
+body.dark #brushSize {
+    background: #888;
+}
+
+#brushSize::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    background: #333;
+    border-radius: 50%;
+    border: 2px solid #fff;
+}
+
+body.dark #brushSize::-webkit-slider-thumb {
+    background: #fff;
+    border-color: #333;
+}
+
+#sizeDisplay {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 4px 8px;
+    border-radius: 6px;
+    min-width: 32px;
+    text-align: center;
+}
+
+body.dark #sizeDisplay {
+    color: #fff;
+    background: rgba(40, 40, 40, 0.9);
+}
+
+/* ズームリセットボタン（ズーム中のみ表示） */
+#resetZoomBtn {
+    display: none;
+    position: fixed;
+    bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
+    right: max(20px, calc(env(safe-area-inset-right) + 12px));
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid #666;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #333;
+}
+
+#resetZoomBtn svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+body.dark #resetZoomBtn {
+    background: rgba(40, 40, 40, 0.9);
+    border-color: #888;
+    color: #fff;
+}
+
+#resetZoomBtn.visible {
+    display: flex;
+}
+
+/* 保存モーダル */
+#save-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 200;
+}
+
+#save-ui {
+    display: none;
+    position: fixed;
+    top: max(20px, env(safe-area-inset-top));
+    left: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 16px 24px;
+    border-radius: 12px;
+    z-index: 201;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    transition: opacity 0.2s;
+}
+
+#save-ui.hidden-during-selection {
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.dark #save-ui {
+    background: rgba(30, 30, 30, 0.95);
+    color: #fff;
+}
+
+#save-ui h3 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    font-weight: normal;
+    color: #666;
+}
+
+body.dark #save-ui h3 {
+    color: #aaa;
+}
+
+#save-ui label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+#save-ui input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+.option-group {
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.option-group-label {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 4px;
+}
+
+body.dark .option-group-label {
+    color: #666;
+}
+
+.option-buttons {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+.option-btn {
+    padding: 4px 10px;
+    border: 1px solid #999;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.1s;
+}
+
+body.dark .option-btn {
+    background: rgba(60, 60, 60, 0.5);
+    border-color: #666;
+}
+
+.option-btn.active {
+    background: #333;
+    color: #fff;
+    border-color: #333;
+}
+
+body.dark .option-btn.active {
+    background: #fff;
+    color: #333;
+    border-color: #fff;
+}
+
+.option-btn.disabled {
+    opacity: 0.3;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+/* 確定モード時はオプション部分を非表示 */
+#save-ui.in-confirmation-mode .option-group,
+#save-ui.in-confirmation-mode label,
+#save-ui.in-confirmation-mode #saveAllBtn {
+    display: none;
+}
+
+#save-ui.in-confirmation-mode h3 {
+    margin-bottom: 16px;
+}
+
+.save-btn {
+    padding: 10px 20px;
+    margin: 0 4px;
+    border: 1px solid #333;
+    background: #fff;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+body.dark .save-btn {
+    background: #444;
+    border-color: #888;
+    color: #fff;
+}
+
+.save-btn:active {
+    transform: scale(0.96);
+}
+
+.save-btn.primary {
+    background: #333;
+    color: #fff;
+}
+
+body.dark .save-btn.primary {
+    background: #fff;
+    color: #333;
+}
+
+/* 選択範囲キャンバス */
+#selection-canvas {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 199;
+}
+
+/* フラッシュエフェクト */
+#flash {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 300;
+    transition: opacity 0.1s;
+}
+
+/* 生成中インジケーター */
+#generating {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    padding: 24px 48px;
+    border-radius: 16px;
+    z-index: 250;
+    font-size: 16px;
+    min-width: 280px;
+    text-align: center;
+}
+
+#progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    margin-top: 16px;
+    overflow: hidden;
+    position: relative;
+}
+
+#progress-fill {
+    height: 100%;
+    background: #fff;
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+#progress-text {
+    margin-top: 8px;
+    font-size: 13px;
+    opacity: 0.8;
+}
+
+/* スピナーアニメーション */
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: -4px;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* デバッグログ表示 */
+#debug-log {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    background: rgba(0, 0, 0, 0.95);
+    color: #0f0;
+    font-family: monospace;
+    font-size: 11px;
+    padding: 8px;
+    overflow-y: auto;
+    z-index: 999;
+    border-top: 2px solid #0f0;
+}
+
+#debug-log.visible {
+    display: block;
+}
+
+#debug-log div {
+    margin: 2px 0;
+    word-wrap: break-word;
+}
+
+#debug-toggle {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 255, 0, 0.3);
+    border: 2px solid #0f0;
+    border-radius: 50%;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+#debug-toggle.visible {
+    display: flex;
+}
+
+/* 左下隠しエリア（デバッグボタン表示用） */
+#debug-activator {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 60px;
+    height: 60px;
+    z-index: 999;
+}
+
+/* クレジットボタン */
+#credit-btn {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top));
+    left: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.1);
+    color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.2s;
+}
+
+#credit-btn:hover {
+    background: rgba(0, 0, 0, 0.2);
+    color: rgba(0, 0, 0, 0.8);
+    border-color: rgba(0, 0, 0, 0.5);
+}
+
+body.dark #credit-btn {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+}
+
+body.dark #credit-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* クレジットモーダル */
+#credit-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    z-index: 300;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 20px;
+}
+
+#credit-modal.visible {
+    display: flex;
+}
+
+#credit-content {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 32px;
+    border-radius: 16px;
+    text-align: center;
+    max-width: 400px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+body.dark #credit-content {
+    background: rgba(30, 30, 30, 0.95);
+    color: #fff;
+}
+
+#credit-content h2 {
+    font-size: 24px;
+    margin-bottom: 16px;
+    font-weight: bold;
+}
+
+#credit-logo {
+    width: 120px;
+    height: 120px;
+    margin: 16px auto;
+    cursor: pointer;
+}
+
+#credit-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+#credit-author {
+    font-size: 16px;
+    margin-top: 16px;
+}
+
+#credit-author a {
+    color: #333;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+body.dark #credit-author a {
+    color: #fff;
+}
+
+#credit-author a:hover {
+    text-decoration: underline;
+}
+
+/* ツールチップ（ヘルプモード時のみ表示） */
+.tool-tooltip {
+    display: none;
+    position: absolute;
+    left: 60px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.95);
+    color: #333;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border: 1px solid #ddd;
+    z-index: 400;
+    pointer-events: none;
+}
+
+body.dark .tool-tooltip {
+    background: rgba(40, 40, 40, 0.95);
+    color: #fff;
+    border-color: #555;
+}
+
+/* 右側に表示する吹き出し（左下ツール用）の矢印 */
+.tool-tooltip::before {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-right-color: #ddd;
+}
+
+body.dark .tool-tooltip::before {
+    border-right-color: #555;
+}
+
+.tool-tooltip::after {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: rgba(255, 255, 255, 0.95);
+}
+
+body.dark .tool-tooltip::after {
+    border-right-color: rgba(40, 40, 40, 0.95);
+}
+
+/* 下側に表示する吹き出し（右上ツール用） */
+.tool-tooltip-bottom {
+    left: 50%;
+    top: 60px;
+    transform: translateX(-50%);
+}
+
+.tool-tooltip-bottom::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-bottom-color: #ddd;
+    right: auto;
+    top: auto;
+}
+
+body.dark .tool-tooltip-bottom::before {
+    border-bottom-color: #555;
+    border-right-color: transparent;
+}
+
+.tool-tooltip-bottom::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-bottom-color: rgba(255, 255, 255, 0.95);
+    right: auto;
+    top: auto;
+}
+
+body.dark .tool-tooltip-bottom::after {
+    border-bottom-color: rgba(40, 40, 40, 0.95);
+    border-right-color: transparent;
+}
+
+/* ヘルプモード時にツールチップを表示 */
+body.help-mode .tool-tooltip {
+    display: block;
+}
+
+/* ヘルプモード時にツールバーとクレジットボタンをモーダルより前面に */
+body.help-mode #toolbar-left,
+body.help-mode #toolbar-right,
+body.help-mode #credit-btn {
+    z-index: 400;
+}
+
+/* 右上ツールバーの各ボタンで吹き出しの位置をずらす */
+#toolbar-right .tool-btn:nth-child(1) .tool-tooltip-bottom {
+    top: 60px;
+}
+
+#toolbar-right .tool-btn:nth-child(2) .tool-tooltip-bottom {
+    top: 90px;
+}
+
+/* レスポンシブ調整 - クレジットモーダル */
+@media (max-width: 768px) {
+    #credit-content {
+        max-width: 280px;
+        padding: 24px;
+    }
+
+    #credit-content h2 {
+        font-size: 20px;
+        margin-bottom: 12px;
+    }
+
+    #credit-logo {
+        width: 90px;
+        height: 90px;
+        margin: 12px auto;
+    }
+
+    #credit-author {
+        font-size: 14px;
+        margin-top: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    #credit-content {
+        max-width: 200px;
+        padding: 16px;
+    }
+
+    #credit-content h2 {
+        font-size: 18px;
+    }
+
+    #credit-logo {
+        width: 60px;
+        height: 60px;
+    }
+
+    #credit-author {
+        font-size: 13px;
+    }
+}
