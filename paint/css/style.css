@@ -550,8 +550,9 @@ body.dark #credit-btn:hover {
     height: 100%;
     background: #fff;
     z-index: 300;
-    align-items: center;
-    justify-content: center;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 20px;
 }
 
 #credit-modal.visible {
