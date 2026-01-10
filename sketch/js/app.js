@@ -1005,13 +1005,31 @@ async function copyToClipboard(x, y, w, h) {
             tempCtx.drawImage(canvas, x, y, w, h, 0, 0, outputW, outputH);
         }
 
-        const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+        const blob = await new Promise((resolve, reject) => {
+            tempCanvas.toBlob((b) => {
+                if (b) resolve(b);
+                else reject(new Error('Blob generation failed'));
+            }, 'image/png');
+        });
 
-        await navigator.clipboard.write([
-            new ClipboardItem({
-                'image/png': blob
-            })
-        ]);
+        // Safari/iPadでの互換性のためにClipboardItemを適切に生成
+        try {
+            // まずPromiseベースのClipboardItemを試す（Chrome等）
+            await navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': blob })
+            ]);
+        } catch (firstError) {
+            // 失敗した場合、Promiseでラップして再試行（Safari等）
+            try {
+                await navigator.clipboard.write([
+                    new ClipboardItem({
+                        'image/png': Promise.resolve(blob)
+                    })
+                ]);
+            } catch (secondError) {
+                throw secondError || firstError;
+            }
+        }
 
         // コピー成功のフィードバック（ボタンテキストを一時的に変更）
         const copyBtn = document.getElementById('copyClipboardBtn');
