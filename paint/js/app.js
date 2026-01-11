@@ -1158,32 +1158,17 @@ document.getElementById('copySelectionBtn').addEventListener('click', async () =
             tempCtx.drawImage(canvas, x, y, w, h, 0, 0, outputW, outputH);
         }
 
-        // Blobに変換してクリップボードにコピー
-        const blob = await new Promise((resolve, reject) => {
-            tempCanvas.toBlob((b) => {
-                if (b) resolve(b);
-                else reject(new Error('Blob generation failed'));
-            }, 'image/png');
-        });
-
-        // Safari/iPadでの互換性のためにClipboardItemを適切に生成
-        try {
-            // まずPromiseベースのClipboardItemを試す（Chrome等）
-            await navigator.clipboard.write([
-                new ClipboardItem({ 'image/png': blob })
-            ]);
-        } catch (firstError) {
-            // 失敗した場合、Promiseでラップして再試行（Safari等）
-            try {
-                await navigator.clipboard.write([
-                    new ClipboardItem({
-                        'image/png': Promise.resolve(blob)
-                    })
-                ]);
-            } catch (secondError) {
-                throw secondError || firstError;
-            }
-        }
+        // Safari/iPadでの互換性のためにClipboardItemにPromiseを渡す
+        await navigator.clipboard.write([
+            new ClipboardItem({
+                'image/png': new Promise((resolve, reject) => {
+                    tempCanvas.toBlob((blob) => {
+                        if (blob) resolve(blob);
+                        else reject(new Error('Blob generation failed'));
+                    }, 'image/png');
+                })
+            })
+        ]);
 
         // ボタンのテキストを変更
         btn.textContent = 'コピーしました！';
