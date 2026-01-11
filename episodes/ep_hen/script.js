@@ -52,8 +52,8 @@ replayButton.addEventListener('click', (e) => {
     }, 1000);
 });
 
-// ×ボタン: episodes ページに戻る
+// ×ボタン: タブを閉じる
 backButton.addEventListener('click', (e) => {
     e.stopPropagation();
-    window.location.href = '../';
+    window.close();
 });

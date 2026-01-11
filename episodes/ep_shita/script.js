@@ -287,8 +287,8 @@ function handleReplay() {
 
 // 戻る
 function handleBack() {
-    // index.html に遷移
-    window.location.href = '../index.html';
+    // タブを閉じる
+    window.close();
 }
 
 // ページ読み込み時に初期化
