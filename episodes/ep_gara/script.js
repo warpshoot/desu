@@ -34,7 +34,7 @@ const replayButton = document.getElementById('replayButton');
 const backButton = document.getElementById('backButton');
 
 // 状態管理
-let currentDialogueIndex = 0;
+let currentDialogueIndex = -1;
 let isTyping = false;
 let typingTimeout = null;
 let canProceed = false;
@@ -117,6 +117,9 @@ function handleClick() {
     if (!gameStarted) {
         // タイトル画面を非表示にしてゲーム開始
         startGame();
+    } else if (currentDialogueIndex === -1) {
+        // kkj.jpg表示中、最初の台詞を表示
+        showDialogue(0);
     } else if (isChangingBackground) {
         // 背景切り替え中はクリックを無視
         return;
@@ -133,6 +136,11 @@ function handleClick() {
 function startGame() {
     gameStarted = true;
 
+    // AudioContextを初期化（音声を鳴らすため）
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
     // 初期背景を設定（nullの場合はスキップ）
     if (initialBackground) {
         backgroundImage.src = initialBackground;
@@ -142,14 +150,10 @@ function startGame() {
     // タイトル画面をフェードアウト
     titleScreen.classList.add('hidden');
 
-    // 1秒後にフェードアウトして最初の台詞を表示
+    // 1秒後にフェードアウトしてkkj.jpgを表示（クリック待ち状態）
     setTimeout(() => {
         fadeOverlay.classList.add('fade-out');
-
-        // フェードアウト完了後に最初の台詞を表示
-        setTimeout(() => {
-            showDialogue(0);
-        }, 2000);
+        // ここでshowDialogue(0)は呼ばない。次のクリックを待つ
     }, 1000);
 }
 
@@ -333,7 +337,7 @@ function handleReplay() {
 
     // ゲーム状態をリセット
     setTimeout(() => {
-        currentDialogueIndex = 0;
+        currentDialogueIndex = -1;
         previousSpeaker = null;
         currentBackground = null;
         isChangingBackground = false;
