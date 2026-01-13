@@ -1005,11 +1005,15 @@ async function copyToClipboard(x, y, w, h) {
             tempCtx.drawImage(canvas, x, y, w, h, 0, 0, outputW, outputH);
         }
 
-        const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
-
+        // Safari/iPadでの互換性のためにClipboardItemにPromiseを渡す
         await navigator.clipboard.write([
             new ClipboardItem({
-                'image/png': blob
+                'image/png': new Promise((resolve, reject) => {
+                    tempCanvas.toBlob((blob) => {
+                        if (blob) resolve(blob);
+                        else reject(new Error('Blob generation failed'));
+                    }, 'image/png');
+                })
             })
         ]);
 
