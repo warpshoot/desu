@@ -77,6 +77,24 @@ body {
     gap: 20px;
 }
 
+/* セリフがない状態（kkj.jpg表示中など） */
+.text-window.empty {
+    background-color: transparent;
+}
+
+.text-window.empty .face-icon,
+.text-window.empty .name-display,
+.text-window.empty .text-content {
+    display: none;
+}
+
+.text-window.empty .continue-icon {
+    right: 50%;
+    top: auto;
+    bottom: 10vh;
+    transform: translateX(50%);
+}
+
 /* 顔アイコン */
 .face-icon {
     width: 100px;
