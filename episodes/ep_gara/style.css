@@ -22,7 +22,7 @@ body {
 /* iOS Safari用の調整 */
 @supports (-webkit-touch-callout: none) {
     body {
-        padding-top: 5vh;
+        padding-top: 2.5vh;
     }
 }
 
@@ -197,7 +197,7 @@ body {
 /* iOS Safari用のタイトル位置調整 */
 @supports (-webkit-touch-callout: none) {
     .title-screen {
-        padding-top: 30vh;
+        padding-top: 15vh;
     }
 }
 
@@ -284,11 +284,11 @@ body {
     /* iOS Safari用のモバイル調整 */
     @supports (-webkit-touch-callout: none) {
         body {
-            padding-top: 5vh;
+            padding-top: 2.5vh;
         }
 
         .title-screen {
-            padding-top: 30vh;
+            padding-top: 15vh;
         }
     }
 
