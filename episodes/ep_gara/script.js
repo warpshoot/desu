@@ -44,13 +44,13 @@ let currentBackground = null;
 let isChangingBackground = false;
 
 // 初期背景
-const initialBackground = 'images/kkj.jpg';
+const initialBackground = null;
 
 // 名前の表示名
 const speakerNames = {
     sakana: 'サカナ',
     desu: 'デス',
-    shi: 'シー'
+    shi: '？'
 };
 
 // 顔アイコンのパス
@@ -133,9 +133,11 @@ function handleClick() {
 function startGame() {
     gameStarted = true;
 
-    // 初期背景を設定
-    backgroundImage.src = initialBackground;
-    currentBackground = initialBackground;
+    // 初期背景を設定（nullの場合はスキップ）
+    if (initialBackground) {
+        backgroundImage.src = initialBackground;
+        currentBackground = initialBackground;
+    }
 
     // タイトル画面をフェードアウト
     titleScreen.classList.add('hidden');
