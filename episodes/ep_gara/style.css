@@ -238,6 +238,14 @@ body {
 
 /* モバイル */
 @media (max-width: 768px) {
+    body {
+        padding-top: 10vh;
+    }
+
+    .title-screen {
+        padding-top: 35vh;
+    }
+
     .text-window {
         height: 35%;
         padding: 15px 20px;
