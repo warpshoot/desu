@@ -75,24 +75,26 @@ body {
     flex-direction: row;
     align-items: flex-start; /* center → flex-start（上寄せ） */
     gap: 20px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* セリフがある状態 */
+.text-window.active {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 /* セリフがない状態（kkj.jpg表示中など） */
 .text-window.empty {
-    background-color: transparent;
+    opacity: 1;
+    pointer-events: none;
 }
 
 .text-window.empty .face-icon,
 .text-window.empty .name-display,
 .text-window.empty .text-content {
     display: none;
-}
-
-.text-window.empty .continue-icon {
-    right: 50%;
-    top: auto;
-    bottom: 10vh;
-    transform: translateX(50%);
 }
 
 /* 顔アイコン */
