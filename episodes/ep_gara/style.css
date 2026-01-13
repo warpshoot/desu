@@ -87,7 +87,6 @@ body {
 
 /* セリフがない状態（kkj.jpg表示中など） */
 .text-window.empty {
-    background-color: transparent;
     opacity: 1;
     pointer-events: none;
 }
