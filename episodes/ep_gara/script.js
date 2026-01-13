@@ -44,7 +44,7 @@ let currentBackground = null;
 let isChangingBackground = false;
 
 // 初期背景
-const initialBackground = null;
+const initialBackground = 'images/kkj.jpg';
 
 // 名前の表示名
 const speakerNames = {
@@ -81,7 +81,7 @@ function playTextSound(speaker) {
         const frequencies = {
             sakana: 300,
             desu: 700,
-            shi: 500
+            shi: 200
         };
         oscillator.frequency.value = frequencies[speaker] || 600;
 
