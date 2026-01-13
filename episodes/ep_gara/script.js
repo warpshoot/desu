@@ -25,6 +25,7 @@ const dialogues = [
 const titleScreen = document.getElementById('titleScreen');
 const fadeOverlay = document.getElementById('fadeOverlay');
 const backgroundImage = document.getElementById('backgroundImage');
+const textWindow = document.getElementById('textWindow');
 const faceIcon = document.getElementById('faceIcon');
 const nameDisplay = document.getElementById('nameDisplay');
 const textContent = document.getElementById('textContent');
@@ -153,7 +154,10 @@ function startGame() {
     // 1秒後にフェードアウトしてkkj.jpgを表示（クリック待ち状態）
     setTimeout(() => {
         fadeOverlay.classList.add('fade-out');
-        // ここでshowDialogue(0)は呼ばない。次のクリックを待つ
+        // テキストウィンドウを空状態にして三角形だけ表示
+        textWindow.classList.add('empty');
+        canProceed = true;
+        continueIcon.classList.add('show');
     }, 1000);
 }
 
@@ -164,6 +168,9 @@ function showDialogue(index) {
         endStory();
         return;
     }
+
+    // テキストウィンドウを通常状態に戻す
+    textWindow.classList.remove('empty');
 
     const dialogue = dialogues[index];
     currentDialogueIndex = index;
@@ -347,6 +354,7 @@ function handleReplay() {
         textContent.innerHTML = '';
         nameDisplay.textContent = '';
         continueIcon.classList.remove('show');
+        textWindow.classList.remove('empty');
 
         // タイトル画面を再表示
         titleScreen.classList.remove('hidden');
