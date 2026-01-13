@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>DESU™︎ ep. ガラ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app-container">
+        <!-- タイトル画面 -->
+        <div class="title-screen" id="titleScreen">
+            <div class="title-text">DESU™︎<br>ep. ガラ</div>
+        </div>
+
+        <!-- 背景画像 -->
+        <img class="background" id="backgroundImage" src="" alt="背景">
+
+        <!-- フェード用オーバーレイ -->
+        <div class="fade-overlay" id="fadeOverlay"></div>
+
+        <!-- テキストウィンドウ -->
+        <div class="text-window" id="textWindow">
+            <img class="face-icon" id="faceIcon" src="" alt="キャラクター">
+            <div class="text-area">
+                <div class="name-display" id="nameDisplay"></div>
+                <div class="text-content" id="textContent"></div>
+            </div>
+            <div class="continue-icon" id="continueIcon">▼</div>
+        </div>
+
+        <!-- 選択画面 -->
+        <div class="choice-screen" id="choiceScreen">
+            <div class="choice-container">
+                <button class="choice-button" id="replayButton">↻</button>
+                <button class="choice-button" id="backButton">×</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

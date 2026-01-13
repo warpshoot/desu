@@ -1,0 +1,274 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Yu Gothic', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #000;
+}
+
+/* コンテナ（縦位置固定） */
+#app-container {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* 背景画像 */
+.background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background-color: #000;
+    z-index: 1;
+}
+
+/* フェード用オーバーレイ */
+.fade-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    z-index: 10;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 2s ease-in-out;
+}
+
+.fade-overlay.fade-out {
+    opacity: 0;
+}
+
+.fade-overlay.fade-in {
+    opacity: 1;
+}
+
+/* テキストウィンドウ */
+.text-window {
+    position: absolute;
+    bottom: env(safe-area-inset-bottom, 0);
+    left: 0;
+    width: 100%;
+    height: 30%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 5;
+    padding: 20px 40px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start; /* center → flex-start（上寄せ） */
+    gap: 20px;
+}
+
+/* 顔アイコン */
+.face-icon {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+}
+
+/* テキストエリア */
+.text-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+/* 名前表示 */
+.name-display {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    min-height: 24px;
+    color: #fff; /* デフォルトは白 */
+}
+
+.name-display.sakana {
+    color: #4a9eff;
+}
+
+.name-display.desu {
+    color: #ccc;
+}
+
+.name-display.shi {
+    color: #ff9eff;
+}
+
+/* テキスト内容 */
+.text-content {
+    font-size: 18px;
+    line-height: 1.8;
+    color: #ffffff;
+}
+
+/* 進行可能マーク */
+.continue-icon {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 24px;
+    color: #ffffff;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.continue-icon.show {
+    opacity: 1;
+    animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+    0%, 100% {
+        opacity: 0.3;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* タイトル画面 */
+.title-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+    opacity: 1;
+    transition: opacity 1s ease-in-out;
+}
+
+.title-screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.title-text {
+    color: #fff;
+    font-size: 48px;
+    font-weight: 300;
+    letter-spacing: 4px;
+    text-align: center;
+}
+
+/* 選択画面 */
+.choice-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 15;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease-in-out;
+}
+
+.choice-screen.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.choice-container {
+    display: flex;
+    flex-direction: row;
+    gap: 30px;
+    align-items: center;
+}
+
+.choice-button {
+    font-family: 'Yu Gothic', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+    font-size: 60px;
+    width: 120px;
+    height: 120px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.choice-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.6);
+    transform: scale(1.1);
+}
+
+.choice-button:active {
+    transform: scale(1.0);
+}
+
+/* レスポンシブ対応 */
+
+/* モバイル */
+@media (max-width: 768px) {
+    .text-window {
+        height: 35%;
+        padding: 15px 20px;
+        padding-bottom: max(15px, env(safe-area-inset-bottom, 15px));
+        gap: 15px;
+    }
+
+    .face-icon {
+        width: 70px;
+        height: 70px;
+        border-width: 2px;
+    }
+
+    .name-display {
+        font-size: 16px;
+    }
+
+    .text-content {
+        font-size: 14px;
+    }
+
+    .continue-icon {
+        font-size: 20px;
+        right: 15px;
+    }
+
+    .title-text {
+        font-size: 36px;
+    }
+
+    .choice-button {
+        font-size: 48px;
+        width: 100px;
+        height: 100px;
+    }
+}
