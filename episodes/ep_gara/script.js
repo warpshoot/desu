@@ -171,6 +171,7 @@ function showDialogue(index) {
 
     // テキストウィンドウを通常状態に戻す
     textWindow.classList.remove('empty');
+    textWindow.classList.add('active');
 
     const dialogue = dialogues[index];
     currentDialogueIndex = index;
@@ -323,6 +324,7 @@ function endStory() {
     fadeOverlay.classList.add('fade-in');
 
     // テキストウィンドウを非表示
+    textWindow.classList.remove('active', 'empty');
     continueIcon.classList.remove('show');
 
     // 2秒後に選択画面を表示
@@ -354,7 +356,7 @@ function handleReplay() {
         textContent.innerHTML = '';
         nameDisplay.textContent = '';
         continueIcon.classList.remove('show');
-        textWindow.classList.remove('empty');
+        textWindow.classList.remove('active', 'empty');
 
         // タイトル画面を再表示
         titleScreen.classList.remove('hidden');
