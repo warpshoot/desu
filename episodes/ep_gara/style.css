@@ -31,8 +31,7 @@ body {
     position: relative;
     width: 100%;
     max-width: 600px;
-    height: 100vh;
-    height: -webkit-fill-available;
+    height: 90vh;
     overflow: hidden;
 }
 
@@ -278,6 +277,10 @@ body {
         padding-top: 10vh;
     }
 
+    #app-container {
+        height: 90vh;
+    }
+
     .title-screen {
         padding-top: 35vh;
     }
@@ -286,6 +289,11 @@ body {
     @supports (-webkit-touch-callout: none) {
         body {
             padding-top: 2.5vh;
+        }
+
+        #app-container {
+            height: 97.5vh;
+            height: -webkit-fill-available;
         }
 
         .title-screen {
