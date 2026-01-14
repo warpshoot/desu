@@ -560,10 +560,10 @@
         let initialPinchDist = 0;
         let initialPinchCenter = { x: 0, y: 0 };
         let maxFingers = 0;
-        let gestureStartTime = 0;
         let touchStartTime = 0;
         let touchStartPos = { x: 0, y: 0 };
         let pencilDetected = false;
+        let didInteract = false; // Track if drawing, panning, or pinching occurred
 
         // Save mode
         let isSaveMode = false;
@@ -812,19 +812,19 @@
             // Draw grid lines
             if (showGrid && !hideGrid) {
                 ctx.strokeStyle = bgColor === '#ffffff' ? '#e0e0e0' : '#444444';
-                ctx.lineWidth = 0.5 / SCALE;
+                ctx.lineWidth = 1;
 
-                ctx.beginPath();
                 for (let i = 0; i <= GRID_SIZE; i++) {
-                    // Vertical lines
+                    ctx.beginPath();
                     ctx.moveTo(i * CELL_SIZE, 0);
                     ctx.lineTo(i * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+                    ctx.stroke();
 
-                    // Horizontal lines
+                    ctx.beginPath();
                     ctx.moveTo(0, i * CELL_SIZE);
                     ctx.lineTo(GRID_SIZE * CELL_SIZE, i * CELL_SIZE);
+                    ctx.stroke();
                 }
-                ctx.stroke();
             }
 
             // Draw cells
@@ -932,6 +932,7 @@
 
             render();
             saveState();
+            didInteract = true; // Mark that drawing occurred
         }
 
         // Canvas events
@@ -952,6 +953,7 @@
                 maxFingers = 1;
                 isPinching = false;
                 wasPanning = false; // Reset panning flag for new interaction
+                didInteract = false; // Reset interaction flag
             }
             maxFingers = Math.max(maxFingers, activePointers.size);
 
@@ -1025,6 +1027,7 @@
                     updateTransform();
                     lastPinchDist = dist;
                     lastPinchCenter = center;
+                    didInteract = true; // Mark interaction occurred
                 }
                 return;
             }
@@ -1035,6 +1038,7 @@
                 translateY = lastPanY + (e.clientY - panStartY);
                 updateTransform();
                 wasPanning = true; // Mark that panning has occurred
+                didInteract = true; // Mark interaction occurred
             }
         });
 
@@ -1056,21 +1060,18 @@
                 canvas.style.cursor = isSpacePressed ? 'grab' : '';
 
                 // Check for gesture (2/3 finger tap for undo/redo)
-                // Only trigger if no pinching occurred (pure tap gesture)
+                // Only trigger if no interaction occurred (pure tap gesture)
                 const duration = Date.now() - touchStartTime;
-                const distMoved = Math.hypot(e.clientX - touchStartPos.x, e.clientY - touchStartPos.y);
 
-                if (maxFingers >= 2 && duration < 300 && distMoved < 15 && !isPinching) {
-                    if (maxFingers === 2) {
-                        undo();
-                    } else if (maxFingers === 3) {
-                        redo();
-                    }
+                if (maxFingers >= 2 && duration < 400 && !didInteract) {
+                    if (maxFingers === 2) undo();
+                    if (maxFingers === 3) redo();
                 }
 
                 touchStartTime = 0;
                 maxFingers = 0;
                 isPinching = false;
+                didInteract = false;
             }
         });
 
