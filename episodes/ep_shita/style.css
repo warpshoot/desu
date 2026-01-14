@@ -248,22 +248,6 @@ body {
         padding-top: 35vh;
     }
 
-    /* iOS Safari用のモバイル調整 */
-    @supports (-webkit-touch-callout: none) {
-        body {
-            padding-top: 2.5vh;
-        }
-
-        #app-container {
-            height: 97.5vh;
-            height: -webkit-fill-available;
-        }
-
-        .title-screen {
-            padding-top: 15vh;
-        }
-    }
-
     .text-window {
         height: 35%;
         padding: 15px 20px;
