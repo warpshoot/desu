@@ -9,11 +9,13 @@ body {
     overflow: hidden;
     width: 100vw;
     height: 100vh;
+    height: -webkit-fill-available;
     position: relative;
     cursor: pointer;
     display: flex;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
+    padding-top: 0;
     background-color: #000;
 }
 
@@ -146,6 +148,36 @@ body {
 
 /* モバイル */
 @media (max-width: 768px) {
+    body {
+        align-items: flex-start;
+        padding-top: 10vh;
+    }
+
+    #app-container {
+        height: 90vh;
+    }
+
+    .title-screen {
+        align-items: flex-start;
+        padding-top: 35vh;
+    }
+
+    /* iOS Safari用のモバイル調整 */
+    @supports (-webkit-touch-callout: none) {
+        body {
+            padding-top: 2.5vh;
+        }
+
+        #app-container {
+            height: 97.5vh;
+            height: -webkit-fill-available;
+        }
+
+        .title-screen {
+            padding-top: 15vh;
+        }
+    }
+
     .title-text {
         font-size: 36px;
     }
