@@ -347,11 +347,6 @@
             z-index: 202;
         }
 
-        #selection-canvas.active {
-            display: block;
-            pointer-events: auto;
-        }
-
         /* ズームリセットボタン */
         #resetZoomBtn {
             position: fixed;
@@ -542,8 +537,13 @@
         let isPinching = false;
         let lastPinchDist = 0;
         let lastPinchCenter = { x: 0, y: 0 };
+        let initialPinchDist = 0;
+        let initialPinchCenter = { x: 0, y: 0 };
         let maxFingers = 0;
         let gestureStartTime = 0;
+        let touchStartTime = 0;
+        let touchStartPos = { x: 0, y: 0 };
+        let pencilDetected = false;
 
         // Save mode
         let isSaveMode = false;
@@ -913,22 +913,51 @@
             if (isSaveMode) return;
 
             e.preventDefault();
+            canvas.setPointerCapture(e.pointerId);
             activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-            if (activePointers.size === 1 && !gestureStartTime) {
-                gestureStartTime = Date.now();
+            if (e.pointerType === 'pen') {
+                pencilDetected = true;
+            }
+
+            if (activePointers.size === 1) {
+                touchStartTime = Date.now();
+                touchStartPos = { x: e.clientX, y: e.clientY };
                 maxFingers = 1;
+                isPinching = false;
             }
             maxFingers = Math.max(maxFingers, activePointers.size);
 
-            // Pan mode
-            if ((isSpacePressed || activePointers.size === 2) && !isPinching) {
+            // 2本指 = ピンチ/パン準備
+            if (activePointers.size === 2) {
+                isPinching = false;
+                const pts = Array.from(activePointers.values());
+                lastPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+                lastPinchCenter = {
+                    x: (pts[0].x + pts[1].x) / 2,
+                    y: (pts[0].y + pts[1].y) / 2
+                };
+                initialPinchDist = lastPinchDist;
+                initialPinchCenter = { x: lastPinchCenter.x, y: lastPinchCenter.y };
+                return;
+            }
+
+            // 手のひらモード（スペースキー押下中）
+            if (activePointers.size === 1 && isSpacePressed) {
                 isPanning = true;
                 panStartX = e.clientX;
                 panStartY = e.clientY;
                 lastPanX = translateX;
                 lastPanY = translateY;
                 canvas.style.cursor = 'grabbing';
+                return;
+            }
+
+            // クリック/タッチで描画（ペン、マウス、またはApple Pencilが検出されていない指タッチ）
+            const canDraw = e.pointerType === 'pen' || e.pointerType === 'mouse' || (e.pointerType === 'touch' && !pencilDetected);
+
+            if (activePointers.size === 1 && canDraw) {
+                // 描画処理はclickイベントで行う
             }
         });
 
@@ -936,9 +965,10 @@
             if (isSaveMode) return;
 
             if (!activePointers.has(e.pointerId)) return;
+            e.preventDefault();
             activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-            // Pinch zoom
+            // 2本指 = ピンチズーム / パン
             if (activePointers.size === 2) {
                 const pts = Array.from(activePointers.values());
                 const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
@@ -947,11 +977,15 @@
                     y: (pts[0].y + pts[1].y) / 2
                 };
 
-                if (!isPinching && lastPinchDist === 0) {
-                    lastPinchDist = dist;
-                    lastPinchCenter = center;
-                } else {
+                // 閾値: 10px以上動いたらピンチ開始
+                const distDelta = Math.abs(dist - initialPinchDist);
+                const centerDelta = Math.hypot(center.x - initialPinchCenter.x, center.y - initialPinchCenter.y);
+
+                if (distDelta > 10 || centerDelta > 10) {
                     isPinching = true;
+                }
+
+                if (isPinching) {
                     const zoomFactor = dist / lastPinchDist;
                     const oldScale = scale;
                     scale = Math.max(0.1, Math.min(20, scale * zoomFactor));
@@ -965,10 +999,11 @@
                     lastPinchDist = dist;
                     lastPinchCenter = center;
                 }
+                return;
             }
 
             // Pan
-            if (isPanning && activePointers.size <= 2) {
+            if (isPanning && activePointers.size === 1) {
                 translateX = lastPanX + (e.clientX - panStartX);
                 translateY = lastPanY + (e.clientY - panStartY);
                 updateTransform();
@@ -984,6 +1019,7 @@
             if (activePointers.size < 2) {
                 isPinching = false;
                 lastPinchDist = 0;
+                initialPinchDist = 0;
             }
 
             // Reset pan
@@ -991,14 +1027,16 @@
                 isPanning = false;
                 canvas.style.cursor = isSpacePressed ? 'grab' : '';
 
-                // Check for gesture
-                const duration = Date.now() - gestureStartTime;
-                if (maxFingers >= 2 && duration < 400 && !isPinching) {
+                // Check for gesture (2/3 finger tap for undo/redo)
+                const duration = Date.now() - touchStartTime;
+                const distMoved = Math.hypot(e.clientX - touchStartPos.x, e.clientY - touchStartPos.y);
+
+                if (maxFingers >= 2 && duration < 400 && distMoved < 10) {
                     if (maxFingers === 2) undo();
                     if (maxFingers === 3) redo();
                 }
 
-                gestureStartTime = 0;
+                touchStartTime = 0;
                 maxFingers = 0;
             }
         });
@@ -1064,15 +1102,33 @@
         });
 
         // Color pickers
-        document.getElementById('fillColorPicker').addEventListener('input', (e) => {
-            fillColor = e.target.value;
+        function updateFillColor(color) {
+            fillColor = color;
             document.getElementById('fillColorDisplay').style.background = fillColor;
+            document.getElementById('fillColorPicker').value = fillColor;
+        }
+
+        function updateBgColor(color) {
+            bgColor = color;
+            document.getElementById('bgColorDisplay').style.background = bgColor;
+            document.getElementById('bgColorPicker').value = bgColor;
+            render();
+        }
+
+        document.getElementById('fillColorPicker').addEventListener('input', (e) => {
+            updateFillColor(e.target.value);
+        });
+
+        document.getElementById('fillColorPicker').addEventListener('change', (e) => {
+            updateFillColor(e.target.value);
         });
 
         document.getElementById('bgColorPicker').addEventListener('input', (e) => {
-            bgColor = e.target.value;
-            document.getElementById('bgColorDisplay').style.background = bgColor;
-            render();
+            updateBgColor(e.target.value);
+        });
+
+        document.getElementById('bgColorPicker').addEventListener('change', (e) => {
+            updateBgColor(e.target.value);
         });
 
         // Grid toggle
@@ -1279,12 +1335,9 @@
                     break;
                 case 'x':
                     // Swap fill and bg colors
-                    [fillColor, bgColor] = [bgColor, fillColor];
-                    document.getElementById('fillColorPicker').value = fillColor;
-                    document.getElementById('bgColorPicker').value = bgColor;
-                    document.getElementById('fillColorDisplay').style.background = fillColor;
-                    document.getElementById('bgColorDisplay').style.background = bgColor;
-                    render();
+                    const tempColor = fillColor;
+                    updateFillColor(bgColor);
+                    updateBgColor(tempColor);
                     break;
                 case 'delete':
                 case 'backspace':
@@ -1326,6 +1379,7 @@
         // Selection functionality
         const selectionCanvas = document.getElementById('selection-canvas');
         const selCtx = selectionCanvas.getContext('2d');
+        const saveOverlay = document.getElementById('save-overlay');
 
         function updateSelectionCanvas() {
             selectionCanvas.width = window.innerWidth;
@@ -1337,16 +1391,20 @@
             if (isSaveMode) updateSelectionCanvas();
         });
 
-        // Selection drawing
-        selectionCanvas.addEventListener('mousedown', (e) => {
-            if (!isSaveMode || confirmedSelection) return;
+        // Selection drawing on overlay (not selection-canvas)
+        saveOverlay.addEventListener('pointerdown', (e) => {
+            if (!isSaveMode) return;
             selectionStart = { x: e.clientX, y: e.clientY };
             selectionEnd = { x: e.clientX, y: e.clientY };
+            confirmedSelection = null;
             document.getElementById('save-ui').style.opacity = '0.3';
+            document.getElementById('confirmSelectionBtn').style.display = 'none';
+            document.getElementById('copySelectionBtn').style.display = 'none';
+            document.getElementById('redoSelectionBtn').style.display = 'none';
         });
 
-        selectionCanvas.addEventListener('mousemove', (e) => {
-            if (!isSaveMode || !selectionStart || confirmedSelection) return;
+        saveOverlay.addEventListener('pointermove', (e) => {
+            if (!isSaveMode || !selectionStart) return;
             selectionEnd = { x: e.clientX, y: e.clientY };
 
             const rectX = Math.min(selectionStart.x, selectionEnd.x);
@@ -1363,8 +1421,8 @@
             selCtx.fillRect(rectX, rectY, rectW, rectH);
         });
 
-        selectionCanvas.addEventListener('mouseup', (e) => {
-            if (!isSaveMode || !selectionStart || confirmedSelection) return;
+        saveOverlay.addEventListener('pointerup', (e) => {
+            if (!isSaveMode || !selectionStart) return;
 
             const rectX = Math.min(selectionStart.x, selectionEnd.x);
             const rectY = Math.min(selectionStart.y, selectionEnd.y);
@@ -1500,14 +1558,17 @@
             document.getElementById('save-overlay').classList.add('active');
             document.getElementById('save-ui').classList.add('active');
             updateSelectionCanvas();
-            selectionCanvas.classList.add('active');
+            selectionCanvas.style.display = 'block';
+            selectionStart = null;
+            selectionEnd = null;
+            confirmedSelection = null;
         });
 
         document.getElementById('cancelSaveBtn').addEventListener('click', () => {
             isSaveMode = false;
             document.getElementById('save-overlay').classList.remove('active');
             document.getElementById('save-ui').classList.remove('active');
-            selectionCanvas.classList.remove('active');
+            selectionCanvas.style.display = 'none';
             selCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
             selectionStart = null;
             selectionEnd = null;
@@ -1515,6 +1576,7 @@
             document.getElementById('confirmSelectionBtn').style.display = 'none';
             document.getElementById('copySelectionBtn').style.display = 'none';
             document.getElementById('redoSelectionBtn').style.display = 'none';
+            document.getElementById('save-ui').style.opacity = '1';
         });
 
         // Initialize
