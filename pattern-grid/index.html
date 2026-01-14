@@ -594,6 +594,25 @@
             render();
         }
 
+        // Fit canvas to screen (initial only)
+        function fitCanvasToScreen() {
+            const size = GRID_SIZE * CELL_SIZE;
+            // Leave space for toolbars (120px left, 60px right, 60px top, 120px bottom)
+            const availableWidth = window.innerWidth - 180;
+            const availableHeight = window.innerHeight - 180;
+
+            const scaleX = availableWidth / size;
+            const scaleY = availableHeight / size;
+
+            // Use smaller scale to fit, max 3x
+            scale = Math.min(scaleX, scaleY, 3);
+
+            // Don't scale too small
+            if (scale < 0.5) scale = 0.5;
+
+            updateTransform();
+        }
+
         // Update transform
         function updateTransform() {
             canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
@@ -1552,6 +1571,7 @@
         // Initialize
         initGrid();
         resizeCanvas();
+        fitCanvasToScreen(); // Fit to screen on initial load
         saveState(); // Initial state
         updateSelectionCanvas();
     </script>
