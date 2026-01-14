@@ -1,120 +1,144 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>DESU™ pattern</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
-        body {
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: none;
+            background: #4d4d4d;
             font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, 'YuGothic', 'Yu Gothic', sans-serif;
-            background: #1a1a1a;
-            color: #fff;
+        }
+
+        #canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            image-rendering: pixelated;
+            image-rendering: -webkit-optimize-contrast;
+            touch-action: none;
+            transform-origin: 0 0;
+        }
+
+        /* 左下ツールバー */
+        #toolbar-left {
+            position: fixed;
+            left: 12px;
+            bottom: 120px;
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
+            gap: 8px;
+            z-index: 100;
         }
 
-        .toolbar {
-            background: #2a2a2a;
-            padding: 16px;
-            display: flex;
-            gap: 16px;
-            align-items: center;
-            flex-wrap: wrap;
-            border-bottom: 1px solid #3a3a3a;
-        }
-
-        .control-group {
+        /* 右上ツールバー */
+        #toolbar-right {
+            position: fixed;
+            top: max(12px, env(safe-area-inset-top));
+            right: 12px;
             display: flex;
             gap: 8px;
-            align-items: center;
+            z-index: 100;
         }
 
-        .control-group label {
-            font-size: 14px;
-            color: #aaa;
-        }
-
-        button {
-            background: #3a3a3a;
-            color: #fff;
-            border: 2px solid #4a4a4a;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-
-        button:hover {
-            background: #4a4a4a;
-            border-color: #5a5a5a;
-        }
-
-        button.active {
-            background: #667eea;
-            border-color: #667eea;
-        }
-
-        input[type="color"] {
-            width: 50px;
-            height: 36px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        input[type="range"] {
-            width: 150px;
-        }
-
-        input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-
-        .canvas-container {
-            flex: 1;
+        .tool-btn {
+            position: relative;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            border: 2px solid #666;
+            background: rgba(255, 255, 255, 0.9);
             display: flex;
-            align-items: flex-start;
-            justify-content: flex-start;
-            padding: 20px;
-            overflow: auto;
-            -webkit-overflow-scrolling: touch;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.1s;
+            color: #333;
         }
 
-        canvas {
-            border: 2px solid #3a3a3a;
-            cursor: crosshair;
-            margin: auto;
+        .tool-btn svg {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
 
-        .size-display {
-            font-size: 14px;
-            color: #aaa;
-            min-width: 60px;
+        .tool-btn svg .filled {
+            fill: currentColor;
+            stroke: none;
+        }
+
+        .tool-btn:active {
+            transform: scale(0.92);
+        }
+
+        .tool-btn.active {
+            background: #333;
+            border-color: #fff;
+            color: #fff;
+        }
+
+        /* カラーピッカー用ボタン */
+        .color-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            border: 2px solid #666;
+            cursor: pointer;
+            transition: transform 0.1s;
+            position: relative;
+        }
+
+        .color-btn:active {
+            transform: scale(0.92);
+        }
+
+        .color-btn input[type="color"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .color-btn .color-display {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            pointer-events: none;
         }
 
         /* クレジットボタン */
         #credit-btn {
             position: fixed;
-            top: 16px;
-            left: 16px;
+            top: max(12px, env(safe-area-inset-top));
+            left: 12px;
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.1);
-            color: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.1);
+            color: rgba(0, 0, 0, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -126,9 +150,9 @@
         }
 
         #credit-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: rgba(255, 255, 255, 0.8);
-            border-color: rgba(255, 255, 255, 0.5);
+            background: rgba(0, 0, 0, 0.2);
+            color: rgba(0, 0, 0, 0.8);
+            border-color: rgba(0, 0, 0, 0.5);
         }
 
         /* クレジットモーダル */
@@ -139,11 +163,18 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: #1a1a1a;
+            background: #fff;
             z-index: 300;
             align-items: center;
             justify-content: center;
             padding: 20px;
+        }
+
+        @media (max-width: 768px) and (orientation: portrait) {
+            #credit-modal {
+                align-items: flex-end;
+                justify-content: flex-end;
+            }
         }
 
         #credit-modal.visible {
@@ -151,13 +182,12 @@
         }
 
         #credit-content {
-            background: rgba(30, 30, 30, 0.95);
-            color: #fff;
+            background: rgba(255, 255, 255, 0.95);
             padding: 32px;
             border-radius: 16px;
             text-align: center;
             max-width: 400px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
         #credit-content h2 {
@@ -186,7 +216,7 @@
         }
 
         #credit-author a {
-            color: #fff;
+            color: #333;
             text-decoration: none;
             font-weight: bold;
         }
@@ -195,76 +225,280 @@
             text-decoration: underline;
         }
 
+        /* 保存UI */
+        #save-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            z-index: 200;
+        }
+
+        #save-overlay.active {
+            display: block;
+        }
+
+        #save-ui {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.98);
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            z-index: 201;
+            max-width: 90%;
+        }
+
+        #save-ui.active {
+            display: block;
+        }
+
+        #save-ui h3 {
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+
+        .option-group {
+            margin-bottom: 16px;
+        }
+
+        .option-group-label {
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: #666;
+        }
+
+        .option-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .option-btn {
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            background: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .option-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .option-btn.active {
+            background: #333;
+            color: #fff;
+            border-color: #333;
+        }
+
+        .save-btn {
+            padding: 10px 20px;
+            margin: 4px;
+            border: 1px solid #333;
+            background: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .save-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .save-btn.primary {
+            background: #333;
+            color: #fff;
+        }
+
+        .save-btn.primary:hover {
+            background: #555;
+        }
+
+        #save-ui label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            cursor: pointer;
+        }
+
+        #save-ui input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        #selection-canvas {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 202;
+        }
+
+        #selection-canvas.active {
+            display: block;
+            pointer-events: auto;
+        }
+
+        /* ズームリセットボタン */
+        #resetZoomBtn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #666;
+            color: #333;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.2s;
+        }
+
+        #resetZoomBtn svg {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        #resetZoomBtn:active {
+            transform: scale(0.92);
+        }
+
+        #resetZoomBtn.visible {
+            display: flex;
+        }
+
         @media (max-width: 768px) {
-            .toolbar {
-                padding: 12px;
-                gap: 12px;
+            .tool-btn {
+                width: 44px;
+                height: 44px;
             }
 
-            input[type="range"] {
-                width: 100px;
-            }
-
-            #credit-modal {
-                align-items: flex-end;
-                justify-content: flex-end;
-            }
-
-            #credit-content {
-                padding: 24px;
+            .color-btn {
+                width: 44px;
+                height: 44px;
             }
         }
     </style>
 </head>
-
 <body>
-    <div class="toolbar">
-        <div class="control-group">
-            <button id="triangleMode" class="active">▲ Triangle</button>
-            <button id="arcMode">◗ Arc</button>
-            <button id="rectMode">■ Rectangle</button>
-        </div>
+    <canvas id="canvas"></canvas>
 
-        <div class="control-group">
-            <label>Fill:</label>
-            <input type="color" id="colorPicker" value="#000000">
+    <!-- 左下ツールバー -->
+    <div id="toolbar-left">
+        <div class="tool-btn active" id="triangleBtn" data-tool="triangle" title="三角形 (1)">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 6 L20 18 L4 18 Z" class="filled"/>
+            </svg>
         </div>
-
-        <div class="control-group">
-            <label>BG:</label>
+        <div class="tool-btn" id="arcBtn" data-tool="arc" title="円弧 (2)">
+            <svg viewBox="0 0 24 24">
+                <path d="M6 18 Q6 6 18 6" stroke-width="3" fill="none"/>
+            </svg>
+        </div>
+        <div class="tool-btn" id="rectBtn" data-tool="rect" title="矩形 (3)">
+            <svg viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" class="filled"/>
+            </svg>
+        </div>
+        <div class="color-btn" id="fillColorBtn" title="塗りつぶし色 (X)">
+            <div class="color-display" id="fillColorDisplay" style="background: #000000;"></div>
+            <input type="color" id="fillColorPicker" value="#000000">
+        </div>
+        <div class="color-btn" id="bgColorBtn" title="背景色">
+            <div class="color-display" id="bgColorDisplay" style="background: #ffffff;"></div>
             <input type="color" id="bgColorPicker" value="#ffffff">
         </div>
+    </div>
 
-        <div class="control-group">
-            <label>Grid:</label>
-            <button id="grid8" class="active">8x8</button>
-            <button id="grid16">16x16</button>
+    <!-- 右上ツールバー -->
+    <div id="toolbar-right">
+        <div class="tool-btn" id="saveBtn" title="保存 (⌘S)">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 4 L12 16 M6 12 L12 18 L18 12"/>
+                <path d="M4 20 L20 20"/>
+            </svg>
         </div>
-
-        <div class="control-group">
-            <label>Zoom:</label>
-            <button id="zoomOut">-</button>
-            <span class="size-display" id="zoomDisplay">100%</span>
-            <button id="zoomIn">+</button>
+        <div class="tool-btn active" id="gridBtn" title="グリッド線">
+            <svg viewBox="0 0 24 24">
+                <path d="M4 8 L20 8 M4 12 L20 12 M4 16 L20 16"/>
+                <path d="M8 4 L8 20 M12 4 L12 20 M16 4 L16 20"/>
+            </svg>
         </div>
-
-        <div class="control-group">
-            <label>
-                <input type="checkbox" id="transparentBg">
-                Transparent BG
-            </label>
-        </div>
-
-        <div class="control-group">
-            <button id="clearBtn">Clear</button>
-            <button id="downloadBtn">Download</button>
-            <button id="copyBtn">Copy</button>
+        <div class="tool-btn" id="clearBtn" title="クリア (Del)">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34"/>
+            </svg>
         </div>
     </div>
 
-    <div class="canvas-container">
-        <canvas id="canvas"></canvas>
+    <!-- ズームリセットボタン -->
+    <div id="resetZoomBtn">
+        <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="8"/>
+            <path d="M12 7 L12 17 M7 12 L17 12"/>
+        </svg>
     </div>
+
+    <!-- 保存UI -->
+    <div id="save-overlay"></div>
+    <div id="save-ui">
+        <h3>範囲をドラッグして選択</h3>
+
+        <div class="option-group">
+            <div class="option-group-label">縦横比</div>
+            <div class="option-buttons">
+                <button class="option-btn active" data-aspect="free">自由</button>
+                <button class="option-btn" data-aspect="1:1">1:1</button>
+                <button class="option-btn" data-aspect="4:5">4:5</button>
+                <button class="option-btn" data-aspect="16:9">16:9</button>
+                <button class="option-btn" data-aspect="9:16">9:16</button>
+            </div>
+        </div>
+
+        <div class="option-group">
+            <div class="option-group-label">倍率</div>
+            <div class="option-buttons">
+                <button class="option-btn active" data-scale="1">1x</button>
+                <button class="option-btn" data-scale="2">2x</button>
+                <button class="option-btn" data-scale="3">3x</button>
+            </div>
+        </div>
+
+        <label>
+            <input type="checkbox" id="transparentBg">
+            背景透過
+        </label>
+
+        <div>
+            <button class="save-btn" id="saveAllBtn">全体を保存</button>
+            <button class="save-btn primary" id="confirmSelectionBtn" style="display:none;">確定</button>
+            <button class="save-btn" id="copySelectionBtn" style="display:none;">コピー</button>
+            <button class="save-btn" id="redoSelectionBtn" style="display:none;">やり直し</button>
+            <button class="save-btn" id="cancelSaveBtn">閉じる</button>
+        </div>
+    </div>
+
+    <canvas id="selection-canvas"></canvas>
 
     <!-- クレジットボタンとモーダル -->
     <div id="credit-btn">?</div>
@@ -284,20 +518,54 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d', { alpha: true });
 
-        const SCALE = 4; // High-DPI scaling for smooth rendering
-        let gridSize = 8;
-        let cellSize = 20;
-        let zoom = 1.0;
+        // Constants
+        const SCALE = 4; // High-DPI scaling
+        const GRID_SIZE = 16;
+        const CELL_SIZE = 30;
+        const MAX_HISTORY = 50;
+
+        // State
         let mode = 'triangle';
-        let currentColor = '#000000';
+        let fillColor = '#000000';
         let bgColor = '#ffffff';
-        let transparentBg = false;
+        let showGrid = true;
         let grid = [];
+        let scale = 1;
+        let translateX = 0;
+        let translateY = 0;
+
+        // Undo/Redo
+        let undoStack = [];
+        let redoStack = [];
+
+        // Pan/Zoom
+        let isSpacePressed = false;
+        let isPanning = false;
+        let panStartX = 0;
+        let panStartY = 0;
+        let lastPanX = 0;
+        let lastPanY = 0;
+
+        // Touch
+        let activePointers = new Map();
+        let isPinching = false;
+        let lastPinchDist = 0;
+        let lastPinchCenter = { x: 0, y: 0 };
+        let maxFingers = 0;
+        let gestureStartTime = 0;
+
+        // Save mode
+        let isSaveMode = false;
+        let selectionStart = null;
+        let selectionEnd = null;
+        let confirmedSelection = null;
+        let selectedAspect = 'free';
+        let selectedScale = 1;
 
         // Initialize grid
         function initGrid() {
-            grid = Array(gridSize).fill(null).map(() =>
-                Array(gridSize).fill(null).map(() => ({
+            grid = Array(GRID_SIZE).fill(null).map(() =>
+                Array(GRID_SIZE).fill(null).map(() => ({
                     type: null,
                     corner: null,
                     color: null,
@@ -308,17 +576,54 @@
 
         // Set canvas size
         function resizeCanvas() {
-            const displaySize = gridSize * cellSize * zoom;
-            canvas.width = gridSize * cellSize * SCALE;
-            canvas.height = gridSize * cellSize * SCALE;
-            canvas.style.width = displaySize + 'px';
-            canvas.style.height = displaySize + 'px';
+            const size = GRID_SIZE * CELL_SIZE;
+            canvas.width = size * SCALE;
+            canvas.height = size * SCALE;
+            canvas.style.width = size + 'px';
+            canvas.style.height = size + 'px';
             ctx.scale(SCALE, SCALE);
+
+            // Center canvas
+            const centerX = (window.innerWidth - size) / 2;
+            const centerY = (window.innerHeight - size) / 2;
+            canvas.style.left = centerX + 'px';
+            canvas.style.top = centerY + 'px';
+
             render();
         }
 
-        // Better corner detection
-        function getCornerByDistance(relX, relY) {
+        // Update transform
+        function updateTransform() {
+            canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+
+            const resetBtn = document.getElementById('resetZoomBtn');
+            if (Math.abs(scale - 1) > 0.01 || Math.abs(translateX) > 1 || Math.abs(translateY) > 1) {
+                resetBtn.classList.add('visible');
+            } else {
+                resetBtn.classList.remove('visible');
+            }
+        }
+
+        // Get canvas point from screen coordinates
+        function getCanvasPoint(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (clientX - rect.left) / scale;
+            const y = (clientY - rect.top) / scale;
+            return { x, y };
+        }
+
+        // Get grid cell from canvas point
+        function getGridCell(x, y) {
+            const col = Math.floor(x / CELL_SIZE);
+            const row = Math.floor(y / CELL_SIZE);
+            if (col >= 0 && col < GRID_SIZE && row >= 0 && row < GRID_SIZE) {
+                return { col, row };
+            }
+            return null;
+        }
+
+        // Get corner from relative position
+        function getCorner(relX, relY) {
             const corners = [
                 { name: 'tl', x: 0, y: 0 },
                 { name: 'tr', x: 1, y: 0 },
@@ -406,7 +711,6 @@
             ctx.beginPath();
 
             if (!inverted) {
-                // Normal arc: just the quarter circle
                 switch (corner) {
                     case 'tl':
                         ctx.arc(x, y, size, 0, Math.PI / 2);
@@ -426,31 +730,26 @@
                         break;
                 }
             } else {
-                // Inverted arc: draw from arc end, through 3 corners, back to arc start
                 switch (corner) {
                     case 'tl':
-                        // Arc from 90° to 0° (bottom to right), then corners
                         ctx.arc(x, y, size, Math.PI / 2, 0, true);
                         ctx.lineTo(x + size, y);
                         ctx.lineTo(x + size, y + size);
                         ctx.lineTo(x, y + size);
                         break;
                     case 'tr':
-                        // Arc from 180° to 90° (left to bottom), then corners
                         ctx.arc(x + size, y, size, Math.PI, Math.PI / 2, true);
                         ctx.lineTo(x + size, y + size);
                         ctx.lineTo(x, y + size);
                         ctx.lineTo(x, y);
                         break;
                     case 'bl':
-                        // Arc from 0° to 270° (right to top), then corners
                         ctx.arc(x, y + size, size, 0, (3 * Math.PI) / 2, true);
                         ctx.lineTo(x, y);
                         ctx.lineTo(x + size, y);
                         ctx.lineTo(x + size, y + size);
                         break;
                     case 'br':
-                        // Arc from 270° to 180° (top to left), then corners
                         ctx.arc(x + size, y + size, size, (3 * Math.PI) / 2, Math.PI, true);
                         ctx.lineTo(x, y + size);
                         ctx.lineTo(x, y);
@@ -463,7 +762,7 @@
             ctx.fill();
         }
 
-        // Render grid
+        // Render
         function render(hideGrid = false) {
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -471,245 +770,390 @@
             ctx.restore();
 
             // Draw background
-            if (!transparentBg || hideGrid) {
-                ctx.fillStyle = bgColor;
-                ctx.fillRect(0, 0, gridSize * cellSize, gridSize * cellSize);
-            }
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
 
-            // Draw grid lines (only if not exporting)
-            if (!hideGrid) {
+            // Draw grid lines
+            if (showGrid && !hideGrid) {
                 ctx.strokeStyle = bgColor === '#ffffff' ? '#e0e0e0' : '#444444';
                 ctx.lineWidth = 1 / SCALE;
 
-                for (let i = 0; i <= gridSize; i++) {
+                for (let i = 0; i <= GRID_SIZE; i++) {
                     ctx.beginPath();
-                    ctx.moveTo(i * cellSize, 0);
-                    ctx.lineTo(i * cellSize, gridSize * cellSize);
+                    ctx.moveTo(i * CELL_SIZE, 0);
+                    ctx.lineTo(i * CELL_SIZE, GRID_SIZE * CELL_SIZE);
                     ctx.stroke();
 
                     ctx.beginPath();
-                    ctx.moveTo(0, i * cellSize);
-                    ctx.lineTo(gridSize * cellSize, i * cellSize);
+                    ctx.moveTo(0, i * CELL_SIZE);
+                    ctx.lineTo(GRID_SIZE * CELL_SIZE, i * CELL_SIZE);
                     ctx.stroke();
                 }
             }
 
             // Draw cells
-            for (let row = 0; row < gridSize; row++) {
-                for (let col = 0; col < gridSize; col++) {
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
                     const cell = grid[row][col];
                     if (cell.type && cell.color) {
-                        const x = col * cellSize;
-                        const y = row * cellSize;
+                        const x = col * CELL_SIZE;
+                        const y = row * CELL_SIZE;
 
                         if (cell.type === 'triangle') {
-                            drawTriangle(x, y, cellSize, cell.corner, cell.color, cell.inverted);
+                            drawTriangle(x, y, CELL_SIZE, cell.corner, cell.color, cell.inverted);
                         } else if (cell.type === 'arc') {
-                            drawArc(x, y, cellSize, cell.corner, cell.color, cell.inverted);
+                            drawArc(x, y, CELL_SIZE, cell.corner, cell.color, cell.inverted);
                         } else if (cell.type === 'rect') {
                             ctx.fillStyle = cell.color;
-                            ctx.fillRect(x, y, cellSize, cellSize);
+                            ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
                         }
                     }
                 }
             }
         }
 
-        // Handle canvas click
-        function handleClick(x, y) {
-            const displaySize = gridSize * cellSize * zoom;
-            const scaleX = (gridSize * cellSize) / displaySize;
-            const scaleY = (gridSize * cellSize) / displaySize;
+        // Save state for undo
+        async function saveState() {
+            const bitmap = await createImageBitmap(canvas);
+            undoStack.push(bitmap);
+            if (undoStack.length > MAX_HISTORY) {
+                undoStack.shift().close();
+            }
+            redoStack.forEach(b => b.close());
+            redoStack = [];
+        }
 
-            const canvasX = x * scaleX;
-            const canvasY = y * scaleY;
+        // Undo
+        function undo() {
+            if (undoStack.length <= 1) return;
 
-            const col = Math.floor(canvasX / cellSize);
-            const row = Math.floor(canvasY / cellSize);
+            const current = undoStack.pop();
+            redoStack.push(current);
 
-            if (col >= 0 && col < gridSize && row >= 0 && row < gridSize) {
-                const cell = grid[row][col];
+            const prev = undoStack[undoStack.length - 1];
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(prev, 0, 0);
+        }
 
-                if (mode === 'rect') {
-                    if (cell.type === 'rect') {
-                        cell.type = null;
-                        cell.color = null;
+        // Redo
+        function redo() {
+            if (redoStack.length === 0) return;
+
+            const next = redoStack.pop();
+            undoStack.push(next);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(next, 0, 0);
+        }
+
+        // Handle click
+        function handleClick(clientX, clientY) {
+            if (isSaveMode) return;
+
+            const p = getCanvasPoint(clientX, clientY);
+            const cell = getGridCell(p.x, p.y);
+
+            if (!cell) return;
+
+            const { col, row } = cell;
+            const gridCell = grid[row][col];
+
+            if (mode === 'rect') {
+                if (gridCell.type === 'rect') {
+                    gridCell.type = null;
+                    gridCell.color = null;
+                } else {
+                    gridCell.type = 'rect';
+                    gridCell.corner = null;
+                    gridCell.color = fillColor;
+                    gridCell.inverted = false;
+                }
+            } else {
+                const relX = (p.x % CELL_SIZE) / CELL_SIZE;
+                const relY = (p.y % CELL_SIZE) / CELL_SIZE;
+                const corner = getCorner(relX, relY);
+
+                if (gridCell.type === mode && gridCell.corner === corner) {
+                    if (!gridCell.inverted) {
+                        gridCell.inverted = true;
                     } else {
-                        cell.type = 'rect';
-                        cell.corner = null;
-                        cell.color = currentColor;
-                        cell.inverted = false;
+                        gridCell.type = null;
+                        gridCell.corner = null;
+                        gridCell.color = null;
+                        gridCell.inverted = false;
                     }
                 } else {
-                    const relX = (canvasX % cellSize) / cellSize;
-                    const relY = (canvasY % cellSize) / cellSize;
-                    const corner = getCornerByDistance(relX, relY);
-
-                    if (cell.type === mode && cell.corner === corner) {
-                        if (!cell.inverted) {
-                            cell.inverted = true;
-                        } else {
-                            cell.type = null;
-                            cell.corner = null;
-                            cell.color = null;
-                            cell.inverted = false;
-                        }
-                    } else {
-                        cell.type = mode;
-                        cell.corner = corner;
-                        cell.color = currentColor;
-                        cell.inverted = false;
-                    }
+                    gridCell.type = mode;
+                    gridCell.corner = corner;
+                    gridCell.color = fillColor;
+                    gridCell.inverted = false;
                 }
-
-                render();
             }
+
+            render();
+            saveState();
         }
 
-        canvas.addEventListener('click', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            handleClick(x, y);
-        });
+        // Canvas events
+        canvas.addEventListener('pointerdown', (e) => {
+            if (isSaveMode) return;
 
-        // Track touch state
-        let touchStartTime = 0;
-        let touchMoved = false;
+            e.preventDefault();
+            activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-        canvas.addEventListener('touchstart', (e) => {
-            // Only handle single touch for drawing
-            if (e.touches.length === 1) {
-                touchStartTime = Date.now();
-                touchMoved = false;
-                // Don't preventDefault to allow scrolling with momentum
+            if (activePointers.size === 1 && !gestureStartTime) {
+                gestureStartTime = Date.now();
+                maxFingers = 1;
+            }
+            maxFingers = Math.max(maxFingers, activePointers.size);
+
+            // Pan mode
+            if ((isSpacePressed || activePointers.size === 2) && !isPinching) {
+                isPanning = true;
+                panStartX = e.clientX;
+                panStartY = e.clientY;
+                lastPanX = translateX;
+                lastPanY = translateY;
+                canvas.style.cursor = 'grabbing';
             }
         });
 
-        canvas.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 1) {
-                touchMoved = true;
-            }
-        });
+        canvas.addEventListener('pointermove', (e) => {
+            if (isSaveMode) return;
 
-        canvas.addEventListener('touchend', (e) => {
-            // Only trigger click for single tap (not scroll)
-            if (e.changedTouches.length === 1 && !touchMoved) {
-                const touchDuration = Date.now() - touchStartTime;
-                // Only register as click if it was a quick tap (< 200ms)
-                if (touchDuration < 200) {
-                    e.preventDefault(); // Prevent the following click event
-                    const touch = e.changedTouches[0];
-                    const rect = canvas.getBoundingClientRect();
-                    const x = touch.clientX - rect.left;
-                    const y = touch.clientY - rect.top;
-                    handleClick(x, y);
+            if (!activePointers.has(e.pointerId)) return;
+            activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            // Pinch zoom
+            if (activePointers.size === 2) {
+                const pts = Array.from(activePointers.values());
+                const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+                const center = {
+                    x: (pts[0].x + pts[1].x) / 2,
+                    y: (pts[0].y + pts[1].y) / 2
+                };
+
+                if (!isPinching && lastPinchDist === 0) {
+                    lastPinchDist = dist;
+                    lastPinchCenter = center;
+                } else {
+                    isPinching = true;
+                    const zoomFactor = dist / lastPinchDist;
+                    const oldScale = scale;
+                    scale = Math.max(0.1, Math.min(20, scale * zoomFactor));
+
+                    translateX = center.x - (center.x - translateX) * (scale / oldScale);
+                    translateY = center.y - (center.y - translateY) * (scale / oldScale);
+                    translateX += center.x - lastPinchCenter.x;
+                    translateY += center.y - lastPinchCenter.y;
+
+                    updateTransform();
+                    lastPinchDist = dist;
+                    lastPinchCenter = center;
                 }
+            }
+
+            // Pan
+            if (isPanning && activePointers.size <= 2) {
+                translateX = lastPanX + (e.clientX - panStartX);
+                translateY = lastPanY + (e.clientY - panStartY);
+                updateTransform();
+            }
+        });
+
+        canvas.addEventListener('pointerup', (e) => {
+            if (isSaveMode) return;
+
+            activePointers.delete(e.pointerId);
+
+            // Reset pinch
+            if (activePointers.size < 2) {
+                isPinching = false;
+                lastPinchDist = 0;
+            }
+
+            // Reset pan
+            if (activePointers.size === 0) {
+                isPanning = false;
+                canvas.style.cursor = isSpacePressed ? 'grab' : '';
+
+                // Check for gesture
+                const duration = Date.now() - gestureStartTime;
+                if (maxFingers >= 2 && duration < 400 && !isPinching) {
+                    if (maxFingers === 2) undo();
+                    if (maxFingers === 3) redo();
+                }
+
+                gestureStartTime = 0;
+                maxFingers = 0;
+            }
+        });
+
+        canvas.addEventListener('click', (e) => {
+            if (activePointers.size === 0) {
+                handleClick(e.clientX, e.clientY);
             }
         });
 
         // Mode buttons
-        function setMode(newMode) {
-            mode = newMode;
-            document.getElementById('triangleMode').classList.toggle('active', newMode === 'triangle');
-            document.getElementById('arcMode').classList.toggle('active', newMode === 'arc');
-            document.getElementById('rectMode').classList.toggle('active', newMode === 'rect');
-        }
+        document.getElementById('triangleBtn').addEventListener('click', () => {
+            mode = 'triangle';
+            document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('triangleBtn').classList.add('active');
+        });
 
-        document.getElementById('triangleMode').addEventListener('click', () => setMode('triangle'));
-        document.getElementById('arcMode').addEventListener('click', () => setMode('arc'));
-        document.getElementById('rectMode').addEventListener('click', () => setMode('rect'));
+        document.getElementById('arcBtn').addEventListener('click', () => {
+            mode = 'arc';
+            document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('arcBtn').classList.add('active');
+        });
+
+        document.getElementById('rectBtn').addEventListener('click', () => {
+            mode = 'rect';
+            document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('rectBtn').classList.add('active');
+        });
 
         // Color pickers
-        document.getElementById('colorPicker').addEventListener('input', (e) => {
-            currentColor = e.target.value;
+        document.getElementById('fillColorPicker').addEventListener('input', (e) => {
+            fillColor = e.target.value;
+            document.getElementById('fillColorDisplay').style.background = fillColor;
         });
 
         document.getElementById('bgColorPicker').addEventListener('input', (e) => {
             bgColor = e.target.value;
+            document.getElementById('bgColorDisplay').style.background = bgColor;
             render();
         });
 
-        // Transparent background checkbox
-        document.getElementById('transparentBg').addEventListener('change', (e) => {
-            transparentBg = e.target.checked;
+        // Grid toggle
+        document.getElementById('gridBtn').addEventListener('click', () => {
+            showGrid = !showGrid;
+            document.getElementById('gridBtn').classList.toggle('active', showGrid);
             render();
         });
 
-        // Grid size buttons
-        function setGridSize(size) {
-            gridSize = size;
-            document.getElementById('grid8').classList.toggle('active', size === 8);
-            document.getElementById('grid16').classList.toggle('active', size === 16);
-            initGrid();
-            resizeCanvas();
-        }
-
-        document.getElementById('grid8').addEventListener('click', () => setGridSize(8));
-        document.getElementById('grid16').addEventListener('click', () => setGridSize(16));
-
-        // Zoom controls
-        function updateZoom(newZoom) {
-            zoom = Math.max(0.25, Math.min(4, newZoom));
-            document.getElementById('zoomDisplay').textContent = `${Math.round(zoom * 100)}%`;
-            resizeCanvas();
-        }
-
-        document.getElementById('zoomIn').addEventListener('click', () => {
-            updateZoom(zoom * 1.25);
-        });
-
-        document.getElementById('zoomOut').addEventListener('click', () => {
-            updateZoom(zoom / 1.25);
-        });
-
-        // Clear button
+        // Clear
         document.getElementById('clearBtn').addEventListener('click', () => {
-            initGrid();
-            render();
+            if (confirm('全てクリアしますか？')) {
+                initGrid();
+                render();
+                saveState();
+            }
         });
 
-        // Export function (without grid lines)
-        function exportCanvas() {
-            const tempTransparent = transparentBg;
-            render(true); // Render without grid
-            return new Promise((resolve) => {
-                canvas.toBlob((blob) => {
-                    render(); // Restore grid
-                    resolve(blob);
-                });
+        // Save button (updated below with selection canvas)
+
+        // Save all
+        document.getElementById('saveAllBtn').addEventListener('click', () => {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+
+            const useTransparent = document.getElementById('transparentBg').checked;
+            const exportScale = selectedScale;
+            const size = GRID_SIZE * CELL_SIZE * exportScale;
+
+            tempCanvas.width = size;
+            tempCanvas.height = size;
+            tempCtx.scale(exportScale, exportScale);
+
+            if (!useTransparent) {
+                tempCtx.fillStyle = bgColor;
+                tempCtx.fillRect(0, 0, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+            }
+
+            // Draw cells without grid
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    const cell = grid[row][col];
+                    if (cell.type && cell.color) {
+                        const x = col * CELL_SIZE;
+                        const y = row * CELL_SIZE;
+
+                        if (cell.type === 'triangle') {
+                            drawTriangleToContext(tempCtx, x, y, CELL_SIZE, cell.corner, cell.color, cell.inverted);
+                        } else if (cell.type === 'arc') {
+                            drawArcToContext(tempCtx, x, y, CELL_SIZE, cell.corner, cell.color, cell.inverted);
+                        } else if (cell.type === 'rect') {
+                            tempCtx.fillStyle = cell.color;
+                            tempCtx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                        }
+                    }
+                }
+            }
+
+            tempCanvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'pattern-grid.png';
+                a.click();
+                URL.revokeObjectURL(url);
             });
+        });
+
+        // Helper functions for export
+        function drawTriangleToContext(context, x, y, size, corner, color, inverted) {
+            context.fillStyle = color;
+            context.beginPath();
+            // Same logic as drawTriangle but for different context
+            if (!inverted) {
+                switch (corner) {
+                    case 'tl': context.moveTo(x, y); context.lineTo(x + size, y); context.lineTo(x, y + size); break;
+                    case 'tr': context.moveTo(x + size, y); context.lineTo(x + size, y + size); context.lineTo(x, y); break;
+                    case 'bl': context.moveTo(x, y + size); context.lineTo(x, y); context.lineTo(x + size, y + size); break;
+                    case 'br': context.moveTo(x + size, y + size); context.lineTo(x, y + size); context.lineTo(x + size, y); break;
+                }
+            } else {
+                switch (corner) {
+                    case 'tl': context.moveTo(x + size, y); context.lineTo(x + size, y + size); context.lineTo(x, y + size); break;
+                    case 'tr': context.moveTo(x, y); context.lineTo(x, y + size); context.lineTo(x + size, y + size); break;
+                    case 'bl': context.moveTo(x, y); context.lineTo(x + size, y); context.lineTo(x + size, y + size); break;
+                    case 'br': context.moveTo(x, y); context.lineTo(x + size, y); context.lineTo(x, y + size); break;
+                }
+            }
+            context.closePath();
+            context.fill();
         }
 
-        // Download PNG
-        document.getElementById('downloadBtn').addEventListener('click', async () => {
-            const blob = await exportCanvas();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'pattern-grid.png';
-            a.click();
-            URL.revokeObjectURL(url);
+        function drawArcToContext(context, x, y, size, corner, color, inverted) {
+            context.fillStyle = color;
+            context.beginPath();
+            // Same logic as drawArc but for different context
+            if (!inverted) {
+                switch (corner) {
+                    case 'tl': context.arc(x, y, size, 0, Math.PI / 2); context.lineTo(x, y); break;
+                    case 'tr': context.arc(x + size, y, size, Math.PI / 2, Math.PI); context.lineTo(x + size, y); break;
+                    case 'bl': context.arc(x, y + size, size, -Math.PI / 2, 0); context.lineTo(x, y + size); break;
+                    case 'br': context.arc(x + size, y + size, size, Math.PI, Math.PI * 1.5); context.lineTo(x + size, y + size); break;
+                }
+            } else {
+                switch (corner) {
+                    case 'tl': context.arc(x, y, size, Math.PI / 2, 0, true); context.lineTo(x + size, y); context.lineTo(x + size, y + size); context.lineTo(x, y + size); break;
+                    case 'tr': context.arc(x + size, y, size, Math.PI, Math.PI / 2, true); context.lineTo(x + size, y + size); context.lineTo(x, y + size); context.lineTo(x, y); break;
+                    case 'bl': context.arc(x, y + size, size, 0, (3 * Math.PI) / 2, true); context.lineTo(x, y); context.lineTo(x + size, y); context.lineTo(x + size, y + size); break;
+                    case 'br': context.arc(x + size, y + size, size, (3 * Math.PI) / 2, Math.PI, true); context.lineTo(x, y + size); context.lineTo(x, y); context.lineTo(x + size, y); break;
+                }
+            }
+            context.closePath();
+            context.fill();
+        }
+
+        // Scale buttons
+        document.querySelectorAll('[data-scale]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                selectedScale = parseInt(btn.dataset.scale);
+                document.querySelectorAll('[data-scale]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
         });
 
-        // Copy to clipboard
-        document.getElementById('copyBtn').addEventListener('click', async () => {
-            try {
-                const blob = await exportCanvas();
-                await navigator.clipboard.write([
-                    new ClipboardItem({ 'image/png': blob })
-                ]);
-
-                const btn = document.getElementById('copyBtn');
-                const originalText = btn.textContent;
-                btn.textContent = 'Copied!';
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                }, 1500);
-            } catch (err) {
-                console.error('Failed to copy:', err);
-                alert('Failed to copy to clipboard');
-            }
+        // Reset zoom
+        document.getElementById('resetZoomBtn').addEventListener('click', () => {
+            scale = 1;
+            translateX = 0;
+            translateY = 0;
+            updateTransform();
         });
 
         // Credit modal
@@ -724,10 +1168,342 @@
             }
         });
 
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (isSaveMode && e.key !== ' ') return;
+
+            // Space: pan mode
+            if (e.key === ' ' && !isSpacePressed) {
+                e.preventDefault();
+                isSpacePressed = true;
+                if (!isPanning) {
+                    canvas.style.cursor = 'grab';
+                }
+                return;
+            }
+
+            // Cmd/Ctrl + S: save
+            if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+                e.preventDefault();
+                document.getElementById('saveBtn').click();
+                return;
+            }
+
+            // Cmd/Ctrl + Shift + Z: redo
+            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') {
+                e.preventDefault();
+                redo();
+                return;
+            }
+
+            // Cmd/Ctrl + Y: redo
+            if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+                e.preventDefault();
+                redo();
+                return;
+            }
+
+            // Cmd/Ctrl + Z: undo
+            if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+                e.preventDefault();
+                undo();
+                return;
+            }
+
+            if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+            switch(e.key.toLowerCase()) {
+                case '1':
+                    document.getElementById('triangleBtn').click();
+                    break;
+                case '2':
+                    document.getElementById('arcBtn').click();
+                    break;
+                case '3':
+                    document.getElementById('rectBtn').click();
+                    break;
+                case 'x':
+                    // Swap fill and bg colors
+                    [fillColor, bgColor] = [bgColor, fillColor];
+                    document.getElementById('fillColorPicker').value = fillColor;
+                    document.getElementById('bgColorPicker').value = bgColor;
+                    document.getElementById('fillColorDisplay').style.background = fillColor;
+                    document.getElementById('bgColorDisplay').style.background = bgColor;
+                    render();
+                    break;
+                case 'delete':
+                case 'backspace':
+                    e.preventDefault();
+                    document.getElementById('clearBtn').click();
+                    break;
+                case 'tab':
+                    e.preventDefault();
+                    const toolbarLeft = document.getElementById('toolbar-left');
+                    const toolbarRight = document.getElementById('toolbar-right');
+                    const creditBtn = document.getElementById('credit-btn');
+
+                    if (toolbarLeft.style.display === 'none') {
+                        toolbarLeft.style.display = 'flex';
+                        toolbarRight.style.display = 'flex';
+                        creditBtn.style.display = 'flex';
+                    } else {
+                        toolbarLeft.style.display = 'none';
+                        toolbarRight.style.display = 'none';
+                        creditBtn.style.display = 'none';
+                    }
+                    break;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === ' ') {
+                e.preventDefault();
+                isSpacePressed = false;
+                isPanning = false;
+                canvas.style.cursor = '';
+            }
+        });
+
+        // Selection functionality
+        const selectionCanvas = document.getElementById('selection-canvas');
+        const selCtx = selectionCanvas.getContext('2d');
+
+        function updateSelectionCanvas() {
+            selectionCanvas.width = window.innerWidth;
+            selectionCanvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            if (isSaveMode) updateSelectionCanvas();
+        });
+
+        // Aspect ratio buttons
+        document.querySelectorAll('[data-aspect]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                selectedAspect = btn.dataset.aspect;
+                document.querySelectorAll('[data-aspect]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // Selection drawing
+        selectionCanvas.addEventListener('mousedown', (e) => {
+            if (!isSaveMode || confirmedSelection) return;
+            selectionStart = { x: e.clientX, y: e.clientY };
+            selectionEnd = { x: e.clientX, y: e.clientY };
+            document.getElementById('save-ui').style.opacity = '0.3';
+        });
+
+        selectionCanvas.addEventListener('mousemove', (e) => {
+            if (!isSaveMode || !selectionStart || confirmedSelection) return;
+            selectionEnd = { x: e.clientX, y: e.clientY };
+
+            let rectX = Math.min(selectionStart.x, selectionEnd.x);
+            let rectY = Math.min(selectionStart.y, selectionEnd.y);
+            let rectW = Math.abs(selectionEnd.x - selectionStart.x);
+            let rectH = Math.abs(selectionEnd.y - selectionStart.y);
+
+            // Apply aspect ratio
+            if (selectedAspect !== 'free' && rectW > 0 && rectH > 0) {
+                const [w, h] = selectedAspect.split(':').map(Number);
+                const targetRatio = w / h;
+                const currentRatio = rectW / rectH;
+
+                if (currentRatio > targetRatio) {
+                    rectW = rectH * targetRatio;
+                } else {
+                    rectH = rectW / targetRatio;
+                }
+
+                if (selectionEnd.x < selectionStart.x) rectX = selectionStart.x - rectW;
+                if (selectionEnd.y < selectionStart.y) rectY = selectionStart.y - rectH;
+            }
+
+            selCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+            selCtx.strokeStyle = '#333';
+            selCtx.lineWidth = 2;
+            selCtx.setLineDash([5, 5]);
+            selCtx.strokeRect(rectX, rectY, rectW, rectH);
+            selCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            selCtx.fillRect(rectX, rectY, rectW, rectH);
+        });
+
+        selectionCanvas.addEventListener('mouseup', (e) => {
+            if (!isSaveMode || !selectionStart || confirmedSelection) return;
+
+            let rectX = Math.min(selectionStart.x, selectionEnd.x);
+            let rectY = Math.min(selectionStart.y, selectionEnd.y);
+            let rectW = Math.abs(selectionEnd.x - selectionStart.x);
+            let rectH = Math.abs(selectionEnd.y - selectionStart.y);
+
+            // Apply aspect ratio
+            if (selectedAspect !== 'free' && rectW > 0 && rectH > 0) {
+                const [w, h] = selectedAspect.split(':').map(Number);
+                const targetRatio = w / h;
+                const currentRatio = rectW / rectH;
+
+                if (currentRatio > targetRatio) {
+                    rectW = rectH * targetRatio;
+                } else {
+                    rectH = rectW / targetRatio;
+                }
+
+                if (selectionEnd.x < selectionStart.x) rectX = selectionStart.x - rectW;
+                if (selectionEnd.y < selectionStart.y) rectY = selectionStart.y - rectH;
+            }
+
+            if (rectW > 10 && rectH > 10) {
+                confirmedSelection = { x: rectX, y: rectY, w: rectW, h: rectH };
+                document.getElementById('save-ui').style.opacity = '1';
+                document.getElementById('confirmSelectionBtn').style.display = 'inline-block';
+                document.getElementById('copySelectionBtn').style.display = 'inline-block';
+                document.getElementById('redoSelectionBtn').style.display = 'inline-block';
+            } else {
+                selectionStart = null;
+                selectionEnd = null;
+                selCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+                document.getElementById('save-ui').style.opacity = '1';
+            }
+        });
+
+        // Confirm selection button
+        document.getElementById('confirmSelectionBtn').addEventListener('click', () => {
+            if (!confirmedSelection) return;
+            saveSelection(confirmedSelection, false);
+        });
+
+        // Copy selection button
+        document.getElementById('copySelectionBtn').addEventListener('click', async () => {
+            if (!confirmedSelection) return;
+            const blob = await exportSelection(confirmedSelection);
+            try {
+                await navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                ]);
+                const btn = document.getElementById('copySelectionBtn');
+                const originalText = btn.textContent;
+                btn.textContent = 'コピー完了!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 1500);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                alert('コピーに失敗しました');
+            }
+        });
+
+        // Redo selection button
+        document.getElementById('redoSelectionBtn').addEventListener('click', () => {
+            confirmedSelection = null;
+            selectionStart = null;
+            selectionEnd = null;
+            selCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+            document.getElementById('confirmSelectionBtn').style.display = 'none';
+            document.getElementById('copySelectionBtn').style.display = 'none';
+            document.getElementById('redoSelectionBtn').style.display = 'none';
+        });
+
+        // Export selection
+        function exportSelection(selection) {
+            return new Promise((resolve) => {
+                const canvasRect = canvas.getBoundingClientRect();
+                const x = (selection.x - canvasRect.left) / scale;
+                const y = (selection.y - canvasRect.top) / scale;
+                const w = selection.w / scale;
+                const h = selection.h / scale;
+
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+
+                const useTransparent = document.getElementById('transparentBg').checked;
+                const exportScale = selectedScale;
+
+                tempCanvas.width = w * exportScale;
+                tempCanvas.height = h * exportScale;
+                tempCtx.scale(exportScale, exportScale);
+
+                if (!useTransparent) {
+                    tempCtx.fillStyle = bgColor;
+                    tempCtx.fillRect(0, 0, w, h);
+                }
+
+                // Draw visible cells in selection
+                const startCol = Math.floor(x / CELL_SIZE);
+                const startRow = Math.floor(y / CELL_SIZE);
+                const endCol = Math.ceil((x + w) / CELL_SIZE);
+                const endRow = Math.ceil((y + h) / CELL_SIZE);
+
+                tempCtx.save();
+                tempCtx.translate(-x, -y);
+
+                for (let row = Math.max(0, startRow); row < Math.min(GRID_SIZE, endRow); row++) {
+                    for (let col = Math.max(0, startCol); col < Math.min(GRID_SIZE, endCol); col++) {
+                        const cell = grid[row][col];
+                        if (cell.type && cell.color) {
+                            const cellX = col * CELL_SIZE;
+                            const cellY = row * CELL_SIZE;
+
+                            if (cell.type === 'triangle') {
+                                drawTriangleToContext(tempCtx, cellX, cellY, CELL_SIZE, cell.corner, cell.color, cell.inverted);
+                            } else if (cell.type === 'arc') {
+                                drawArcToContext(tempCtx, cellX, cellY, CELL_SIZE, cell.corner, cell.color, cell.inverted);
+                            } else if (cell.type === 'rect') {
+                                tempCtx.fillStyle = cell.color;
+                                tempCtx.fillRect(cellX, cellY, CELL_SIZE, CELL_SIZE);
+                            }
+                        }
+                    }
+                }
+
+                tempCtx.restore();
+
+                tempCanvas.toBlob((blob) => {
+                    resolve(blob);
+                });
+            });
+        }
+
+        // Save selection
+        function saveSelection(selection, copy = false) {
+            exportSelection(selection).then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'pattern-grid-selection.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        // Save mode
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            isSaveMode = true;
+            document.getElementById('save-overlay').classList.add('active');
+            document.getElementById('save-ui').classList.add('active');
+            updateSelectionCanvas();
+            selectionCanvas.classList.add('active');
+        });
+
+        document.getElementById('cancelSaveBtn').addEventListener('click', () => {
+            isSaveMode = false;
+            document.getElementById('save-overlay').classList.remove('active');
+            document.getElementById('save-ui').classList.remove('active');
+            selectionCanvas.classList.remove('active');
+            selCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+            selectionStart = null;
+            selectionEnd = null;
+            confirmedSelection = null;
+            document.getElementById('confirmSelectionBtn').style.display = 'none';
+            document.getElementById('copySelectionBtn').style.display = 'none';
+            document.getElementById('redoSelectionBtn').style.display = 'none';
+        });
+
         // Initialize
         initGrid();
         resizeCanvas();
+        saveState(); // Initial state
+        updateSelectionCanvas();
     </script>
 </body>
-
 </html>
