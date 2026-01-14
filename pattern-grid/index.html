@@ -104,6 +104,97 @@
             min-width: 60px;
         }
 
+        /* クレジットボタン */
+        #credit-btn {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.2s;
+        }
+
+        #credit-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.8);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* クレジットモーダル */
+        #credit-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a1a;
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        #credit-modal.visible {
+            display: flex;
+        }
+
+        #credit-content {
+            background: rgba(30, 30, 30, 0.95);
+            color: #fff;
+            padding: 32px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        #credit-content h2 {
+            font-size: 24px;
+            margin-bottom: 16px;
+            font-weight: bold;
+        }
+
+        #credit-logo {
+            width: 120px;
+            height: 120px;
+            margin: 16px auto;
+            cursor: pointer;
+            display: block;
+        }
+
+        #credit-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #credit-author {
+            font-size: 16px;
+            margin-top: 16px;
+        }
+
+        #credit-author a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        #credit-author a:hover {
+            text-decoration: underline;
+        }
+
         @media (max-width: 768px) {
             .toolbar {
                 padding: 12px;
@@ -112,6 +203,15 @@
 
             input[type="range"] {
                 width: 100px;
+            }
+
+            #credit-modal {
+                align-items: flex-end;
+                justify-content: flex-end;
+            }
+
+            #credit-content {
+                padding: 24px;
             }
         }
     </style>
@@ -137,8 +237,8 @@
 
         <div class="control-group">
             <label>Grid:</label>
-            <input type="range" id="gridSize" min="8" max="128" value="32" step="8">
-            <span class="size-display" id="sizeDisplay">32x32</span>
+            <button id="grid8" class="active">8x8</button>
+            <button id="grid16">16x16</button>
         </div>
 
         <div class="control-group">
@@ -166,12 +266,26 @@
         <canvas id="canvas"></canvas>
     </div>
 
+    <!-- クレジットボタンとモーダル -->
+    <div id="credit-btn">?</div>
+    <div id="credit-modal">
+        <div id="credit-content">
+            <h2>DESU™ pattern</h2>
+            <a href="https://warpshoot.github.io/desu/" target="_blank" id="credit-logo">
+                <img src="https://warpshoot.github.io/desu/paint/logo.gif" alt="DESU pattern Logo">
+            </a>
+            <div id="credit-author">
+                by <a href="https://warpshoot.github.io/" target="_blank">wpy</a>
+            </div>
+        </div>
+    </div>
+
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d', { alpha: true });
 
         const SCALE = 4; // High-DPI scaling for smooth rendering
-        let gridSize = 32;
+        let gridSize = 8;
         let cellSize = 20;
         let zoom = 1.0;
         let mode = 'triangle';
@@ -522,13 +636,17 @@
             render();
         });
 
-        // Grid size slider
-        document.getElementById('gridSize').addEventListener('input', (e) => {
-            gridSize = parseInt(e.target.value);
-            document.getElementById('sizeDisplay').textContent = `${gridSize}x${gridSize}`;
+        // Grid size buttons
+        function setGridSize(size) {
+            gridSize = size;
+            document.getElementById('grid8').classList.toggle('active', size === 8);
+            document.getElementById('grid16').classList.toggle('active', size === 16);
             initGrid();
             resizeCanvas();
-        });
+        }
+
+        document.getElementById('grid8').addEventListener('click', () => setGridSize(8));
+        document.getElementById('grid16').addEventListener('click', () => setGridSize(16));
 
         // Zoom controls
         function updateZoom(newZoom) {
@@ -591,6 +709,18 @@
             } catch (err) {
                 console.error('Failed to copy:', err);
                 alert('Failed to copy to clipboard');
+            }
+        });
+
+        // Credit modal
+        document.getElementById('credit-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('credit-modal').classList.add('visible');
+        });
+
+        document.getElementById('credit-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'credit-modal') {
+                document.getElementById('credit-modal').classList.remove('visible');
             }
         });
 
