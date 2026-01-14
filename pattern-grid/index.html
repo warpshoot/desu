@@ -617,6 +617,12 @@
             // Don't scale too small
             if (scale < 0.5) scale = 0.5;
 
+            // Center the scaled canvas
+            const scaledWidth = size * scale;
+            const scaledHeight = size * scale;
+            translateX = (window.innerWidth - scaledWidth) / 2 - parseFloat(canvas.style.left || 0);
+            translateY = (window.innerHeight - scaledHeight) / 2 - parseFloat(canvas.style.top || 0);
+
             updateTransform();
         }
 
@@ -806,19 +812,19 @@
             // Draw grid lines
             if (showGrid && !hideGrid) {
                 ctx.strokeStyle = bgColor === '#ffffff' ? '#e0e0e0' : '#444444';
-                ctx.lineWidth = 1 / SCALE;
+                ctx.lineWidth = 0.5 / SCALE;
 
+                ctx.beginPath();
                 for (let i = 0; i <= GRID_SIZE; i++) {
-                    ctx.beginPath();
+                    // Vertical lines
                     ctx.moveTo(i * CELL_SIZE, 0);
                     ctx.lineTo(i * CELL_SIZE, GRID_SIZE * CELL_SIZE);
-                    ctx.stroke();
 
-                    ctx.beginPath();
+                    // Horizontal lines
                     ctx.moveTo(0, i * CELL_SIZE);
                     ctx.lineTo(GRID_SIZE * CELL_SIZE, i * CELL_SIZE);
-                    ctx.stroke();
                 }
+                ctx.stroke();
             }
 
             // Draw cells
@@ -1050,16 +1056,21 @@
                 canvas.style.cursor = isSpacePressed ? 'grab' : '';
 
                 // Check for gesture (2/3 finger tap for undo/redo)
+                // Only trigger if no pinching occurred (pure tap gesture)
                 const duration = Date.now() - touchStartTime;
                 const distMoved = Math.hypot(e.clientX - touchStartPos.x, e.clientY - touchStartPos.y);
 
-                if (maxFingers >= 2 && duration < 400 && distMoved < 10) {
-                    if (maxFingers === 2) undo();
-                    if (maxFingers === 3) redo();
+                if (maxFingers >= 2 && duration < 300 && distMoved < 15 && !isPinching) {
+                    if (maxFingers === 2) {
+                        undo();
+                    } else if (maxFingers === 3) {
+                        redo();
+                    }
                 }
 
                 touchStartTime = 0;
                 maxFingers = 0;
+                isPinching = false;
             }
         });
 
