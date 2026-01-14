@@ -1435,7 +1435,7 @@
         });
 
         saveOverlay.addEventListener('pointermove', (e) => {
-            if (!isSaveMode || !selectionStart) return;
+            if (!isSaveMode || !selectionStart || confirmedSelection) return;
             selectionEnd = { x: e.clientX, y: e.clientY };
 
             const rectX = Math.min(selectionStart.x, selectionEnd.x);
