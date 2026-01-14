@@ -465,17 +465,6 @@
         <h3>範囲をドラッグして選択</h3>
 
         <div class="option-group">
-            <div class="option-group-label">縦横比</div>
-            <div class="option-buttons">
-                <button class="option-btn active" data-aspect="free">自由</button>
-                <button class="option-btn" data-aspect="1:1">1:1</button>
-                <button class="option-btn" data-aspect="4:5">4:5</button>
-                <button class="option-btn" data-aspect="16:9">16:9</button>
-                <button class="option-btn" data-aspect="9:16">9:16</button>
-            </div>
-        </div>
-
-        <div class="option-group">
             <div class="option-group-label">倍率</div>
             <div class="option-buttons">
                 <button class="option-btn active" data-scale="1">1x</button>
@@ -540,6 +529,8 @@
 
         // Pan/Zoom
         let isSpacePressed = false;
+        let isCtrlPressed = false;
+        let isAltPressed = false;
         let isPanning = false;
         let panStartX = 0;
         let panStartY = 0;
@@ -559,7 +550,6 @@
         let selectionStart = null;
         let selectionEnd = null;
         let confirmedSelection = null;
-        let selectedAspect = 'free';
         let selectedScale = 1;
 
         // Initialize grid
@@ -590,6 +580,25 @@
             canvas.style.top = centerY + 'px';
 
             render();
+        }
+
+        // Fit canvas to screen (initial only)
+        function fitCanvasToScreen() {
+            const size = GRID_SIZE * CELL_SIZE;
+            // Leave space for toolbars (120px left, 60px right, 60px top, 120px bottom)
+            const availableWidth = window.innerWidth - 180;
+            const availableHeight = window.innerHeight - 180;
+
+            const scaleX = availableWidth / size;
+            const scaleY = availableHeight / size;
+
+            // Use smaller scale to fit, max 3x
+            scale = Math.min(scaleX, scaleY, 3);
+
+            // Don't scale too small
+            if (scale < 0.5) scale = 0.5;
+
+            updateTransform();
         }
 
         // Update transform
@@ -768,6 +777,9 @@
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.restore();
+
+            // Re-apply scale after restore
+            ctx.scale(SCALE, SCALE);
 
             // Draw background
             ctx.fillStyle = bgColor;
@@ -991,9 +1003,44 @@
 
         canvas.addEventListener('click', (e) => {
             if (activePointers.size === 0) {
-                handleClick(e.clientX, e.clientY);
+                // Ctrl + Space + Click: Zoom in/out
+                if (isCtrlPressed && isSpacePressed) {
+                    const zoomAmount = isAltPressed ? 0.8 : 1.25;
+                    const oldScale = scale;
+                    scale = Math.max(0.1, Math.min(20, scale * zoomAmount));
+
+                    const rect = canvas.getBoundingClientRect();
+                    const centerX = e.clientX;
+                    const centerY = e.clientY;
+
+                    translateX = centerX - (centerX - translateX) * (scale / oldScale);
+                    translateY = centerY - (centerY - translateY) * (scale / oldScale);
+
+                    updateTransform();
+                } else {
+                    handleClick(e.clientX, e.clientY);
+                }
             }
         });
+
+        // Mouse wheel zoom
+        canvas.addEventListener('wheel', (e) => {
+            if (isSaveMode) return;
+
+            e.preventDefault();
+            const zoomAmount = e.deltaY < 0 ? 1.1 : 0.9;
+            const oldScale = scale;
+            scale = Math.max(0.1, Math.min(20, scale * zoomAmount));
+
+            const rect = canvas.getBoundingClientRect();
+            const centerX = e.clientX;
+            const centerY = e.clientY;
+
+            translateX = centerX - (centerX - translateX) * (scale / oldScale);
+            translateY = centerY - (centerY - translateY) * (scale / oldScale);
+
+            updateTransform();
+        }, { passive: false });
 
         // Mode buttons
         document.getElementById('triangleBtn').addEventListener('click', () => {
@@ -1170,14 +1217,20 @@
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
+            // Track modifier keys
+            if (e.key === 'Control' || e.metaKey) isCtrlPressed = true;
+            if (e.key === 'Alt') isAltPressed = true;
+
             if (isSaveMode && e.key !== ' ') return;
 
-            // Space: pan mode
+            // Space: pan mode (or zoom mode with Ctrl)
             if (e.key === ' ' && !isSpacePressed) {
                 e.preventDefault();
                 isSpacePressed = true;
-                if (!isPanning) {
+                if (!isPanning && !isCtrlPressed) {
                     canvas.style.cursor = 'grab';
+                } else if (isCtrlPressed) {
+                    canvas.style.cursor = isAltPressed ? 'zoom-out' : 'zoom-in';
                 }
                 return;
             }
@@ -1256,6 +1309,10 @@
         });
 
         document.addEventListener('keyup', (e) => {
+            // Track modifier key release
+            if (e.key === 'Control' || e.key === 'Meta') isCtrlPressed = false;
+            if (e.key === 'Alt') isAltPressed = false;
+
             if (e.key === ' ') {
                 e.preventDefault();
                 isSpacePressed = false;
@@ -1278,15 +1335,6 @@
             if (isSaveMode) updateSelectionCanvas();
         });
 
-        // Aspect ratio buttons
-        document.querySelectorAll('[data-aspect]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                selectedAspect = btn.dataset.aspect;
-                document.querySelectorAll('[data-aspect]').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            });
-        });
-
         // Selection drawing
         selectionCanvas.addEventListener('mousedown', (e) => {
             if (!isSaveMode || confirmedSelection) return;
@@ -1299,26 +1347,10 @@
             if (!isSaveMode || !selectionStart || confirmedSelection) return;
             selectionEnd = { x: e.clientX, y: e.clientY };
 
-            let rectX = Math.min(selectionStart.x, selectionEnd.x);
-            let rectY = Math.min(selectionStart.y, selectionEnd.y);
-            let rectW = Math.abs(selectionEnd.x - selectionStart.x);
-            let rectH = Math.abs(selectionEnd.y - selectionStart.y);
-
-            // Apply aspect ratio
-            if (selectedAspect !== 'free' && rectW > 0 && rectH > 0) {
-                const [w, h] = selectedAspect.split(':').map(Number);
-                const targetRatio = w / h;
-                const currentRatio = rectW / rectH;
-
-                if (currentRatio > targetRatio) {
-                    rectW = rectH * targetRatio;
-                } else {
-                    rectH = rectW / targetRatio;
-                }
-
-                if (selectionEnd.x < selectionStart.x) rectX = selectionStart.x - rectW;
-                if (selectionEnd.y < selectionStart.y) rectY = selectionStart.y - rectH;
-            }
+            const rectX = Math.min(selectionStart.x, selectionEnd.x);
+            const rectY = Math.min(selectionStart.y, selectionEnd.y);
+            const rectW = Math.abs(selectionEnd.x - selectionStart.x);
+            const rectH = Math.abs(selectionEnd.y - selectionStart.y);
 
             selCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
             selCtx.strokeStyle = '#333';
@@ -1332,26 +1364,10 @@
         selectionCanvas.addEventListener('mouseup', (e) => {
             if (!isSaveMode || !selectionStart || confirmedSelection) return;
 
-            let rectX = Math.min(selectionStart.x, selectionEnd.x);
-            let rectY = Math.min(selectionStart.y, selectionEnd.y);
-            let rectW = Math.abs(selectionEnd.x - selectionStart.x);
-            let rectH = Math.abs(selectionEnd.y - selectionStart.y);
-
-            // Apply aspect ratio
-            if (selectedAspect !== 'free' && rectW > 0 && rectH > 0) {
-                const [w, h] = selectedAspect.split(':').map(Number);
-                const targetRatio = w / h;
-                const currentRatio = rectW / rectH;
-
-                if (currentRatio > targetRatio) {
-                    rectW = rectH * targetRatio;
-                } else {
-                    rectH = rectW / targetRatio;
-                }
-
-                if (selectionEnd.x < selectionStart.x) rectX = selectionStart.x - rectW;
-                if (selectionEnd.y < selectionStart.y) rectY = selectionStart.y - rectH;
-            }
+            const rectX = Math.min(selectionStart.x, selectionEnd.x);
+            const rectY = Math.min(selectionStart.y, selectionEnd.y);
+            const rectW = Math.abs(selectionEnd.x - selectionStart.x);
+            const rectH = Math.abs(selectionEnd.y - selectionStart.y);
 
             if (rectW > 10 && rectH > 10) {
                 confirmedSelection = { x: rectX, y: rectY, w: rectW, h: rectH };
@@ -1502,6 +1518,7 @@
         // Initialize
         initGrid();
         resizeCanvas();
+        fitCanvasToScreen(); // Fit to screen on initial load
         saveState(); // Initial state
         updateSelectionCanvas();
     </script>
