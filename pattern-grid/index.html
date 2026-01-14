@@ -538,6 +538,7 @@
         let isCtrlPressed = false;
         let isAltPressed = false;
         let isPanning = false;
+        let wasPanning = false; // Track if panning occurred during this interaction
         let panStartX = 0;
         let panStartY = 0;
         let lastPanX = 0;
@@ -936,6 +937,7 @@
                 touchStartPos = { x: e.clientX, y: e.clientY };
                 maxFingers = 1;
                 isPinching = false;
+                wasPanning = false; // Reset panning flag for new interaction
             }
             maxFingers = Math.max(maxFingers, activePointers.size);
 
@@ -1018,6 +1020,7 @@
                 translateX = lastPanX + (e.clientX - panStartX);
                 translateY = lastPanY + (e.clientY - panStartY);
                 updateTransform();
+                wasPanning = true; // Mark that panning has occurred
             }
         });
 
@@ -1054,6 +1057,11 @@
 
         canvas.addEventListener('click', (e) => {
             if (activePointers.size === 0) {
+                // Skip click if panning occurred or space is pressed (unless doing zoom)
+                if (wasPanning) {
+                    return;
+                }
+
                 // Ctrl + Space + Click: Zoom in/out
                 if (isCtrlPressed && isSpacePressed) {
                     const zoomAmount = isAltPressed ? 0.8 : 1.25;
@@ -1068,7 +1076,8 @@
                     translateY = centerY - (centerY - translateY) * (scale / oldScale);
 
                     updateTransform();
-                } else {
+                } else if (!isSpacePressed) {
+                    // Only draw if space is not pressed
                     handleClick(e.clientX, e.clientY);
                 }
             }
