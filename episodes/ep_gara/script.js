@@ -3,10 +3,10 @@
 // fade を省略した場合はデフォルトでフェード効果ありになります
 const dialogues = [
     { speaker: 'shi', text: 'S1本で5万ね', background: 'images/mdgc_nomi.jpg' },
-    { speaker: 'desu', text: 'どうも', background: 'images/mdgc_kane.jpg' },
-    { speaker: 'desu', text: 'あ、ホーレムもらえますか', background: 'images/mdgc_nomi.jpg' },
+    { speaker: 'desu', text: 'どうも', background: 'images/mdgc_kane.jpg' , fade: false},
+    { speaker: 'desu', text: 'あ、ホーレムもらえますか', background: 'images/mdgc_nomi.jpg' , fade: false},
     { speaker: 'shi', text: '…ホーレム？\nああ、ガラね' },
-    { speaker: 'shi', text: 'はい', background: 'images/mdgc_holem.jpg' },
+    { speaker: 'shi', text: 'はい', background: 'images/mdgc_holem.jpg' , fade: false},
     { speaker: 'desu', text: 'どうも' },
     { speaker: 'sakana', text: 'おつかれさん', background: 'images/kkj.jpg' },
     { speaker: 'desu', text: 'うん キミも' },
