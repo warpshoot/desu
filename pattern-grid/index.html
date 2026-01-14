@@ -540,6 +540,8 @@
 
         // Pan/Zoom
         let isSpacePressed = false;
+        let isCtrlPressed = false;
+        let isAltPressed = false;
         let isPanning = false;
         let panStartX = 0;
         let panStartY = 0;
@@ -769,6 +771,9 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.restore();
 
+            // Re-apply scale after restore
+            ctx.scale(SCALE, SCALE);
+
             // Draw background
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
@@ -991,9 +996,44 @@
 
         canvas.addEventListener('click', (e) => {
             if (activePointers.size === 0) {
-                handleClick(e.clientX, e.clientY);
+                // Ctrl + Space + Click: Zoom in/out
+                if (isCtrlPressed && isSpacePressed) {
+                    const zoomAmount = isAltPressed ? 0.8 : 1.25;
+                    const oldScale = scale;
+                    scale = Math.max(0.1, Math.min(20, scale * zoomAmount));
+
+                    const rect = canvas.getBoundingClientRect();
+                    const centerX = e.clientX;
+                    const centerY = e.clientY;
+
+                    translateX = centerX - (centerX - translateX) * (scale / oldScale);
+                    translateY = centerY - (centerY - translateY) * (scale / oldScale);
+
+                    updateTransform();
+                } else {
+                    handleClick(e.clientX, e.clientY);
+                }
             }
         });
+
+        // Mouse wheel zoom
+        canvas.addEventListener('wheel', (e) => {
+            if (isSaveMode) return;
+
+            e.preventDefault();
+            const zoomAmount = e.deltaY < 0 ? 1.1 : 0.9;
+            const oldScale = scale;
+            scale = Math.max(0.1, Math.min(20, scale * zoomAmount));
+
+            const rect = canvas.getBoundingClientRect();
+            const centerX = e.clientX;
+            const centerY = e.clientY;
+
+            translateX = centerX - (centerX - translateX) * (scale / oldScale);
+            translateY = centerY - (centerY - translateY) * (scale / oldScale);
+
+            updateTransform();
+        }, { passive: false });
 
         // Mode buttons
         document.getElementById('triangleBtn').addEventListener('click', () => {
@@ -1170,14 +1210,20 @@
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
+            // Track modifier keys
+            if (e.key === 'Control' || e.metaKey) isCtrlPressed = true;
+            if (e.key === 'Alt') isAltPressed = true;
+
             if (isSaveMode && e.key !== ' ') return;
 
-            // Space: pan mode
+            // Space: pan mode (or zoom mode with Ctrl)
             if (e.key === ' ' && !isSpacePressed) {
                 e.preventDefault();
                 isSpacePressed = true;
-                if (!isPanning) {
+                if (!isPanning && !isCtrlPressed) {
                     canvas.style.cursor = 'grab';
+                } else if (isCtrlPressed) {
+                    canvas.style.cursor = isAltPressed ? 'zoom-out' : 'zoom-in';
                 }
                 return;
             }
@@ -1256,6 +1302,10 @@
         });
 
         document.addEventListener('keyup', (e) => {
+            // Track modifier key release
+            if (e.key === 'Control' || e.key === 'Meta') isCtrlPressed = false;
+            if (e.key === 'Alt') isAltPressed = false;
+
             if (e.key === ' ') {
                 e.preventDefault();
                 isSpacePressed = false;
