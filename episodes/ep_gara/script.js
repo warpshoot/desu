@@ -1,4 +1,6 @@
 // 台詞データ
+// fade: false を指定すると、その背景切り替え時にフェード効果なしで即座に切り替わります
+// fade を省略した場合はデフォルトでフェード効果ありになります
 const dialogues = [
     { speaker: 'shi', text: 'S1本で5万ね', background: 'images/mdgc_nomi.jpg' },
     { speaker: 'desu', text: 'どうも', background: 'images/mdgc_kane.jpg' },
@@ -180,8 +182,9 @@ function showDialogue(index) {
 
     // 背景画像の切り替えが必要か確認
     if (dialogue.background && dialogue.background !== currentBackground) {
-        // 背景切り替え処理
-        changeBackground(dialogue.background, () => {
+        // 背景切り替え処理（fade プロパティがない場合はデフォルトで true）
+        const useFade = dialogue.fade !== false;
+        changeBackground(dialogue.background, useFade, () => {
             // 背景切り替え後に台詞を表示
             displayDialogue(dialogue);
         });
@@ -198,28 +201,37 @@ function showDialogue(index) {
 }
 
 // 背景画像を切り替え
-function changeBackground(newBackground, callback) {
+function changeBackground(newBackground, useFade, callback) {
     isChangingBackground = true;
 
-    // フェードイン（黒画面にする）
-    fadeOverlay.classList.remove('fade-out');
-    fadeOverlay.classList.add('fade-in');
+    if (useFade) {
+        // フェード効果あり
+        // フェードイン（黒画面にする）
+        fadeOverlay.classList.remove('fade-out');
+        fadeOverlay.classList.add('fade-in');
 
-    // フェードイン完了後に画像を切り替え
-    setTimeout(() => {
+        // フェードイン完了後に画像を切り替え
+        setTimeout(() => {
+            backgroundImage.src = newBackground;
+            currentBackground = newBackground;
+
+            // フェードアウト（画像を表示）
+            fadeOverlay.classList.remove('fade-in');
+            fadeOverlay.classList.add('fade-out');
+
+            // フェードアウト完了後にコールバックを実行
+            setTimeout(() => {
+                isChangingBackground = false;
+                if (callback) callback();
+            }, 2000);
+        }, 2000);
+    } else {
+        // フェード効果なし（即座に切り替え）
         backgroundImage.src = newBackground;
         currentBackground = newBackground;
-
-        // フェードアウト（画像を表示）
-        fadeOverlay.classList.remove('fade-in');
-        fadeOverlay.classList.add('fade-out');
-
-        // フェードアウト完了後にコールバックを実行
-        setTimeout(() => {
-            isChangingBackground = false;
-            if (callback) callback();
-        }, 2000);
-    }, 2000);
+        isChangingBackground = false;
+        if (callback) callback();
+    }
 }
 
 // 台詞を表示（実際の表示処理）
