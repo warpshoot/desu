@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DESU™ pattern</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, 'YuGothic', 'Yu Gothic', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .toolbar {
+            background: #2a2a2a;
+            padding: 16px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #3a3a3a;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .control-group label {
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        button {
+            background: #3a3a3a;
+            color: #fff;
+            border: 2px solid #4a4a4a;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #4a4a4a;
+            border-color: #5a5a5a;
+        }
+
+        button.active {
+            background: #667eea;
+            border-color: #667eea;
+        }
+
+        input[type="color"] {
+            width: 50px;
+            height: 36px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        input[type="range"] {
+            width: 150px;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 20px;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        canvas {
+            border: 2px solid #3a3a3a;
+            cursor: crosshair;
+            margin: auto;
+        }
+
+        .size-display {
+            font-size: 14px;
+            color: #aaa;
+            min-width: 60px;
+        }
+
+        @media (max-width: 768px) {
+            .toolbar {
+                padding: 12px;
+                gap: 12px;
+            }
+
+            input[type="range"] {
+                width: 100px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="toolbar">
+        <div class="control-group">
+            <button id="triangleMode" class="active">▲ Triangle</button>
+            <button id="arcMode">◗ Arc</button>
+            <button id="rectMode">■ Rectangle</button>
+        </div>
+
+        <div class="control-group">
+            <label>Fill:</label>
+            <input type="color" id="colorPicker" value="#000000">
+        </div>
+
+        <div class="control-group">
+            <label>BG:</label>
+            <input type="color" id="bgColorPicker" value="#ffffff">
+        </div>
+
+        <div class="control-group">
+            <label>Grid:</label>
+            <input type="range" id="gridSize" min="8" max="128" value="32" step="8">
+            <span class="size-display" id="sizeDisplay">32x32</span>
+        </div>
+
+        <div class="control-group">
+            <label>Zoom:</label>
+            <button id="zoomOut">-</button>
+            <span class="size-display" id="zoomDisplay">100%</span>
+            <button id="zoomIn">+</button>
+        </div>
+
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="transparentBg">
+                Transparent BG
+            </label>
+        </div>
+
+        <div class="control-group">
+            <button id="clearBtn">Clear</button>
+            <button id="downloadBtn">Download</button>
+            <button id="copyBtn">Copy</button>
+        </div>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: true });
+
+        const SCALE = 4; // High-DPI scaling for smooth rendering
+        let gridSize = 32;
+        let cellSize = 20;
+        let zoom = 1.0;
+        let mode = 'triangle';
+        let currentColor = '#000000';
+        let bgColor = '#ffffff';
+        let transparentBg = false;
+        let grid = [];
+
+        // Initialize grid
+        function initGrid() {
+            grid = Array(gridSize).fill(null).map(() =>
+                Array(gridSize).fill(null).map(() => ({
+                    type: null,
+                    corner: null,
+                    color: null,
+                    inverted: false
+                }))
+            );
+        }
+
+        // Set canvas size
+        function resizeCanvas() {
+            const displaySize = gridSize * cellSize * zoom;
+            canvas.width = gridSize * cellSize * SCALE;
+            canvas.height = gridSize * cellSize * SCALE;
+            canvas.style.width = displaySize + 'px';
+            canvas.style.height = displaySize + 'px';
+            ctx.scale(SCALE, SCALE);
+            render();
+        }
+
+        // Better corner detection
+        function getCornerByDistance(relX, relY) {
+            const corners = [
+                { name: 'tl', x: 0, y: 0 },
+                { name: 'tr', x: 1, y: 0 },
+                { name: 'bl', x: 0, y: 1 },
+                { name: 'br', x: 1, y: 1 }
+            ];
+
+            let minDist = Infinity;
+            let closestCorner = 'tl';
+
+            corners.forEach(corner => {
+                const dist = Math.sqrt(
+                    Math.pow(relX - corner.x, 2) +
+                    Math.pow(relY - corner.y, 2)
+                );
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestCorner = corner.name;
+                }
+            });
+
+            return closestCorner;
+        }
+
+        // Draw triangle
+        function drawTriangle(x, y, size, corner, color, inverted) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+
+            if (!inverted) {
+                switch (corner) {
+                    case 'tl':
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x + size, y);
+                        ctx.lineTo(x, y + size);
+                        break;
+                    case 'tr':
+                        ctx.moveTo(x + size, y);
+                        ctx.lineTo(x + size, y + size);
+                        ctx.lineTo(x, y);
+                        break;
+                    case 'bl':
+                        ctx.moveTo(x, y + size);
+                        ctx.lineTo(x, y);
+                        ctx.lineTo(x + size, y + size);
+                        break;
+                    case 'br':
+                        ctx.moveTo(x + size, y + size);
+                        ctx.lineTo(x, y + size);
+                        ctx.lineTo(x + size, y);
+                        break;
+                }
+            } else {
+                switch (corner) {
+                    case 'tl':
+                        ctx.moveTo(x + size, y);
+                        ctx.lineTo(x + size, y + size);
+                        ctx.lineTo(x, y + size);
+                        break;
+                    case 'tr':
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x, y + size);
+                        ctx.lineTo(x + size, y + size);
+                        break;
+                    case 'bl':
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x + size, y);
+                        ctx.lineTo(x + size, y + size);
+                        break;
+                    case 'br':
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x + size, y);
+                        ctx.lineTo(x, y + size);
+                        break;
+                }
+            }
+
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Draw arc
+        function drawArc(x, y, size, corner, color, inverted) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+
+            if (!inverted) {
+                // Normal arc: just the quarter circle
+                switch (corner) {
+                    case 'tl':
+                        ctx.arc(x, y, size, 0, Math.PI / 2);
+                        ctx.lineTo(x, y);
+                        break;
+                    case 'tr':
+                        ctx.arc(x + size, y, size, Math.PI / 2, Math.PI);
+                        ctx.lineTo(x + size, y);
+                        break;
+                    case 'bl':
+                        ctx.arc(x, y + size, size, -Math.PI / 2, 0);
+                        ctx.lineTo(x, y + size);
+                        break;
+                    case 'br':
+                        ctx.arc(x + size, y + size, size, Math.PI, Math.PI * 1.5);
+                        ctx.lineTo(x + size, y + size);
+                        break;
+                }
+            } else {
+                // Inverted arc: draw from arc end, through 3 corners, back to arc start
+                switch (corner) {
+                    case 'tl':
+                        // Arc from 90° to 0° (bottom to right), then corners
+                        ctx.arc(x, y, size, Math.PI / 2, 0, true);
+                        ctx.lineTo(x + size, y);
+                        ctx.lineTo(x + size, y + size);
+                        ctx.lineTo(x, y + size);
+                        break;
+                    case 'tr':
+                        // Arc from 180° to 90° (left to bottom), then corners
+                        ctx.arc(x + size, y, size, Math.PI, Math.PI / 2, true);
+                        ctx.lineTo(x + size, y + size);
+                        ctx.lineTo(x, y + size);
+                        ctx.lineTo(x, y);
+                        break;
+                    case 'bl':
+                        // Arc from 0° to 270° (right to top), then corners
+                        ctx.arc(x, y + size, size, 0, (3 * Math.PI) / 2, true);
+                        ctx.lineTo(x, y);
+                        ctx.lineTo(x + size, y);
+                        ctx.lineTo(x + size, y + size);
+                        break;
+                    case 'br':
+                        // Arc from 270° to 180° (top to left), then corners
+                        ctx.arc(x + size, y + size, size, (3 * Math.PI) / 2, Math.PI, true);
+                        ctx.lineTo(x, y + size);
+                        ctx.lineTo(x, y);
+                        ctx.lineTo(x + size, y);
+                        break;
+                }
+            }
+
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Render grid
+        function render(hideGrid = false) {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+
+            // Draw background
+            if (!transparentBg || hideGrid) {
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(0, 0, gridSize * cellSize, gridSize * cellSize);
+            }
+
+            // Draw grid lines (only if not exporting)
+            if (!hideGrid) {
+                ctx.strokeStyle = bgColor === '#ffffff' ? '#e0e0e0' : '#444444';
+                ctx.lineWidth = 1 / SCALE;
+
+                for (let i = 0; i <= gridSize; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(i * cellSize, 0);
+                    ctx.lineTo(i * cellSize, gridSize * cellSize);
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(0, i * cellSize);
+                    ctx.lineTo(gridSize * cellSize, i * cellSize);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw cells
+            for (let row = 0; row < gridSize; row++) {
+                for (let col = 0; col < gridSize; col++) {
+                    const cell = grid[row][col];
+                    if (cell.type && cell.color) {
+                        const x = col * cellSize;
+                        const y = row * cellSize;
+
+                        if (cell.type === 'triangle') {
+                            drawTriangle(x, y, cellSize, cell.corner, cell.color, cell.inverted);
+                        } else if (cell.type === 'arc') {
+                            drawArc(x, y, cellSize, cell.corner, cell.color, cell.inverted);
+                        } else if (cell.type === 'rect') {
+                            ctx.fillStyle = cell.color;
+                            ctx.fillRect(x, y, cellSize, cellSize);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Handle canvas click
+        function handleClick(x, y) {
+            const displaySize = gridSize * cellSize * zoom;
+            const scaleX = (gridSize * cellSize) / displaySize;
+            const scaleY = (gridSize * cellSize) / displaySize;
+
+            const canvasX = x * scaleX;
+            const canvasY = y * scaleY;
+
+            const col = Math.floor(canvasX / cellSize);
+            const row = Math.floor(canvasY / cellSize);
+
+            if (col >= 0 && col < gridSize && row >= 0 && row < gridSize) {
+                const cell = grid[row][col];
+
+                if (mode === 'rect') {
+                    if (cell.type === 'rect') {
+                        cell.type = null;
+                        cell.color = null;
+                    } else {
+                        cell.type = 'rect';
+                        cell.corner = null;
+                        cell.color = currentColor;
+                        cell.inverted = false;
+                    }
+                } else {
+                    const relX = (canvasX % cellSize) / cellSize;
+                    const relY = (canvasY % cellSize) / cellSize;
+                    const corner = getCornerByDistance(relX, relY);
+
+                    if (cell.type === mode && cell.corner === corner) {
+                        if (!cell.inverted) {
+                            cell.inverted = true;
+                        } else {
+                            cell.type = null;
+                            cell.corner = null;
+                            cell.color = null;
+                            cell.inverted = false;
+                        }
+                    } else {
+                        cell.type = mode;
+                        cell.corner = corner;
+                        cell.color = currentColor;
+                        cell.inverted = false;
+                    }
+                }
+
+                render();
+            }
+        }
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            handleClick(x, y);
+        });
+
+        // Track touch state
+        let touchStartTime = 0;
+        let touchMoved = false;
+
+        canvas.addEventListener('touchstart', (e) => {
+            // Only handle single touch for drawing
+            if (e.touches.length === 1) {
+                touchStartTime = Date.now();
+                touchMoved = false;
+                // Don't preventDefault to allow scrolling with momentum
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1) {
+                touchMoved = true;
+            }
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            // Only trigger click for single tap (not scroll)
+            if (e.changedTouches.length === 1 && !touchMoved) {
+                const touchDuration = Date.now() - touchStartTime;
+                // Only register as click if it was a quick tap (< 200ms)
+                if (touchDuration < 200) {
+                    e.preventDefault(); // Prevent the following click event
+                    const touch = e.changedTouches[0];
+                    const rect = canvas.getBoundingClientRect();
+                    const x = touch.clientX - rect.left;
+                    const y = touch.clientY - rect.top;
+                    handleClick(x, y);
+                }
+            }
+        });
+
+        // Mode buttons
+        function setMode(newMode) {
+            mode = newMode;
+            document.getElementById('triangleMode').classList.toggle('active', newMode === 'triangle');
+            document.getElementById('arcMode').classList.toggle('active', newMode === 'arc');
+            document.getElementById('rectMode').classList.toggle('active', newMode === 'rect');
+        }
+
+        document.getElementById('triangleMode').addEventListener('click', () => setMode('triangle'));
+        document.getElementById('arcMode').addEventListener('click', () => setMode('arc'));
+        document.getElementById('rectMode').addEventListener('click', () => setMode('rect'));
+
+        // Color pickers
+        document.getElementById('colorPicker').addEventListener('input', (e) => {
+            currentColor = e.target.value;
+        });
+
+        document.getElementById('bgColorPicker').addEventListener('input', (e) => {
+            bgColor = e.target.value;
+            render();
+        });
+
+        // Transparent background checkbox
+        document.getElementById('transparentBg').addEventListener('change', (e) => {
+            transparentBg = e.target.checked;
+            render();
+        });
+
+        // Grid size slider
+        document.getElementById('gridSize').addEventListener('input', (e) => {
+            gridSize = parseInt(e.target.value);
+            document.getElementById('sizeDisplay').textContent = `${gridSize}x${gridSize}`;
+            initGrid();
+            resizeCanvas();
+        });
+
+        // Zoom controls
+        function updateZoom(newZoom) {
+            zoom = Math.max(0.25, Math.min(4, newZoom));
+            document.getElementById('zoomDisplay').textContent = `${Math.round(zoom * 100)}%`;
+            resizeCanvas();
+        }
+
+        document.getElementById('zoomIn').addEventListener('click', () => {
+            updateZoom(zoom * 1.25);
+        });
+
+        document.getElementById('zoomOut').addEventListener('click', () => {
+            updateZoom(zoom / 1.25);
+        });
+
+        // Clear button
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            initGrid();
+            render();
+        });
+
+        // Export function (without grid lines)
+        function exportCanvas() {
+            const tempTransparent = transparentBg;
+            render(true); // Render without grid
+            return new Promise((resolve) => {
+                canvas.toBlob((blob) => {
+                    render(); // Restore grid
+                    resolve(blob);
+                });
+            });
+        }
+
+        // Download PNG
+        document.getElementById('downloadBtn').addEventListener('click', async () => {
+            const blob = await exportCanvas();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'pattern-grid.png';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // Copy to clipboard
+        document.getElementById('copyBtn').addEventListener('click', async () => {
+            try {
+                const blob = await exportCanvas();
+                await navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                ]);
+
+                const btn = document.getElementById('copyBtn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 1500);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy to clipboard');
+            }
+        });
+
+        // Initialize
+        initGrid();
+        resizeCanvas();
+    </script>
+</body>
+
+</html>
