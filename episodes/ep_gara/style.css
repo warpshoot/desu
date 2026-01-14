@@ -14,16 +14,9 @@ body {
     cursor: pointer;
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    padding-top: 10vh;
+    align-items: center;
+    padding-top: 0;
     background-color: #000;
-}
-
-/* iOS Safari用の調整 */
-@supports (-webkit-touch-callout: none) {
-    body {
-        padding-top: 2.5vh;
-    }
 }
 
 /* コンテナ（縦位置固定） */
@@ -31,7 +24,7 @@ body {
     position: relative;
     width: 100%;
     max-width: 600px;
-    height: 90vh;
+    height: 100vh;
     overflow: hidden;
 }
 
@@ -187,18 +180,11 @@ body {
     background-color: #000;
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    padding-top: 35vh;
+    align-items: center;
+    padding-top: 0;
     z-index: 20;
     opacity: 1;
     transition: opacity 1s ease-in-out;
-}
-
-/* iOS Safari用のタイトル位置調整 */
-@supports (-webkit-touch-callout: none) {
-    .title-screen {
-        padding-top: 15vh;
-    }
 }
 
 .title-screen.hidden {
@@ -274,6 +260,7 @@ body {
 /* モバイル */
 @media (max-width: 768px) {
     body {
+        align-items: flex-start;
         padding-top: 10vh;
     }
 
@@ -282,6 +269,7 @@ body {
     }
 
     .title-screen {
+        align-items: flex-start;
         padding-top: 35vh;
     }
 
