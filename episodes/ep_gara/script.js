@@ -2,10 +2,11 @@
 // fade: false を指定すると、その背景切り替え時にフェード効果なしで即座に切り替わります
 // fade を省略した場合はデフォルトでフェード効果ありになります
 const dialogues = [
-    { speaker: 'shi', text: 'S1本で5万ね', background: 'images/mdgc_nomi.jpg' },
-    { speaker: 'desu', text: 'どうも', background: 'images/mdgc_kane.jpg' , fade: false},
-    { speaker: 'desu', text: 'あ、ホーレムもらえますか', background: 'images/mdgc_nomi.jpg' , fade: false},
-    { speaker: 'shi', text: '…ホーレム？\nああ、ガラね' },
+    { speaker: 'shi', text: 'Sが1本で、5万ね', background: 'images/mdgc_nomi.jpg' },
+    { speaker: 'shi', text: 'はい', background: 'images/mdgc_kane.jpg' , fade: false},
+    { speaker: 'desu', text: 'どうも', },
+    { speaker: 'desu', text: 'あ、ホーレムもらえますか' , background: 'images/mdgc_nomi.jpg' , fade: false},
+    { speaker: 'shi', text: '…ホーレム？\nああ、ガラね'},
     { speaker: 'shi', text: 'はい', background: 'images/mdgc_holem.jpg' , fade: false},
     { speaker: 'desu', text: 'どうも' },
     { speaker: 'sakana', text: 'おつかれさん', background: 'images/kkj.jpg' },
@@ -18,9 +19,9 @@ const dialogues = [
     { speaker: 'desu', text: 'ホーレム？\nどうもしない' },
     { speaker: 'sakana', text: '…ん？\nじゃあなんでもらうの' },
     { speaker: 'desu', text: '…かわいいから' },
-    { speaker: 'sakana', text: 'かわいいか？' },
+    { speaker: 'sakana', text: 'かわいい…か？' },
     { speaker: 'desu', text: 'うん' },
-    { speaker: 'sakana', text: 'そうか' }
+    { speaker: 'sakana', text: '…そうか' }
 ];
 
 // DOM要素
