@@ -1444,12 +1444,12 @@
             const rectH = Math.abs(selectionEnd.y - selectionStart.y);
 
             selCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
-            selCtx.strokeStyle = '#333';
+            selCtx.strokeStyle = '#fff';
             selCtx.lineWidth = 2;
             selCtx.setLineDash([5, 5]);
             selCtx.strokeRect(rectX, rectY, rectW, rectH);
             // 選択中はほとんど透明にして背景を見やすく
-            selCtx.fillStyle = 'rgba(0, 0, 0, 0.03)';
+            selCtx.fillStyle = 'rgba(255, 255, 255, 0.05)';
             selCtx.fillRect(rectX, rectY, rectW, rectH);
         });
 
@@ -1466,11 +1466,11 @@
 
                 // 選択を確定して描画（最終状態）
                 selCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
-                selCtx.strokeStyle = '#333';
+                selCtx.strokeStyle = '#fff';
                 selCtx.lineWidth = 2;
                 selCtx.setLineDash([5, 5]);
                 selCtx.strokeRect(rectX, rectY, rectW, rectH);
-                selCtx.fillStyle = 'rgba(51, 51, 51, 0.15)';
+                selCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';
                 selCtx.fillRect(rectX, rectY, rectW, rectH);
 
                 // 選択確定後、モーダルを表示して確認モードに
