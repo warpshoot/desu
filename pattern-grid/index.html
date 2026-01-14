@@ -465,17 +465,6 @@
         <h3>範囲をドラッグして選択</h3>
 
         <div class="option-group">
-            <div class="option-group-label">縦横比</div>
-            <div class="option-buttons">
-                <button class="option-btn active" data-aspect="free">自由</button>
-                <button class="option-btn" data-aspect="1:1">1:1</button>
-                <button class="option-btn" data-aspect="4:5">4:5</button>
-                <button class="option-btn" data-aspect="16:9">16:9</button>
-                <button class="option-btn" data-aspect="9:16">9:16</button>
-            </div>
-        </div>
-
-        <div class="option-group">
             <div class="option-group-label">倍率</div>
             <div class="option-buttons">
                 <button class="option-btn active" data-scale="1">1x</button>
@@ -561,7 +550,6 @@
         let selectionStart = null;
         let selectionEnd = null;
         let confirmedSelection = null;
-        let selectedAspect = 'free';
         let selectedScale = 1;
 
         // Initialize grid
@@ -1347,15 +1335,6 @@
             if (isSaveMode) updateSelectionCanvas();
         });
 
-        // Aspect ratio buttons
-        document.querySelectorAll('[data-aspect]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                selectedAspect = btn.dataset.aspect;
-                document.querySelectorAll('[data-aspect]').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            });
-        });
-
         // Selection drawing
         selectionCanvas.addEventListener('mousedown', (e) => {
             if (!isSaveMode || confirmedSelection) return;
@@ -1368,26 +1347,10 @@
             if (!isSaveMode || !selectionStart || confirmedSelection) return;
             selectionEnd = { x: e.clientX, y: e.clientY };
 
-            let rectX = Math.min(selectionStart.x, selectionEnd.x);
-            let rectY = Math.min(selectionStart.y, selectionEnd.y);
-            let rectW = Math.abs(selectionEnd.x - selectionStart.x);
-            let rectH = Math.abs(selectionEnd.y - selectionStart.y);
-
-            // Apply aspect ratio
-            if (selectedAspect !== 'free' && rectW > 0 && rectH > 0) {
-                const [w, h] = selectedAspect.split(':').map(Number);
-                const targetRatio = w / h;
-                const currentRatio = rectW / rectH;
-
-                if (currentRatio > targetRatio) {
-                    rectW = rectH * targetRatio;
-                } else {
-                    rectH = rectW / targetRatio;
-                }
-
-                if (selectionEnd.x < selectionStart.x) rectX = selectionStart.x - rectW;
-                if (selectionEnd.y < selectionStart.y) rectY = selectionStart.y - rectH;
-            }
+            const rectX = Math.min(selectionStart.x, selectionEnd.x);
+            const rectY = Math.min(selectionStart.y, selectionEnd.y);
+            const rectW = Math.abs(selectionEnd.x - selectionStart.x);
+            const rectH = Math.abs(selectionEnd.y - selectionStart.y);
 
             selCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
             selCtx.strokeStyle = '#333';
@@ -1401,26 +1364,10 @@
         selectionCanvas.addEventListener('mouseup', (e) => {
             if (!isSaveMode || !selectionStart || confirmedSelection) return;
 
-            let rectX = Math.min(selectionStart.x, selectionEnd.x);
-            let rectY = Math.min(selectionStart.y, selectionEnd.y);
-            let rectW = Math.abs(selectionEnd.x - selectionStart.x);
-            let rectH = Math.abs(selectionEnd.y - selectionStart.y);
-
-            // Apply aspect ratio
-            if (selectedAspect !== 'free' && rectW > 0 && rectH > 0) {
-                const [w, h] = selectedAspect.split(':').map(Number);
-                const targetRatio = w / h;
-                const currentRatio = rectW / rectH;
-
-                if (currentRatio > targetRatio) {
-                    rectW = rectH * targetRatio;
-                } else {
-                    rectH = rectW / targetRatio;
-                }
-
-                if (selectionEnd.x < selectionStart.x) rectX = selectionStart.x - rectW;
-                if (selectionEnd.y < selectionStart.y) rectY = selectionStart.y - rectH;
-            }
+            const rectX = Math.min(selectionStart.x, selectionEnd.x);
+            const rectY = Math.min(selectionStart.y, selectionEnd.y);
+            const rectW = Math.abs(selectionEnd.x - selectionStart.x);
+            const rectH = Math.abs(selectionEnd.y - selectionStart.y);
 
             if (rectW > 10 && rectH > 10) {
                 confirmedSelection = { x: rectX, y: rectY, w: rectW, h: rectH };
