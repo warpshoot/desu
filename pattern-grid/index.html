@@ -1509,20 +1509,84 @@
         // Copy selection button
         document.getElementById('copySelectionBtn').addEventListener('click', async () => {
             if (!confirmedSelection) return;
-            const blob = await exportSelection(confirmedSelection);
+
+            const btn = document.getElementById('copySelectionBtn');
+            const originalText = btn.textContent;
+
             try {
+                const canvasRect = canvas.getBoundingClientRect();
+                const x = (confirmedSelection.x - canvasRect.left) / scale;
+                const y = (confirmedSelection.y - canvasRect.top) / scale;
+                const w = confirmedSelection.w / scale;
+                const h = confirmedSelection.h / scale;
+
+                const useTransparent = document.getElementById('transparentBg').checked;
+                const exportScale = selectedScale;
+
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+
+                tempCanvas.width = w * exportScale;
+                tempCanvas.height = h * exportScale;
+                tempCtx.scale(exportScale, exportScale);
+
+                if (!useTransparent) {
+                    tempCtx.fillStyle = bgColor;
+                    tempCtx.fillRect(0, 0, w, h);
+                }
+
+                // Draw visible cells in selection
+                const startCol = Math.floor(x / CELL_SIZE);
+                const startRow = Math.floor(y / CELL_SIZE);
+                const endCol = Math.ceil((x + w) / CELL_SIZE);
+                const endRow = Math.ceil((y + h) / CELL_SIZE);
+
+                tempCtx.save();
+                tempCtx.translate(-x, -y);
+
+                for (let row = Math.max(0, startRow); row < Math.min(GRID_SIZE, endRow); row++) {
+                    for (let col = Math.max(0, startCol); col < Math.min(GRID_SIZE, endCol); col++) {
+                        const cell = grid[row][col];
+                        if (cell.type && cell.color) {
+                            const cellX = col * CELL_SIZE;
+                            const cellY = row * CELL_SIZE;
+
+                            if (cell.type === 'triangle') {
+                                drawTriangleToContext(tempCtx, cellX, cellY, CELL_SIZE, cell.corner, cell.color, cell.inverted);
+                            } else if (cell.type === 'arc') {
+                                drawArcToContext(tempCtx, cellX, cellY, CELL_SIZE, cell.corner, cell.color, cell.inverted);
+                            } else if (cell.type === 'rect') {
+                                tempCtx.fillStyle = cell.color;
+                                tempCtx.fillRect(cellX, cellY, CELL_SIZE, CELL_SIZE);
+                            }
+                        }
+                    }
+                }
+
+                tempCtx.restore();
+
+                // Safari/iPadでの互換性のためにClipboardItemにPromiseを渡す
                 await navigator.clipboard.write([
-                    new ClipboardItem({ 'image/png': blob })
+                    new ClipboardItem({
+                        'image/png': new Promise((resolve, reject) => {
+                            tempCanvas.toBlob((blob) => {
+                                if (blob) resolve(blob);
+                                else reject(new Error('Blob generation failed'));
+                            }, 'image/png');
+                        })
+                    })
                 ]);
-                const btn = document.getElementById('copySelectionBtn');
-                const originalText = btn.textContent;
+
                 btn.textContent = 'コピー完了!';
                 setTimeout(() => {
                     btn.textContent = originalText;
                 }, 1500);
             } catch (err) {
                 console.error('Failed to copy:', err);
-                alert('コピーに失敗しました');
+                btn.textContent = 'コピー失敗';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 1500);
             }
         });
 
