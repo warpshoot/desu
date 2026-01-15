@@ -236,6 +236,101 @@
             text-decoration: underline;
         }
 
+        /* ツールチップ（ヘルプモード時のみ表示） */
+        .tool-tooltip {
+            display: none;
+            position: absolute;
+            left: 60px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            border: 1px solid #ddd;
+            z-index: 400;
+            pointer-events: none;
+        }
+
+        /* 右側に表示する吹き出し（左下ツール用）の矢印 */
+        .tool-tooltip::before {
+            content: '';
+            position: absolute;
+            right: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 6px solid transparent;
+            border-right-color: #ddd;
+        }
+
+        .tool-tooltip::after {
+            content: '';
+            position: absolute;
+            right: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 5px solid transparent;
+            border-right-color: rgba(255, 255, 255, 0.95);
+            margin-right: -1px;
+        }
+
+        /* 下側に表示する吹き出し（右上ツール用） */
+        .tool-tooltip-bottom {
+            left: 50%;
+            top: 60px;
+            transform: translateX(-50%);
+        }
+
+        /* 右上ツールバーの各ボタンで吹き出しの位置をずらす */
+        #toolbar-right .tool-btn:nth-child(1) .tool-tooltip-bottom {
+            top: 60px;
+        }
+
+        #toolbar-right .tool-btn:nth-child(2) .tool-tooltip-bottom {
+            top: 90px;
+        }
+
+        #toolbar-right .tool-btn:nth-child(3) .tool-tooltip-bottom {
+            top: 120px;
+        }
+
+        .tool-tooltip-bottom::before {
+            right: auto;
+            left: 50%;
+            top: auto;
+            bottom: 100%;
+            transform: translateX(-50%);
+            border-right-color: transparent;
+            border-bottom-color: #ddd;
+        }
+
+        .tool-tooltip-bottom::after {
+            right: auto;
+            left: 50%;
+            top: auto;
+            bottom: 100%;
+            transform: translateX(-50%);
+            border-right-color: transparent;
+            border-bottom-color: rgba(255, 255, 255, 0.95);
+            margin-right: 0;
+            margin-bottom: -1px;
+        }
+
+        /* ヘルプモード時に吹き出しを表示 */
+        body.help-mode .tool-tooltip {
+            display: block;
+        }
+
+        /* ヘルプモード時にツールバーとクレジットボタンをモーダルより前面に */
+        body.help-mode #toolbar-left,
+        body.help-mode #toolbar-right,
+        body.help-mode #credit-btn {
+            z-index: 400;
+        }
+
         /* 保存UI */
         #save-overlay {
             display: none;
@@ -423,24 +518,29 @@
             <svg viewBox="0 0 24 24">
                 <path d="M12 6 L20 18 L4 18 Z" class="filled"/>
             </svg>
+            <div class="tool-tooltip">三角形 (1)</div>
         </div>
         <div class="tool-btn" id="arcBtn" data-tool="arc" title="円弧 (2)">
             <svg viewBox="0 0 24 24">
                 <path d="M6 18 Q6 6 18 6" stroke-width="3" fill="none"/>
             </svg>
+            <div class="tool-tooltip">円弧 (2)</div>
         </div>
         <div class="tool-btn" id="rectBtn" data-tool="rect" title="矩形 (3)">
             <svg viewBox="0 0 24 24">
                 <rect x="6" y="6" width="12" height="12" class="filled"/>
             </svg>
+            <div class="tool-tooltip">矩形 (3)</div>
         </div>
         <div class="color-btn" id="fillColorBtn" title="塗りつぶし色 (X)">
             <div class="color-display" id="fillColorDisplay" style="background: #000000;"></div>
             <input type="color" id="fillColorPicker" value="#000000">
+            <div class="tool-tooltip">塗りつぶし色 (X)</div>
         </div>
         <div class="color-btn" id="bgColorBtn" title="背景色">
             <div class="color-display" id="bgColorDisplay" style="background: #ffffff;"></div>
             <input type="color" id="bgColorPicker" value="#ffffff">
+            <div class="tool-tooltip">背景色</div>
         </div>
     </div>
 
@@ -451,17 +551,20 @@
                 <path d="M12 4 L12 16 M6 12 L12 18 L18 12"/>
                 <path d="M4 20 L20 20"/>
             </svg>
+            <div class="tool-tooltip tool-tooltip-bottom">保存 (⌘S)</div>
         </div>
         <div class="tool-btn active" id="gridBtn" title="グリッド線">
             <svg viewBox="0 0 24 24">
                 <path d="M4 8 L20 8 M4 12 L20 12 M4 16 L20 16"/>
                 <path d="M8 4 L8 20 M12 4 L12 20 M16 4 L16 20"/>
             </svg>
+            <div class="tool-tooltip tool-tooltip-bottom">グリッド線</div>
         </div>
         <div class="tool-btn" id="clearBtn" title="クリア (Del)">
             <svg viewBox="0 0 24 24">
                 <path d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34"/>
             </svg>
+            <div class="tool-tooltip tool-tooltip-bottom">クリア (Del)</div>
         </div>
     </div>
 
@@ -1305,11 +1408,15 @@
         document.getElementById('credit-btn').addEventListener('click', (e) => {
             e.stopPropagation();
             document.getElementById('credit-modal').classList.add('visible');
+            // ヘルプモード有効化（ツールチップ表示）
+            document.body.classList.add('help-mode');
         });
 
         document.getElementById('credit-modal').addEventListener('click', (e) => {
             if (e.target.id === 'credit-modal') {
                 document.getElementById('credit-modal').classList.remove('visible');
+                // ヘルプモード無効化（ツールチップ非表示）
+                document.body.classList.remove('help-mode');
             }
         });
 
