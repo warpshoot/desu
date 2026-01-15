@@ -1420,6 +1420,23 @@
             }
         });
 
+        // ヘルプモード時、モーダル外（ツールバーや？ボタン含む）のクリックで復帰
+        document.addEventListener('click', (e) => {
+            if (!document.body.classList.contains('help-mode')) return;
+
+            const modal = document.getElementById('credit-modal');
+            const creditContent = document.getElementById('credit-content');
+
+            // credit-content内のクリックは無視
+            if (creditContent.contains(e.target)) return;
+
+            // それ以外の場所（ツール、？ボタン、モーダル背景など）ならヘルプモード解除
+            e.preventDefault();
+            e.stopPropagation();
+            modal.classList.remove('visible');
+            document.body.classList.remove('help-mode');
+        }, true); // キャプチャフェーズで処理（ツールボタンのリスナーより先に実行）
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             // Track modifier keys
