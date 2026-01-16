@@ -59,44 +59,80 @@ function initializePresetUI() {
     const levels = ['level1', 'level2', 'level3', 'level4'];
 
     levels.forEach((level, index) => {
-        const container = document.getElementById(`${level}Presets`);
+        const levelNum = index + 1;
+        const previewCanvas = document.getElementById(`preview${levelNum}`);
+        const label = document.getElementById(`label${levelNum}`);
+        const dropdown = document.getElementById(`dropdown${levelNum}`);
+        const toneBox = document.querySelector(`.tone-box[data-level="${level}"]`);
 
+        // Draw initial preview
+        const initialPreset = TONE_PRESETS.find(p => p.id === selectedPresets[level]);
+        drawToneBoxPreview(previewCanvas, initialPreset);
+        label.textContent = initialPreset.name;
+
+        // Populate dropdown
         TONE_PRESETS.forEach(preset => {
-            const item = document.createElement('div');
-            item.className = 'preset-item';
-            item.dataset.presetId = preset.id;
-            item.dataset.level = level;
+            const option = document.createElement('div');
+            option.className = 'tone-option';
+            option.dataset.presetId = preset.id;
 
-            // Create preview canvas
-            const canvas = document.createElement('canvas');
-            canvas.className = 'preset-canvas';
-            canvas.width = 100;
-            canvas.height = 80;
+            // Preview canvas for option
+            const optionCanvas = document.createElement('canvas');
+            optionCanvas.className = 'tone-option-preview';
+            optionCanvas.width = 60;
+            optionCanvas.height = 60;
+            drawPresetPreview(optionCanvas, preset);
 
-            // Draw preset preview
-            drawPresetPreview(canvas, preset);
+            // Label
+            const optionLabel = document.createElement('div');
+            optionLabel.className = 'tone-option-label';
+            optionLabel.textContent = preset.name;
 
-            // Create label
-            const label = document.createElement('div');
-            label.className = 'preset-label';
-            label.textContent = preset.name;
+            option.appendChild(optionCanvas);
+            option.appendChild(optionLabel);
 
-            item.appendChild(canvas);
-            item.appendChild(label);
+            // Mark selected
+            if (selectedPresets[level] === preset.id) {
+                option.classList.add('selected');
+            }
 
             // Click handler
-            item.addEventListener('click', () => {
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
                 selectPreset(level, preset.id);
+                dropdown.classList.remove('active');
             });
 
-            container.appendChild(item);
+            dropdown.appendChild(option);
+        });
 
-            // Mark default selection
-            if (selectedPresets[level] === preset.id) {
-                item.classList.add('selected');
-            }
+        // Toggle dropdown on box click
+        toneBox.addEventListener('click', (e) => {
+            // Close all other dropdowns
+            document.querySelectorAll('.tone-dropdown').forEach(dd => {
+                if (dd !== dropdown) dd.classList.remove('active');
+            });
+            // Toggle this dropdown
+            dropdown.classList.toggle('active');
         });
     });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.tone-box')) {
+            document.querySelectorAll('.tone-dropdown').forEach(dd => {
+                dd.classList.remove('active');
+            });
+        }
+    });
+}
+
+// Draw preview for tone box (larger preview)
+function drawToneBoxPreview(canvas, preset) {
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth || 150;
+    canvas.height = 80;
+    drawPresetPreview(canvas, preset);
 }
 
 // Draw preset preview on canvas
@@ -243,13 +279,22 @@ function drawPresetPreview(canvas, preset) {
 function selectPreset(level, presetId) {
     selectedPresets[level] = presetId;
 
-    // Update UI
-    const container = document.getElementById(`${level}Presets`);
-    container.querySelectorAll('.preset-item').forEach(item => {
-        if (item.dataset.presetId === presetId) {
-            item.classList.add('selected');
+    const levelNum = ['level1', 'level2', 'level3', 'level4'].indexOf(level) + 1;
+    const previewCanvas = document.getElementById(`preview${levelNum}`);
+    const label = document.getElementById(`label${levelNum}`);
+    const dropdown = document.getElementById(`dropdown${levelNum}`);
+
+    // Update preview and label
+    const preset = TONE_PRESETS.find(p => p.id === presetId);
+    drawToneBoxPreview(previewCanvas, preset);
+    label.textContent = preset.name;
+
+    // Update dropdown selection
+    dropdown.querySelectorAll('.tone-option').forEach(option => {
+        if (option.dataset.presetId === presetId) {
+            option.classList.add('selected');
         } else {
-            item.classList.remove('selected');
+            option.classList.remove('selected');
         }
     });
 
@@ -269,6 +314,24 @@ initializePresetUI();
 toneToggleBtn.addEventListener('click', () => {
     toneToggleBtn.classList.toggle('active');
     toneSection.classList.toggle('active');
+});
+
+// Full size preview modal
+const previewModal = document.getElementById('previewModal');
+const previewCanvas = document.getElementById('previewCanvas');
+
+outputCanvas.addEventListener('click', () => {
+    // Copy canvas content to preview modal
+    previewCanvas.width = outputCanvas.width;
+    previewCanvas.height = outputCanvas.height;
+    const previewCtx = previewCanvas.getContext('2d');
+    previewCtx.drawImage(outputCanvas, 0, 0);
+
+    previewModal.classList.add('active');
+});
+
+previewModal.addEventListener('click', () => {
+    previewModal.classList.remove('active');
 });
 
 // Upload area click handler
