@@ -1,7 +1,6 @@
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
 const controls = document.getElementById('controls');
-const resolutionRadios = document.querySelectorAll('input[name="resolution"]');
 const blackPoint = document.getElementById('blackPoint');
 const whitePoint = document.getElementById('whitePoint');
 const blackPointValue = document.getElementById('blackPointValue');
@@ -302,15 +301,6 @@ uploadArea.addEventListener('drop', (e) => {
     }
 });
 
-// Resolution change handler
-resolutionRadios.forEach(radio => {
-    radio.addEventListener('change', () => {
-        if (sourceImage) {
-            resizeAndProcess();
-        }
-    });
-});
-
 // Load image
 function loadImage(file) {
     const reader = new FileReader();
@@ -329,33 +319,17 @@ function loadImage(file) {
     reader.readAsDataURL(file);
 }
 
-// Resize image based on resolution setting and process
+// Resize image to fixed 1000px long edge and process
 function resizeAndProcess() {
-    const selectedResolution = document.querySelector('input[name="resolution"]:checked').value;
-
-    if (selectedResolution === 'original') {
-        processedImage = sourceImage;
-        processMangaTone();
-        return;
-    }
-
-    const maxSize = parseInt(selectedResolution);
+    const maxSize = 1000;
     const srcWidth = sourceImage.width;
     const srcHeight = sourceImage.height;
     const maxDimension = Math.max(srcWidth, srcHeight);
 
-    // Calculate new dimensions
-    let newWidth, newHeight;
-    if (maxDimension <= maxSize) {
-        // Image is smaller than target, use original size
-        newWidth = srcWidth;
-        newHeight = srcHeight;
-    } else {
-        // Resize to fit within maxSize
-        const scale = maxSize / maxDimension;
-        newWidth = Math.round(srcWidth * scale);
-        newHeight = Math.round(srcHeight * scale);
-    }
+    // Calculate new dimensions (always scale to 1000px on long edge)
+    const scale = maxSize / maxDimension;
+    const newWidth = Math.round(srcWidth * scale);
+    const newHeight = Math.round(srcHeight * scale);
 
     // Create temporary canvas for resizing
     const tempCanvas = document.createElement('canvas');
