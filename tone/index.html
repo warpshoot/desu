@@ -17,7 +17,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background: #f5f5f5;
+            background: #fff;
             min-height: 100vh;
             padding: 20px;
             padding-top: 80px;
@@ -116,31 +116,30 @@
             max-width: 1200px;
             margin: 0 auto;
             background: #fff;
-            border-radius: 8px;
+            border: 2px solid #000;
             padding: 30px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
             font-size: 28px;
             margin-bottom: 30px;
-            color: #333;
+            color: #000;
         }
 
         .upload-area {
-            border: 3px dashed #ccc;
-            border-radius: 8px;
+            border: 2px dashed #000;
             padding: 60px 20px;
             text-align: center;
             margin-bottom: 30px;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             cursor: pointer;
-            background: #fafafa;
+            background: #fff;
         }
 
         .upload-area.dragover {
-            border-color: #4CAF50;
-            background: #f0f8f0;
+            border-color: #000;
+            background: #000;
+            color: #fff;
         }
 
         .upload-area.has-image {
@@ -153,8 +152,9 @@
         }
 
         .upload-text {
-            color: #666;
+            color: #000;
             font-size: 16px;
+            font-weight: 500;
         }
 
         #fileInput {
@@ -181,7 +181,7 @@
         .control-label {
             min-width: 80px;
             font-weight: 500;
-            color: #333;
+            color: #000;
             font-size: 14px;
         }
 
@@ -197,7 +197,7 @@
             gap: 5px;
             cursor: pointer;
             font-size: 14px;
-            color: #666;
+            color: #000;
         }
 
         .radio-group input[type="radio"] {
@@ -210,7 +210,7 @@
             gap: 8px;
             cursor: pointer;
             font-size: 14px;
-            color: #666;
+            color: #000;
         }
 
         .checkbox-label input[type="checkbox"] {
@@ -229,27 +229,24 @@
             flex: 1;
             -webkit-appearance: none;
             appearance: none;
-            height: 6px;
-            border-radius: 3px;
-            background: #ddd;
+            height: 4px;
+            background: #000;
             outline: none;
         }
 
         .slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #4CAF50;
+            width: 16px;
+            height: 16px;
+            background: #000;
             cursor: pointer;
         }
 
         .slider::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #4CAF50;
+            width: 16px;
+            height: 16px;
+            background: #000;
             cursor: pointer;
             border: none;
         }
@@ -258,30 +255,29 @@
             min-width: 50px;
             text-align: right;
             font-weight: 600;
-            color: #333;
+            color: #000;
         }
 
         .tone-toggle-btn {
             width: 100%;
             padding: 12px;
-            background: #f5f5f5;
-            border: 1px solid #ddd;
-            border-radius: 6px;
+            background: #fff;
+            border: 2px solid #000;
             font-size: 14px;
             font-weight: 500;
-            color: #333;
+            color: #000;
             cursor: pointer;
             transition: all 0.2s;
         }
 
         .tone-toggle-btn:hover {
-            background: #eee;
+            background: #000;
+            color: #fff;
         }
 
         .tone-toggle-btn.active {
-            background: #4CAF50;
-            color: white;
-            border-color: #4CAF50;
+            background: #000;
+            color: #fff;
         }
 
         .tone-section {
@@ -289,8 +285,9 @@
             flex-direction: column;
             gap: 15px;
             padding: 15px;
-            background: #f9f9f9;
-            border-radius: 6px;
+            background: #fff;
+            border: 2px solid #000;
+            border-top: none;
         }
 
         .tone-section.active {
@@ -307,35 +304,32 @@
         .preset-item {
             position: relative;
             cursor: pointer;
-            border: 2px solid #ddd;
-            border-radius: 4px;
+            border: 2px solid #000;
             padding: 4px;
             transition: all 0.2s ease;
             background: white;
         }
 
         .preset-item:hover {
-            border-color: #4CAF50;
-            transform: scale(1.05);
+            background: #000;
+            color: #fff;
         }
 
         .preset-item.selected {
-            border-color: #4CAF50;
-            background: #e8f5e9;
-            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+            background: #000;
+            color: #fff;
         }
 
         .preset-canvas {
             width: 100%;
             height: 50px;
-            border-radius: 2px;
             background: white;
         }
 
         .preset-label {
             text-align: center;
             font-size: 11px;
-            color: #666;
+            color: inherit;
             margin-top: 4px;
             font-weight: 500;
         }
@@ -343,15 +337,14 @@
         .level-section {
             background: white;
             padding: 12px;
-            border-radius: 4px;
-            border: 1px solid #e0e0e0;
+            border: 2px solid #000;
         }
 
         .level-section h4 {
             margin-bottom: 10px;
-            color: #666;
+            color: #000;
             font-size: 12px;
-            font-weight: 500;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -359,8 +352,7 @@
         .btn {
             width: 100%;
             padding: 14px;
-            border: none;
-            border-radius: 6px;
+            border: 2px solid #000;
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
@@ -368,24 +360,26 @@
         }
 
         .btn-primary {
-            background: #333;
-            color: white;
+            background: #000;
+            color: #fff;
         }
 
         .btn-primary:hover {
-            background: #000;
+            background: #fff;
+            color: #000;
         }
 
         .btn-primary:disabled {
-            background: #ccc;
+            background: #fff;
+            color: #000;
+            opacity: 0.3;
             cursor: not-allowed;
         }
 
         .output-canvas {
             display: none;
             max-width: 100%;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            border: 2px solid #000;
             margin-top: 20px;
         }
 
@@ -396,12 +390,12 @@
         footer {
             text-align: center;
             padding: 30px 20px 20px;
-            color: #666;
+            color: #000;
             font-size: 14px;
         }
 
         footer a {
-            color: #333;
+            color: #000;
             text-decoration: none;
         }
 
@@ -456,7 +450,7 @@
 
         <div class="upload-area" id="uploadArea">
             <div class="upload-icon">📷</div>
-            <div class="upload-text">画像を選択</div>
+            <div class="upload-text">Select Image</div>
             <input type="file" id="fileInput" accept="image/*">
         </div>
 
@@ -465,18 +459,18 @@
         <div class="controls" id="controls">
             <!-- Resolution -->
             <div class="control-row">
-                <label class="control-label">解像度</label>
+                <label class="control-label">Resolution</label>
                 <div class="radio-group">
                     <label><input type="radio" name="resolution" value="1200"><span>1200</span></label>
                     <label><input type="radio" name="resolution" value="1600" checked><span>1600</span></label>
                     <label><input type="radio" name="resolution" value="2000"><span>2000</span></label>
-                    <label><input type="radio" name="resolution" value="original"><span>元</span></label>
+                    <label><input type="radio" name="resolution" value="original"><span>Original</span></label>
                 </div>
             </div>
 
             <!-- Levels -->
             <div class="control-row">
-                <label class="control-label">黒点</label>
+                <label class="control-label">Black Point</label>
                 <div class="slider-container">
                     <input type="range" id="blackPoint" class="slider" min="0" max="255" value="0">
                     <span id="blackPointValue" class="slider-value">0</span>
@@ -484,7 +478,7 @@
             </div>
 
             <div class="control-row">
-                <label class="control-label">白点</label>
+                <label class="control-label">White Point</label>
                 <div class="slider-container">
                     <input type="range" id="whitePoint" class="slider" min="0" max="255" value="255">
                     <span id="whitePointValue" class="slider-value">255</span>
@@ -493,15 +487,15 @@
 
             <!-- Edge -->
             <div class="control-row">
-                <label class="control-label">輪郭線</label>
+                <label class="control-label">Edge</label>
                 <label class="checkbox-label">
                     <input type="checkbox" id="edgeToggle">
-                    <span>表示</span>
+                    <span>Show</span>
                 </label>
             </div>
 
             <div class="control-row" id="edgeThresholdControl" style="display: none;">
-                <label class="control-label">感度</label>
+                <label class="control-label">Sensitivity</label>
                 <div class="slider-container">
                     <input type="range" id="edgeThreshold" class="slider" min="10" max="200" value="50">
                     <span id="edgeThresholdValue" class="slider-value">50</span>
@@ -510,35 +504,35 @@
 
             <!-- Tone Assignment Toggle -->
             <div class="control-row">
-                <button class="tone-toggle-btn" id="toneToggleBtn">トーン設定</button>
+                <button class="tone-toggle-btn" id="toneToggleBtn">Tone Settings</button>
             </div>
 
             <!-- Collapsible Tone Section -->
             <div class="tone-section" id="toneSection">
                 <div class="level-section">
-                    <h4>明</h4>
+                    <h4>Light</h4>
                     <div class="preset-grid" id="level1Presets"></div>
                 </div>
 
                 <div class="level-section">
-                    <h4>中明</h4>
+                    <h4>Mid-Light</h4>
                     <div class="preset-grid" id="level2Presets"></div>
                 </div>
 
                 <div class="level-section">
-                    <h4>中暗</h4>
+                    <h4>Mid-Dark</h4>
                     <div class="preset-grid" id="level3Presets"></div>
                 </div>
 
                 <div class="level-section">
-                    <h4>暗</h4>
+                    <h4>Dark</h4>
                     <div class="preset-grid" id="level4Presets"></div>
                 </div>
             </div>
 
             <!-- Download -->
             <div class="control-row">
-                <button class="btn btn-primary" id="downloadBtn" disabled>保存</button>
+                <button class="btn btn-primary" id="downloadBtn" disabled>Save</button>
             </div>
         </div>
     </div>
