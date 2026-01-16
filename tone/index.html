@@ -281,72 +281,101 @@
         }
 
         .tone-section {
-            display: none;
-            flex-direction: column;
-            gap: 15px;
-            padding: 15px;
-            background: #fff;
-            border: 2px solid #000;
-            border-top: none;
-        }
-
-        .tone-section.active {
-            display: flex;
-        }
-
-        .preset-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-            gap: 8px;
-            margin-top: 10px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
         }
 
-        .preset-item {
+        .tone-box {
             position: relative;
+            border: 2px solid #000;
+            background: #fff;
             cursor: pointer;
-            border: 2px solid #000;
-            padding: 4px;
-            transition: all 0.2s ease;
-            background: white;
+            transition: all 0.2s;
         }
 
-        .preset-item:hover {
-            background: #000;
-            color: #fff;
+        .tone-box:hover {
+            background: #f5f5f5;
         }
 
-        .preset-item.selected {
-            background: #000;
-            color: #fff;
-        }
-
-        .preset-canvas {
-            width: 100%;
-            height: 50px;
-            background: white;
-        }
-
-        .preset-label {
+        .tone-box-header {
+            padding: 8px;
             text-align: center;
+            border-bottom: 2px solid #000;
             font-size: 11px;
-            color: inherit;
-            margin-top: 4px;
-            font-weight: 500;
-        }
-
-        .level-section {
-            background: white;
-            padding: 12px;
-            border: 2px solid #000;
-        }
-
-        .level-section h4 {
-            margin-bottom: 10px;
-            color: #000;
-            font-size: 12px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+        }
+
+        .tone-box-preview {
+            width: 100%;
+            height: 80px;
+            background: #fff;
+        }
+
+        .tone-box-label {
+            padding: 6px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            border-top: 2px solid #000;
+        }
+
+        /* Dropdown for tone selection */
+        .tone-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 2px solid #000;
+            border-top: none;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .tone-dropdown.active {
+            display: block;
+        }
+
+        .tone-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            border-bottom: 1px solid #000;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tone-option:last-child {
+            border-bottom: none;
+        }
+
+        .tone-option:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        .tone-option.selected {
+            background: #000;
+            color: #fff;
+        }
+
+        .tone-option-preview {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #000;
+            background: #fff;
+            flex-shrink: 0;
+        }
+
+        .tone-option-label {
+            font-size: 13px;
+            font-weight: 600;
         }
 
         .btn {
@@ -378,13 +407,45 @@
 
         .output-canvas {
             display: none;
-            max-width: 100%;
+            max-width: 600px;
+            width: 100%;
             border: 2px solid #000;
             margin-top: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .output-canvas:hover {
+            opacity: 0.9;
         }
 
         .output-canvas.active {
             display: block;
+        }
+
+        /* Full size preview modal */
+        .preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .preview-modal.active {
+            display: flex;
+        }
+
+        .preview-modal canvas {
+            max-width: 90vw;
+            max-height: 90vh;
+            border: 2px solid #fff;
         }
 
         footer {
@@ -412,11 +473,21 @@
                 font-size: 24px;
             }
 
-            .button-group {
-                flex-direction: column;
+            .tone-section {
+                grid-template-columns: repeat(2, 1fr);
             }
 
-            .btn {
+            .control-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .control-label {
+                min-width: auto;
+            }
+
+            .slider-container {
                 width: 100%;
             }
         }
@@ -496,26 +567,38 @@
                 <button class="tone-toggle-btn" id="toneToggleBtn">Tone Settings</button>
             </div>
 
-            <!-- Collapsible Tone Section -->
+            <!-- Tone Section -->
             <div class="tone-section" id="toneSection">
-                <div class="level-section">
-                    <h4>Light</h4>
-                    <div class="preset-grid" id="level1Presets"></div>
+                <!-- Level 1: Light -->
+                <div class="tone-box" data-level="level1">
+                    <div class="tone-box-header">Light</div>
+                    <canvas class="tone-box-preview" id="preview1"></canvas>
+                    <div class="tone-box-label" id="label1">A1</div>
+                    <div class="tone-dropdown" id="dropdown1"></div>
                 </div>
 
-                <div class="level-section">
-                    <h4>Mid-Light</h4>
-                    <div class="preset-grid" id="level2Presets"></div>
+                <!-- Level 2: Mid-Light -->
+                <div class="tone-box" data-level="level2">
+                    <div class="tone-box-header">Mid-Light</div>
+                    <canvas class="tone-box-preview" id="preview2"></canvas>
+                    <div class="tone-box-label" id="label2">B2</div>
+                    <div class="tone-dropdown" id="dropdown2"></div>
                 </div>
 
-                <div class="level-section">
-                    <h4>Mid-Dark</h4>
-                    <div class="preset-grid" id="level3Presets"></div>
+                <!-- Level 3: Mid-Dark -->
+                <div class="tone-box" data-level="level3">
+                    <div class="tone-box-header">Mid-Dark</div>
+                    <canvas class="tone-box-preview" id="preview3"></canvas>
+                    <div class="tone-box-label" id="label3">C2</div>
+                    <div class="tone-dropdown" id="dropdown3"></div>
                 </div>
 
-                <div class="level-section">
-                    <h4>Dark</h4>
-                    <div class="preset-grid" id="level4Presets"></div>
+                <!-- Level 4: Dark -->
+                <div class="tone-box" data-level="level4">
+                    <div class="tone-box-header">Dark</div>
+                    <canvas class="tone-box-preview" id="preview4"></canvas>
+                    <div class="tone-box-label" id="label4">G1</div>
+                    <div class="tone-dropdown" id="dropdown4"></div>
                 </div>
             </div>
 
@@ -524,6 +607,11 @@
                 <button class="btn btn-primary" id="downloadBtn" disabled>Save</button>
             </div>
         </div>
+    </div>
+
+    <!-- Full Size Preview Modal -->
+    <div class="preview-modal" id="previewModal">
+        <canvas id="previewCanvas"></canvas>
     </div>
 
     <footer>
