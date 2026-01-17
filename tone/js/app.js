@@ -96,8 +96,8 @@ function openToneModal(level, levelName) {
 
         // Preview canvas
         const optionCanvas = document.createElement('canvas');
-        optionCanvas.width = 80;
-        optionCanvas.height = 80;
+        optionCanvas.width = 60;
+        optionCanvas.height = 60;
         drawPresetPreview(optionCanvas, preset);
 
         // Label
@@ -252,25 +252,25 @@ function drawPresetPreview(canvas, preset) {
         const cos45 = Math.cos(angle);
         const sin45 = Math.sin(angle);
 
-        // Calculate grid aligned to create seamless pattern
+        // Draw seamless pattern by aligning to spacing grid
         const diagonal = Math.sqrt(width * width + height * height);
-        const gridSize = spacing * Math.sqrt(2);
 
-        // Start from aligned position for seamless tiling
-        const startPos = -diagonal;
-        const endPos = diagonal * 2;
+        // Calculate grid start position aligned to spacing for seamless tiling
+        const gridSpacing = spacing * Math.sqrt(2);
+        const startX = -Math.ceil(diagonal / gridSpacing) * spacing;
+        const startY = -Math.ceil(diagonal / gridSpacing) * spacing;
+        const endX = Math.ceil(diagonal / gridSpacing) * spacing + diagonal;
+        const endY = Math.ceil(diagonal / gridSpacing) * spacing + diagonal;
 
-        for (let gy = startPos; gy < endPos; gy += spacing) {
-            for (let gx = startPos; gx < endPos; gx += spacing) {
+        for (let gy = startY; gy < endY; gy += spacing) {
+            for (let gx = startX; gx < endX; gx += spacing) {
                 const x = gx * cos45 - gy * sin45 + width / 2;
                 const y = gx * sin45 + gy * cos45 + height / 2;
 
-                // Draw dots that are within or near the canvas bounds
-                if (x >= -dotSize && x < width + dotSize && y >= -dotSize && y < height + dotSize) {
-                    ctx.beginPath();
-                    ctx.arc(x, y, dotSize / 2, 0, Math.PI * 2);
-                    ctx.fill();
-                }
+                // Draw all dots to create seamless pattern
+                ctx.beginPath();
+                ctx.arc(x, y, dotSize / 2, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
     }
@@ -721,58 +721,58 @@ function drawLevelPattern(ctx, width, height, toneLevelMap, level, preset) {
         }
         return;
     } else if (preset.type === 'coarse' || preset.type === 'fine') {
-        // Regular dot pattern
+        // Regular dot pattern - seamless tiling
         const spacing = preset.spacing;
         const dotSize = preset.dotSize;
 
-        // 45-degree rotation
+        // 45-degree rotation for screen tone effect
         const angle = Math.PI / 4;
         const cos45 = Math.cos(angle);
         const sin45 = Math.sin(angle);
 
-        // Calculate the bounds we need to cover after rotation
+        // Create seamless pattern on temporary canvas
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = width;
+        tempCanvas.height = height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.imageSmoothingEnabled = false;
+
+        // Fill with white background
+        tempCtx.fillStyle = '#ffffff';
+        tempCtx.fillRect(0, 0, width, height);
+        tempCtx.fillStyle = '#000000';
+
+        // Draw seamless dot pattern
         const diagonal = Math.sqrt(width * width + height * height);
-        const startPos = -diagonal;
-        const endPos = diagonal;
+        const gridSpacing = spacing * Math.sqrt(2);
+        const startX = -Math.ceil(diagonal / gridSpacing) * spacing;
+        const startY = -Math.ceil(diagonal / gridSpacing) * spacing;
+        const endX = Math.ceil(diagonal / gridSpacing) * spacing + diagonal;
+        const endY = Math.ceil(diagonal / gridSpacing) * spacing + diagonal;
 
-        // Draw dots in a rotated grid
-        for (let gy = startPos; gy < endPos; gy += spacing) {
-            for (let gx = startPos; gx < endPos; gx += spacing) {
-                // Rotate point back to original coordinates
-                const x = Math.round(gx * cos45 - gy * sin45 + width / 2);
-                const y = Math.round(gx * sin45 + gy * cos45 + height / 2);
+        for (let gy = startY; gy < endY; gy += spacing) {
+            for (let gx = startX; gx < endX; gx += spacing) {
+                const x = gx * cos45 - gy * sin45 + width / 2;
+                const y = gx * sin45 + gy * cos45 + height / 2;
 
-                // Check if point is within image bounds
-                if (x < 0 || x >= width || y < 0 || y >= height) continue;
+                // Draw all dots to create seamless pattern
+                tempCtx.beginPath();
+                tempCtx.arc(x, y, dotSize / 2, 0, Math.PI * 2);
+                tempCtx.fill();
+            }
+        }
 
-                // Check if this pixel should have this tone level
+        // Apply pattern only where this level exists
+        const tempData = tempCtx.getImageData(0, 0, width, height).data;
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
                 const idx = y * width + x;
-                if (toneLevelMap[idx] !== level) continue;
-
-                // Check surrounding area to see if we should draw a dot here
-                let shouldDraw = false;
-                const checkRadius = Math.floor(spacing / 2);
-
-                for (let dy = -checkRadius; dy <= checkRadius; dy++) {
-                    for (let dx = -checkRadius; dx <= checkRadius; dx++) {
-                        const checkX = x + dx;
-                        const checkY = y + dy;
-
-                        if (checkX >= 0 && checkX < width && checkY >= 0 && checkY < height) {
-                            const checkIdx = checkY * width + checkX;
-                            if (toneLevelMap[checkIdx] === level) {
-                                shouldDraw = true;
-                                break;
-                            }
-                        }
+                if (toneLevelMap[idx] === level) {
+                    const dataIdx = idx * 4;
+                    // Check if pixel is black (not white)
+                    if (tempData[dataIdx] < 128) {
+                        ctx.fillRect(x, y, 1, 1);
                     }
-                    if (shouldDraw) break;
-                }
-
-                if (shouldDraw) {
-                    ctx.beginPath();
-                    ctx.arc(x, y, dotSize / 2, 0, Math.PI * 2);
-                    ctx.fill();
                 }
             }
         }
