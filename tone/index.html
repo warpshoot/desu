@@ -476,7 +476,7 @@
 
         @media (max-width: 640px) {
             .container {
-                padding: 20px;
+                padding: 15px;
             }
 
             h1 {
@@ -484,7 +484,27 @@
             }
 
             .tone-section {
-                grid-template-columns: repeat(2, 1fr);
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+            }
+
+            .tone-box {
+                padding: 4px;
+                min-height: 40px;
+            }
+
+            .tone-box-content {
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .tone-box-preview {
+                width: 30px;
+                height: 30px;
+            }
+
+            .tone-box-label {
+                font-size: 10px;
             }
 
             .control-row {
@@ -572,43 +592,38 @@
                 </div>
             </div>
 
-            <!-- Tone Assignment Toggle -->
-            <div class="control-row">
-                <button class="tone-toggle-btn" id="toneToggleBtn">Tone Settings</button>
-            </div>
-
             <!-- Tone Section -->
             <div class="tone-section" id="toneSection">
                 <!-- Level 1: Light -->
                 <div class="tone-box" data-level="level1">
-                    <div class="tone-box-header">Light</div>
-                    <canvas class="tone-box-preview" id="preview1"></canvas>
-                    <div class="tone-box-label" id="label1">A1</div>
-                    <div class="tone-dropdown" id="dropdown1"></div>
+                    <div class="tone-box-content">
+                        <canvas class="tone-box-preview" id="preview1"></canvas>
+                        <div class="tone-box-label" id="label1">A1</div>
+                    </div>
                 </div>
 
                 <!-- Level 2: Mid-Light -->
                 <div class="tone-box" data-level="level2">
-                    <div class="tone-box-header">Mid-Light</div>
-                    <canvas class="tone-box-preview" id="preview2"></canvas>
-                    <div class="tone-box-label" id="label2">B2</div>
-                    <div class="tone-dropdown" id="dropdown2"></div>
+                    <div class="tone-box-content">
+                        <canvas class="tone-box-preview" id="preview2"></canvas>
+                        <div class="tone-box-label" id="label2">B2</div>
+                    </div>
                 </div>
 
                 <!-- Level 3: Mid-Dark -->
                 <div class="tone-box" data-level="level3">
-                    <div class="tone-box-header">Mid-Dark</div>
-                    <canvas class="tone-box-preview" id="preview3"></canvas>
-                    <div class="tone-box-label" id="label3">C2</div>
-                    <div class="tone-dropdown" id="dropdown3"></div>
+                    <div class="tone-box-content">
+                        <canvas class="tone-box-preview" id="preview3"></canvas>
+                        <div class="tone-box-label" id="label3">C2</div>
+                    </div>
                 </div>
 
                 <!-- Level 4: Dark -->
                 <div class="tone-box" data-level="level4">
-                    <div class="tone-box-header">Dark</div>
-                    <canvas class="tone-box-preview" id="preview4"></canvas>
-                    <div class="tone-box-label" id="label4">G1</div>
-                    <div class="tone-dropdown" id="dropdown4"></div>
+                    <div class="tone-box-content">
+                        <canvas class="tone-box-preview" id="preview4"></canvas>
+                        <div class="tone-box-label" id="label4">G1</div>
+                    </div>
                 </div>
             </div>
 
@@ -616,6 +631,14 @@
             <div class="control-row">
                 <button class="btn btn-primary" id="downloadBtn" disabled>Save</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Tone Selection Modal -->
+    <div class="tone-modal" id="toneModal">
+        <div class="tone-modal-content">
+            <div class="tone-modal-header" id="toneModalHeader">Select Tone</div>
+            <div class="tone-modal-grid" id="toneModalGrid"></div>
         </div>
     </div>
 
