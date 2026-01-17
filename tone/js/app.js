@@ -167,47 +167,38 @@ function drawPresetPreview(canvas, preset) {
     ctx.strokeStyle = '#000000';
 
     if (preset.type === 'diagonal') {
-        // Diagonal line pattern
+        // Diagonal line pattern - seamless tiling
         const spacing = preset.spacing;
         const lineWidth = preset.width;
-        const angle = (preset.angle * Math.PI) / 180;
-        const cosA = Math.cos(angle);
-        const sinA = Math.sin(angle);
 
-        ctx.lineWidth = lineWidth;
-        const diagonal = Math.sqrt(width * width + height * height);
+        // For 45-degree lines, draw pixel-by-pixel for uniform width
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                // Calculate distance from diagonal lines
+                const dist = Math.abs((x - y) % spacing);
+                const distAlt = Math.abs((x - y + spacing) % spacing);
+                const minDist = Math.min(dist, distAlt);
 
-        for (let offset = -diagonal; offset < diagonal; offset += spacing) {
-            ctx.beginPath();
-            const x1 = offset * cosA - diagonal * sinA + width / 2;
-            const y1 = offset * sinA + diagonal * cosA + height / 2;
-            const x2 = offset * cosA + diagonal * sinA + width / 2;
-            const y2 = offset * sinA - diagonal * cosA + height / 2;
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            ctx.stroke();
+                if (minDist < lineWidth) {
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
         }
         return;
     } else if (preset.type === 'grid') {
-        // Grid pattern
+        // Grid pattern - seamless tiling
         const spacing = preset.spacing;
-        const lineWidth = preset.width;
-        ctx.lineWidth = lineWidth;
+        const lineWidth = Math.ceil(preset.width);
 
-        // Vertical lines
-        for (let x = 0; x < width; x += spacing) {
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, height);
-            ctx.stroke();
-        }
-
-        // Horizontal lines
-        for (let y = 0; y < height; y += spacing) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(width, y);
-            ctx.stroke();
+        // Draw pixel-by-pixel for uniform lines
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const xDist = x % spacing;
+                const yDist = y % spacing;
+                if (xDist < lineWidth || yDist < lineWidth) {
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
         }
         return;
     } else if (preset.type === 'organic') {
@@ -252,25 +243,30 @@ function drawPresetPreview(canvas, preset) {
         }
         return;
     } else if (preset.type === 'coarse' || preset.type === 'fine') {
-        // Regular dot pattern
+        // Regular dot pattern - seamless tiling
         const spacing = preset.spacing;
         const dotSize = preset.dotSize;
 
-        // 45-degree rotation
+        // 45-degree rotation for screen tone effect
         const angle = Math.PI / 4;
         const cos45 = Math.cos(angle);
         const sin45 = Math.sin(angle);
 
+        // Calculate grid aligned to create seamless pattern
         const diagonal = Math.sqrt(width * width + height * height);
-        const startPos = -diagonal / 2;
-        const endPos = diagonal / 2;
+        const gridSize = spacing * Math.sqrt(2);
+
+        // Start from aligned position for seamless tiling
+        const startPos = -diagonal;
+        const endPos = diagonal * 2;
 
         for (let gy = startPos; gy < endPos; gy += spacing) {
             for (let gx = startPos; gx < endPos; gx += spacing) {
                 const x = gx * cos45 - gy * sin45 + width / 2;
                 const y = gx * sin45 + gy * cos45 + height / 2;
 
-                if (x >= 0 && x < width && y >= 0 && y < height) {
+                // Draw dots that are within or near the canvas bounds
+                if (x >= -dotSize && x < width + dotSize && y >= -dotSize && y < height + dotSize) {
                     ctx.beginPath();
                     ctx.arc(x, y, dotSize / 2, 0, Math.PI * 2);
                     ctx.fill();
@@ -617,50 +613,21 @@ function drawLevelPattern(ctx, width, height, toneLevelMap, level, preset) {
     ctx.strokeStyle = '#000000';
 
     if (preset.type === 'diagonal') {
-        // Diagonal line pattern
+        // Diagonal line pattern - pixel-perfect for uniform width
         const spacing = preset.spacing;
         const lineWidth = preset.width;
-        const angle = (preset.angle * Math.PI) / 180;
-        const cosA = Math.cos(angle);
-        const sinA = Math.sin(angle);
 
-        const diagonal = Math.sqrt(width * width + height * height);
-
-        // Create a temporary canvas to draw the full pattern
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = width;
-        tempCanvas.height = height;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.imageSmoothingEnabled = false;
-
-        // Fill with white background
-        tempCtx.fillStyle = '#ffffff';
-        tempCtx.fillRect(0, 0, width, height);
-
-        // Draw black lines
-        tempCtx.lineWidth = lineWidth;
-        tempCtx.strokeStyle = '#000000';
-
-        for (let offset = -diagonal; offset < diagonal; offset += spacing) {
-            tempCtx.beginPath();
-            const x1 = offset * cosA - diagonal * sinA + width / 2;
-            const y1 = offset * sinA + diagonal * cosA + height / 2;
-            const x2 = offset * cosA + diagonal * sinA + width / 2;
-            const y2 = offset * sinA - diagonal * cosA + height / 2;
-            tempCtx.moveTo(x1, y1);
-            tempCtx.lineTo(x2, y2);
-            tempCtx.stroke();
-        }
-
-        // Apply to level mask
-        const tempData = tempCtx.getImageData(0, 0, width, height).data;
+        // Draw pixel-by-pixel for consistent line width
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const idx = y * width + x;
                 if (toneLevelMap[idx] === level) {
-                    const dataIdx = idx * 4;
-                    // Check if pixel is black (not white)
-                    if (tempData[dataIdx] < 128) {
+                    // Calculate distance from diagonal lines
+                    const dist = Math.abs((x - y) % spacing);
+                    const distAlt = Math.abs((x - y + spacing) % spacing);
+                    const minDist = Math.min(dist, distAlt);
+
+                    if (minDist < lineWidth) {
                         ctx.fillRect(x, y, 1, 1);
                     }
                 }
@@ -668,18 +635,19 @@ function drawLevelPattern(ctx, width, height, toneLevelMap, level, preset) {
         }
         return;
     } else if (preset.type === 'grid') {
-        // Grid pattern
+        // Grid pattern - seamless tiling
         const spacing = preset.spacing;
-        const lineWidth = preset.width;
-        ctx.lineWidth = lineWidth;
+        const lineWidth = Math.ceil(preset.width);
 
         // Draw grid lines only where this level exists
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const idx = y * width + x;
                 if (toneLevelMap[idx] === level) {
-                    // Check if on grid line
-                    if (x % spacing < lineWidth || y % spacing < lineWidth) {
+                    // Check if on grid line (seamless wrap)
+                    const xDist = x % spacing;
+                    const yDist = y % spacing;
+                    if (xDist < lineWidth || yDist < lineWidth) {
                         ctx.fillRect(x, y, 1, 1);
                     }
                 }
