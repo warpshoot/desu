@@ -23,27 +23,27 @@ let processingTimeout = null;
 // Define 18 tone presets
 const TONE_PRESETS = [
     { id: 'white', name: 'A1', type: 'white', spacing: 0, dotSize: 0 },
-    // Coarse dots (4 variations)
-    { id: 'coarse1', name: 'B1', type: 'coarse', spacing: 24, dotSize: 3 },
-    { id: 'coarse2', name: 'B2', type: 'coarse', spacing: 20, dotSize: 4 },
-    { id: 'coarse3', name: 'B3', type: 'coarse', spacing: 16, dotSize: 5 },
-    { id: 'coarse4', name: 'B4', type: 'coarse', spacing: 12, dotSize: 6 },
-    // Fine dots (4 variations)
+    // Coarse dots (4 variations) - dotSize fixed at 4, spacing varies
+    { id: 'coarse1', name: 'B1', type: 'coarse', spacing: 24, dotSize: 4 },
+    { id: 'coarse2', name: 'B2', type: 'coarse', spacing: 18, dotSize: 4 },
+    { id: 'coarse3', name: 'B3', type: 'coarse', spacing: 14, dotSize: 4 },
+    { id: 'coarse4', name: 'B4', type: 'coarse', spacing: 10, dotSize: 4 },
+    // Fine dots (4 variations) - dotSize fixed at 3, spacing varies
     { id: 'fine1', name: 'C1', type: 'fine', spacing: 9, dotSize: 3 },
-    { id: 'fine2', name: 'C2', type: 'fine', spacing: 7, dotSize: 3.5 },
-    { id: 'fine3', name: 'C3', type: 'fine', spacing: 5, dotSize: 4 },
-    { id: 'fine4', name: 'C4', type: 'fine', spacing: 4, dotSize: 4.5 },
-    // Diagonal lines (3 variations)
+    { id: 'fine2', name: 'C2', type: 'fine', spacing: 7, dotSize: 3 },
+    { id: 'fine3', name: 'C3', type: 'fine', spacing: 5, dotSize: 3 },
+    { id: 'fine4', name: 'C4', type: 'fine', spacing: 4, dotSize: 3 },
+    // Diagonal lines (3 variations) - width fixed at 1, spacing varies
     { id: 'diag1', name: 'D1', type: 'diagonal', spacing: 8, angle: 45, width: 1 },
-    { id: 'diag2', name: 'D2', type: 'diagonal', spacing: 4, angle: 45, width: 1 },
-    { id: 'diag3', name: 'D3', type: 'diagonal', spacing: 6, angle: 45, width: 1.5 },
-    // Grid patterns (3 variations)
+    { id: 'diag2', name: 'D2', type: 'diagonal', spacing: 6, angle: 45, width: 1 },
+    { id: 'diag3', name: 'D3', type: 'diagonal', spacing: 4, angle: 45, width: 1 },
+    // Grid patterns (3 variations) - width fixed at 1, spacing varies
     { id: 'grid1', name: 'E1', type: 'grid', spacing: 12, width: 1 },
-    { id: 'grid2', name: 'E2', type: 'grid', spacing: 8, width: 1.5 },
+    { id: 'grid2', name: 'E2', type: 'grid', spacing: 8, width: 1 },
     { id: 'grid3', name: 'E3', type: 'grid', spacing: 6, width: 1 },
-    // Organic dots (2 variations)
+    // Organic dots (2 variations) - dotSize and randomness fixed, spacing varies
     { id: 'organic1', name: 'F1', type: 'organic', spacing: 10, dotSize: 3, randomness: 0.3 },
-    { id: 'organic2', name: 'F2', type: 'organic', spacing: 7, dotSize: 2.5, randomness: 0.4 },
+    { id: 'organic2', name: 'F2', type: 'organic', spacing: 7, dotSize: 3, randomness: 0.3 },
     { id: 'black', name: 'G1', type: 'black', spacing: 0, dotSize: 0 }
 ];
 
