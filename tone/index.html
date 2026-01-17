@@ -400,23 +400,35 @@
 
         @media (max-width: 640px) {
             .tone-modal-content {
-                padding: 10px;
+                padding: 4px;
+                max-height: 92vh;
             }
 
             .tone-modal-header {
-                font-size: 12px;
-                margin-bottom: 6px;
-                padding-bottom: 4px;
+                font-size: 9px;
+                margin-bottom: 2px;
+                padding-bottom: 2px;
+                letter-spacing: 0.2px;
             }
 
             .tone-modal-grid {
                 grid-template-columns: repeat(3, 1fr);
-                gap: 4px;
+                gap: 2px;
+            }
+
+            .tone-modal-option {
+                border-width: 1px;
+            }
+
+            .tone-modal-option canvas {
+                max-height: 38px;
             }
 
             .tone-modal-option-label {
-                font-size: 8px;
-                padding: 1px;
+                font-size: 6.5px;
+                padding: 0px 1px 1px;
+                border-top-width: 1px;
+                line-height: 1;
             }
         }
 
