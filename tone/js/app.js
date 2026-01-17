@@ -169,15 +169,15 @@ function drawPresetPreview(canvas, preset) {
     if (preset.type === 'diagonal') {
         // Diagonal line pattern - seamless tiling
         const spacing = preset.spacing;
-        const lineWidth = preset.width;
+        const lineWidth = Math.ceil(preset.width);
 
         // For 45-degree lines, draw pixel-by-pixel for uniform width
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
-                // Calculate distance from diagonal lines
-                const dist = Math.abs((x - y) % spacing);
-                const distAlt = Math.abs((x - y + spacing) % spacing);
-                const minDist = Math.min(dist, distAlt);
+                // Calculate distance from diagonal lines (normalize modulo for negative values)
+                const diff = x - y;
+                const dist = ((diff % spacing) + spacing) % spacing;
+                const minDist = Math.min(dist, spacing - dist);
 
                 if (minDist < lineWidth) {
                     ctx.fillRect(x, y, 1, 1);
@@ -615,17 +615,17 @@ function drawLevelPattern(ctx, width, height, toneLevelMap, level, preset) {
     if (preset.type === 'diagonal') {
         // Diagonal line pattern - pixel-perfect for uniform width
         const spacing = preset.spacing;
-        const lineWidth = preset.width;
+        const lineWidth = Math.ceil(preset.width);
 
         // Draw pixel-by-pixel for consistent line width
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const idx = y * width + x;
                 if (toneLevelMap[idx] === level) {
-                    // Calculate distance from diagonal lines
-                    const dist = Math.abs((x - y) % spacing);
-                    const distAlt = Math.abs((x - y + spacing) % spacing);
-                    const minDist = Math.min(dist, distAlt);
+                    // Calculate distance from diagonal lines (normalize modulo for negative values)
+                    const diff = x - y;
+                    const dist = ((diff % spacing) + spacing) % spacing;
+                    const minDist = Math.min(dist, spacing - dist);
 
                     if (minDist < lineWidth) {
                         ctx.fillRect(x, y, 1, 1);
