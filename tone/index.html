@@ -398,6 +398,39 @@
             line-height: 1.2;
         }
 
+        @media (max-width: 1024px) {
+            .tone-modal-content {
+                padding: 8px;
+                max-height: 90vh;
+            }
+
+            .tone-modal-header {
+                font-size: 11px;
+                margin-bottom: 4px;
+                padding-bottom: 3px;
+                letter-spacing: 0.3px;
+            }
+
+            .tone-modal-grid {
+                gap: 4px;
+            }
+
+            .tone-modal-option {
+                border-width: 1px;
+            }
+
+            .tone-modal-option canvas {
+                max-height: 50px;
+            }
+
+            .tone-modal-option-label {
+                font-size: 8px;
+                padding: 1px;
+                border-top-width: 1px;
+                line-height: 1.1;
+            }
+        }
+
         @media (max-width: 640px) {
             .tone-modal-content {
                 padding: 4px;
@@ -416,10 +449,6 @@
                 gap: 2px;
             }
 
-            .tone-modal-option {
-                border-width: 1px;
-            }
-
             .tone-modal-option canvas {
                 max-height: 38px;
             }
@@ -427,7 +456,6 @@
             .tone-modal-option-label {
                 font-size: 6.5px;
                 padding: 0px 1px 1px;
-                border-top-width: 1px;
                 line-height: 1;
             }
         }
