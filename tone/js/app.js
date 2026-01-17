@@ -10,6 +10,7 @@ const edgeThreshold = document.getElementById('edgeThreshold');
 const edgeThresholdValue = document.getElementById('edgeThresholdValue');
 const edgeThresholdControl = document.getElementById('edgeThresholdControl');
 const downloadBtn = document.getElementById('downloadBtn');
+const resetBtn = document.getElementById('resetBtn');
 const outputCanvas = document.getElementById('outputCanvas');
 const ctx = outputCanvas.getContext('2d');
 const toneModal = document.getElementById('toneModal');
@@ -360,6 +361,7 @@ function loadImage(file) {
             controls.classList.add('active');
             outputCanvas.classList.add('active');
             downloadBtn.disabled = false;
+            resetBtn.disabled = false;
             resizeAndProcess();
         };
         img.src = e.target.result;
@@ -433,6 +435,40 @@ downloadBtn.addEventListener('click', () => {
     link.download = 'manga-tone-output.png';
     link.href = outputCanvas.toDataURL();
     link.click();
+});
+
+// Reset button handler
+resetBtn.addEventListener('click', () => {
+    // Clear image data
+    sourceImage = null;
+    processedImage = null;
+
+    // Reset UI
+    uploadArea.classList.remove('has-image');
+    controls.classList.remove('active');
+    outputCanvas.classList.remove('active');
+
+    // Reset sliders to default
+    blackPoint.value = 0;
+    blackPointValue.textContent = '0';
+    whitePoint.value = 255;
+    whitePointValue.textContent = '255';
+    edgeThreshold.value = 50;
+    edgeThresholdValue.textContent = '50';
+
+    // Reset edge toggle
+    edgeToggle.checked = false;
+    edgeThresholdControl.style.display = 'none';
+
+    // Disable buttons
+    downloadBtn.disabled = true;
+    resetBtn.disabled = true;
+
+    // Clear file input
+    fileInput.value = '';
+
+    // Clear canvas
+    ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
 });
 
 // Main processing function
