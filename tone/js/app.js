@@ -459,20 +459,26 @@ function processMangaTone() {
     const imageData = tempCtx.getImageData(0, 0, width, height);
     const data = imageData.data;
 
-    // Convert to grayscale and apply level correction
+    // Convert to grayscale (original, for edge detection)
+    const originalGrayData = new Uint8Array(width * height);
+    for (let i = 0; i < data.length; i += 4) {
+        const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+        originalGrayData[i / 4] = gray;
+    }
+
+    // Apply level correction to create adjusted gray data for tone mapping
     const grayData = new Uint8Array(width * height);
     const blackPt = parseInt(blackPoint.value);
     const whitePt = parseInt(whitePoint.value);
 
-    for (let i = 0; i < data.length; i += 4) {
-        // Convert to grayscale
-        const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    for (let i = 0; i < originalGrayData.length; i++) {
+        const gray = originalGrayData[i];
 
         // Apply level correction
         let adjusted = (gray - blackPt) * 255 / (whitePt - blackPt);
         adjusted = Math.max(0, Math.min(255, adjusted));
 
-        grayData[i / 4] = adjusted;
+        grayData[i] = adjusted;
     }
 
     // Create tone level map (1-4)
@@ -508,9 +514,9 @@ function processMangaTone() {
     drawLevelPattern(ctx, width, height, toneLevelMap, 2, level2Preset);
     drawLevelPattern(ctx, width, height, toneLevelMap, 1, level1Preset);
 
-    // Draw edge lines if enabled
+    // Draw edge lines if enabled (use original grayscale, not adjusted)
     if (edgeToggle.checked) {
-        const edgeData = detectEdges(grayData, width, height, parseInt(edgeThreshold.value));
+        const edgeData = detectEdges(originalGrayData, width, height, parseInt(edgeThreshold.value));
         drawEdges(ctx, edgeData, width, height);
     }
 
