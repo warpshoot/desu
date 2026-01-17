@@ -367,6 +367,9 @@
             cursor: pointer;
             transition: all 0.2s;
             position: relative;
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         .tone-modal-option:hover {
@@ -380,7 +383,7 @@
 
         .tone-modal-option canvas {
             width: 100%;
-            height: 60px;
+            flex: 1;
             display: block;
             background: #fff;
         }
@@ -396,10 +399,6 @@
         @media (max-width: 640px) {
             .tone-modal-grid {
                 grid-template-columns: repeat(3, 1fr);
-            }
-
-            .tone-modal-option canvas {
-                height: 50px;
             }
         }
 
