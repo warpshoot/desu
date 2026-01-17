@@ -35,8 +35,8 @@ const TONE_PRESETS = [
     { id: 'fine4', name: 'C4', type: 'fine', spacing: 4, dotSize: 4.5 },
     // Diagonal lines (3 variations)
     { id: 'diag1', name: 'D1', type: 'diagonal', spacing: 8, angle: 45, width: 1 },
-    { id: 'diag2', name: 'D2', type: 'diagonal', spacing: 6, angle: 45, width: 1.5 },
-    { id: 'diag3', name: 'D3', type: 'diagonal', spacing: 4, angle: 45, width: 1 },
+    { id: 'diag2', name: 'D2', type: 'diagonal', spacing: 4, angle: 45, width: 1 },
+    { id: 'diag3', name: 'D3', type: 'diagonal', spacing: 6, angle: 45, width: 1.5 },
     // Grid patterns (3 variations)
     { id: 'grid1', name: 'E1', type: 'grid', spacing: 12, width: 1 },
     { id: 'grid2', name: 'E2', type: 'grid', spacing: 8, width: 1.5 },
@@ -96,8 +96,8 @@ function openToneModal(level, levelName) {
 
         // Preview canvas
         const optionCanvas = document.createElement('canvas');
-        optionCanvas.width = 60;
-        optionCanvas.height = 60;
+        optionCanvas.width = 50;
+        optionCanvas.height = 50;
         drawPresetPreview(optionCanvas, preset);
 
         // Label

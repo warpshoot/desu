@@ -338,7 +338,7 @@
         .tone-modal-content {
             background: #fff;
             border: 2px solid #000;
-            padding: 20px;
+            padding: 12px;
             max-width: 90vw;
             width: auto;
             max-height: 90vh;
@@ -346,10 +346,10 @@
         }
 
         .tone-modal-header {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
             border-bottom: 2px solid #000;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -358,7 +358,7 @@
         .tone-modal-grid {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
-            gap: 8px;
+            gap: 6px;
         }
 
         .tone-modal-option {
@@ -391,15 +391,32 @@
 
         .tone-modal-option-label {
             text-align: center;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 600;
-            padding: 4px;
+            padding: 2px;
             border-top: 2px solid #000;
+            line-height: 1.2;
         }
 
         @media (max-width: 640px) {
+            .tone-modal-content {
+                padding: 10px;
+            }
+
+            .tone-modal-header {
+                font-size: 12px;
+                margin-bottom: 6px;
+                padding-bottom: 4px;
+            }
+
             .tone-modal-grid {
                 grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
+            }
+
+            .tone-modal-option-label {
+                font-size: 8px;
+                padding: 1px;
             }
         }
 
