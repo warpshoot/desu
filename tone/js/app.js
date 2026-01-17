@@ -439,6 +439,11 @@ downloadBtn.addEventListener('click', () => {
 
 // Reset button handler
 resetBtn.addEventListener('click', () => {
+    // Confirm before resetting
+    if (!confirm('Reset all settings and clear the image?')) {
+        return;
+    }
+
     // Clear image data
     sourceImage = null;
     processedImage = null;
