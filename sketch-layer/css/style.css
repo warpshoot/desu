@@ -12,7 +12,7 @@ html, body {
     height: 100%;
     overflow: hidden;
     touch-action: none;
-    background: #ffffff;
+    background: #808080;
 }
 
 /* レイヤーcanvas - 重ね合わせ */
