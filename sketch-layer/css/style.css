@@ -12,7 +12,7 @@ html, body {
     height: 100%;
     overflow: hidden;
     touch-action: none;
-    background: #ffffff;
+    background: #808080;
 }
 
 /* レイヤーcanvas - 重ね合わせ */
@@ -819,6 +819,13 @@ body.help-mode #credit-btn {
     padding: 8px 12px;
     min-width: 160px;
     transition: all 0.2s ease;
+    cursor: pointer;
+    user-select: none;
+}
+
+.layer-control:hover {
+    background: rgba(240, 240, 240, 0.95);
+    border-color: #333;
 }
 
 .layer-control.active {
@@ -830,6 +837,11 @@ body.help-mode #credit-btn {
 body.dark .layer-control {
     background: rgba(40, 40, 40, 0.9);
     border-color: #888;
+}
+
+body.dark .layer-control:hover {
+    background: rgba(60, 60, 60, 0.95);
+    border-color: #aaa;
 }
 
 body.dark .layer-control.active {

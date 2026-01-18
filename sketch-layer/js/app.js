@@ -1067,6 +1067,23 @@ if (brushSizeInput && sizeDisplay) {
     });
 }
 
+// レイヤーコントロールクリックでレイヤー切り替え
+document.querySelectorAll('.layer-control').forEach(control => {
+    control.addEventListener('click', (e) => {
+        // 目ボタンやスライダーをクリックした場合は無視
+        if (e.target.closest('.layer-visible-btn') || e.target.closest('.layer-opacity')) {
+            return;
+        }
+
+        const targetLayer = control.dataset.layer;
+        if (targetLayer && targetLayer !== activeLayer) {
+            activeLayer = targetLayer;
+            updateActiveLayerUI();
+            console.log('Layer switched to:', activeLayer);
+        }
+    });
+});
+
 // ズームリセット
 document.getElementById('resetZoomBtn').addEventListener('click', () => {
     scale = 1;
@@ -1578,6 +1595,24 @@ document.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
     switch(e.key.toLowerCase()) {
+        case '1':
+            // アタリレイヤーをアクティブに
+            if (activeLayer !== 'rough') {
+                activeLayer = 'rough';
+                updateActiveLayerUI();
+                console.log('Layer switched to: rough');
+            }
+            break;
+
+        case '2':
+            // ペン入れレイヤーをアクティブに
+            if (activeLayer !== 'line') {
+                activeLayer = 'line';
+                updateActiveLayerUI();
+                console.log('Layer switched to: line');
+            }
+            break;
+
         case 'b':
             // スケッチツール（アタリ）
             document.getElementById('sketchBtn').click();
