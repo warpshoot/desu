@@ -1146,10 +1146,10 @@ overlay.addEventListener('pointerup', (e) => {
     const h = y2 - y1;
 
     if (w > 5 && h > 5) {
-        const cx = Math.max(0, Math.min(x1, canvas.width));
-        const cy = Math.max(0, Math.min(y1, canvas.height));
-        const cw = Math.min(w, canvas.width - cx);
-        const ch = Math.min(h, canvas.height - cy);
+        const cx = Math.max(0, Math.min(x1, roughCanvas.width));
+        const cy = Math.max(0, Math.min(y1, roughCanvas.height));
+        const cw = Math.min(w, roughCanvas.width - cx);
+        const ch = Math.min(h, roughCanvas.height - cy);
 
         if (cw > 0 && ch > 0) {
             // 選択範囲を確定（保存はしない）
@@ -1337,22 +1337,34 @@ async function copyToClipboard(x, y, w, h) {
 
 window.addEventListener('orientationchange', () => {
     setTimeout(async () => {
-        const bitmap = await createImageBitmap(canvas);
+        // 両方のレイヤーの現在の状態を保存
+        const roughBitmap = await createImageBitmap(roughCanvas);
+        const lineBitmap = await createImageBitmap(lineCanvas);
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        const newWidth = window.innerWidth;
+        const newHeight = window.innerHeight;
 
-        lassoCanvas.width = window.innerWidth;
-        lassoCanvas.height = window.innerHeight;
+        // アタリレイヤーをリサイズ
+        roughCanvas.width = newWidth;
+        roughCanvas.height = newHeight;
+        roughCtx.fillStyle = '#fff';
+        roughCtx.fillRect(0, 0, newWidth, newHeight);
+        roughCtx.drawImage(roughBitmap, 0, 0);
+        roughBitmap.close();
 
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(bitmap, 0, 0);
-        bitmap.close();
+        // ペン入れレイヤーをリサイズ
+        lineCanvas.width = newWidth;
+        lineCanvas.height = newHeight;
+        lineCtx.drawImage(lineBitmap, 0, 0);
+        lineBitmap.close();
+
+        // その他のcanvasもリサイズ
+        lassoCanvas.width = newWidth;
+        lassoCanvas.height = newHeight;
 
         const selCanvas = document.getElementById('selection-canvas');
-        selCanvas.width = window.innerWidth;
-        selCanvas.height = window.innerHeight;
+        selCanvas.width = newWidth;
+        selCanvas.height = newHeight;
 
         applyTransform();
     }, 100);
