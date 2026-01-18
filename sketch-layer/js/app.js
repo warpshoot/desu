@@ -988,6 +988,29 @@ function updateActiveLayerUI() {
     });
 }
 
+// レイヤーを切り替え（消しゴム以外の場合はツールも自動切り替え）
+function switchLayer(newLayer) {
+    if (activeLayer === newLayer) return;
+
+    activeLayer = newLayer;
+
+    // 消しゴム以外の場合、レイヤーに応じてツールを自動切り替え
+    if (currentTool !== 'eraser') {
+        if (activeLayer === 'rough') {
+            currentTool = 'sketch';
+            document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+            document.getElementById('sketchBtn').classList.add('active');
+        } else if (activeLayer === 'line') {
+            currentTool = 'pen';
+            document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+            document.getElementById('penBtn').classList.add('active');
+        }
+    }
+
+    updateActiveLayerUI();
+    console.log('Layer switched to:', activeLayer, 'Tool:', currentTool);
+}
+
 // ツール切り替え
 document.querySelectorAll('[data-tool]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1076,10 +1099,8 @@ document.querySelectorAll('.layer-control').forEach(control => {
         }
 
         const targetLayer = control.dataset.layer;
-        if (targetLayer && targetLayer !== activeLayer) {
-            activeLayer = targetLayer;
-            updateActiveLayerUI();
-            console.log('Layer switched to:', activeLayer);
+        if (targetLayer) {
+            switchLayer(targetLayer);
         }
     });
 });
@@ -1597,20 +1618,12 @@ document.addEventListener('keydown', (e) => {
     switch(e.key.toLowerCase()) {
         case '1':
             // アタリレイヤーをアクティブに
-            if (activeLayer !== 'rough') {
-                activeLayer = 'rough';
-                updateActiveLayerUI();
-                console.log('Layer switched to: rough');
-            }
+            switchLayer('rough');
             break;
 
         case '2':
             // ペン入れレイヤーをアクティブに
-            if (activeLayer !== 'line') {
-                activeLayer = 'line';
-                updateActiveLayerUI();
-                console.log('Layer switched to: line');
-            }
+            switchLayer('line');
             break;
 
         case 'b':
