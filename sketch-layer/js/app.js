@@ -385,12 +385,18 @@ function fillPolygon(points, color) {
 }
 
 function getBounds(points) {
+    // アクティブレイヤーのcanvasサイズを取得
+    const canvas = activeLayer === 'rough' ? roughCanvas : lineCanvas;
+
     const xs = points.map(p => p.x);
     const ys = points.map(p => p.y);
     const minX = Math.max(0, Math.floor(Math.min(...xs)) - 1);
     const minY = Math.max(0, Math.floor(Math.min(...ys)) - 1);
     const maxX = Math.min(canvas.width, Math.ceil(Math.max(...xs)) + 1);
     const maxY = Math.min(canvas.height, Math.ceil(Math.max(...ys)) + 1);
+
+    console.log('getBounds: canvas size=', canvas.width, 'x', canvas.height, 'bounds=', {minX, minY, width: maxX - minX, height: maxY - minY});
+
     return {
         minX,
         minY,
@@ -426,8 +432,15 @@ function fillPolygonNoAA(points, r, g, b, alpha) {
 
     const bounds = getBounds(points);
     console.log('fillPolygonNoAA: bounds=', bounds);
+
+    if (bounds.width <= 0 || bounds.height <= 0) {
+        console.log('fillPolygonNoAA: Invalid bounds, skipping');
+        return;
+    }
+
     const imgData = ctx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
     const data = imgData.data;
+    let pixelsFilled = 0;
 
     for (let py = 0; py < bounds.height; py++) {
         for (let px = 0; px < bounds.width; px++) {
@@ -442,11 +455,14 @@ function fillPolygonNoAA(points, r, g, b, alpha) {
                 data[i + 1] = data[i + 1] * (1 - alpha) + g * alpha;
                 data[i + 2] = data[i + 2] * (1 - alpha) + b * alpha;
                 // Alpha channel stays at 255 (opaque)
+                pixelsFilled++;
             }
         }
     }
 
+    console.log('fillPolygonNoAA: Filled', pixelsFilled, 'pixels');
     ctx.putImageData(imgData, bounds.minX, bounds.minY);
+    console.log('fillPolygonNoAA: putImageData complete');
 }
 
 // ============================================
@@ -779,7 +795,11 @@ lineCanvas.addEventListener('pointerup', (e) => {
     }
 
     activePointers.delete(e.pointerId);
-    console.log('pointerup - activePointers.size after delete:', activePointers.size);
+    console.log('pointerup - activePointers.size after delete:', activePointers.size, 'pointerId:', e.pointerId);
+
+    // 安全装置: 1本指操作完了時にactivePointersが残っている場合は強制クリア
+    // （maxFingers/strokeMadeをリセットする前にチェック）
+    const wasOneFingerDrawing = maxFingers === 1 && strokeMade;
 
     // 全指離した時のタップ判定
     if (activePointers.size === 0) {
@@ -790,6 +810,14 @@ lineCanvas.addEventListener('pointerup', (e) => {
             if (maxFingers === 3) redo();
         }
 
+        maxFingers = 0;
+        touchStartPos = null;
+        strokeMade = false;
+        isPinching = false;
+    } else if (wasOneFingerDrawing && activePointers.size > 0) {
+        // 1本指で描画したのにまだポインターが残っている = バグ
+        console.log('WARNING: Single-finger drawing ended but activePointers still has', activePointers.size, 'pointers. Remaining IDs:', Array.from(activePointers.keys()), 'Force clearing.');
+        activePointers.clear();
         maxFingers = 0;
         touchStartPos = null;
         strokeMade = false;
