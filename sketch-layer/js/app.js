@@ -182,6 +182,8 @@ async function initCanvas() {
     const w = window.innerWidth;
     const h = window.innerHeight;
 
+    console.log('Initializing canvas:', w, 'x', h);
+
     // アタリレイヤー初期化
     roughCanvas.width = w;
     roughCanvas.height = h;
@@ -192,6 +194,9 @@ async function initCanvas() {
     lineCanvas.width = w;
     lineCanvas.height = h;
     lineCtx.clearRect(0, 0, w, h);
+
+    console.log('Canvas initialized - rough:', roughCanvas.width, 'x', roughCanvas.height);
+    console.log('Canvas initialized - line:', lineCanvas.width, 'x', lineCanvas.height);
 
     // その他のcanvas
     lassoCanvas.width = w;
@@ -406,12 +411,17 @@ function isPointInPolygon(x, y, points) {
 
 // Fill polygon with transparency, no anti-aliasing (pixel-by-pixel)
 function fillPolygonNoAA(points, r, g, b, alpha) {
-    if (points.length < 3) return;
+    if (points.length < 3) {
+        console.log('fillPolygonNoAA: Not enough points');
+        return;
+    }
 
     // アクティブレイヤーに応じたctxを選択
     const ctx = activeLayer === 'rough' ? roughCtx : lineCtx;
+    console.log('fillPolygonNoAA: activeLayer=', activeLayer, 'points=', points.length, 'color=', r, g, b, alpha);
 
     const bounds = getBounds(points);
+    console.log('fillPolygonNoAA: bounds=', bounds);
     const imgData = ctx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
     const data = imgData.data;
 
@@ -442,13 +452,19 @@ function fillPolygonNoAA(points, r, g, b, alpha) {
 function startPenDrawing(x, y) {
     isPenDrawing = true;
     lastPenPoint = { x, y };
+    console.log('startPenDrawing:', x, y);
 }
 
 function drawPenLine(x, y) {
     if (!isPenDrawing || !lastPenPoint) return;
 
+    const brushSizeEl = document.getElementById('brushSize');
+    const brushSize = brushSizeEl ? parseFloat(brushSizeEl.value) : 3;
+
+    console.log('drawPenLine: from', lastPenPoint, 'to', {x, y}, 'brushSize=', brushSize);
+
     lineCtx.strokeStyle = '#000000';
-    lineCtx.lineWidth = parseFloat(document.getElementById('brushSize').value);
+    lineCtx.lineWidth = brushSize;
     lineCtx.lineCap = 'round';
     lineCtx.lineJoin = 'round';
     lineCtx.globalAlpha = 1.0;
@@ -795,28 +811,52 @@ document.getElementById('clearBtn').addEventListener('click', () => {
 });
 
 // レイヤー表示/非表示
-document.getElementById('roughVisibleBtn').addEventListener('click', () => {
-    roughVisible = !roughVisible;
-    roughCanvas.style.display = roughVisible ? 'block' : 'none';
-    document.getElementById('roughVisibleBtn').classList.toggle('hidden', !roughVisible);
-});
+const roughVisibleBtn = document.getElementById('roughVisibleBtn');
+const lineVisibleBtn = document.getElementById('lineVisibleBtn');
 
-document.getElementById('lineVisibleBtn').addEventListener('click', () => {
-    lineVisible = !lineVisible;
-    lineCanvas.style.display = lineVisible ? 'block' : 'none';
-    document.getElementById('lineVisibleBtn').classList.toggle('hidden', !lineVisible);
-});
+if (roughVisibleBtn) {
+    roughVisibleBtn.addEventListener('click', () => {
+        roughVisible = !roughVisible;
+        roughCanvas.style.display = roughVisible ? 'block' : 'none';
+        roughVisibleBtn.classList.toggle('hidden', !roughVisible);
+    });
+}
+
+if (lineVisibleBtn) {
+    lineVisibleBtn.addEventListener('click', () => {
+        lineVisible = !lineVisible;
+        lineCanvas.style.display = lineVisible ? 'block' : 'none';
+        lineVisibleBtn.classList.toggle('hidden', !lineVisible);
+    });
+}
 
 // レイヤー不透明度
-document.getElementById('roughOpacity').addEventListener('input', (e) => {
-    roughOpacity = parseFloat(e.target.value) / 100;
-    roughCanvas.style.opacity = roughOpacity;
-});
+const roughOpacityInput = document.getElementById('roughOpacity');
+const lineOpacityInput = document.getElementById('lineOpacity');
 
-document.getElementById('lineOpacity').addEventListener('input', (e) => {
-    lineOpacity = parseFloat(e.target.value) / 100;
-    lineCanvas.style.opacity = lineOpacity;
-});
+if (roughOpacityInput) {
+    roughOpacityInput.addEventListener('input', (e) => {
+        roughOpacity = parseFloat(e.target.value) / 100;
+        roughCanvas.style.opacity = roughOpacity;
+    });
+}
+
+if (lineOpacityInput) {
+    lineOpacityInput.addEventListener('input', (e) => {
+        lineOpacity = parseFloat(e.target.value) / 100;
+        lineCanvas.style.opacity = lineOpacity;
+    });
+}
+
+// ブラシサイズ
+const brushSizeInput = document.getElementById('brushSize');
+const sizeDisplay = document.getElementById('sizeDisplay');
+
+if (brushSizeInput && sizeDisplay) {
+    brushSizeInput.addEventListener('input', (e) => {
+        sizeDisplay.textContent = e.target.value;
+    });
+}
 
 // ズームリセット
 document.getElementById('resetZoomBtn').addEventListener('click', () => {
