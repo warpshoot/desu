@@ -771,13 +771,8 @@ lineCanvas.addEventListener('pointerdown', (e) => {
             const p = getCanvasPoint(e.clientX, e.clientY);
             isErasing = false;
             startPenDrawing(p.x, p.y);
-        } else if (currentTool === 'eraser' && activeLayer === 'line') {
-            // ペン入れレイヤーの消しゴム: ペンのように線を引いて消す
-            const p = getCanvasPoint(e.clientX, e.clientY);
-            isErasing = true;
-            startPenDrawing(p.x, p.y);
         } else {
-            // スケッチツール、またはアタリレイヤーの消しゴム: 投げ縄
+            // スケッチツールと消しゴム: 投げ縄
             startLasso(e.clientX, e.clientY);
         }
     }
@@ -982,6 +977,17 @@ lineCanvas.addEventListener('pointercancel', (e) => {
 // UIイベント
 // ============================================
 
+// アクティブレイヤーのUI表示を更新
+function updateActiveLayerUI() {
+    document.querySelectorAll('.layer-control').forEach(control => {
+        if (control.dataset.layer === activeLayer) {
+            control.classList.add('active');
+        } else {
+            control.classList.remove('active');
+        }
+    });
+}
+
 // ツール切り替え
 document.querySelectorAll('[data-tool]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -995,6 +1001,9 @@ document.querySelectorAll('[data-tool]').forEach(btn => {
 
         document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+
+        // アクティブレイヤーのUI表示を更新
+        updateActiveLayerUI();
     });
 });
 
@@ -1608,3 +1617,4 @@ document.addEventListener('keyup', (e) => {
 // ============================================
 
 initCanvas();
+updateActiveLayerUI();

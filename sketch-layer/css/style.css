@@ -818,11 +818,24 @@ body.help-mode #credit-btn {
     border-radius: 12px;
     padding: 8px 12px;
     min-width: 160px;
+    transition: all 0.2s ease;
+}
+
+.layer-control.active {
+    background: rgba(220, 240, 255, 0.95);
+    border: 3px solid #0066ff;
+    box-shadow: 0 0 8px rgba(0, 102, 255, 0.4);
 }
 
 body.dark .layer-control {
     background: rgba(40, 40, 40, 0.9);
     border-color: #888;
+}
+
+body.dark .layer-control.active {
+    background: rgba(60, 80, 100, 0.95);
+    border-color: #4499ff;
+    box-shadow: 0 0 8px rgba(68, 153, 255, 0.4);
 }
 
 .layer-control-header {
