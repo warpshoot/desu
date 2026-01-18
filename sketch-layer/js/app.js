@@ -324,12 +324,16 @@ function startLasso(x, y) {
     lassoPoints = [{ x, y }];
     lassoCanvas.style.display = 'block';
     lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+    console.log('startLasso at:', x, y, 'currentTool:', currentTool);
 }
 
 function updateLasso(x, y) {
     if (!isLassoing) return;
 
     lassoPoints.push({ x, y });
+    if (lassoPoints.length % 10 === 0) {
+        console.log('updateLasso - total points:', lassoPoints.length);
+    }
 
     // 青い線で軌跡を描画
     lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
@@ -572,6 +576,8 @@ lineCanvas.addEventListener('pointerdown', (e) => {
     lineCanvas.setPointerCapture(e.pointerId);
     activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
+    console.log('pointerdown - id:', e.pointerId, 'activePointers.size:', activePointers.size, 'type:', e.pointerType);
+
     if (e.pointerType === 'pen') {
         pencilDetected = true;
     }
@@ -697,6 +703,8 @@ lineCanvas.addEventListener('pointerup', (e) => {
 
     e.preventDefault();
 
+    console.log('pointerup - id:', e.pointerId, 'activePointers.size before delete:', activePointers.size);
+
     // 手のひらモード終了
     if (isPanning) {
         isPanning = false;
@@ -710,49 +718,68 @@ lineCanvas.addEventListener('pointerup', (e) => {
 
     // 投げ縄終了
     if (isLassoing) {
+        console.log('Lasso ending - points:', lassoPoints.length, 'currentTool:', currentTool, 'activeLayer:', activeLayer);
+
         // 移動距離で判定: 短い = タップ、長い = 投げ縄
-        const startP = lassoPoints[0];
-        const totalDist = lassoPoints.reduce((acc, p, i) => {
-            if (i === 0) return 0;
-            const prev = lassoPoints[i - 1];
-            return acc + Math.hypot(p.x - prev.x, p.y - prev.y);
-        }, 0);
-
-        if (totalDist < 20) {
-            // タップ = 塗りつぶし (eraser tool only)
-            if (currentTool === 'eraser') {
-                const p = getCanvasPoint(startP.x, startP.y);
-                floodFill(p.x, p.y, [255, 255, 255, 255]);
-                saveState();
-                strokeMade = true;
-            }
-            // スケッチツールでのタップは何もしない
+        if (lassoPoints.length === 0) {
+            console.log('No lasso points - canceling');
+            isLassoing = false;
+            lassoCanvas.style.display = 'none';
+            lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
         } else {
-            // 投げ縄塗りつぶし
-            const canvasPoints = lassoPoints.map(p => getCanvasPoint(p.x, p.y));
+            const startP = lassoPoints[0];
+            const totalDist = lassoPoints.reduce((acc, p, i) => {
+                if (i === 0) return 0;
+                const prev = lassoPoints[i - 1];
+                return acc + Math.hypot(p.x - prev.x, p.y - prev.y);
+            }, 0);
 
-            if (canvasPoints.length >= 3) {
-                if (currentTool === 'sketch') {
-                    // 20%透明度のグレー、アンチエイリアスなし
-                    fillPolygonNoAA(canvasPoints, 128, 128, 128, 0.2);
-                    saveState();
-                    strokeMade = true;
-                } else if (currentTool === 'eraser') {
-                    // 白で塗りつぶし（アンチエイリアスなしなので2値化不要）
-                    fillPolygonNoAA(canvasPoints, 255, 255, 255, 1.0);
+            console.log('Lasso distance:', totalDist);
+
+            if (totalDist < 20) {
+                // タップ = 塗りつぶし (eraser tool only)
+                if (currentTool === 'eraser') {
+                    const p = getCanvasPoint(startP.x, startP.y);
+                    console.log('FloodFill at:', p);
+                    floodFill(p.x, p.y, [255, 255, 255, 255]);
                     saveState();
                     strokeMade = true;
                 }
-            }
-        }
+                // スケッチツールでのタップは何もしない
+            } else {
+                // 投げ縄塗りつぶし
+                const canvasPoints = lassoPoints.map(p => getCanvasPoint(p.x, p.y));
 
-        isLassoing = false;
-        lassoPoints = [];
-        lassoCanvas.style.display = 'none';
-        lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+                console.log('Canvas points:', canvasPoints.length);
+
+                if (canvasPoints.length >= 3) {
+                    if (currentTool === 'sketch') {
+                        // 20%透明度のグレー、アンチエイリアスなし
+                        console.log('Filling polygon with sketch tool');
+                        fillPolygonNoAA(canvasPoints, 128, 128, 128, 0.2);
+                        saveState();
+                        strokeMade = true;
+                    } else if (currentTool === 'eraser') {
+                        // 白で塗りつぶし（アンチエイリアスなしなので2値化不要）
+                        console.log('Filling polygon with eraser tool');
+                        fillPolygonNoAA(canvasPoints, 255, 255, 255, 1.0);
+                        saveState();
+                        strokeMade = true;
+                    }
+                } else {
+                    console.log('Not enough canvas points:', canvasPoints.length);
+                }
+            }
+
+            isLassoing = false;
+            lassoPoints = [];
+            lassoCanvas.style.display = 'none';
+            lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+        }
     }
 
     activePointers.delete(e.pointerId);
+    console.log('pointerup - activePointers.size after delete:', activePointers.size);
 
     // 全指離した時のタップ判定
     if (activePointers.size === 0) {
