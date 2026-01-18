@@ -165,6 +165,7 @@ let isLassoing = false;
 // ペンツール用
 let isPenDrawing = false;
 let lastPenPoint = null;
+let isErasing = false;  // 消しゴムモードフラグ
 
 // 保存モード
 let isSaveMode = false;
@@ -313,6 +314,120 @@ function floodFill(startX, startY, fillColor) {
     }
 
     ctx.putImageData(imgData, 0, 0);
+}
+
+// 透明で塗りつぶし（ペン入れレイヤー用）
+function floodFillTransparent(startX, startY) {
+    const canvas = lineCanvas;
+    const ctx = lineCtx;
+
+    const w = canvas.width, h = canvas.height;
+
+    if (startX < 0 || startX >= w || startY < 0 || startY >= h) return;
+
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+
+    const idx = (startY * w + startX) * 4;
+    const targetR = data[idx], targetG = data[idx + 1], targetB = data[idx + 2], targetA = data[idx + 3];
+
+    // 既に透明の場合は何もしない
+    if (targetA === 0) return;
+
+    const matchTarget = (i) => data[i] === targetR && data[i + 1] === targetG && data[i + 2] === targetB && data[i + 3] === targetA;
+    const setPixel = (i) => {
+        data[i + 3] = 0;  // alpha = 0 (透明)
+    };
+
+    const stack = [[startX, startY]];
+
+    while (stack.length > 0) {
+        let [x, y] = stack.pop();
+        let i = (y * w + x) * 4;
+
+        while (x >= 0 && matchTarget(i)) {
+            x--;
+            i -= 4;
+        }
+        x++;
+        i += 4;
+
+        let spanAbove = false, spanBelow = false;
+
+        while (x < w && matchTarget(i)) {
+            setPixel(i);
+
+            if (y > 0) {
+                const above = i - w * 4;
+                if (matchTarget(above)) {
+                    if (!spanAbove) {
+                        stack.push([x, y - 1]);
+                        spanAbove = true;
+                    }
+                } else {
+                    spanAbove = false;
+                }
+            }
+
+            if (y < h - 1) {
+                const below = i + w * 4;
+                if (matchTarget(below)) {
+                    if (!spanBelow) {
+                        stack.push([x, y + 1]);
+                        spanBelow = true;
+                    }
+                } else {
+                    spanBelow = false;
+                }
+            }
+
+            x++;
+            i += 4;
+        }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+}
+
+// 投げ縄で透明塗りつぶし（ペン入れレイヤーの消しゴム用）
+function fillPolygonTransparent(points) {
+    if (points.length < 3) {
+        console.log('fillPolygonTransparent: Not enough points');
+        return;
+    }
+
+    const ctx = lineCtx;
+    console.log('fillPolygonTransparent: points=', points.length);
+
+    const bounds = getBounds(points);
+    console.log('fillPolygonTransparent: bounds=', bounds);
+
+    if (bounds.width <= 0 || bounds.height <= 0) {
+        console.log('fillPolygonTransparent: Invalid bounds, skipping');
+        return;
+    }
+
+    const imgData = ctx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
+    const data = imgData.data;
+    let pixelsErased = 0;
+
+    for (let py = 0; py < bounds.height; py++) {
+        for (let px = 0; px < bounds.width; px++) {
+            const canvasX = bounds.minX + px;
+            const canvasY = bounds.minY + py;
+
+            if (isPointInPolygon(canvasX, canvasY, points)) {
+                const i = (py * bounds.width + px) * 4;
+                // Set alpha to 0 (transparent)
+                data[i + 3] = 0;
+                pixelsErased++;
+            }
+        }
+    }
+
+    console.log('fillPolygonTransparent: Erased', pixelsErased, 'pixels');
+    ctx.putImageData(imgData, bounds.minX, bounds.minY);
+    console.log('fillPolygonTransparent: putImageData complete');
 }
 
 // ============================================
@@ -481,18 +596,31 @@ function drawPenLine(x, y) {
     const brushSizeEl = document.getElementById('brushSize');
     const brushSize = brushSizeEl ? parseFloat(brushSizeEl.value) : 3;
 
-    console.log('drawPenLine: from', lastPenPoint, 'to', {x, y}, 'brushSize=', brushSize);
+    console.log('drawPenLine: from', lastPenPoint, 'to', {x, y}, 'brushSize=', brushSize, 'isErasing=', isErasing);
 
-    lineCtx.strokeStyle = '#000000';
     lineCtx.lineWidth = brushSize;
     lineCtx.lineCap = 'round';
     lineCtx.lineJoin = 'round';
-    lineCtx.globalAlpha = 1.0;
+
+    if (isErasing) {
+        // 消しゴムモード: destination-outで透明にする
+        lineCtx.globalCompositeOperation = 'destination-out';
+        lineCtx.strokeStyle = 'rgba(0,0,0,1)';  // 色は何でもいい、alphaが重要
+        lineCtx.globalAlpha = 1.0;
+    } else {
+        // 通常のペンモード
+        lineCtx.globalCompositeOperation = 'source-over';
+        lineCtx.strokeStyle = '#000000';
+        lineCtx.globalAlpha = 1.0;
+    }
 
     lineCtx.beginPath();
     lineCtx.moveTo(lastPenPoint.x, lastPenPoint.y);
     lineCtx.lineTo(x, y);
     lineCtx.stroke();
+
+    // globalCompositeOperationを元に戻す
+    lineCtx.globalCompositeOperation = 'source-over';
 
     lastPenPoint = { x, y };
 }
@@ -641,9 +769,15 @@ lineCanvas.addEventListener('pointerdown', (e) => {
         if (currentTool === 'pen') {
             // ペンツール: 線を描画
             const p = getCanvasPoint(e.clientX, e.clientY);
+            isErasing = false;
+            startPenDrawing(p.x, p.y);
+        } else if (currentTool === 'eraser' && activeLayer === 'line') {
+            // ペン入れレイヤーの消しゴム: ペンのように線を引いて消す
+            const p = getCanvasPoint(e.clientX, e.clientY);
+            isErasing = true;
             startPenDrawing(p.x, p.y);
         } else {
-            // スケッチツール/消しゴムツール: 投げ縄
+            // スケッチツール、またはアタリレイヤーの消しゴム: 投げ縄
             startLasso(e.clientX, e.clientY);
         }
     }
@@ -757,7 +891,13 @@ lineCanvas.addEventListener('pointerup', (e) => {
                 if (currentTool === 'eraser') {
                     const p = getCanvasPoint(startP.x, startP.y);
                     console.log('FloodFill at:', p);
-                    floodFill(p.x, p.y, [255, 255, 255, 255]);
+                    if (activeLayer === 'line') {
+                        // ペン入れレイヤー: 透明で塗りつぶし
+                        floodFillTransparent(p.x, p.y);
+                    } else {
+                        // アタリレイヤー: 白で塗りつぶし
+                        floodFill(p.x, p.y, [255, 255, 255, 255]);
+                    }
                     saveState();
                     strokeMade = true;
                 }
@@ -776,9 +916,14 @@ lineCanvas.addEventListener('pointerup', (e) => {
                         saveState();
                         strokeMade = true;
                     } else if (currentTool === 'eraser') {
-                        // 白で塗りつぶし（アンチエイリアスなしなので2値化不要）
                         console.log('Filling polygon with eraser tool');
-                        fillPolygonNoAA(canvasPoints, 255, 255, 255, 1.0);
+                        if (activeLayer === 'line') {
+                            // ペン入れレイヤー: 透明で塗りつぶし
+                            fillPolygonTransparent(canvasPoints);
+                        } else {
+                            // アタリレイヤー: 白で塗りつぶし
+                            fillPolygonNoAA(canvasPoints, 255, 255, 255, 1.0);
+                        }
                         saveState();
                         strokeMade = true;
                     }
