@@ -28,14 +28,23 @@ html, body {
     transform-origin: 0 0;
 }
 
+/* キャンバス白背景 */
+#canvas-background {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: #ffffff;
+    transform-origin: 0 0;
+    z-index: 0;
+}
+
 #canvas-rough {
     z-index: 1;
-    background-color: #ffffff;
 }
 
 #canvas-line {
     z-index: 2;
-    background-color: #ffffff;
 }
 
 /* 投げ縄用オーバーレイキャンバス */
@@ -253,7 +262,8 @@ body.dark .layer-opacity::-moz-range-thumb {
 }
 
 #size-slider-container.hidden {
-    display: none;
+    opacity: 0.3;
+    pointer-events: none;
 }
 
 #brushSize {
