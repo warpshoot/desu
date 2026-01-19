@@ -113,8 +113,8 @@ const lassoCanvas = document.getElementById('lasso-canvas');
 const lassoCtx = lassoCanvas.getContext('2d');
 
 // --- 状態 ---
-let currentTool = 'pen';  // 'sketch', 'pen', or 'eraser'
-let activeLayer = 'line';   // 'rough' or 'line'
+let currentTool = 'sketch';  // 'sketch', 'pen', or 'eraser'
+let activeLayer = 'rough';   // 'rough' or 'line'
 
 // レイヤー表示状態
 let roughVisible = true;
@@ -633,9 +633,11 @@ function drawPenLine(x, y) {
 }
 
 function endPenDrawing() {
+    console.log('endPenDrawing called - isPenDrawing:', isPenDrawing);
     if (isPenDrawing) {
         isPenDrawing = false;
         lastPenPoint = null;
+        console.log('endPenDrawing - calling saveState()');
         saveState();
     }
 }
