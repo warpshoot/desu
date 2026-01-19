@@ -877,8 +877,10 @@ lineCanvas.addEventListener('pointerup', (e) => {
         lineCanvas.style.cursor = isSpacePressed ? 'grab' : '';
     }
 
-    // ペンツール描画終了
-    if (isPenDrawing) {
+    // ペンツール描画終了（最後の指が離れた時）
+    console.log('pointerup - isPenDrawing:', isPenDrawing, 'activePointers.size:', activePointers.size);
+    if (isPenDrawing && activePointers.size === 1) {
+        console.log('Last finger up - ending pen drawing');
         endPenDrawing();
     }
 
