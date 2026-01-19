@@ -202,7 +202,7 @@
 
         .levels-slider-container {
             position: relative;
-            height: 60px;
+            height: 40px;
             padding: 10px 0;
         }
 
@@ -219,12 +219,13 @@
             width: 18px;
             height: 18px;
             background: #fff;
-            border: 2px solid #000;
+            border: 2px solid #fff;
             border-radius: 50%;
             cursor: grab;
             top: 50%;
             transform: translate(-50%, -50%);
             z-index: 2;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .levels-handle:active {
@@ -235,29 +236,19 @@
             z-index: 3;
         }
 
-        .levels-labels {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 8px;
+        #blackHandle {
+            background: #000;
+            border-color: #fff;
         }
 
-        .levels-label-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
+        #midHandle {
+            background: #888;
+            border-color: #fff;
         }
 
-        .levels-label-name {
-            font-size: 10px;
-            font-weight: 500;
-            color: #fff;
-        }
-
-        .levels-label-value {
-            font-size: 11px;
-            font-weight: 600;
-            color: #fff;
+        #whiteHandle {
+            background: #fff;
+            border-color: #000;
         }
 
         .edge-control {
@@ -678,20 +669,6 @@
                             <div class="levels-handle" id="blackHandle" data-point="black"></div>
                             <div class="levels-handle" id="midHandle" data-point="mid"></div>
                             <div class="levels-handle" id="whiteHandle" data-point="white"></div>
-                        </div>
-                    </div>
-                    <div class="levels-labels">
-                        <div class="levels-label-item">
-                            <span class="levels-label-name">Black</span>
-                            <span class="levels-label-value" id="blackPointValue">0</span>
-                        </div>
-                        <div class="levels-label-item">
-                            <span class="levels-label-name">Mid</span>
-                            <span class="levels-label-value" id="midPointValue">128</span>
-                        </div>
-                        <div class="levels-label-item">
-                            <span class="levels-label-name">White</span>
-                            <span class="levels-label-value" id="whitePointValue">255</span>
                         </div>
                     </div>
                 </div>
