@@ -2,13 +2,15 @@ const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
 const controls = document.getElementById('controls');
 const blackPoint = document.getElementById('blackPoint');
+const midPoint = document.getElementById('midPoint');
 const whitePoint = document.getElementById('whitePoint');
 const blackPointValue = document.getElementById('blackPointValue');
+const midPointValue = document.getElementById('midPointValue');
 const whitePointValue = document.getElementById('whitePointValue');
 const edgeToggle = document.getElementById('edgeToggle');
 const edgeThreshold = document.getElementById('edgeThreshold');
 const edgeThresholdValue = document.getElementById('edgeThresholdValue');
-const edgeThresholdControl = document.getElementById('edgeThresholdControl');
+const edgeSensitivity = document.getElementById('edgeSensitivity');
 const downloadBtn = document.getElementById('downloadBtn');
 const resetBtn = document.getElementById('resetBtn');
 const outputCanvas = document.getElementById('outputCanvas');
@@ -415,12 +417,17 @@ function setupSlider(slider, valueDisplay) {
 }
 
 setupSlider(blackPoint, blackPointValue);
+setupSlider(midPoint, midPointValue);
 setupSlider(whitePoint, whitePointValue);
 setupSlider(edgeThreshold, edgeThresholdValue);
 
 // Edge toggle handler
 edgeToggle.addEventListener('change', () => {
-    edgeThresholdControl.style.display = edgeToggle.checked ? 'block' : 'none';
+    if (edgeToggle.checked) {
+        edgeSensitivity.classList.add('active');
+    } else {
+        edgeSensitivity.classList.remove('active');
+    }
     if (processedImage) {
         clearTimeout(processingTimeout);
         processingTimeout = setTimeout(() => {
@@ -456,14 +463,16 @@ resetBtn.addEventListener('click', () => {
     // Reset sliders to default
     blackPoint.value = 0;
     blackPointValue.textContent = '0';
+    midPoint.value = 128;
+    midPointValue.textContent = '128';
     whitePoint.value = 255;
     whitePointValue.textContent = '255';
-    edgeThreshold.value = 50;
-    edgeThresholdValue.textContent = '50';
+    edgeThreshold.value = 120;
+    edgeThresholdValue.textContent = '120';
 
     // Reset edge toggle
     edgeToggle.checked = false;
-    edgeThresholdControl.style.display = 'none';
+    edgeSensitivity.classList.remove('active');
 
     // Disable buttons
     downloadBtn.disabled = true;
@@ -510,13 +519,27 @@ function processMangaTone() {
     // Apply level correction to create adjusted gray data for tone mapping
     const grayData = new Uint8Array(width * height);
     const blackPt = parseInt(blackPoint.value);
+    const midPt = parseInt(midPoint.value);
     const whitePt = parseInt(whitePoint.value);
+
+    // Calculate gamma from midpoint
+    const midNormalized = (midPt - blackPt) / (whitePt - blackPt);
+    const gamma = midNormalized > 0 && midNormalized < 1
+        ? Math.log(0.5) / Math.log(midNormalized)
+        : 1.0;
 
     for (let i = 0; i < originalGrayData.length; i++) {
         const gray = originalGrayData[i];
 
-        // Apply level correction
-        let adjusted = (gray - blackPt) * 255 / (whitePt - blackPt);
+        // Apply level correction with gamma
+        let normalized = (gray - blackPt) / (whitePt - blackPt);
+        normalized = Math.max(0, Math.min(1, normalized));
+
+        // Apply gamma correction
+        const gammaCorrected = Math.pow(normalized, gamma);
+
+        // Scale to 0-255
+        let adjusted = gammaCorrected * 255;
         adjusted = Math.max(0, Math.min(255, adjusted));
 
         grayData[i] = adjusted;
