@@ -977,17 +977,6 @@ lineCanvas.addEventListener('pointercancel', (e) => {
 // UIイベント
 // ============================================
 
-// アクティブレイヤーのUI表示を更新
-function updateActiveLayerUI() {
-    document.querySelectorAll('.layer-control').forEach(control => {
-        if (control.dataset.layer === activeLayer) {
-            control.classList.add('active');
-        } else {
-            control.classList.remove('active');
-        }
-    });
-}
-
 // レイヤーを切り替え（消しゴム以外の場合はツールも自動切り替え）
 function switchLayer(newLayer) {
     if (activeLayer === newLayer) return;
@@ -1007,14 +996,31 @@ function switchLayer(newLayer) {
         }
     }
 
-    updateActiveLayerUI();
     console.log('Layer switched to:', activeLayer, 'Tool:', currentTool);
 }
 
-// ツール切り替え
+// ツール切り替えと不透明度スライダー切り替え
 document.querySelectorAll('[data-tool]').forEach(btn => {
     btn.addEventListener('click', () => {
-        currentTool = btn.dataset.tool;
+        const wasActive = btn.classList.contains('active');
+        const newTool = btn.dataset.tool;
+
+        // 同じツールを再度クリック→不透明度スライダーの表示切り替え
+        if (wasActive && newTool !== 'eraser') {
+            const containerId = newTool === 'sketch' ? 'roughOpacityContainer' : 'lineOpacityContainer';
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.classList.toggle('visible');
+            }
+            return;
+        }
+
+        // 別のツールに切り替え→すべてのスライダーを非表示
+        document.querySelectorAll('.opacity-slider-container').forEach(c => {
+            c.classList.remove('visible');
+        });
+
+        currentTool = newTool;
 
         // ツールに応じてアクティブレイヤーを切り替え
         if (btn.dataset.layer) {
@@ -1024,9 +1030,6 @@ document.querySelectorAll('[data-tool]').forEach(btn => {
 
         document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-
-        // アクティブレイヤーのUI表示を更新
-        updateActiveLayerUI();
     });
 });
 
@@ -1090,20 +1093,7 @@ if (brushSizeInput && sizeDisplay) {
     });
 }
 
-// レイヤーコントロールクリックでレイヤー切り替え
-document.querySelectorAll('.layer-control').forEach(control => {
-    control.addEventListener('click', (e) => {
-        // 目ボタンやスライダーをクリックした場合は無視
-        if (e.target.closest('.layer-visible-btn') || e.target.closest('.layer-opacity')) {
-            return;
-        }
-
-        const targetLayer = control.dataset.layer;
-        if (targetLayer) {
-            switchLayer(targetLayer);
-        }
-    });
-});
+// レイヤーコントロールパネルは削除済み（ツールバーに統合）
 
 // ズームリセット
 document.getElementById('resetZoomBtn').addEventListener('click', () => {
@@ -1665,4 +1655,3 @@ document.addEventListener('keyup', (e) => {
 // ============================================
 
 initCanvas();
-updateActiveLayerUI();
