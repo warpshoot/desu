@@ -1,9 +1,10 @@
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
 const controls = document.getElementById('controls');
-const blackPoint = document.getElementById('blackPoint');
-const midPoint = document.getElementById('midPoint');
-const whitePoint = document.getElementById('whitePoint');
+const levelsTrack = document.getElementById('levelsTrack');
+const blackHandle = document.getElementById('blackHandle');
+const midHandle = document.getElementById('midHandle');
+const whiteHandle = document.getElementById('whiteHandle');
 const blackPointValue = document.getElementById('blackPointValue');
 const midPointValue = document.getElementById('midPointValue');
 const whitePointValue = document.getElementById('whitePointValue');
@@ -22,6 +23,11 @@ const toneModalGrid = document.getElementById('toneModalGrid');
 let sourceImage = null;  // Original uploaded image
 let processedImage = null;  // Resized image for processing
 let processingTimeout = null;
+
+// Levels values
+let blackPoint = 0;
+let midPoint = 128;
+let whitePoint = 255;
 
 // Define 18 tone presets
 const TONE_PRESETS = [
@@ -402,24 +408,104 @@ function resizeAndProcess() {
     resizedImg.src = tempCanvas.toDataURL();
 }
 
-// Slider value display and processing trigger
-function setupSlider(slider, valueDisplay) {
-    slider.addEventListener('input', (e) => {
-        valueDisplay.textContent = e.target.value;
+// Custom levels slider implementation
+function initLevelsSlider() {
+    function updateHandlePosition(handle, value) {
+        const percentage = (value / 255) * 100;
+        handle.style.left = `${percentage}%`;
+    }
+
+    function updateDisplayValues() {
+        blackPointValue.textContent = blackPoint;
+        midPointValue.textContent = midPoint;
+        whitePointValue.textContent = whitePoint;
+    }
+
+    // Initialize handle positions
+    updateHandlePosition(blackHandle, blackPoint);
+    updateHandlePosition(midHandle, midPoint);
+    updateHandlePosition(whiteHandle, whitePoint);
+    updateDisplayValues();
+
+    // Drag functionality
+    let draggingHandle = null;
+    let trackRect = null;
+
+    function startDrag(handle, e) {
+        e.preventDefault();
+        draggingHandle = handle;
+        trackRect = levelsTrack.getBoundingClientRect();
+        handle.classList.add('dragging');
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('touchmove', onDrag);
+        document.addEventListener('touchend', stopDrag);
+    }
+
+    function onDrag(e) {
+        if (!draggingHandle) return;
+
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const x = clientX - trackRect.left;
+        const percentage = Math.max(0, Math.min(100, (x / trackRect.width) * 100));
+        const value = Math.round((percentage / 100) * 255);
+
+        const pointType = draggingHandle.dataset.point;
+
+        // No constraints - allow free positioning for creative effects
+        if (pointType === 'black') {
+            blackPoint = value;
+        } else if (pointType === 'mid') {
+            midPoint = value;
+        } else if (pointType === 'white') {
+            whitePoint = value;
+        }
+
+        updateHandlePosition(blackHandle, blackPoint);
+        updateHandlePosition(midHandle, midPoint);
+        updateHandlePosition(whiteHandle, whitePoint);
+        updateDisplayValues();
+
         if (processedImage) {
-            // Debounce processing
             clearTimeout(processingTimeout);
             processingTimeout = setTimeout(() => {
                 processMangaTone();
             }, 150);
         }
-    });
+    }
+
+    function stopDrag() {
+        if (draggingHandle) {
+            draggingHandle.classList.remove('dragging');
+            draggingHandle = null;
+        }
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('mouseup', stopDrag);
+        document.removeEventListener('touchmove', onDrag);
+        document.removeEventListener('touchend', stopDrag);
+    }
+
+    blackHandle.addEventListener('mousedown', (e) => startDrag(blackHandle, e));
+    midHandle.addEventListener('mousedown', (e) => startDrag(midHandle, e));
+    whiteHandle.addEventListener('mousedown', (e) => startDrag(whiteHandle, e));
+
+    blackHandle.addEventListener('touchstart', (e) => startDrag(blackHandle, e));
+    midHandle.addEventListener('touchstart', (e) => startDrag(midHandle, e));
+    whiteHandle.addEventListener('touchstart', (e) => startDrag(whiteHandle, e));
 }
 
-setupSlider(blackPoint, blackPointValue);
-setupSlider(midPoint, midPointValue);
-setupSlider(whitePoint, whitePointValue);
-setupSlider(edgeThreshold, edgeThresholdValue);
+initLevelsSlider();
+
+// Edge threshold slider
+edgeThreshold.addEventListener('input', (e) => {
+    edgeThresholdValue.textContent = e.target.value;
+    if (processedImage) {
+        clearTimeout(processingTimeout);
+        processingTimeout = setTimeout(() => {
+            processMangaTone();
+        }, 150);
+    }
+});
 
 // Edge toggle handler
 edgeToggle.addEventListener('change', () => {
@@ -461,14 +547,17 @@ resetBtn.addEventListener('click', () => {
     outputCanvas.classList.remove('active');
 
     // Reset sliders to default
-    blackPoint.value = 0;
+    blackPoint = 0;
+    midPoint = 128;
+    whitePoint = 255;
     blackPointValue.textContent = '0';
-    midPoint.value = 128;
     midPointValue.textContent = '128';
-    whitePoint.value = 255;
     whitePointValue.textContent = '255';
-    edgeThreshold.value = 120;
-    edgeThresholdValue.textContent = '120';
+    blackHandle.style.left = '0%';
+    midHandle.style.left = '50%';
+    whiteHandle.style.left = '100%';
+    edgeThreshold.value = 100;
+    edgeThresholdValue.textContent = '100';
 
     // Reset edge toggle
     edgeToggle.checked = false;
@@ -518,9 +607,9 @@ function processMangaTone() {
 
     // Apply level correction to create adjusted gray data for tone mapping
     const grayData = new Uint8Array(width * height);
-    const blackPt = parseInt(blackPoint.value);
-    const midPt = parseInt(midPoint.value);
-    const whitePt = parseInt(whitePoint.value);
+    const blackPt = blackPoint;
+    const midPt = midPoint;
+    const whitePt = whitePoint;
 
     // Calculate gamma from midpoint
     const midNormalized = (midPt - blackPt) / (whitePt - blackPt);
