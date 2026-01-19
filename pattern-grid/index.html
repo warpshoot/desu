@@ -587,6 +587,20 @@
             <input type="color" id="bgColorPicker" value="#ffffff">
             <div class="tool-tooltip">背景色</div>
         </div>
+        <div class="tool-btn" id="symmetryBtn" title="対称描画 (S)">
+            <svg viewBox="0 0 24 24" id="symmetrySvg">
+                <!-- 蝶ベース（対称マーク） -->
+                <ellipse cx="8" cy="10" rx="2.5" ry="3.5" fill="currentColor" opacity="0.4"/>
+                <ellipse cx="16" cy="10" rx="2.5" ry="3.5" fill="currentColor" opacity="0.4"/>
+                <ellipse cx="8" cy="14" rx="2.5" ry="3.5" fill="currentColor" opacity="0.4"/>
+                <ellipse cx="16" cy="14" rx="2.5" ry="3.5" fill="currentColor" opacity="0.4"/>
+                <circle cx="12" cy="12" r="2" fill="currentColor"/>
+                <!-- 軸線（none時は非表示） -->
+                <line id="symmetryLineV" x1="12" y1="4" x2="12" y2="20" stroke="currentColor" stroke-width="2" style="display: none;"/>
+                <line id="symmetryLineH" x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" style="display: none;"/>
+            </svg>
+            <div class="tool-tooltip">対称描画 (S)</div>
+        </div>
     </div>
 
     <!-- 右上ツールバー -->
@@ -678,6 +692,7 @@
         // State
         let mode = 'triangle';
         let fillColor = '#000000';
+        let symmetryMode = 'none'; // 'none', 'x', 'y', 'xy'
         let bgColor = '#ffffff';
         let showGrid = true;
         let grid = [];
@@ -1035,15 +1050,32 @@
         }
 
         // Handle click
-        function handleClick(clientX, clientY) {
-            if (isSaveMode) return;
+        // Helper function to flip corner for symmetry
+        function flipCorner(corner, flipX, flipY) {
+            if (!corner) return null;
 
-            const p = getCanvasPoint(clientX, clientY);
-            const cell = getGridCell(p.x, p.y);
+            let result = corner;
+            if (flipX) {
+                // Flip horizontally: tl <-> tr, bl <-> br
+                if (corner === 'tl') result = 'tr';
+                else if (corner === 'tr') result = 'tl';
+                else if (corner === 'bl') result = 'br';
+                else if (corner === 'br') result = 'bl';
+            }
+            if (flipY) {
+                // Flip vertically: tl <-> bl, tr <-> br
+                if (result === 'tl') result = 'bl';
+                else if (result === 'bl') result = 'tl';
+                else if (result === 'tr') result = 'br';
+                else if (result === 'br') result = 'tr';
+            }
+            return result;
+        }
 
-            if (!cell) return;
+        // Helper function to draw a single cell
+        function drawCell(row, col, corner) {
+            if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return;
 
-            const { col, row } = cell;
             const gridCell = grid[row][col];
 
             if (mode === 'rect') {
@@ -1057,10 +1089,6 @@
                     gridCell.inverted = false;
                 }
             } else {
-                const relX = (p.x % CELL_SIZE) / CELL_SIZE;
-                const relY = (p.y % CELL_SIZE) / CELL_SIZE;
-                const corner = getCorner(relX, relY);
-
                 if (gridCell.type === mode && gridCell.corner === corner) {
                     if (!gridCell.inverted) {
                         gridCell.inverted = true;
@@ -1076,6 +1104,51 @@
                     gridCell.color = fillColor;
                     gridCell.inverted = false;
                 }
+            }
+        }
+
+        function handleClick(clientX, clientY) {
+            if (isSaveMode) return;
+
+            const p = getCanvasPoint(clientX, clientY);
+            const cell = getGridCell(p.x, p.y);
+
+            if (!cell) return;
+
+            const { col, row } = cell;
+
+            // Calculate corner for triangle and arc modes
+            let corner = null;
+            if (mode !== 'rect') {
+                const relX = (p.x % CELL_SIZE) / CELL_SIZE;
+                const relY = (p.y % CELL_SIZE) / CELL_SIZE;
+                corner = getCorner(relX, relY);
+            }
+
+            // Draw at primary position
+            drawCell(row, col, corner);
+
+            // Draw at symmetric positions
+            if (symmetryMode === 'x' || symmetryMode === 'xy') {
+                // X-axis symmetry (left-right mirror)
+                const symCol = GRID_SIZE - 1 - col;
+                const symCorner = flipCorner(corner, true, false);
+                drawCell(row, symCol, symCorner);
+            }
+
+            if (symmetryMode === 'y' || symmetryMode === 'xy') {
+                // Y-axis symmetry (top-bottom mirror)
+                const symRow = GRID_SIZE - 1 - row;
+                const symCorner = flipCorner(corner, false, true);
+                drawCell(symRow, col, symCorner);
+            }
+
+            if (symmetryMode === 'xy') {
+                // Both axes symmetry (diagonal mirror)
+                const symRow = GRID_SIZE - 1 - row;
+                const symCol = GRID_SIZE - 1 - col;
+                const symCorner = flipCorner(corner, true, true);
+                drawCell(symRow, symCol, symCorner);
             }
 
             render();
@@ -1287,6 +1360,55 @@
             mode = 'rect';
             document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.remove('active'));
             document.getElementById('rectBtn').classList.add('active');
+        });
+
+        // Symmetry mode toggle
+        function updateSymmetryIcon() {
+            const lineV = document.getElementById('symmetryLineV');
+            const lineH = document.getElementById('symmetryLineH');
+            const btn = document.getElementById('symmetryBtn');
+
+            switch (symmetryMode) {
+                case 'none':
+                    lineV.style.display = 'none';
+                    lineH.style.display = 'none';
+                    btn.classList.remove('active');
+                    break;
+                case 'x':
+                    lineV.style.display = 'block';
+                    lineH.style.display = 'none';
+                    btn.classList.add('active');
+                    break;
+                case 'y':
+                    lineV.style.display = 'none';
+                    lineH.style.display = 'block';
+                    btn.classList.add('active');
+                    break;
+                case 'xy':
+                    lineV.style.display = 'block';
+                    lineH.style.display = 'block';
+                    btn.classList.add('active');
+                    break;
+            }
+        }
+
+        document.getElementById('symmetryBtn').addEventListener('click', () => {
+            // Cycle through modes: none -> x -> y -> xy -> none
+            switch (symmetryMode) {
+                case 'none':
+                    symmetryMode = 'x';
+                    break;
+                case 'x':
+                    symmetryMode = 'y';
+                    break;
+                case 'y':
+                    symmetryMode = 'xy';
+                    break;
+                case 'xy':
+                    symmetryMode = 'none';
+                    break;
+            }
+            updateSymmetryIcon();
         });
 
         // Color pickers
@@ -1560,6 +1682,9 @@
                     const tempColor = fillColor;
                     updateFillColor(bgColor);
                     updateBgColor(tempColor);
+                    break;
+                case 's':
+                    document.getElementById('symmetryBtn').click();
                     break;
                 case 'delete':
                 case 'backspace':
