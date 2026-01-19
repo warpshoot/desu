@@ -185,6 +185,11 @@ async function initCanvas() {
 
     console.log('Initializing canvas:', w, 'x', h);
 
+    // 白背景の初期化
+    const canvasBg = document.getElementById('canvas-background');
+    canvasBg.style.width = w + 'px';
+    canvasBg.style.height = h + 'px';
+
     // アタリレイヤー初期化
     roughCanvas.width = w;
     roughCanvas.height = h;
@@ -218,6 +223,8 @@ async function initCanvas() {
 
 function applyTransform() {
     const transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    const canvasBg = document.getElementById('canvas-background');
+    canvasBg.style.transform = transform;
     roughCanvas.style.transform = transform;
     lineCanvas.style.transform = transform;
 
