@@ -196,56 +196,68 @@
             letter-spacing: 0.5px;
         }
 
-        .levels-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+        .levels-container {
             margin-bottom: 15px;
         }
 
-        .level-control {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
+        .levels-slider-container {
+            position: relative;
+            height: 60px;
+            padding: 10px 0;
         }
 
-        .level-label {
-            font-size: 11px;
+        .levels-track {
+            position: relative;
+            height: 6px;
+            background: linear-gradient(to right, #000 0%, #888 50%, #fff 100%);
+            border: 1px solid #fff;
+            cursor: pointer;
+        }
+
+        .levels-handle {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border: 2px solid #000;
+            border-radius: 50%;
+            cursor: grab;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+        }
+
+        .levels-handle:active {
+            cursor: grabbing;
+        }
+
+        .levels-handle.dragging {
+            z-index: 3;
+        }
+
+        .levels-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+        }
+
+        .levels-label-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .levels-label-name {
+            font-size: 10px;
             font-weight: 500;
             color: #fff;
         }
 
-        .level-value {
+        .levels-label-value {
             font-size: 11px;
             font-weight: 600;
             color: #fff;
-            text-align: right;
-        }
-
-        .slider {
-            width: 100%;
-            -webkit-appearance: none;
-            appearance: none;
-            height: 4px;
-            background: #fff;
-            outline: none;
-        }
-
-        .slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            background: #fff;
-            cursor: pointer;
-        }
-
-        .slider::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
-            background: #fff;
-            cursor: pointer;
-            border: none;
         }
 
         .edge-control {
@@ -593,10 +605,6 @@
                 margin-bottom: 15px;
             }
 
-            .levels-grid {
-                gap: 8px;
-            }
-
             .tone-section {
                 grid-template-columns: repeat(4, 1fr);
                 gap: 6px;
@@ -664,27 +672,27 @@
             <!-- Levels Section -->
             <div class="control-section">
                 <div class="control-section-title">Levels</div>
-                <div class="levels-grid">
-                    <div class="level-control">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span class="level-label">Black</span>
-                            <span class="level-value" id="blackPointValue">0</span>
+                <div class="levels-container">
+                    <div class="levels-slider-container">
+                        <div class="levels-track" id="levelsTrack">
+                            <div class="levels-handle" id="blackHandle" data-point="black"></div>
+                            <div class="levels-handle" id="midHandle" data-point="mid"></div>
+                            <div class="levels-handle" id="whiteHandle" data-point="white"></div>
                         </div>
-                        <input type="range" id="blackPoint" class="slider" min="0" max="255" value="0">
                     </div>
-                    <div class="level-control">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span class="level-label">Mid</span>
-                            <span class="level-value" id="midPointValue">128</span>
+                    <div class="levels-labels">
+                        <div class="levels-label-item">
+                            <span class="levels-label-name">Black</span>
+                            <span class="levels-label-value" id="blackPointValue">0</span>
                         </div>
-                        <input type="range" id="midPoint" class="slider" min="0" max="255" value="128">
-                    </div>
-                    <div class="level-control">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span class="level-label">White</span>
-                            <span class="level-value" id="whitePointValue">255</span>
+                        <div class="levels-label-item">
+                            <span class="levels-label-name">Mid</span>
+                            <span class="levels-label-value" id="midPointValue">128</span>
                         </div>
-                        <input type="range" id="whitePoint" class="slider" min="0" max="255" value="255">
+                        <div class="levels-label-item">
+                            <span class="levels-label-name">White</span>
+                            <span class="levels-label-value" id="whitePointValue">255</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -698,8 +706,8 @@
                     </label>
                     <div class="edge-sensitivity" id="edgeSensitivity">
                         <span class="edge-sensitivity-label">Sensitivity</span>
-                        <input type="range" id="edgeThreshold" class="slider" min="100" max="300" value="120">
-                        <span class="edge-sensitivity-value" id="edgeThresholdValue">120</span>
+                        <input type="range" id="edgeThreshold" class="slider" min="50" max="250" value="100">
+                        <span class="edge-sensitivity-value" id="edgeThresholdValue">100</span>
                     </div>
                 </div>
             </div>
