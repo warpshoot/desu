@@ -649,6 +649,7 @@ async function saveState() {
     if (activeLayer === 'rough') {
         const bitmap = await createImageBitmap(roughCanvas);
         roughUndoStack.push(bitmap);
+        console.log('Saved rough layer state - stack size:', roughUndoStack.length);
 
         if (roughUndoStack.length > MAX_HISTORY) {
             roughUndoStack.shift().close();
@@ -659,6 +660,7 @@ async function saveState() {
     } else if (activeLayer === 'line') {
         const bitmap = await createImageBitmap(lineCanvas);
         lineUndoStack.push(bitmap);
+        console.log('Saved line layer state - stack size:', lineUndoStack.length);
 
         if (lineUndoStack.length > MAX_HISTORY) {
             lineUndoStack.shift().close();
@@ -671,7 +673,11 @@ async function saveState() {
 
 function undo() {
     if (activeLayer === 'rough') {
-        if (roughUndoStack.length <= 1) return;
+        console.log('Undo rough layer - stack size:', roughUndoStack.length);
+        if (roughUndoStack.length <= 1) {
+            console.log('Cannot undo - at initial state');
+            return;
+        }
 
         const current = roughUndoStack.pop();
         roughRedoStack.push(current);
@@ -679,8 +685,13 @@ function undo() {
         const prev = roughUndoStack[roughUndoStack.length - 1];
         roughCtx.clearRect(0, 0, roughCanvas.width, roughCanvas.height);
         roughCtx.drawImage(prev, 0, 0);
+        console.log('Undo complete - new stack size:', roughUndoStack.length);
     } else if (activeLayer === 'line') {
-        if (lineUndoStack.length <= 1) return;
+        console.log('Undo line layer - stack size:', lineUndoStack.length);
+        if (lineUndoStack.length <= 1) {
+            console.log('Cannot undo - at initial state');
+            return;
+        }
 
         const current = lineUndoStack.pop();
         lineRedoStack.push(current);
@@ -688,6 +699,7 @@ function undo() {
         const prev = lineUndoStack[lineUndoStack.length - 1];
         lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
         lineCtx.drawImage(prev, 0, 0);
+        console.log('Undo complete - new stack size:', lineUndoStack.length);
     }
 }
 
