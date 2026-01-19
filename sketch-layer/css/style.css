@@ -35,6 +35,7 @@ html, body {
 
 #canvas-line {
     z-index: 2;
+    background-color: #ffffff;
 }
 
 /* 投げ縄用オーバーレイキャンバス */
@@ -118,6 +119,11 @@ body.dark .tool-btn.active {
     background: #fff;
     border-color: #333;
     color: #333;
+}
+
+/* 消しゴム使用時のアクティブレイヤー表示 */
+.tool-btn.layer-active {
+    border-width: 4px;
 }
 
 /* ツールグループ（ツール + 目アイコン + 不透明度スライダー） */
@@ -244,6 +250,10 @@ body.dark .layer-opacity::-moz-range-thumb {
     gap: 4px;
     margin-top: 8px;
     width: 48px;
+}
+
+#size-slider-container.hidden {
+    display: none;
 }
 
 #brushSize {
