@@ -977,6 +977,40 @@ lineCanvas.addEventListener('pointercancel', (e) => {
 // UIイベント
 // ============================================
 
+// アクティブレイヤーのUI表示を更新（消しゴム使用時）
+function updateActiveLayerIndicator() {
+    const sketchBtn = document.getElementById('sketchBtn');
+    const penBtn = document.getElementById('penBtn');
+
+    // 消しゴム使用時のみアクティブレイヤーを視覚的に表示
+    if (currentTool === 'eraser') {
+        if (activeLayer === 'rough') {
+            sketchBtn.classList.add('layer-active');
+            penBtn.classList.remove('layer-active');
+        } else if (activeLayer === 'line') {
+            penBtn.classList.add('layer-active');
+            sketchBtn.classList.remove('layer-active');
+        }
+    } else {
+        // 消しゴム以外の時はlayer-activeを削除
+        sketchBtn.classList.remove('layer-active');
+        penBtn.classList.remove('layer-active');
+    }
+}
+
+// ブラシサイズスライダーの表示/非表示を更新
+function updateBrushSizeVisibility() {
+    const sizeSlider = document.getElementById('size-slider-container');
+    if (!sizeSlider) return;
+
+    // ペンツール選択時のみ表示
+    if (currentTool === 'pen') {
+        sizeSlider.classList.remove('hidden');
+    } else {
+        sizeSlider.classList.add('hidden');
+    }
+}
+
 // レイヤーを切り替え（消しゴム以外の場合はツールも自動切り替え）
 function switchLayer(newLayer) {
     if (activeLayer === newLayer) return;
@@ -996,6 +1030,8 @@ function switchLayer(newLayer) {
         }
     }
 
+    updateActiveLayerIndicator();
+    updateBrushSizeVisibility();
     console.log('Layer switched to:', activeLayer, 'Tool:', currentTool);
 }
 
@@ -1030,6 +1066,10 @@ document.querySelectorAll('[data-tool]').forEach(btn => {
 
         document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+
+        // UI更新
+        updateActiveLayerIndicator();
+        updateBrushSizeVisibility();
     });
 });
 
@@ -1655,3 +1695,5 @@ document.addEventListener('keyup', (e) => {
 // ============================================
 
 initCanvas();
+updateActiveLayerIndicator();
+updateBrushSizeVisibility();
