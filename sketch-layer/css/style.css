@@ -30,6 +30,7 @@ html, body {
 
 #canvas-rough {
     z-index: 1;
+    background-color: #ffffff;
 }
 
 #canvas-line {
@@ -117,6 +118,122 @@ body.dark .tool-btn.active {
     background: #fff;
     border-color: #333;
     color: #333;
+}
+
+/* ツールグループ（ツール + 目アイコン + 不透明度スライダー） */
+.tool-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.layer-visible-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.layer-visible-btn:hover {
+    background: rgba(230, 230, 230, 0.95);
+}
+
+.layer-visible-btn .eye-icon {
+    width: 20px;
+    height: 20px;
+    stroke: #333;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+body.dark .layer-visible-btn {
+    background: rgba(40, 40, 40, 0.9);
+}
+
+body.dark .layer-visible-btn:hover {
+    background: rgba(60, 60, 60, 0.95);
+}
+
+body.dark .layer-visible-btn .eye-icon {
+    stroke: #fff;
+}
+
+.layer-visible-btn.hidden .eye-icon path:first-child {
+    opacity: 0.3;
+}
+
+.layer-visible-btn.hidden .eye-icon circle {
+    opacity: 0.3;
+}
+
+/* 不透明度スライダー */
+.opacity-slider-container {
+    display: none;
+    align-items: center;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+}
+
+.opacity-slider-container.visible {
+    display: flex;
+}
+
+body.dark .opacity-slider-container {
+    background: rgba(40, 40, 40, 0.9);
+}
+
+.layer-opacity {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 80px;
+    height: 4px;
+    background: #888;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+body.dark .layer-opacity {
+    background: #666;
+}
+
+.layer-opacity::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #333;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    cursor: pointer;
+}
+
+body.dark .layer-opacity::-webkit-slider-thumb {
+    background: #fff;
+    border-color: #333;
+}
+
+.layer-opacity::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: #333;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    cursor: pointer;
+}
+
+body.dark .layer-opacity::-moz-range-thumb {
+    background: #fff;
+    border-color: #333;
 }
 
 /* 縦スライダー */
@@ -801,146 +918,9 @@ body.help-mode #credit-btn {
     }
 }
 
-/* レイヤーコントロールパネル */
+/* レイヤーコントロールパネル（削除済み - ツールバーに統合） */
 #layer-controls {
-    position: fixed;
-    top: max(12px, env(safe-area-inset-top));
-    left: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    z-index: 100;
-}
-
-.layer-control {
-    background: rgba(255, 255, 255, 0.9);
-    border: 2px solid #666;
-    border-radius: 12px;
-    padding: 8px 12px;
-    min-width: 160px;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    user-select: none;
-}
-
-.layer-control:hover {
-    background: rgba(240, 240, 240, 0.95);
-    border-color: #333;
-}
-
-.layer-control.active {
-    background: rgba(220, 240, 255, 0.95);
-    border: 3px solid #0066ff;
-    box-shadow: 0 0 8px rgba(0, 102, 255, 0.4);
-}
-
-body.dark .layer-control {
-    background: rgba(40, 40, 40, 0.9);
-    border-color: #888;
-}
-
-body.dark .layer-control:hover {
-    background: rgba(60, 60, 60, 0.95);
-    border-color: #aaa;
-}
-
-body.dark .layer-control.active {
-    background: rgba(60, 80, 100, 0.95);
-    border-color: #4499ff;
-    box-shadow: 0 0 8px rgba(68, 153, 255, 0.4);
-}
-
-.layer-control-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 6px;
-}
-
-.layer-name {
-    font-size: 13px;
-    font-weight: bold;
-    color: #333;
-}
-
-body.dark .layer-name {
-    color: #fff;
-}
-
-.layer-visible-btn {
-    width: 28px;
-    height: 28px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    padding: 2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.layer-visible-btn .eye-icon {
-    width: 20px;
-    height: 20px;
-    stroke: #333;
-    fill: none;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-body.dark .layer-visible-btn .eye-icon {
-    stroke: #fff;
-}
-
-.layer-visible-btn.hidden .eye-icon path:first-child {
-    opacity: 0.3;
-}
-
-.layer-visible-btn.hidden .eye-icon circle {
     display: none;
 }
 
-.layer-opacity {
-    width: 100%;
-    -webkit-appearance: none;
-    appearance: none;
-    height: 4px;
-    background: #888;
-    border-radius: 2px;
-    cursor: pointer;
-}
-
-body.dark .layer-opacity {
-    background: #666;
-}
-
-.layer-opacity::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 16px;
-    height: 16px;
-    background: #333;
-    border-radius: 50%;
-    border: 2px solid #fff;
-    cursor: pointer;
-}
-
-body.dark .layer-opacity::-webkit-slider-thumb {
-    background: #fff;
-    border-color: #333;
-}
-
-.layer-opacity::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    background: #333;
-    border-radius: 50%;
-    border: 2px solid #fff;
-    cursor: pointer;
-}
-
-body.dark .layer-opacity::-moz-range-thumb {
-    background: #fff;
-    border-color: #333;
-}
+/* 古いレイヤーコントロールのスタイルは削除済み - ツールバーに統合 */
