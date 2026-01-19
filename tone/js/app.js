@@ -5,9 +5,6 @@ const levelsTrack = document.getElementById('levelsTrack');
 const blackHandle = document.getElementById('blackHandle');
 const midHandle = document.getElementById('midHandle');
 const whiteHandle = document.getElementById('whiteHandle');
-const blackPointValue = document.getElementById('blackPointValue');
-const midPointValue = document.getElementById('midPointValue');
-const whitePointValue = document.getElementById('whitePointValue');
 const edgeToggle = document.getElementById('edgeToggle');
 const edgeThreshold = document.getElementById('edgeThreshold');
 const edgeThresholdValue = document.getElementById('edgeThresholdValue');
@@ -415,17 +412,10 @@ function initLevelsSlider() {
         handle.style.left = `${percentage}%`;
     }
 
-    function updateDisplayValues() {
-        blackPointValue.textContent = blackPoint;
-        midPointValue.textContent = midPoint;
-        whitePointValue.textContent = whitePoint;
-    }
-
     // Initialize handle positions
     updateHandlePosition(blackHandle, blackPoint);
     updateHandlePosition(midHandle, midPoint);
     updateHandlePosition(whiteHandle, whitePoint);
-    updateDisplayValues();
 
     // Drag functionality
     let draggingHandle = null;
@@ -464,7 +454,6 @@ function initLevelsSlider() {
         updateHandlePosition(blackHandle, blackPoint);
         updateHandlePosition(midHandle, midPoint);
         updateHandlePosition(whiteHandle, whitePoint);
-        updateDisplayValues();
 
         if (processedImage) {
             clearTimeout(processingTimeout);
@@ -550,9 +539,6 @@ resetBtn.addEventListener('click', () => {
     blackPoint = 0;
     midPoint = 128;
     whitePoint = 255;
-    blackPointValue.textContent = '0';
-    midPointValue.textContent = '128';
-    whitePointValue.textContent = '255';
     blackHandle.style.left = '0%';
     midHandle.style.left = '50%';
     whiteHandle.style.left = '100%';
