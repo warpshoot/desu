@@ -262,7 +262,8 @@ body.dark .layer-opacity::-moz-range-thumb {
 }
 
 #size-slider-container.hidden {
-    display: none;
+    opacity: 0.3;
+    pointer-events: none;
 }
 
 #brushSize {
