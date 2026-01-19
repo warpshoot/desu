@@ -48,8 +48,8 @@ const TONE_PRESETS = [
     { id: 'grid2', name: 'E2', type: 'grid', spacing: 8, width: 1 },
     { id: 'grid3', name: 'E3', type: 'grid', spacing: 6, width: 1 },
     // Organic dots (2 variations) - dotSize and randomness fixed, spacing varies
-    { id: 'organic1', name: 'F1', type: 'organic', spacing: 10, dotSize: 2, randomness: 0.1 },
-    { id: 'organic2', name: 'F2', type: 'organic', spacing: 7, dotSize: 2, randomness: 0.1 },
+    { id: 'organic1', name: 'F1', type: 'organic', spacing: 10, dotSize: 2, randomness: 0.3 },
+    { id: 'organic2', name: 'F2', type: 'organic', spacing: 7, dotSize: 2, randomness: 0.3 },
     { id: 'black', name: 'G1', type: 'black', spacing: 0, dotSize: 0 }
 ];
 
