@@ -20,25 +20,7 @@
     <!-- 左下ツールバー -->
     <div id="toolbar-left">
         <div class="tool-group">
-            <div class="tool-btn active" id="sketchBtn" data-tool="sketch" data-layer="rough">
-                <svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="8" fill="#808080"/>
-                </svg>
-                <div class="tool-tooltip">アタリ (B)</div>
-            </div>
-            <button class="layer-visible-btn" id="roughVisibleBtn" data-layer="rough">
-                <svg viewBox="0 0 24 24" class="eye-icon">
-                    <path d="M2 12 C2 12 5 5 12 5 C19 5 22 12 22 12 C22 12 19 19 12 19 C5 19 2 12 2 12 Z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                </svg>
-            </button>
-            <div class="opacity-slider-container" id="roughOpacityContainer">
-                <input type="range" class="layer-opacity" id="roughOpacity" min="0" max="100" value="100" data-layer="rough">
-            </div>
-        </div>
-
-        <div class="tool-group">
-            <div class="tool-btn" id="penBtn" data-tool="pen" data-layer="line">
+            <div class="tool-btn active" id="penBtn" data-tool="pen" data-layer="line">
                 <svg viewBox="0 0 24 24">
                     <path d="M4 18 Q8 14, 12 12 T20 6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
                 </svg>
@@ -52,6 +34,24 @@
             </button>
             <div class="opacity-slider-container" id="lineOpacityContainer">
                 <input type="range" class="layer-opacity" id="lineOpacity" min="0" max="100" value="100" data-layer="line">
+            </div>
+        </div>
+
+        <div class="tool-group">
+            <div class="tool-btn" id="sketchBtn" data-tool="sketch" data-layer="rough">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="8" fill="#808080"/>
+                </svg>
+                <div class="tool-tooltip">アタリ (B)</div>
+            </div>
+            <button class="layer-visible-btn" id="roughVisibleBtn" data-layer="rough">
+                <svg viewBox="0 0 24 24" class="eye-icon">
+                    <path d="M2 12 C2 12 5 5 12 5 C19 5 22 12 22 12 C22 12 19 19 12 19 C5 19 2 12 2 12 Z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+            </button>
+            <div class="opacity-slider-container" id="roughOpacityContainer">
+                <input type="range" class="layer-opacity" id="roughOpacity" min="0" max="100" value="100" data-layer="rough">
             </div>
         </div>
 

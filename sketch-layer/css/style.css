@@ -873,13 +873,13 @@ body.help-mode #credit-btn {
 }
 
 /* 左下ツールバーの各ボタンで吹き出しの位置をずらす（縦方向に配置） */
-#sketchBtn .tool-tooltip {
-    top: 24px; /* スケッチツールボタンの中心 */
+#penBtn .tool-tooltip {
+    top: 24px; /* ペンツールボタンの中心 */
     transform: translateY(0);
 }
 
-#penBtn .tool-tooltip {
-    top: 80px; /* ペンツールボタンの中心（48px + 8px gap + 24px） */
+#sketchBtn .tool-tooltip {
+    top: 80px; /* スケッチツールボタンの中心（48px + 8px gap + 24px） */
     transform: translateY(0);
 }
 
