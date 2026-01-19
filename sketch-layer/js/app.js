@@ -632,13 +632,14 @@ function drawPenLine(x, y) {
     lastPenPoint = { x, y };
 }
 
-function endPenDrawing() {
+async function endPenDrawing() {
     console.log('endPenDrawing called - isPenDrawing:', isPenDrawing);
     if (isPenDrawing) {
         isPenDrawing = false;
         lastPenPoint = null;
         console.log('endPenDrawing - calling saveState()');
-        saveState();
+        await saveState();
+        console.log('endPenDrawing - saveState() completed');
     }
 }
 
@@ -864,7 +865,7 @@ lineCanvas.addEventListener('pointermove', (e) => {
     }
 });
 
-lineCanvas.addEventListener('pointerup', (e) => {
+lineCanvas.addEventListener('pointerup', async (e) => {
     if (isSaveMode) return;
 
     e.preventDefault();
@@ -881,7 +882,8 @@ lineCanvas.addEventListener('pointerup', (e) => {
     console.log('pointerup - isPenDrawing:', isPenDrawing, 'activePointers.size:', activePointers.size);
     if (isPenDrawing && activePointers.size === 1) {
         console.log('Last finger up - ending pen drawing');
-        endPenDrawing();
+        await endPenDrawing();
+        console.log('endPenDrawing awaited - continuing pointerup handler');
     }
 
     // 投げ縄終了
