@@ -452,13 +452,13 @@ function initLevelsSlider() {
 
         const pointType = draggingHandle.dataset.point;
 
-        // Apply constraints
+        // No constraints - allow free positioning for creative effects
         if (pointType === 'black') {
-            blackPoint = Math.min(value, midPoint - 1);
+            blackPoint = value;
         } else if (pointType === 'mid') {
-            midPoint = Math.max(blackPoint + 1, Math.min(value, whitePoint - 1));
+            midPoint = value;
         } else if (pointType === 'white') {
-            whitePoint = Math.max(value, midPoint + 1);
+            whitePoint = value;
         }
 
         updateHandlePosition(blackHandle, blackPoint);
