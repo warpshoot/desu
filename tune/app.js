@@ -48,7 +48,6 @@ const state = {
         reverb: true,
         octaveDoubling: false,
         chordMode: false,
-        velocity: true,
         previewSound: false
     },
     // Audio nodes
@@ -189,7 +188,7 @@ function yToFrequency(y, canvasHeight) {
     return currentScale[Math.max(0, Math.min(currentScale.length - 1, index))];
 }
 
-async function playNote(frequency, timbre, duration = 0.25, velocity = 1.0) {
+async function playNote(frequency, timbre, duration = 0.25) {
     const audioCtx = state.audioContext;
     if (!audioCtx) return;
 
@@ -200,31 +199,28 @@ async function playNote(frequency, timbre, duration = 0.25, velocity = 1.0) {
     if (audioCtx.state !== 'running') return;
 
     // Base note
-    playSound(frequency, timbre, duration, velocity);
+    playSound(frequency, timbre, duration, 1.0);
 
     // Octave Doubling
     if (state.options.octaveDoubling) {
-        playSound(frequency * 2, timbre, duration, velocity * 0.5); // Lower volume for octave
+        playSound(frequency * 2, timbre, duration, 0.5); // Lower volume for octave
     }
 
     // Chord Mode
     if (state.options.chordMode) {
         const harmonics = getHarmonics(frequency, currentScale);
         harmonics.forEach(freq => {
-            playSound(freq, timbre, duration, velocity * 0.4); // Lower volume for harmony
+            playSound(freq, timbre, duration, 0.4); // Lower volume for harmony
         });
     }
 }
 
-function playSound(frequency, timbre, duration, velocity = 1.0) {
+function playSound(frequency, timbre, duration, volumeScale = 1.0) {
     const audioCtx = state.audioContext;
     const now = audioCtx.currentTime;
 
-    // Apply global volume and velocity option
-    let volume = 0.2 * velocity;
-    if (!state.options.velocity) {
-        volume = 0.2; // Fixed volume if velocity option is off
-    }
+    // Global volume
+    let volume = 0.2 * volumeScale;
 
     // Oscillator & Gain setup
     const oscillator = audioCtx.createOscillator();
@@ -593,7 +589,6 @@ function setupControls() {
         { id: 'opt-reverb', key: 'reverb' },
         { id: 'opt-octave', key: 'octaveDoubling' },
         { id: 'opt-chord', key: 'chordMode' },
-        { id: 'opt-velocity', key: 'velocity' },
         { id: 'opt-preview', key: 'previewSound' }
     ];
 
@@ -967,7 +962,7 @@ function draw(e) {
             // Call playSound directly for lower latency/overhead, skip reverb/chords for preview to keep it clean?
             // Or use full playNote for full effect. Let's use playNote for full effect but short duration.
             // Using a slightly shorter duration for preview
-            playNote(frequency, timbre, 0.1, 0.5);
+            playNote(frequency, timbre, 0.1);
 
             state.lastDrawTime = now;
             state.lastDrawY = pos.y;
