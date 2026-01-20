@@ -3,7 +3,6 @@ const state = {
     isPlaying: false,
     playbackPosition: 0,
     speed: 1.0,
-    tool: 'pen',
     currentColor: 'red',
     currentTimbre: 'square',
     animationId: null,
@@ -30,10 +29,22 @@ const state = {
         filterEnabled: false,
         filterCutoff: 10000,
         resonance: 0.5
-    }
+    },
+    // Undo/Redo
+    history: [],
+    historyIndex: -1,
+    maxHistory: 50,
+    // Mute/Solo
+    colorMuted: {
+        red: false,
+        blue: false,
+        green: false,
+        yellow: false
+    },
+    soloColor: null // null = no solo, or color name
 };
 
-const GRID_SIZE = 30; // 16th notes grid (1200px / 40 = 30px)
+const GRID_SIZE = 30;
 
 const COLOR_MAP = {
     red: '#fc5c65',
@@ -84,7 +95,6 @@ async function initAudio() {
     if (state.audioContext.state === 'suspended') {
         try {
             await state.audioContext.resume();
-            console.log('AudioContext resumed, state:', state.audioContext.state);
         } catch (error) {
             console.error('Failed to resume AudioContext:', error);
         }
@@ -100,24 +110,21 @@ function yToFrequency(y, canvasHeight) {
 }
 
 async function playNote(frequency, timbre, duration = 0.25) {
-    const ctx = state.audioContext;
-    if (!ctx) return;
+    const audioCtx = state.audioContext;
+    if (!audioCtx) return;
 
-    if (ctx.state === 'suspended') {
-        await ctx.resume();
+    if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
     }
 
-    if (ctx.state !== 'running') {
-        console.warn('AudioContext not running:', ctx.state);
-        return;
-    }
+    if (audioCtx.state !== 'running') return;
 
-    const now = ctx.currentTime;
+    const now = audioCtx.currentTime;
 
     // Basic waveforms
     if (['square', 'triangle', 'sawtooth', 'sine'].includes(timbre)) {
-        const oscillator = ctx.createOscillator();
-        const gainNode = ctx.createGain();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
 
         oscillator.type = timbre;
         oscillator.frequency.setValueAtTime(frequency, now);
@@ -129,17 +136,17 @@ async function playNote(frequency, timbre, duration = 0.25) {
         gainNode.gain.linearRampToValueAtTime(0, now + duration);
 
         if (state.djMode.filterEnabled) {
-            const filter = ctx.createBiquadFilter();
+            const filter = audioCtx.createBiquadFilter();
             filter.type = 'lowpass';
             filter.frequency.setValueAtTime(state.djMode.filterCutoff, now);
             filter.Q.setValueAtTime(state.djMode.resonance, now);
 
             oscillator.connect(filter);
             filter.connect(gainNode);
-            gainNode.connect(ctx.destination);
+            gainNode.connect(audioCtx.destination);
         } else {
             oscillator.connect(gainNode);
-            gainNode.connect(ctx.destination);
+            gainNode.connect(audioCtx.destination);
         }
 
         oscillator.start(now);
@@ -151,8 +158,8 @@ async function playNote(frequency, timbre, duration = 0.25) {
         const gains = [0.3, 0.15, 0.1, 0.05];
 
         harmonics.forEach((harmonic, index) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
 
             osc.type = 'sine';
             osc.frequency.setValueAtTime(frequency * harmonic, now);
@@ -162,17 +169,17 @@ async function playNote(frequency, timbre, duration = 0.25) {
             gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
             if (state.djMode.filterEnabled) {
-                const filter = ctx.createBiquadFilter();
+                const filter = audioCtx.createBiquadFilter();
                 filter.type = 'lowpass';
                 filter.frequency.setValueAtTime(state.djMode.filterCutoff, now);
                 filter.Q.setValueAtTime(state.djMode.resonance, now);
 
                 osc.connect(filter);
                 filter.connect(gain);
-                gain.connect(ctx.destination);
+                gain.connect(audioCtx.destination);
             } else {
                 osc.connect(gain);
-                gain.connect(ctx.destination);
+                gain.connect(audioCtx.destination);
             }
 
             osc.start(now);
@@ -181,8 +188,8 @@ async function playNote(frequency, timbre, duration = 0.25) {
     }
     // Bell
     else if (timbre === 'bell') {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
 
         osc.type = 'sine';
         osc.frequency.setValueAtTime(frequency, now);
@@ -192,17 +199,17 @@ async function playNote(frequency, timbre, duration = 0.25) {
         gain.gain.exponentialRampToValueAtTime(0.001, now + duration * 2);
 
         if (state.djMode.filterEnabled) {
-            const filter = ctx.createBiquadFilter();
+            const filter = audioCtx.createBiquadFilter();
             filter.type = 'lowpass';
             filter.frequency.setValueAtTime(state.djMode.filterCutoff, now);
             filter.Q.setValueAtTime(state.djMode.resonance, now);
 
             osc.connect(filter);
             filter.connect(gain);
-            gain.connect(ctx.destination);
+            gain.connect(audioCtx.destination);
         } else {
             osc.connect(gain);
-            gain.connect(ctx.destination);
+            gain.connect(audioCtx.destination);
         }
 
         osc.start(now);
@@ -210,10 +217,10 @@ async function playNote(frequency, timbre, duration = 0.25) {
     }
     // Bass
     else if (timbre === 'bass') {
-        const osc = ctx.createOscillator();
-        const filter = ctx.createBiquadFilter();
-        const djFilter = state.djMode.filterEnabled ? ctx.createBiquadFilter() : null;
-        const gain = ctx.createGain();
+        const osc = audioCtx.createOscillator();
+        const filter = audioCtx.createBiquadFilter();
+        const djFilter = state.djMode.filterEnabled ? audioCtx.createBiquadFilter() : null;
+        const gain = audioCtx.createGain();
 
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(frequency, now);
@@ -238,15 +245,15 @@ async function playNote(frequency, timbre, duration = 0.25) {
         } else {
             filter.connect(gain);
         }
-        gain.connect(ctx.destination);
+        gain.connect(audioCtx.destination);
 
         osc.start(now);
         osc.stop(now + duration);
     }
     // Strings
     else if (timbre === 'strings') {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
 
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(frequency, now);
@@ -257,17 +264,17 @@ async function playNote(frequency, timbre, duration = 0.25) {
         gain.gain.linearRampToValueAtTime(0, now + duration);
 
         if (state.djMode.filterEnabled) {
-            const filter = ctx.createBiquadFilter();
+            const filter = audioCtx.createBiquadFilter();
             filter.type = 'lowpass';
             filter.frequency.setValueAtTime(state.djMode.filterCutoff, now);
             filter.Q.setValueAtTime(state.djMode.resonance, now);
 
             osc.connect(filter);
             filter.connect(gain);
-            gain.connect(ctx.destination);
+            gain.connect(audioCtx.destination);
         } else {
             osc.connect(gain);
-            gain.connect(ctx.destination);
+            gain.connect(audioCtx.destination);
         }
 
         osc.start(now);
@@ -275,23 +282,19 @@ async function playNote(frequency, timbre, duration = 0.25) {
     }
 }
 
-// ==================== Drawing Setup ====================
+// ==================== Initialization ====================
 function init() {
     canvas = document.getElementById('canvas');
     ctx = canvas.getContext('2d', { willReadFrequently: true });
     playbackLine = document.getElementById('playbackLine');
 
     drawGrid();
+    saveHistory(); // Save initial state
     setupControls();
     setupDrawing();
     setupCredit();
-
-    // Show instructions briefly
-    const instructions = document.getElementById('instructions');
-    instructions.classList.add('visible');
-    setTimeout(() => {
-        instructions.classList.remove('visible');
-    }, 5000);
+    setupKeyboard();
+    updateUndoRedoButtons();
 }
 
 function drawGrid() {
@@ -320,11 +323,67 @@ function drawGrid() {
     }
 }
 
+// ==================== History (Undo/Redo) ====================
+function saveHistory() {
+    // Remove any future history if we're not at the end
+    if (state.historyIndex < state.history.length - 1) {
+        state.history = state.history.slice(0, state.historyIndex + 1);
+    }
+
+    // Save current canvas state
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    state.history.push(imageData);
+
+    // Limit history size
+    if (state.history.length > state.maxHistory) {
+        state.history.shift();
+    } else {
+        state.historyIndex++;
+    }
+
+    updateUndoRedoButtons();
+}
+
+function undo() {
+    if (state.historyIndex > 0) {
+        state.historyIndex--;
+        const imageData = state.history[state.historyIndex];
+        ctx.putImageData(imageData, 0, 0);
+        updateUndoRedoButtons();
+
+        // Update snapshot if playing
+        if (state.isPlaying && state.canvasSnapshot) {
+            state.canvasSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        }
+    }
+}
+
+function redo() {
+    if (state.historyIndex < state.history.length - 1) {
+        state.historyIndex++;
+        const imageData = state.history[state.historyIndex];
+        ctx.putImageData(imageData, 0, 0);
+        updateUndoRedoButtons();
+
+        // Update snapshot if playing
+        if (state.isPlaying && state.canvasSnapshot) {
+            state.canvasSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        }
+    }
+}
+
+function updateUndoRedoButtons() {
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+
+    if (undoBtn) undoBtn.disabled = state.historyIndex <= 0;
+    if (redoBtn) redoBtn.disabled = state.historyIndex >= state.history.length - 1;
+}
+
 // ==================== Controls ====================
 function setupControls() {
-    // Play/Stop
-    document.getElementById('playBtn').addEventListener('click', play);
-    document.getElementById('stopBtn').addEventListener('click', stop);
+    // Play/Stop toggle
+    document.getElementById('playBtn').addEventListener('click', togglePlayStop);
 
     // Ping-pong mode
     const pingPongCheck = document.getElementById('pingPongCheck');
@@ -346,11 +405,9 @@ function setupControls() {
         currentScale = SCALES[e.target.value];
     });
 
-    // Tool buttons
-    document.getElementById('penBtn').addEventListener('click', () => setTool('pen'));
-    document.getElementById('eraserBtn').addEventListener('click', () => setTool('eraser'));
-
-    // Clear all
+    // Undo/Redo/Clear
+    document.getElementById('undoBtn').addEventListener('click', undo);
+    document.getElementById('redoBtn').addEventListener('click', redo);
     document.getElementById('clearAllBtn').addEventListener('click', clearAll);
 
     // Color palette
@@ -375,12 +432,26 @@ function setupControls() {
     });
 
     // Color clear buttons
-    document.querySelectorAll('.color-clear-btn').forEach(btn => {
+    document.querySelectorAll('[data-clear-color]').forEach(btn => {
         btn.addEventListener('click', () => {
             const color = btn.dataset.clearColor;
-            if (confirm(`Clear all ${color} lines?`)) {
-                clearColor(color);
-            }
+            clearColor(color);
+        });
+    });
+
+    // Mute buttons
+    document.querySelectorAll('.mute-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const color = btn.dataset.muteColor;
+            toggleMute(color);
+        });
+    });
+
+    // Solo buttons
+    document.querySelectorAll('.solo-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const color = btn.dataset.soloColor;
+            toggleSolo(color);
         });
     });
 }
@@ -400,31 +471,78 @@ function setupCredit() {
     });
 }
 
-function setTool(tool) {
-    state.tool = tool;
+function setupKeyboard() {
+    document.addEventListener('keydown', (e) => {
+        // Undo: Ctrl+Z
+        if (e.ctrlKey && e.key === 'z') {
+            e.preventDefault();
+            undo();
+        }
+        // Redo: Ctrl+Y or Ctrl+Shift+Z
+        if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
+            e.preventDefault();
+            redo();
+        }
+        // Space: Play/Stop
+        if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+            e.preventDefault();
+            togglePlayStop();
+        }
+    });
+}
 
-    const penBtn = document.getElementById('penBtn');
-    const eraserBtn = document.getElementById('eraserBtn');
+// ==================== Mute/Solo ====================
+function toggleMute(color) {
+    state.colorMuted[color] = !state.colorMuted[color];
+    updateMuteSoloUI();
+}
 
-    if (tool === 'pen') {
-        penBtn.classList.add('active');
-        eraserBtn.classList.remove('active');
-        canvas.classList.remove('eraser');
+function toggleSolo(color) {
+    if (state.soloColor === color) {
+        state.soloColor = null;
     } else {
-        eraserBtn.classList.add('active');
-        penBtn.classList.remove('active');
-        canvas.classList.add('eraser');
+        state.soloColor = color;
     }
+    updateMuteSoloUI();
+}
+
+function updateMuteSoloUI() {
+    // Update mute buttons
+    document.querySelectorAll('.mute-btn').forEach(btn => {
+        const color = btn.dataset.muteColor;
+        btn.classList.toggle('active', state.colorMuted[color]);
+    });
+
+    // Update solo buttons
+    document.querySelectorAll('.solo-btn').forEach(btn => {
+        const color = btn.dataset.soloColor;
+        btn.classList.toggle('active', state.soloColor === color);
+    });
+
+    // Update color button opacity
+    document.querySelectorAll('.color-btn').forEach(btn => {
+        const color = btn.dataset.color;
+        const isMuted = isColorMuted(color);
+        btn.classList.toggle('muted', isMuted);
+    });
+}
+
+function isColorMuted(color) {
+    // If solo is active, only the solo color plays
+    if (state.soloColor) {
+        return color !== state.soloColor;
+    }
+    // Otherwise check individual mute
+    return state.colorMuted[color];
 }
 
 function clearAll() {
-    if (confirm('Clear canvas?')) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawGrid();
-        // Update snapshot if playing to prevent animation from restoring cleared canvas
-        if (state.isPlaying && state.canvasSnapshot) {
-            state.canvasSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGrid();
+    saveHistory();
+
+    if (state.isPlaying && state.canvasSnapshot) {
+        state.canvasSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
     }
 }
 
@@ -432,14 +550,16 @@ function clearColor(color) {
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
 
-    const colorRanges = {
-        red: { rMin: 200, rMax: 255, gMin: 0, gMax: 150, bMin: 0, bMax: 150 },
-        blue: { rMin: 0, rMax: 150, gMin: 150, gMax: 255, bMin: 200, bMax: 255 },
-        green: { rMin: 0, rMax: 150, gMin: 200, gMax: 255, bMin: 0, bMax: 200 },
-        yellow: { rMin: 200, rMax: 255, gMin: 200, gMax: 255, bMin: 0, bMax: 150 }
+    // Use hue-based detection to catch anti-aliased intermediate colors
+    // Color hue ranges (in degrees, 0-360)
+    const hueRanges = {
+        red: { hMin: 350, hMax: 360, hMin2: 0, hMax2: 20 },  // Red wraps around 0
+        blue: { hMin: 190, hMax: 220 },
+        green: { hMin: 130, hMax: 170 },
+        yellow: { hMin: 40, hMax: 60 }
     };
 
-    const range = colorRanges[color];
+    const range = hueRanges[color];
     if (!range) return;
 
     for (let i = 0; i < data.length; i += 4) {
@@ -448,17 +568,49 @@ function clearColor(color) {
         const b = data[i + 2];
         const a = data[i + 3];
 
-        if (a > 200 &&
-            r >= range.rMin && r <= range.rMax &&
-            g >= range.gMin && g <= range.gMax &&
-            b >= range.bMin && b <= range.bMax) {
-            data[i + 3] = 0;
+        // Skip transparent/nearly transparent pixels
+        if (a < 10) continue;
+
+        // Skip gray pixels (grid lines)
+        const maxDiff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
+        if (maxDiff < 30) continue;
+
+        // Convert RGB to HSL to get hue
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const d = max - min;
+
+        if (d === 0) continue; // Achromatic
+
+        let h;
+        if (max === r) {
+            h = ((g - b) / d) % 6;
+        } else if (max === g) {
+            h = (b - r) / d + 2;
+        } else {
+            h = (r - g) / d + 4;
+        }
+        h = Math.round(h * 60);
+        if (h < 0) h += 360;
+
+        // Check if hue matches the target color
+        let matches = false;
+        if (color === 'red') {
+            // Red hue wraps around 0/360
+            matches = (h >= range.hMin || h <= range.hMax2);
+        } else {
+            matches = (h >= range.hMin && h <= range.hMax);
+        }
+
+        if (matches) {
+            data[i + 3] = 0; // Make transparent
         }
     }
 
     ctx.putImageData(imageData, 0, 0);
     drawGrid();
-    // Update snapshot if playing to prevent animation from restoring cleared lines
+    saveHistory();
+
     if (state.isPlaying && state.canvasSnapshot) {
         state.canvasSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
     }
@@ -552,7 +704,6 @@ function draw(e) {
         const deltaY = state.djMode.startY - pos.y;
         const deltaX = pos.x - state.djMode.startX;
 
-        // Filter Cutoff (Y-axis)
         const filterNormalized = Math.max(-1, Math.min(1, deltaY / 150));
         const logMin = Math.log(200);
         const logMax = Math.log(20000);
@@ -561,7 +712,6 @@ function draw(e) {
         state.djMode.filterCutoff = Math.exp(logFilter);
         state.djMode.filterCutoff = Math.max(200, Math.min(20000, state.djMode.filterCutoff));
 
-        // Resonance (X-axis)
         const resonanceNormalized = Math.max(0, Math.min(1, deltaX / 800));
         const logResMin = Math.log(0.5);
         const logResMax = Math.log(50);
@@ -577,49 +727,15 @@ function draw(e) {
     // Normal drawing mode
     if (!isDrawing) return;
 
-    if (state.tool === 'pen') {
-        ctx.strokeStyle = COLOR_MAP[state.currentColor];
-        ctx.lineWidth = 4;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+    ctx.strokeStyle = COLOR_MAP[state.currentColor];
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
-        ctx.beginPath();
-        ctx.moveTo(lastX, lastY);
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
-    } else if (state.tool === 'eraser') {
-        const eraserSize = 30;
-        ctx.clearRect(pos.x - eraserSize / 2, pos.y - eraserSize / 2, eraserSize, eraserSize);
-
-        // Redraw grid in erased area
-        ctx.save();
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
-        ctx.lineWidth = 1;
-
-        const w = canvas.width;
-        const h = canvas.height;
-
-        for (let i = 1; i < 16; i++) {
-            const x = (w / 16) * i;
-            if (x >= pos.x - eraserSize / 2 && x <= pos.x + eraserSize / 2) {
-                ctx.beginPath();
-                ctx.moveTo(x, Math.max(0, pos.y - eraserSize / 2));
-                ctx.lineTo(x, Math.min(h, pos.y + eraserSize / 2));
-                ctx.stroke();
-            }
-        }
-
-        for (let i = 1; i < 12; i++) {
-            const y = (h / 12) * i;
-            if (y >= pos.y - eraserSize / 2 && y <= pos.y + eraserSize / 2) {
-                ctx.beginPath();
-                ctx.moveTo(Math.max(0, pos.x - eraserSize / 2), y);
-                ctx.lineTo(Math.min(w, pos.x + eraserSize / 2), y);
-                ctx.stroke();
-            }
-        }
-        ctx.restore();
-    }
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
 
     lastX = pos.x;
     lastY = pos.y;
@@ -636,6 +752,7 @@ function stopDrawing() {
 
     if (isDrawing) {
         isDrawing = false;
+        saveHistory();
     }
 }
 
@@ -662,13 +779,11 @@ function drawDJGuides() {
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
 
-    // Vertical line
     ctx.beginPath();
     ctx.moveTo(state.djMode.startX, 0);
     ctx.lineTo(state.djMode.startX, canvas.height);
     ctx.stroke();
 
-    // Horizontal line
     ctx.beginPath();
     ctx.moveTo(0, state.djMode.startY);
     ctx.lineTo(canvas.width, state.djMode.startY);
@@ -676,20 +791,17 @@ function drawDJGuides() {
 
     ctx.setLineDash([]);
 
-    // Start point marker
     ctx.fillStyle = 'rgba(0, 255, 255, 0.6)';
     ctx.beginPath();
     ctx.arc(state.djMode.startX, state.djMode.startY, 8, 0, Math.PI * 2);
     ctx.fill();
 
-    // Current position marker
     ctx.strokeStyle = 'rgba(255, 0, 255, 1)';
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.arc(state.djMode.currentX, state.djMode.currentY, 12, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Delta lines
     ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)';
     ctx.lineWidth = 2;
 
@@ -707,12 +819,19 @@ function drawDJGuides() {
 }
 
 // ==================== Playback ====================
+function togglePlayStop() {
+    if (state.isPlaying) {
+        stop();
+    } else {
+        play();
+    }
+}
+
 async function play() {
     if (state.isPlaying) return;
 
     await initAudio();
 
-    // Silent note to activate AudioContext
     if (state.audioContext && state.audioContext.state === 'running') {
         const dummyOsc = state.audioContext.createOscillator();
         const dummyGain = state.audioContext.createGain();
@@ -733,6 +852,9 @@ async function play() {
     state.lastTime = performance.now();
     state.lastPlaybackX = -10;
 
+    // Update UI
+    document.body.classList.add('playing');
+    document.getElementById('playBtn').textContent = '■';
     playbackLine.style.display = 'block';
 
     state.animationId = requestAnimationFrame(animate);
@@ -753,6 +875,9 @@ function stop() {
         state.canvasSnapshot = null;
     }
 
+    // Update UI
+    document.body.classList.remove('playing');
+    document.getElementById('playBtn').textContent = '▶';
     playbackLine.style.display = 'none';
     playbackLine.style.left = '0%';
 }
@@ -792,13 +917,11 @@ function animate(currentTime) {
         }
     }
 
-    // Restore canvas
     if (state.canvasSnapshot) {
         ctx.putImageData(state.canvasSnapshot, 0, 0);
 
         drawDJGuides();
 
-        // Redraw flashes
         state.activeFlashes.forEach(flash => {
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
@@ -810,14 +933,12 @@ function animate(currentTime) {
             ctx.restore();
         });
 
-        // Fade flashes
         state.activeFlashes = state.activeFlashes.map(flash => ({
             ...flash,
             alpha: flash.alpha * 0.9
         })).filter(flash => flash.alpha > 0.05);
     }
 
-    // Update playback line
     const percentage = (state.playbackPosition / canvas.width) * 100;
     playbackLine.style.left = `calc(50% - 600px + ${state.playbackPosition}px)`;
 
@@ -861,6 +982,12 @@ function checkAndPlayNotes(x) {
             const colorInfo = getColorFromRGB(r, g, b);
             if (colorInfo) {
                 hasDrawing = true;
+
+                // Check if this color is muted
+                if (isColorMuted(colorInfo.color)) {
+                    continue;
+                }
+
                 const frequency = yToFrequency(y, canvas.height);
                 const bucket = Math.floor(y / bucketSize);
                 const key = `${colorInfo.timbre}_${bucket}`;

@@ -24,7 +24,7 @@
             height: 100%;
             overflow: hidden;
             touch-action: none;
-            background: #4d4d4d;
+            background: #fff;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
         }
 
@@ -34,13 +34,9 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: #f8f9fa;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            background: #fff;
+            border: 2px solid #000;
             cursor: crosshair;
-        }
-
-        #canvas.eraser {
-            cursor: cell;
         }
 
         /* Playback line */
@@ -49,11 +45,10 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 3px;
+            width: 2px;
             height: 400px;
-            background: rgba(255, 0, 0, 0.7);
+            background: #000;
             pointer-events: none;
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
             display: none;
             z-index: 10;
         }
@@ -63,38 +58,23 @@
             position: fixed;
             top: max(12px, env(safe-area-inset-top));
             left: 12px;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: 1px solid rgba(0, 0, 0, 0.3);
-            background: rgba(0, 0, 0, 0.1);
-            color: rgba(0, 0, 0, 0.5);
+            width: 28px;
+            height: 28px;
+            border: 1px solid #000;
+            background: #fff;
+            color: #000;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             cursor: pointer;
             z-index: 100;
-            transition: all 0.2s;
         }
 
         #credit-btn:hover {
-            background: rgba(0, 0, 0, 0.2);
-            color: rgba(0, 0, 0, 0.8);
-            border-color: rgba(0, 0, 0, 0.5);
-        }
-
-        body.dark #credit-btn {
-            border-color: rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.1);
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-        body.dark #credit-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: rgba(255, 255, 255, 0.8);
-            border-color: rgba(255, 255, 255, 0.5);
+            background: #000;
+            color: #fff;
         }
 
         /* Credit modal */
@@ -105,7 +85,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: #fff;
+            background: rgba(255, 255, 255, 0.95);
             z-index: 300;
             align-items: center;
             justify-content: center;
@@ -117,17 +97,11 @@
         }
 
         #credit-content {
-            background: rgba(255, 255, 255, 0.95);
+            background: #000;
+            color: #fff;
             padding: 32px;
-            border-radius: 16px;
             text-align: center;
             max-width: 400px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-
-        body.dark #credit-content {
-            background: rgba(30, 30, 30, 0.95);
-            color: #fff;
         }
 
         #credit-content h2 {
@@ -147,6 +121,7 @@
             width: 100%;
             height: 100%;
             object-fit: contain;
+            filter: invert(1);
         }
 
         #credit-author {
@@ -155,13 +130,9 @@
         }
 
         #credit-author a {
-            color: #333;
+            color: #fff;
             text-decoration: none;
             font-weight: bold;
-        }
-
-        body.dark #credit-author a {
-            color: #fff;
         }
 
         #credit-author a:hover {
@@ -171,25 +142,17 @@
         /* Control panel - top center */
         #control-panel {
             position: fixed;
-            top: max(20px, env(safe-area-inset-top));
+            top: max(12px, env(safe-area-inset-top));
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.95);
-            padding: 12px 20px;
-            border-radius: 12px;
+            background: #000;
+            color: #fff;
+            padding: 8px 16px;
             z-index: 100;
             display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
+            gap: 16px;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            max-width: 90vw;
-        }
-
-        body.dark #control-panel {
-            background: rgba(40, 40, 40, 0.95);
-            color: #fff;
         }
 
         .control-group {
@@ -198,197 +161,200 @@
             gap: 8px;
         }
 
-        .btn {
-            padding: 8px 16px;
-            font-size: 13px;
-            font-weight: 600;
-            border: 2px solid #333;
-            border-radius: 8px;
+        /* Play button */
+        #playBtn {
+            width: 32px;
+            height: 32px;
+            background: transparent;
+            border: 1px solid #fff;
+            color: #fff;
+            font-size: 16px;
             cursor: pointer;
-            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #playBtn:hover {
             background: #fff;
-            color: #333;
+            color: #000;
         }
 
-        body.dark .btn {
-            background: #444;
-            border-color: #888;
+        .control-label {
+            font-size: 12px;
             color: #fff;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn.active {
-            background: #333;
-            color: #fff;
-        }
-
-        body.dark .btn.active {
-            background: #fff;
-            color: #333;
-        }
-
-        .btn.danger {
-            background: #333;
-            color: #fff;
-        }
-
-        body.dark .btn.danger {
-            background: #888;
-        }
-
-        select,
-        input[type="range"] {
-            cursor: pointer;
         }
 
         select {
-            padding: 6px 10px;
-            border: 2px solid #333;
-            border-radius: 6px;
-            background: #fff;
-            font-size: 12px;
-        }
-
-        body.dark select {
-            background: #444;
-            border-color: #888;
+            padding: 4px 8px;
+            border: 1px solid #fff;
+            background: transparent;
             color: #fff;
+            font-size: 11px;
+            cursor: pointer;
         }
 
-        .speed-label,
-        .control-label {
-            font-size: 13px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        body.dark .speed-label,
-        body.dark .control-label {
+        select option {
+            background: #000;
             color: #fff;
         }
 
         input[type="range"] {
-            width: 100px;
+            width: 80px;
+            cursor: pointer;
         }
 
         input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             cursor: pointer;
+        }
+
+        /* Canvas toolbar - below canvas */
+        #canvas-toolbar {
+            position: fixed;
+            top: calc(50% + 200px + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .toolbar-btn {
+            width: 28px;
+            height: 28px;
+            background: #000;
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toolbar-btn:hover {
+            background: #333;
+        }
+
+        .toolbar-btn:disabled {
+            background: #999;
+            cursor: not-allowed;
         }
 
         /* Color palette - bottom center */
         #color-palette {
             position: fixed;
-            bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
+            bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.95);
-            padding: 12px 20px;
-            border-radius: 12px;
+            background: #000;
+            padding: 12px 16px;
             z-index: 100;
             display: flex;
-            gap: 12px;
+            gap: 16px;
             align-items: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            flex-wrap: wrap;
-            justify-content: center;
-            max-width: 90vw;
-        }
-
-        body.dark #color-palette {
-            background: rgba(40, 40, 40, 0.95);
         }
 
         .color-group {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
         }
 
         .color-btn {
-            width: 48px;
-            height: 48px;
-            border-radius: 10px;
-            border: 3px solid transparent;
+            width: 40px;
+            height: 40px;
+            border: 2px solid transparent;
             cursor: pointer;
-            transition: all 0.2s;
-            position: relative;
+            transition: all 0.1s;
         }
 
         .color-btn:hover {
             transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         .color-btn.active {
-            border-color: #333;
-            box-shadow: 0 0 0 2px white, 0 0 0 4px #333;
+            border-color: #fff;
             transform: scale(1.15);
         }
 
-        body.dark .color-btn.active {
-            border-color: #fff;
-            box-shadow: 0 0 0 2px #4d4d4d, 0 0 0 4px #fff;
-        }
-
         .color-btn.red {
-            background: linear-gradient(135deg, #fc5c65, #fd7984);
+            background: #fc5c65;
         }
 
         .color-btn.blue {
-            background: linear-gradient(135deg, #45aaf2, #4b7bec);
+            background: #45aaf2;
         }
 
         .color-btn.green {
-            background: linear-gradient(135deg, #26de81, #20bf6b);
+            background: #26de81;
         }
 
         .color-btn.yellow {
-            background: linear-gradient(135deg, #fed330, #f7b731);
+            background: #fed330;
+        }
+
+        .color-btn.muted {
+            opacity: 0.3;
         }
 
         .timbre-select {
-            padding: 2px 6px;
-            font-size: 10px;
-            border: 1px solid #999;
-            border-radius: 4px;
-            background: white;
+            padding: 2px 4px;
+            font-size: 9px;
+            border: 1px solid #fff;
+            background: transparent;
+            color: #fff;
             cursor: pointer;
-            max-width: 90px;
+            max-width: 70px;
         }
 
-        body.dark .timbre-select {
-            background: #444;
-            border-color: #888;
+        .timbre-select option {
+            background: #000;
             color: #fff;
         }
 
-        .color-clear-btn {
-            padding: 2px 8px;
+        .color-controls {
+            display: flex;
+            gap: 2px;
+        }
+
+        .color-action-btn {
+            width: 20px;
+            height: 20px;
+            background: transparent;
+            border: 1px solid #fff;
+            color: #fff;
             font-size: 10px;
-            background: #333;
-            color: white;
-            border: none;
-            border-radius: 4px;
             cursor: pointer;
-            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        body.dark .color-clear-btn {
-            background: #888;
+        .color-action-btn:hover {
+            background: #fff;
+            color: #000;
         }
 
-        .color-clear-btn:hover {
-            transform: scale(1.05);
+        .color-action-btn.active {
+            background: #fff;
+            color: #000;
+        }
+
+        /* Mute/Solo buttons - hidden when not playing */
+        .mute-solo-btns {
+            display: none;
+        }
+
+        body.playing .mute-solo-btns {
+            display: flex;
+        }
+
+        body.playing .clear-btn-wrapper {
+            display: none;
         }
 
         /* DJ overlay */
@@ -399,10 +365,9 @@
             transform: translate(-50%, -50%);
             background: rgba(0, 0, 0, 0.9);
             color: white;
-            padding: 16px 24px;
-            border-radius: 12px;
+            padding: 12px 20px;
             font-family: monospace;
-            font-size: 14px;
+            font-size: 12px;
             pointer-events: none;
             display: none;
             z-index: 200;
@@ -410,13 +375,13 @@
         }
 
         .dj-overlay div {
-            margin: 4px 0;
+            margin: 2px 0;
         }
 
         .dj-overlay .param-label {
-            color: #aaa;
+            color: #888;
             display: inline-block;
-            width: 90px;
+            width: 80px;
         }
 
         .dj-overlay .param-value {
@@ -424,59 +389,31 @@
             font-weight: bold;
         }
 
-        /* Instructions */
-        .instructions {
-            position: fixed;
-            bottom: max(90px, calc(env(safe-area-inset-bottom) + 80px));
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 11px;
-            text-align: center;
-            max-width: 80vw;
-            line-height: 1.4;
-            display: none;
-            z-index: 50;
-        }
-
-        .instructions.visible {
-            display: block;
-        }
-
         @media (max-width: 768px) {
             #control-panel {
-                font-size: 11px;
-                padding: 10px 12px;
-                gap: 8px;
-            }
-
-            .btn {
-                padding: 6px 12px;
-                font-size: 11px;
+                padding: 6px 10px;
+                gap: 10px;
             }
 
             .color-btn {
-                width: 40px;
-                height: 40px;
+                width: 32px;
+                height: 32px;
             }
 
             #color-palette {
-                padding: 10px 12px;
-                gap: 8px;
+                padding: 8px 12px;
+                gap: 10px;
             }
 
             .timbre-select {
-                font-size: 9px;
-                max-width: 80px;
+                font-size: 8px;
+                max-width: 60px;
             }
         }
     </style>
 </head>
 
-<body class="light">
+<body>
     <canvas id="canvas" width="1200" height="400"></canvas>
     <div class="playback-line" id="playbackLine"></div>
 
@@ -498,20 +435,17 @@
 
     <!-- Control panel -->
     <div id="control-panel">
-        <div class="control-group">
-            <button id="playBtn" class="btn">▶ Play</button>
-            <button id="stopBtn" class="btn">■ Stop</button>
-        </div>
+        <button id="playBtn">▶</button>
 
         <div class="control-group">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                 <input type="checkbox" id="pingPongCheck">
                 <span class="control-label">Ping-Pong</span>
             </label>
         </div>
 
         <div class="control-group">
-            <span class="speed-label">Speed: <span id="speedValue">1.0</span>x</span>
+            <span class="control-label">Speed: <span id="speedValue">1.0</span>x</span>
             <input type="range" id="speedSlider" min="0.5" max="2" step="0.1" value="1">
         </div>
 
@@ -526,19 +460,17 @@
                 <option value="chromatic">Chromatic</option>
             </select>
         </div>
+    </div>
 
-        <div class="control-group">
-            <button id="penBtn" class="btn active">✏️ Pen</button>
-            <button id="eraserBtn" class="btn">🧹 Eraser</button>
-        </div>
-
-        <button id="clearAllBtn" class="btn danger">🗑️ Clear</button>
+    <!-- Canvas toolbar (below canvas) -->
+    <div id="canvas-toolbar">
+        <button class="toolbar-btn" id="undoBtn" title="Undo (Ctrl+Z)">←</button>
+        <button class="toolbar-btn" id="redoBtn" title="Redo (Ctrl+Y)">→</button>
+        <button class="toolbar-btn" id="clearAllBtn" title="Clear All">🗑</button>
     </div>
 
     <!-- Color palette -->
     <div id="color-palette">
-        <span class="control-label">Pen Color:</span>
-
         <div class="color-group">
             <button class="color-btn red active" data-color="red"></button>
             <select class="timbre-select" data-timbre-for="red">
@@ -551,7 +483,15 @@
                 <option value="bass">Bass</option>
                 <option value="strings">Strings</option>
             </select>
-            <button class="color-clear-btn" data-clear-color="red">×</button>
+            <div class="color-controls">
+                <div class="clear-btn-wrapper">
+                    <button class="color-action-btn" data-clear-color="red">×</button>
+                </div>
+                <div class="mute-solo-btns">
+                    <button class="color-action-btn mute-btn" data-mute-color="red">M</button>
+                    <button class="color-action-btn solo-btn" data-solo-color="red">S</button>
+                </div>
+            </div>
         </div>
 
         <div class="color-group">
@@ -566,7 +506,15 @@
                 <option value="bass">Bass</option>
                 <option value="strings">Strings</option>
             </select>
-            <button class="color-clear-btn" data-clear-color="blue">×</button>
+            <div class="color-controls">
+                <div class="clear-btn-wrapper">
+                    <button class="color-action-btn" data-clear-color="blue">×</button>
+                </div>
+                <div class="mute-solo-btns">
+                    <button class="color-action-btn mute-btn" data-mute-color="blue">M</button>
+                    <button class="color-action-btn solo-btn" data-solo-color="blue">S</button>
+                </div>
+            </div>
         </div>
 
         <div class="color-group">
@@ -581,7 +529,15 @@
                 <option value="bass">Bass</option>
                 <option value="strings">Strings</option>
             </select>
-            <button class="color-clear-btn" data-clear-color="green">×</button>
+            <div class="color-controls">
+                <div class="clear-btn-wrapper">
+                    <button class="color-action-btn" data-clear-color="green">×</button>
+                </div>
+                <div class="mute-solo-btns">
+                    <button class="color-action-btn mute-btn" data-mute-color="green">M</button>
+                    <button class="color-action-btn solo-btn" data-solo-color="green">S</button>
+                </div>
+            </div>
         </div>
 
         <div class="color-group">
@@ -596,7 +552,15 @@
                 <option value="bass">Bass</option>
                 <option value="strings">Strings</option>
             </select>
-            <button class="color-clear-btn" data-clear-color="yellow">×</button>
+            <div class="color-controls">
+                <div class="clear-btn-wrapper">
+                    <button class="color-action-btn" data-clear-color="yellow">×</button>
+                </div>
+                <div class="mute-solo-btns">
+                    <button class="color-action-btn mute-btn" data-mute-color="yellow">M</button>
+                    <button class="color-action-btn solo-btn" data-solo-color="yellow">S</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -604,12 +568,6 @@
     <div class="dj-overlay" id="djOverlay">
         <div><span class="param-label">Filter:</span><span class="param-value" id="pitchValue">10kHz</span></div>
         <div><span class="param-label">Resonance:</span><span class="param-value" id="filterValue">0.5</span></div>
-    </div>
-
-    <!-- Instructions -->
-    <div class="instructions" id="instructions">
-        💡 Draw lines with colors, press Play to hear music. Vertical position = pitch. DJ Mode: Drag during playback to
-        control filter & resonance!
     </div>
 
     <script src="app.js"></script>
