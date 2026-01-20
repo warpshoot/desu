@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>DESU™ trajectory</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: none;
+            background: #4d4d4d;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        }
+
+        #canvas {
+            display: block;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #f8f9fa;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            cursor: crosshair;
+        }
+
+        #canvas.eraser {
+            cursor: cell;
+        }
+
+        /* Playback line */
+        .playback-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 3px;
+            height: 400px;
+            background: rgba(255, 0, 0, 0.7);
+            pointer-events: none;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+            display: none;
+            z-index: 10;
+        }
+
+        /* Credit button */
+        #credit-btn {
+            position: fixed;
+            top: max(12px, env(safe-area-inset-top));
+            left: 12px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.1);
+            color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.2s;
+        }
+
+        #credit-btn:hover {
+            background: rgba(0, 0, 0, 0.2);
+            color: rgba(0, 0, 0, 0.8);
+            border-color: rgba(0, 0, 0, 0.5);
+        }
+
+        body.dark #credit-btn {
+            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        body.dark #credit-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.8);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Credit modal */
+        #credit-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        #credit-modal.visible {
+            display: flex;
+        }
+
+        #credit-content {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 32px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        body.dark #credit-content {
+            background: rgba(30, 30, 30, 0.95);
+            color: #fff;
+        }
+
+        #credit-content h2 {
+            font-size: 24px;
+            margin-bottom: 16px;
+            font-weight: bold;
+        }
+
+        #credit-logo {
+            width: 120px;
+            height: 120px;
+            margin: 16px auto;
+            cursor: pointer;
+        }
+
+        #credit-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #credit-author {
+            font-size: 16px;
+            margin-top: 16px;
+        }
+
+        #credit-author a {
+            color: #333;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        body.dark #credit-author a {
+            color: #fff;
+        }
+
+        #credit-author a:hover {
+            text-decoration: underline;
+        }
+
+        /* Control panel - top center */
+        #control-panel {
+            position: fixed;
+            top: max(20px, env(safe-area-inset-top));
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 20px;
+            border-radius: 12px;
+            z-index: 100;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            max-width: 90vw;
+        }
+
+        body.dark #control-panel {
+            background: rgba(40, 40, 40, 0.95);
+            color: #fff;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border: 2px solid #333;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fff;
+            color: #333;
+        }
+
+        body.dark .btn {
+            background: #444;
+            border-color: #888;
+            color: #fff;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.active {
+            background: #333;
+            color: #fff;
+        }
+
+        body.dark .btn.active {
+            background: #fff;
+            color: #333;
+        }
+
+        .btn.danger {
+            background: #333;
+            color: #fff;
+        }
+
+        body.dark .btn.danger {
+            background: #888;
+        }
+
+        select,
+        input[type="range"] {
+            cursor: pointer;
+        }
+
+        select {
+            padding: 6px 10px;
+            border: 2px solid #333;
+            border-radius: 6px;
+            background: #fff;
+            font-size: 12px;
+        }
+
+        body.dark select {
+            background: #444;
+            border-color: #888;
+            color: #fff;
+        }
+
+        .speed-label,
+        .control-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        body.dark .speed-label,
+        body.dark .control-label {
+            color: #fff;
+        }
+
+        input[type="range"] {
+            width: 100px;
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        /* Color palette - bottom center */
+        #color-palette {
+            position: fixed;
+            bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 20px;
+            border-radius: 12px;
+            z-index: 100;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 90vw;
+        }
+
+        body.dark #color-palette {
+            background: rgba(40, 40, 40, 0.95);
+        }
+
+        .color-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .color-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .color-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .color-btn.active {
+            border-color: #333;
+            box-shadow: 0 0 0 2px white, 0 0 0 4px #333;
+            transform: scale(1.15);
+        }
+
+        body.dark .color-btn.active {
+            border-color: #fff;
+            box-shadow: 0 0 0 2px #4d4d4d, 0 0 0 4px #fff;
+        }
+
+        .color-btn.red {
+            background: linear-gradient(135deg, #fc5c65, #fd7984);
+        }
+
+        .color-btn.blue {
+            background: linear-gradient(135deg, #45aaf2, #4b7bec);
+        }
+
+        .color-btn.green {
+            background: linear-gradient(135deg, #26de81, #20bf6b);
+        }
+
+        .color-btn.yellow {
+            background: linear-gradient(135deg, #fed330, #f7b731);
+        }
+
+        .timbre-select {
+            padding: 2px 6px;
+            font-size: 10px;
+            border: 1px solid #999;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            max-width: 90px;
+        }
+
+        body.dark .timbre-select {
+            background: #444;
+            border-color: #888;
+            color: #fff;
+        }
+
+        .color-clear-btn {
+            padding: 2px 8px;
+            font-size: 10px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        body.dark .color-clear-btn {
+            background: #888;
+        }
+
+        .color-clear-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* DJ overlay */
+        .dj-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-family: monospace;
+            font-size: 14px;
+            pointer-events: none;
+            display: none;
+            z-index: 200;
+            text-align: center;
+        }
+
+        .dj-overlay div {
+            margin: 4px 0;
+        }
+
+        .dj-overlay .param-label {
+            color: #aaa;
+            display: inline-block;
+            width: 90px;
+        }
+
+        .dj-overlay .param-value {
+            color: #0ff;
+            font-weight: bold;
+        }
+
+        /* Instructions */
+        .instructions {
+            position: fixed;
+            bottom: max(90px, calc(env(safe-area-inset-bottom) + 80px));
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 11px;
+            text-align: center;
+            max-width: 80vw;
+            line-height: 1.4;
+            display: none;
+            z-index: 50;
+        }
+
+        .instructions.visible {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            #control-panel {
+                font-size: 11px;
+                padding: 10px 12px;
+                gap: 8px;
+            }
+
+            .btn {
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+
+            .color-btn {
+                width: 40px;
+                height: 40px;
+            }
+
+            #color-palette {
+                padding: 10px 12px;
+                gap: 8px;
+            }
+
+            .timbre-select {
+                font-size: 9px;
+                max-width: 80px;
+            }
+        }
+    </style>
+</head>
+
+<body class="light">
+    <canvas id="canvas" width="1200" height="400"></canvas>
+    <div class="playback-line" id="playbackLine"></div>
+
+    <!-- Credit button -->
+    <div id="credit-btn">?</div>
+
+    <!-- Credit modal -->
+    <div id="credit-modal">
+        <div id="credit-content">
+            <h2>DESU™ trajectory</h2>
+            <a href="https://warpshoot.github.io/desu/" target="_blank" id="credit-logo">
+                <img src="../desu_logo.png" alt="DESU Logo">
+            </a>
+            <div id="credit-author">
+                by <a href="https://warpshoot.github.io/" target="_blank">wpy</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Control panel -->
+    <div id="control-panel">
+        <div class="control-group">
+            <button id="playBtn" class="btn">▶ Play</button>
+            <button id="stopBtn" class="btn">■ Stop</button>
+        </div>
+
+        <div class="control-group">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="pingPongCheck">
+                <span class="control-label">Ping-Pong</span>
+            </label>
+        </div>
+
+        <div class="control-group">
+            <span class="speed-label">Speed: <span id="speedValue">1.0</span>x</span>
+            <input type="range" id="speedSlider" min="0.5" max="2" step="0.1" value="1">
+        </div>
+
+        <div class="control-group">
+            <span class="control-label">Scale:</span>
+            <select id="scaleSelect">
+                <option value="pentatonic">Pentatonic</option>
+                <option value="major">Major</option>
+                <option value="minor">Minor</option>
+                <option value="blues">Blues</option>
+                <option value="wholetone">Wholetone</option>
+                <option value="chromatic">Chromatic</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <button id="penBtn" class="btn active">✏️ Pen</button>
+            <button id="eraserBtn" class="btn">🧹 Eraser</button>
+        </div>
+
+        <button id="clearAllBtn" class="btn danger">🗑️ Clear</button>
+    </div>
+
+    <!-- Color palette -->
+    <div id="color-palette">
+        <span class="control-label">Pen Color:</span>
+
+        <div class="color-group">
+            <button class="color-btn red active" data-color="red"></button>
+            <select class="timbre-select" data-timbre-for="red">
+                <option value="square">Square</option>
+                <option value="triangle">Triangle</option>
+                <option value="sawtooth">Sawtooth</option>
+                <option value="sine">Sine</option>
+                <option value="piano">Piano</option>
+                <option value="bell">Bell</option>
+                <option value="bass">Bass</option>
+                <option value="strings">Strings</option>
+            </select>
+            <button class="color-clear-btn" data-clear-color="red">×</button>
+        </div>
+
+        <div class="color-group">
+            <button class="color-btn blue" data-color="blue"></button>
+            <select class="timbre-select" data-timbre-for="blue">
+                <option value="square">Square</option>
+                <option value="triangle" selected>Triangle</option>
+                <option value="sawtooth">Sawtooth</option>
+                <option value="sine">Sine</option>
+                <option value="piano">Piano</option>
+                <option value="bell">Bell</option>
+                <option value="bass">Bass</option>
+                <option value="strings">Strings</option>
+            </select>
+            <button class="color-clear-btn" data-clear-color="blue">×</button>
+        </div>
+
+        <div class="color-group">
+            <button class="color-btn green" data-color="green"></button>
+            <select class="timbre-select" data-timbre-for="green">
+                <option value="square">Square</option>
+                <option value="triangle">Triangle</option>
+                <option value="sawtooth" selected>Sawtooth</option>
+                <option value="sine">Sine</option>
+                <option value="piano">Piano</option>
+                <option value="bell">Bell</option>
+                <option value="bass">Bass</option>
+                <option value="strings">Strings</option>
+            </select>
+            <button class="color-clear-btn" data-clear-color="green">×</button>
+        </div>
+
+        <div class="color-group">
+            <button class="color-btn yellow" data-color="yellow"></button>
+            <select class="timbre-select" data-timbre-for="yellow">
+                <option value="square">Square</option>
+                <option value="triangle">Triangle</option>
+                <option value="sawtooth">Sawtooth</option>
+                <option value="sine" selected>Sine</option>
+                <option value="piano">Piano</option>
+                <option value="bell">Bell</option>
+                <option value="bass">Bass</option>
+                <option value="strings">Strings</option>
+            </select>
+            <button class="color-clear-btn" data-clear-color="yellow">×</button>
+        </div>
+    </div>
+
+    <!-- DJ overlay -->
+    <div class="dj-overlay" id="djOverlay">
+        <div><span class="param-label">Filter:</span><span class="param-value" id="pitchValue">10kHz</span></div>
+        <div><span class="param-label">Resonance:</span><span class="param-value" id="filterValue">0.5</span></div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="instructions" id="instructions">
+        💡 Draw lines with colors, press Play to hear music. Vertical position = pitch. DJ Mode: Drag during playback to
+        control filter & resonance!
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
