@@ -166,6 +166,7 @@ let isLassoing = false;
 let isPenDrawing = false;
 let lastPenPoint = null;
 let isErasing = false;  // 消しゴムモードフラグ
+let justFinishedPenDrawing = false;  // ペン描画直後フラグ（誤アンドゥ防止）
 
 // 保存モード
 let isSaveMode = false;
@@ -640,6 +641,13 @@ async function endPenDrawing() {
         console.log('endPenDrawing - calling saveState()');
         await saveState();
         console.log('endPenDrawing - saveState() completed');
+
+        // ペン描画直後フラグを立てる（誤検出による即座のアンドゥを防ぐ）
+        justFinishedPenDrawing = true;
+        setTimeout(() => {
+            justFinishedPenDrawing = false;
+            console.log('justFinishedPenDrawing cleared');
+        }, 200);
     }
 }
 
@@ -970,9 +978,12 @@ lineCanvas.addEventListener('pointerup', async (e) => {
     if (activePointers.size === 0) {
         const duration = Date.now() - touchStartTime;
 
-        if (maxFingers >= 2 && duration < 400 && !isPinching && !strokeMade) {
+        if (maxFingers >= 2 && duration < 400 && !isPinching && !strokeMade && !justFinishedPenDrawing) {
+            console.log('Gesture detected - maxFingers:', maxFingers);
             if (maxFingers === 2) undo();
             if (maxFingers === 3) redo();
+        } else if (justFinishedPenDrawing) {
+            console.log('Ignoring undo gesture - just finished pen drawing');
         }
 
         maxFingers = 0;
