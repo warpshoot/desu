@@ -854,7 +854,7 @@ async function play() {
 
     // Update UI
     document.body.classList.add('playing');
-    document.getElementById('playBtn').textContent = '■';
+    document.getElementById('playBtn').textContent = '■ STOP';
     playbackLine.style.display = 'block';
 
     state.animationId = requestAnimationFrame(animate);
@@ -877,7 +877,7 @@ function stop() {
 
     // Update UI
     document.body.classList.remove('playing');
-    document.getElementById('playBtn').textContent = '▶';
+    document.getElementById('playBtn').textContent = '▶ PLAY';
     playbackLine.style.display = 'none';
     playbackLine.style.left = '0%';
 }

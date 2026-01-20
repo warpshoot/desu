@@ -139,36 +139,41 @@
             text-decoration: underline;
         }
 
-        /* Control panel - top center */
+        /* Control panel - top center, 2 rows */
         #control-panel {
             position: fixed;
             top: max(12px, env(safe-area-inset-top));
             left: 50%;
             transform: translateX(-50%);
             background: #000;
-            color: #fff;
-            padding: 8px 16px;
             z-index: 100;
             display: flex;
-            gap: 16px;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        /* Row 1: Other controls (top) */
+        .control-row-1 {
+            display: flex;
+            gap: 12px;
+            padding: 8px 12px;
             align-items: center;
             justify-content: center;
         }
 
-        .control-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        /* Row 2: Wide play button (below) */
+        .control-row-2 {
+            width: 100%;
         }
 
-        /* Play button */
         #playBtn {
-            width: 32px;
-            height: 32px;
-            background: transparent;
+            width: 100%;
+            height: 40px;
+            background: #000;
             border: 1px solid #fff;
             color: #fff;
-            font-size: 16px;
+            font-size: 18px;
+            font-weight: bold;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -176,38 +181,40 @@
         }
 
         #playBtn:hover {
-            background: #fff;
-            color: #000;
+            background: #333;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .control-label {
-            font-size: 12px;
+            font-size: 11px;
             color: #fff;
         }
 
         select {
-            padding: 4px 8px;
+            padding: 3px 6px;
             border: 1px solid #fff;
-            background: transparent;
-            color: #fff;
-            font-size: 11px;
+            background: #fff;
+            color: #000;
+            font-size: 10px;
             cursor: pointer;
-        }
-
-        select option {
-            background: #000;
-            color: #fff;
         }
 
         input[type="range"] {
-            width: 80px;
+            width: 60px;
             cursor: pointer;
+            accent-color: #888;
         }
 
         input[type="checkbox"] {
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
             cursor: pointer;
+            accent-color: #888;
         }
 
         /* Canvas toolbar - below canvas */
@@ -217,7 +224,7 @@
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 8px;
+            gap: 4px;
             z-index: 100;
         }
 
@@ -239,7 +246,7 @@
         }
 
         .toolbar-btn:disabled {
-            background: #999;
+            background: #aaa;
             cursor: not-allowed;
         }
 
@@ -250,10 +257,10 @@
             left: 50%;
             transform: translateX(-50%);
             background: #000;
-            padding: 12px 16px;
+            padding: 10px 14px;
             z-index: 100;
             display: flex;
-            gap: 16px;
+            gap: 12px;
             align-items: center;
         }
 
@@ -265,8 +272,8 @@
         }
 
         .color-btn {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             border: 2px solid transparent;
             cursor: pointer;
             transition: all 0.1s;
@@ -305,15 +312,10 @@
             padding: 2px 4px;
             font-size: 9px;
             border: 1px solid #fff;
-            background: transparent;
-            color: #fff;
+            background: #fff;
+            color: #000;
             cursor: pointer;
             max-width: 70px;
-        }
-
-        .timbre-select option {
-            background: #000;
-            color: #fff;
         }
 
         .color-controls {
@@ -322,11 +324,11 @@
         }
 
         .color-action-btn {
-            width: 20px;
-            height: 20px;
-            background: transparent;
-            border: 1px solid #fff;
-            color: #fff;
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border: none;
+            color: #000;
             font-size: 10px;
             cursor: pointer;
             display: flex;
@@ -335,13 +337,12 @@
         }
 
         .color-action-btn:hover {
-            background: #fff;
-            color: #000;
+            background: #ccc;
         }
 
         .color-action-btn.active {
-            background: #fff;
-            color: #000;
+            background: #888;
+            color: #fff;
         }
 
         /* Mute/Solo buttons - hidden when not playing */
@@ -385,29 +386,40 @@
         }
 
         .dj-overlay .param-value {
-            color: #0ff;
+            color: #fff;
             font-weight: bold;
         }
 
         @media (max-width: 768px) {
-            #control-panel {
+            #playBtn {
+                height: 36px;
+                font-size: 16px;
+            }
+
+            .control-row-2 {
                 padding: 6px 10px;
-                gap: 10px;
+                gap: 8px;
             }
 
             .color-btn {
-                width: 32px;
-                height: 32px;
+                width: 28px;
+                height: 28px;
             }
 
             #color-palette {
-                padding: 8px 12px;
-                gap: 10px;
+                padding: 8px 10px;
+                gap: 8px;
             }
 
             .timbre-select {
                 font-size: 8px;
-                max-width: 60px;
+                max-width: 55px;
+            }
+
+            .color-action-btn {
+                width: 16px;
+                height: 16px;
+                font-size: 9px;
             }
         }
     </style>
@@ -433,32 +445,38 @@
         </div>
     </div>
 
-    <!-- Control panel -->
+    <!-- Control panel (2 rows) -->
     <div id="control-panel">
-        <button id="playBtn">▶</button>
+        <!-- Row 1: Other controls (top) -->
+        <div class="control-row-1">
+            <div class="control-group">
+                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <input type="checkbox" id="pingPongCheck">
+                    <span class="control-label">Ping-Pong</span>
+                </label>
+            </div>
 
-        <div class="control-group">
-            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                <input type="checkbox" id="pingPongCheck">
-                <span class="control-label">Ping-Pong</span>
-            </label>
+            <div class="control-group">
+                <span class="control-label">Speed: <span id="speedValue">1.0</span>x</span>
+                <input type="range" id="speedSlider" min="0.5" max="2" step="0.1" value="1">
+            </div>
+
+            <div class="control-group">
+                <span class="control-label">Scale:</span>
+                <select id="scaleSelect">
+                    <option value="pentatonic">Pentatonic</option>
+                    <option value="major">Major</option>
+                    <option value="minor">Minor</option>
+                    <option value="blues">Blues</option>
+                    <option value="wholetone">Wholetone</option>
+                    <option value="chromatic">Chromatic</option>
+                </select>
+            </div>
         </div>
 
-        <div class="control-group">
-            <span class="control-label">Speed: <span id="speedValue">1.0</span>x</span>
-            <input type="range" id="speedSlider" min="0.5" max="2" step="0.1" value="1">
-        </div>
-
-        <div class="control-group">
-            <span class="control-label">Scale:</span>
-            <select id="scaleSelect">
-                <option value="pentatonic">Pentatonic</option>
-                <option value="major">Major</option>
-                <option value="minor">Minor</option>
-                <option value="blues">Blues</option>
-                <option value="wholetone">Wholetone</option>
-                <option value="chromatic">Chromatic</option>
-            </select>
+        <!-- Row 2: Wide play button (below) -->
+        <div class="control-row-2">
+            <button id="playBtn">▶ PLAY</button>
         </div>
     </div>
 
