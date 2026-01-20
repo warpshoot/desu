@@ -1,4 +1,4 @@
-# DESU™ trajectory
+# DESU™ tune
 
 Draw colorful musical trajectories and hear them play back as music.
 
