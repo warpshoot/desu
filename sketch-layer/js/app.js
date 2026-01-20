@@ -166,7 +166,6 @@ let isLassoing = false;
 let isPenDrawing = false;
 let lastPenPoint = null;
 let isErasing = false;  // 消しゴムモードフラグ
-let justFinishedPenDrawing = false;  // ペン描画直後フラグ（誤アンドゥ防止）
 
 // 保存モード
 let isSaveMode = false;
@@ -641,13 +640,6 @@ async function endPenDrawing() {
         console.log('endPenDrawing - calling saveState()');
         await saveState();
         console.log('endPenDrawing - saveState() completed');
-
-        // ペン描画直後フラグを立てる（誤検出による即座のアンドゥを防ぐ）
-        justFinishedPenDrawing = true;
-        setTimeout(() => {
-            justFinishedPenDrawing = false;
-            console.log('justFinishedPenDrawing cleared');
-        }, 200);
     }
 }
 
@@ -880,6 +872,9 @@ lineCanvas.addEventListener('pointerup', async (e) => {
 
     console.log('pointerup - id:', e.pointerId, 'activePointers.size before delete:', activePointers.size);
 
+    // このイベント内でアンドゥジェスチャーをスキップするかのフラグ
+    let skipUndoGestureThisEvent = false;
+
     // 手のひらモード終了
     if (isPanning) {
         isPanning = false;
@@ -892,6 +887,8 @@ lineCanvas.addEventListener('pointerup', async (e) => {
         console.log('Last finger up - ending pen drawing');
         await endPenDrawing();
         console.log('endPenDrawing awaited - continuing pointerup handler');
+        // ペン描画完了後、このイベント内ではアンドゥをスキップ
+        skipUndoGestureThisEvent = true;
     }
 
     // 投げ縄終了
@@ -978,12 +975,12 @@ lineCanvas.addEventListener('pointerup', async (e) => {
     if (activePointers.size === 0) {
         const duration = Date.now() - touchStartTime;
 
-        if (maxFingers >= 2 && duration < 400 && !isPinching && !strokeMade && !justFinishedPenDrawing) {
+        if (maxFingers >= 2 && duration < 400 && !isPinching && !strokeMade && !skipUndoGestureThisEvent) {
             console.log('Gesture detected - maxFingers:', maxFingers);
             if (maxFingers === 2) undo();
             if (maxFingers === 3) redo();
-        } else if (justFinishedPenDrawing) {
-            console.log('Ignoring undo gesture - just finished pen drawing');
+        } else if (skipUndoGestureThisEvent) {
+            console.log('Skipping undo gesture in this event - just finished pen drawing');
         }
 
         maxFingers = 0;
