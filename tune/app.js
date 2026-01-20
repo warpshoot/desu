@@ -940,7 +940,7 @@ function animate(currentTime) {
     }
 
     const percentage = (state.playbackPosition / canvas.width) * 100;
-    playbackLine.style.left = `calc(50% - 600px + ${state.playbackPosition}px)`;
+    playbackLine.style.left = `${percentage}%`;
 
     checkAndPlayNotes(Math.floor(state.playbackPosition));
 

@@ -21,156 +21,155 @@
         html,
         body {
             width: 100%;
-            height: 100%;
-            overflow: hidden;
-            touch-action: none;
+            min-height: 100%;
+            overflow: auto;
             background: #fff;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
         }
 
-        #canvas {
-            display: block;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #fff;
-            border: 2px solid #000;
-            cursor: crosshair;
+        body {
+            padding: 20px;
+            padding-top: 80px;
         }
 
-        /* Playback line */
-        .playback-line {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 2px;
-            height: 400px;
-            background: #000;
-            pointer-events: none;
-            display: none;
-            z-index: 10;
-        }
-
-        /* Credit button */
-        #credit-btn {
-            position: fixed;
-            top: max(12px, env(safe-area-inset-top));
-            left: 12px;
-            width: 28px;
-            height: 28px;
-            border: 1px solid #000;
-            background: #fff;
-            color: #000;
+        /* Hamburger Menu */
+        .hamburger {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: bold;
+            flex-direction: column;
+            justify-content: space-around;
+            width: 30px;
+            height: 30px;
+            background: transparent;
+            border: none;
             cursor: pointer;
+            padding: 0;
+            z-index: 1001;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+        }
+
+        .hamburger span {
+            width: 30px;
+            height: 3px;
+            background: #333;
+            transition: all 0.3s linear;
+            position: relative;
+            transform-origin: 1px;
+        }
+
+        .hamburger.active span:nth-child(1) {
+            transform: rotate(45deg);
+        }
+
+        .hamburger.active span:nth-child(2) {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+
+        .hamburger.active span:nth-child(3) {
+            transform: rotate(-45deg);
+        }
+
+        /* Navigation Menu */
+        .nav-menu {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 250px;
+            height: 100vh;
+            background: #fff;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            transition: left 0.3s ease;
+            z-index: 1000;
+            padding-top: 80px;
+        }
+
+        .nav-menu.active {
+            left: 0;
+        }
+
+        .nav-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .nav-list li {
+            border-bottom: 1px solid #eee;
+        }
+
+        .nav-list a {
+            display: block;
+            padding: 20px 30px;
+            color: #333;
+            text-decoration: none;
+            font-size: 18px;
+            transition: background 0.2s;
+        }
+
+        .nav-list a:hover {
+            background: #f5f5f5;
+        }
+
+        /* Logo */
+        .site-logo {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            height: 40px;
             z-index: 100;
         }
 
-        #credit-btn:hover {
-            background: #000;
-            color: #fff;
-        }
-
-        /* Credit modal */
-        #credit-modal {
-            display: none;
+        /* Header gradient overlay */
+        .header-gradient {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            z-index: 300;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            pointer-events: none;
+            z-index: 50;
         }
 
-        #credit-modal.visible {
-            display: flex;
-        }
-
-        #credit-content {
+        /* Main container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
             background: #000;
-            color: #fff;
-            padding: 32px;
-            text-align: center;
-            max-width: 400px;
+            padding: 0;
         }
 
-        #credit-content h2 {
+        h1 {
             font-size: 24px;
-            margin-bottom: 16px;
-            font-weight: bold;
-        }
-
-        #credit-logo {
-            width: 120px;
-            height: 120px;
-            margin: 16px auto;
-            cursor: pointer;
-        }
-
-        #credit-logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            filter: invert(1);
-        }
-
-        #credit-author {
-            font-size: 16px;
-            margin-top: 16px;
-        }
-
-        #credit-author a {
+            padding: 20px;
             color: #fff;
-            text-decoration: none;
-            font-weight: bold;
+            margin: 0;
         }
 
-        #credit-author a:hover {
-            text-decoration: underline;
-        }
-
-        /* Control panel - top center, 2 rows */
-        #control-panel {
-            position: fixed;
-            top: max(12px, env(safe-area-inset-top));
-            left: 50%;
-            transform: translateX(-50%);
-            background: #000;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-        }
-
-        /* Row 1: Other controls (top) */
+        /* Control panel */
         .control-row-1 {
             display: flex;
             gap: 12px;
-            padding: 8px 12px;
+            padding: 8px 20px;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            border-top: 1px solid #333;
         }
 
-        /* Row 2: Wide play button (below) */
         .control-row-2 {
             width: 100%;
         }
 
         #playBtn {
             width: 100%;
-            height: 40px;
+            height: 44px;
             background: #000;
-            border: 1px solid #fff;
+            border: none;
+            border-top: 1px solid #333;
             color: #fff;
             font-size: 18px;
             font-weight: bold;
@@ -181,7 +180,7 @@
         }
 
         #playBtn:hover {
-            background: #333;
+            background: #222;
         }
 
         .control-group {
@@ -217,23 +216,50 @@
             accent-color: #888;
         }
 
-        /* Canvas toolbar - below canvas */
-        #canvas-toolbar {
-            position: fixed;
-            top: calc(50% + 200px + 8px);
-            left: 50%;
-            transform: translateX(-50%);
+        /* Canvas section */
+        .canvas-section {
+            position: relative;
+            background: #000;
+            padding: 2px;
+        }
+
+        #canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: #fff;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        /* Playback line */
+        .playback-line {
+            position: absolute;
+            top: 2px;
+            left: 0;
+            width: 2px;
+            height: calc(100% - 4px);
+            background: #000;
+            pointer-events: none;
+            display: none;
+            z-index: 10;
+        }
+
+        /* Canvas toolbar */
+        .canvas-toolbar {
             display: flex;
+            justify-content: center;
             gap: 4px;
-            z-index: 100;
+            padding: 8px;
+            background: #000;
         }
 
         .toolbar-btn {
-            width: 28px;
-            height: 28px;
-            background: #000;
+            width: 32px;
+            height: 32px;
+            background: #fff;
             border: none;
-            color: #fff;
+            color: #000;
             font-size: 14px;
             cursor: pointer;
             display: flex;
@@ -242,26 +268,24 @@
         }
 
         .toolbar-btn:hover {
-            background: #333;
+            background: #ccc;
         }
 
         .toolbar-btn:disabled {
-            background: #aaa;
+            background: #888;
+            color: #fff;
             cursor: not-allowed;
         }
 
-        /* Color palette - bottom center */
+        /* Color palette */
         #color-palette {
-            position: fixed;
-            bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
-            left: 50%;
-            transform: translateX(-50%);
             background: #000;
-            padding: 10px 14px;
-            z-index: 100;
+            padding: 12px 20px;
             display: flex;
-            gap: 12px;
+            gap: 16px;
             align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
         .color-group {
@@ -272,8 +296,8 @@
         }
 
         .color-btn {
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             border: 2px solid transparent;
             cursor: pointer;
             transition: all 0.1s;
@@ -345,7 +369,6 @@
             color: #fff;
         }
 
-        /* Mute/Solo buttons - hidden when not playing */
         .mute-solo-btns {
             display: none;
         }
@@ -375,10 +398,6 @@
             text-align: center;
         }
 
-        .dj-overlay div {
-            margin: 2px 0;
-        }
-
         .dj-overlay .param-label {
             color: #888;
             display: inline-block;
@@ -390,25 +409,53 @@
             font-weight: bold;
         }
 
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        footer a {
+            color: #000;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
         @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                padding-top: 70px;
+            }
+
+            h1 {
+                font-size: 20px;
+                padding: 15px;
+            }
+
+            .control-row-1 {
+                gap: 8px;
+                padding: 6px 15px;
+            }
+
             #playBtn {
-                height: 36px;
+                height: 40px;
                 font-size: 16px;
             }
 
-            .control-row-2 {
-                padding: 6px 10px;
-                gap: 8px;
-            }
-
             .color-btn {
-                width: 28px;
-                height: 28px;
+                width: 32px;
+                height: 32px;
             }
 
             #color-palette {
-                padding: 8px 10px;
-                gap: 8px;
+                padding: 8px 15px;
+                gap: 10px;
             }
 
             .timbre-select {
@@ -426,28 +473,35 @@
 </head>
 
 <body>
-    <canvas id="canvas" width="1200" height="400"></canvas>
-    <div class="playback-line" id="playbackLine"></div>
+    <!-- Header gradient -->
+    <div class="header-gradient"></div>
 
-    <!-- Credit button -->
-    <div id="credit-btn">?</div>
+    <!-- Hamburger Menu -->
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
 
-    <!-- Credit modal -->
-    <div id="credit-modal">
-        <div id="credit-content">
-            <h2>DESU™ tune</h2>
-            <a href="https://warpshoot.github.io/desu/" target="_blank" id="credit-logo">
-                <img src="../desu_logo.png" alt="DESU Logo">
-            </a>
-            <div id="credit-author">
-                by <a href="https://warpshoot.github.io/" target="_blank">wpy</a>
-            </div>
-        </div>
-    </div>
+    <!-- Navigation Menu -->
+    <nav class="nav-menu" id="navMenu">
+        <ul class="nav-list">
+            <li><a href="../episodes/">Episodes</a></li>
+            <li><a href="../characters/">Characters</a></li>
+            <li><a href="../tools/">Tools</a></li>
+        </ul>
+    </nav>
 
-    <!-- Control panel (2 rows) -->
-    <div id="control-panel">
-        <!-- Row 1: Other controls (top) -->
+    <!-- Logo -->
+    <a href="../" class="logo-link">
+        <img src="../desu_logo.png" alt="DESU™" class="site-logo">
+    </a>
+
+    <!-- Main container -->
+    <div class="container">
+        <h1>DESU™ tune</h1>
+
+        <!-- Controls -->
         <div class="control-row-1">
             <div class="control-group">
                 <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
@@ -474,113 +528,122 @@
             </div>
         </div>
 
-        <!-- Row 2: Wide play button (below) -->
         <div class="control-row-2">
             <button id="playBtn">▶ PLAY</button>
         </div>
+
+        <!-- Canvas section -->
+        <div class="canvas-section">
+            <canvas id="canvas" width="1200" height="400"></canvas>
+            <div class="playback-line" id="playbackLine"></div>
+        </div>
+
+        <!-- Canvas toolbar -->
+        <div class="canvas-toolbar">
+            <button class="toolbar-btn" id="undoBtn" title="Undo (Ctrl+Z)">←</button>
+            <button class="toolbar-btn" id="redoBtn" title="Redo (Ctrl+Y)">→</button>
+            <button class="toolbar-btn" id="clearAllBtn" title="Clear All">🗑</button>
+        </div>
+
+        <!-- Color palette -->
+        <div id="color-palette">
+            <div class="color-group">
+                <button class="color-btn red active" data-color="red"></button>
+                <select class="timbre-select" data-timbre-for="red">
+                    <option value="square">Square</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="sawtooth">Sawtooth</option>
+                    <option value="sine">Sine</option>
+                    <option value="piano">Piano</option>
+                    <option value="bell">Bell</option>
+                    <option value="bass">Bass</option>
+                    <option value="strings">Strings</option>
+                </select>
+                <div class="color-controls">
+                    <div class="clear-btn-wrapper">
+                        <button class="color-action-btn" data-clear-color="red">×</button>
+                    </div>
+                    <div class="mute-solo-btns">
+                        <button class="color-action-btn mute-btn" data-mute-color="red">M</button>
+                        <button class="color-action-btn solo-btn" data-solo-color="red">S</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="color-group">
+                <button class="color-btn blue" data-color="blue"></button>
+                <select class="timbre-select" data-timbre-for="blue">
+                    <option value="square">Square</option>
+                    <option value="triangle" selected>Triangle</option>
+                    <option value="sawtooth">Sawtooth</option>
+                    <option value="sine">Sine</option>
+                    <option value="piano">Piano</option>
+                    <option value="bell">Bell</option>
+                    <option value="bass">Bass</option>
+                    <option value="strings">Strings</option>
+                </select>
+                <div class="color-controls">
+                    <div class="clear-btn-wrapper">
+                        <button class="color-action-btn" data-clear-color="blue">×</button>
+                    </div>
+                    <div class="mute-solo-btns">
+                        <button class="color-action-btn mute-btn" data-mute-color="blue">M</button>
+                        <button class="color-action-btn solo-btn" data-solo-color="blue">S</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="color-group">
+                <button class="color-btn green" data-color="green"></button>
+                <select class="timbre-select" data-timbre-for="green">
+                    <option value="square">Square</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="sawtooth" selected>Sawtooth</option>
+                    <option value="sine">Sine</option>
+                    <option value="piano">Piano</option>
+                    <option value="bell">Bell</option>
+                    <option value="bass">Bass</option>
+                    <option value="strings">Strings</option>
+                </select>
+                <div class="color-controls">
+                    <div class="clear-btn-wrapper">
+                        <button class="color-action-btn" data-clear-color="green">×</button>
+                    </div>
+                    <div class="mute-solo-btns">
+                        <button class="color-action-btn mute-btn" data-mute-color="green">M</button>
+                        <button class="color-action-btn solo-btn" data-solo-color="green">S</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="color-group">
+                <button class="color-btn yellow" data-color="yellow"></button>
+                <select class="timbre-select" data-timbre-for="yellow">
+                    <option value="square">Square</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="sawtooth">Sawtooth</option>
+                    <option value="sine" selected>Sine</option>
+                    <option value="piano">Piano</option>
+                    <option value="bell">Bell</option>
+                    <option value="bass">Bass</option>
+                    <option value="strings">Strings</option>
+                </select>
+                <div class="color-controls">
+                    <div class="clear-btn-wrapper">
+                        <button class="color-action-btn" data-clear-color="yellow">×</button>
+                    </div>
+                    <div class="mute-solo-btns">
+                        <button class="color-action-btn mute-btn" data-mute-color="yellow">M</button>
+                        <button class="color-action-btn solo-btn" data-solo-color="yellow">S</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Canvas toolbar (below canvas) -->
-    <div id="canvas-toolbar">
-        <button class="toolbar-btn" id="undoBtn" title="Undo (Ctrl+Z)">←</button>
-        <button class="toolbar-btn" id="redoBtn" title="Redo (Ctrl+Y)">→</button>
-        <button class="toolbar-btn" id="clearAllBtn" title="Clear All">🗑</button>
-    </div>
-
-    <!-- Color palette -->
-    <div id="color-palette">
-        <div class="color-group">
-            <button class="color-btn red active" data-color="red"></button>
-            <select class="timbre-select" data-timbre-for="red">
-                <option value="square">Square</option>
-                <option value="triangle">Triangle</option>
-                <option value="sawtooth">Sawtooth</option>
-                <option value="sine">Sine</option>
-                <option value="piano">Piano</option>
-                <option value="bell">Bell</option>
-                <option value="bass">Bass</option>
-                <option value="strings">Strings</option>
-            </select>
-            <div class="color-controls">
-                <div class="clear-btn-wrapper">
-                    <button class="color-action-btn" data-clear-color="red">×</button>
-                </div>
-                <div class="mute-solo-btns">
-                    <button class="color-action-btn mute-btn" data-mute-color="red">M</button>
-                    <button class="color-action-btn solo-btn" data-solo-color="red">S</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="color-group">
-            <button class="color-btn blue" data-color="blue"></button>
-            <select class="timbre-select" data-timbre-for="blue">
-                <option value="square">Square</option>
-                <option value="triangle" selected>Triangle</option>
-                <option value="sawtooth">Sawtooth</option>
-                <option value="sine">Sine</option>
-                <option value="piano">Piano</option>
-                <option value="bell">Bell</option>
-                <option value="bass">Bass</option>
-                <option value="strings">Strings</option>
-            </select>
-            <div class="color-controls">
-                <div class="clear-btn-wrapper">
-                    <button class="color-action-btn" data-clear-color="blue">×</button>
-                </div>
-                <div class="mute-solo-btns">
-                    <button class="color-action-btn mute-btn" data-mute-color="blue">M</button>
-                    <button class="color-action-btn solo-btn" data-solo-color="blue">S</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="color-group">
-            <button class="color-btn green" data-color="green"></button>
-            <select class="timbre-select" data-timbre-for="green">
-                <option value="square">Square</option>
-                <option value="triangle">Triangle</option>
-                <option value="sawtooth" selected>Sawtooth</option>
-                <option value="sine">Sine</option>
-                <option value="piano">Piano</option>
-                <option value="bell">Bell</option>
-                <option value="bass">Bass</option>
-                <option value="strings">Strings</option>
-            </select>
-            <div class="color-controls">
-                <div class="clear-btn-wrapper">
-                    <button class="color-action-btn" data-clear-color="green">×</button>
-                </div>
-                <div class="mute-solo-btns">
-                    <button class="color-action-btn mute-btn" data-mute-color="green">M</button>
-                    <button class="color-action-btn solo-btn" data-solo-color="green">S</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="color-group">
-            <button class="color-btn yellow" data-color="yellow"></button>
-            <select class="timbre-select" data-timbre-for="yellow">
-                <option value="square">Square</option>
-                <option value="triangle">Triangle</option>
-                <option value="sawtooth">Sawtooth</option>
-                <option value="sine" selected>Sine</option>
-                <option value="piano">Piano</option>
-                <option value="bell">Bell</option>
-                <option value="bass">Bass</option>
-                <option value="strings">Strings</option>
-            </select>
-            <div class="color-controls">
-                <div class="clear-btn-wrapper">
-                    <button class="color-action-btn" data-clear-color="yellow">×</button>
-                </div>
-                <div class="mute-solo-btns">
-                    <button class="color-action-btn mute-btn" data-mute-color="yellow">M</button>
-                    <button class="color-action-btn solo-btn" data-solo-color="yellow">S</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <footer>
+        <p>© 2026 <a href="https://warpshoot.github.io/" target="_blank">wpy</a></p>
+    </footer>
 
     <!-- DJ overlay -->
     <div class="dj-overlay" id="djOverlay">
@@ -589,6 +652,24 @@
     </div>
 
     <script src="app.js"></script>
+    <script>
+        // Hamburger menu
+        const hamburger = document.getElementById('hamburger');
+        const navMenu = document.getElementById('navMenu');
+
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('active');
+            navMenu.classList.toggle('active');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!hamburger.contains(e.target) && !navMenu.contains(e.target)) {
+                hamburger.classList.remove('active');
+                navMenu.classList.remove('active');
+            }
+        });
+    </script>
 </body>
 
 </html>
