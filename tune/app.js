@@ -34,14 +34,14 @@ const state = {
     history: [],
     historyIndex: -1,
     maxHistory: 50,
-    // Mute/Solo
     colorMuted: {
         red: false,
         blue: false,
         green: false,
         yellow: false
     },
-    soloColor: null // null = no solo, or color name
+    soloColor: null, // null = no solo, or color name
+    humanize: true  // Timing humanization
 };
 
 const GRID_SIZE = 30;
@@ -408,6 +408,12 @@ function setupControls() {
     const pingPongCheck = document.getElementById('pingPongCheck');
     pingPongCheck.addEventListener('change', (e) => {
         state.pingPongMode = e.target.checked;
+    });
+
+    // Humanize mode (timing variation)
+    const humanizeCheck = document.getElementById('humanizeCheck');
+    humanizeCheck.addEventListener('change', (e) => {
+        state.humanize = e.target.checked;
     });
 
     // Speed slider
@@ -1017,8 +1023,12 @@ function checkAndPlayNotes(x) {
     }
 
     if (hasDrawing && detectedNotes.length > 0) {
-        detectedNotes.forEach(note => {
-            playNote(note.frequency, note.timbre);
+        detectedNotes.forEach((note, index) => {
+            // Humanize: add small random delay (0-50ms) for organic feel
+            const humanizeDelay = state.humanize ? Math.random() * 50 : 0;
+            setTimeout(() => {
+                playNote(note.frequency, note.timbre);
+            }, humanizeDelay);
             flashIntersection(x, note.y, note.color);
         });
         state.playedGrids.add(gridPosition);
