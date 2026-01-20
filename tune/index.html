@@ -426,6 +426,111 @@
             text-decoration: underline;
         }
 
+        /* Options Modal */
+        #options-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #options-modal.visible {
+            display: flex;
+        }
+
+        .options-content {
+            background: #000;
+            border: 1px solid #fff;
+            padding: 20px;
+            min-width: 280px;
+            max-width: 90vw;
+        }
+
+        .options-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .options-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .options-close {
+            width: 24px;
+            height: 24px;
+            background: #fff;
+            border: none;
+            color: #000;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .options-close:hover {
+            background: #ccc;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .option-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #888;
+        }
+
+        .option-item label {
+            font-size: 13px;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .option-item .option-desc {
+            font-size: 10px;
+            color: #888;
+            display: block;
+        }
+
+        #optionsBtn {
+            width: 32px;
+            height: 32px;
+            background: #fff;
+            border: none;
+            color: #000;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #optionsBtn:hover {
+            background: #ccc;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             body {
@@ -504,13 +609,6 @@
         <!-- Controls -->
         <div class="control-row-1">
             <div class="control-group">
-                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                    <input type="checkbox" id="pingPongCheck">
-                    <span class="control-label">Ping-Pong</span>
-                </label>
-            </div>
-
-            <div class="control-group">
                 <span class="control-label">Speed: <span id="speedValue">1.0</span>x</span>
                 <input type="range" id="speedSlider" min="0.5" max="2" step="0.1" value="1">
             </div>
@@ -527,12 +625,7 @@
                 </select>
             </div>
 
-            <div class="control-group">
-                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                    <input type="checkbox" id="humanizeCheck" checked>
-                    <span class="control-label">Humanize</span>
-                </label>
-            </div>
+            <button id="optionsBtn" title="Options">⚙</button>
         </div>
 
         <div class="control-row-2">
@@ -656,6 +749,51 @@
     <div class="dj-overlay" id="djOverlay">
         <div><span class="param-label">Filter:</span><span class="param-value" id="pitchValue">10kHz</span></div>
         <div><span class="param-label">Resonance:</span><span class="param-value" id="filterValue">0.5</span></div>
+    </div>
+
+    <!-- Options Modal -->
+    <div id="options-modal">
+        <div class="options-content">
+            <div class="options-header">
+                <span class="options-title">OPTIONS</span>
+                <button class="options-close" id="optionsClose">×</button>
+            </div>
+            <div class="options-list">
+                <div class="option-item">
+                    <input type="checkbox" id="opt-pingPong">
+                    <label for="opt-pingPong">Ping-Pong<span class="option-desc">Bounce playback
+                            direction</span></label>
+                </div>
+                <div class="option-item">
+                    <input type="checkbox" id="opt-humanize" checked>
+                    <label for="opt-humanize">Humanize<span class="option-desc">Random timing variation</span></label>
+                </div>
+                <div class="option-item">
+                    <input type="checkbox" id="opt-loop">
+                    <label for="opt-loop">Loop<span class="option-desc">Auto-repeat playback</span></label>
+                </div>
+                <div class="option-item">
+                    <input type="checkbox" id="opt-reverb" checked>
+                    <label for="opt-reverb">Reverb<span class="option-desc">Spatial depth effect</span></label>
+                </div>
+                <div class="option-item">
+                    <input type="checkbox" id="opt-octave">
+                    <label for="opt-octave">Octave Doubling<span class="option-desc">Add octave layer</span></label>
+                </div>
+                <div class="option-item">
+                    <input type="checkbox" id="opt-chord">
+                    <label for="opt-chord">Chord Mode<span class="option-desc">Auto-add harmonics</span></label>
+                </div>
+                <div class="option-item">
+                    <input type="checkbox" id="opt-velocity" checked>
+                    <label for="opt-velocity">Velocity<span class="option-desc">Draw speed = volume</span></label>
+                </div>
+                <div class="option-item">
+                    <input type="checkbox" id="opt-preview">
+                    <label for="opt-preview">Preview Sound<span class="option-desc">Sound while drawing</span></label>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="app.js"></script>

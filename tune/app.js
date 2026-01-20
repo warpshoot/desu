@@ -19,7 +19,6 @@ const state = {
         yellow: 'sine'
     },
     playbackDirection: 1,
-    pingPongMode: false,
     djMode: {
         active: false,
         startX: 0,
@@ -40,8 +39,22 @@ const state = {
         green: false,
         yellow: false
     },
-    soloColor: null, // null = no solo, or color name
-    humanize: true  // Timing humanization
+    soloColor: null,
+    // Audio Options
+    options: {
+        pingPong: false,
+        humanize: true,
+        loop: false,
+        reverb: true,
+        octaveDoubling: false,
+        chordMode: false,
+        velocity: true,
+        previewSound: false
+    },
+    // Audio nodes
+    reverbNode: null,
+    lastDrawTime: 0,
+    lastDrawY: 0
 };
 
 const GRID_SIZE = 30;
@@ -117,6 +130,58 @@ async function initAudio() {
     if (state.audioContext.state !== 'running') {
         await new Promise(resolve => setTimeout(resolve, 100));
     }
+
+    // Initialize Reverb if needed
+    if (!state.reverbNode) {
+        initReverb();
+    }
+}
+
+function initReverb() {
+    const ctx = state.audioContext;
+    const convolver = ctx.createConvolver();
+
+    // Create impulse response for simple reverb
+    const duration = 2.0;
+    const decay = 2.0;
+    const sampleRate = ctx.sampleRate;
+    const length = sampleRate * duration;
+    const impulse = ctx.createBuffer(2, length, sampleRate);
+    const left = impulse.getChannelData(0);
+    const right = impulse.getChannelData(1);
+
+    for (let i = 0; i < length; i++) {
+        const n = i; // reverse index not needed for simple exponential decay noise
+        const val = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay);
+        left[i] = val;
+        right[i] = val;
+    }
+
+    convolver.buffer = impulse;
+    state.reverbNode = convolver;
+
+    // Reverb gain (mix) - we can connect this to destination
+    state.reverbGain = ctx.createGain();
+    state.reverbGain.gain.value = 0.3; // 30% wet
+
+    convolver.connect(state.reverbGain);
+    state.reverbGain.connect(ctx.destination);
+}
+
+function getHarmonics(frequency, scale) {
+    // Determine harmonics based on current scale proximity
+    // Simple approach: +3rd (approx * 1.25) and +5th (approx * 1.5)
+    // For a cleaner sound, we should verify against valid scale notes, 
+    // but for this synth toy, simple ratios work well enough for effect.
+    // Major 3rd: 1.2599, Minor 3rd: 1.1892, 5th: 1.4983
+
+    // Let's pick somewhat consonant intervals
+    let interval3rd = 1.26; // Major 3rd-ish
+    if (scale === SCALES.minor || scale === SCALES.blues) {
+        interval3rd = 1.19; // Minor 3rd-ish
+    }
+
+    return [frequency * interval3rd, frequency * 1.5];
 }
 
 function yToFrequency(y, canvasHeight) {
@@ -124,7 +189,7 @@ function yToFrequency(y, canvasHeight) {
     return currentScale[Math.max(0, Math.min(currentScale.length - 1, index))];
 }
 
-async function playNote(frequency, timbre, duration = 0.25) {
+async function playNote(frequency, timbre, duration = 0.25, velocity = 1.0) {
     const audioCtx = state.audioContext;
     if (!audioCtx) return;
 
@@ -134,61 +199,187 @@ async function playNote(frequency, timbre, duration = 0.25) {
 
     if (audioCtx.state !== 'running') return;
 
+    // Base note
+    playSound(frequency, timbre, duration, velocity);
+
+    // Octave Doubling
+    if (state.options.octaveDoubling) {
+        playSound(frequency * 2, timbre, duration, velocity * 0.5); // Lower volume for octave
+    }
+
+    // Chord Mode
+    if (state.options.chordMode) {
+        const harmonics = getHarmonics(frequency, currentScale);
+        harmonics.forEach(freq => {
+            playSound(freq, timbre, duration, velocity * 0.4); // Lower volume for harmony
+        });
+    }
+}
+
+function playSound(frequency, timbre, duration, velocity = 1.0) {
+    const audioCtx = state.audioContext;
     const now = audioCtx.currentTime;
 
-    // Basic waveforms
-    if (['square', 'triangle', 'sawtooth', 'sine'].includes(timbre)) {
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-
-        oscillator.type = timbre;
-        oscillator.frequency.setValueAtTime(frequency, now);
-
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.2, now + 0.02);
-        gainNode.gain.linearRampToValueAtTime(0.12, now + 0.08);
-        gainNode.gain.setValueAtTime(0.12, now + duration - 0.15);
-        gainNode.gain.linearRampToValueAtTime(0, now + duration);
-
-        if (state.djMode.filterEnabled) {
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(state.djMode.filterCutoff, now);
-            filter.Q.setValueAtTime(state.djMode.resonance, now);
-
-            oscillator.connect(filter);
-            filter.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-        } else {
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-        }
-
-        oscillator.start(now);
-        oscillator.stop(now + duration);
+    // Apply global volume and velocity option
+    let volume = 0.2 * velocity;
+    if (!state.options.velocity) {
+        volume = 0.2; // Fixed volume if velocity option is off
     }
-    // Piano
-    else if (timbre === 'piano') {
-        const harmonics = [1, 2, 3, 4];
-        const gains = [0.3, 0.15, 0.1, 0.05];
 
-        harmonics.forEach((harmonic, index) => {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
+    // Oscillator & Gain setup
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
 
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(frequency * harmonic, now);
+    // Custom Timbre support (Simple waveforms + simple expansions)
+    if (['square', 'triangle', 'sawtooth', 'sine'].includes(timbre)) {
+        oscillator.type = timbre;
+    } else {
+        // Fallback or more complex synthesis for piano, bell, etc.
+        // For now, map custom names to basic waveforms to ensure sound
+        switch (timbre) {
+            case 'piano': oscillator.type = 'triangle'; break;
+            case 'bell': oscillator.type = 'sine'; volume *= 1.5; break;
+            case 'bass': oscillator.type = 'square'; frequency *= 0.5; break;
+            case 'strings': oscillator.type = 'sawtooth'; break;
+            default: oscillator.type = 'sine';
+        }
+    }
 
-            gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(gains[index], now + 0.005);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    oscillator.frequency.setValueAtTime(frequency, now);
 
+    // Envelope
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(volume, now + 0.02);
+    gainNode.gain.linearRampToValueAtTime(volume * 0.6, now + 0.08);
+    gainNode.gain.setValueAtTime(volume * 0.6, now + duration - 0.05);
+    gainNode.gain.linearRampToValueAtTime(0, now + duration);
+
+    // Audio Graph Connection
+    let outputNode = gainNode;
+
+    // Filter Logic (DJ Mode)
+    if (state.djMode.filterEnabled) {
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(state.djMode.filterCutoff, now);
+        filter.Q.setValueAtTime(state.djMode.resonance, now);
+
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+    } else {
+        oscillator.connect(gainNode);
+    }
+
+    // Reverb & Destination Connection
+    if (state.options.reverb && state.reverbNode && state.reverbGain) {
+        // Connect to both Dry (Destination) and Wet (Reverb)
+        outputNode.connect(audioCtx.destination);
+        outputNode.connect(state.reverbNode);
+    } else {
+        outputNode.connect(audioCtx.destination);
+    }
+
+    oscillator.start(now);
+    oscillator.stop(now + duration);
+}
+
+async function playNoteOld(frequency, timbre, duration = 0.25) {
+    return; // Function removed
+    /*
+        const audioCtx = state.audioContext;
+        if (!audioCtx) return;
+    
+        if (audioCtx.state === 'suspended') {
+            await audioCtx.resume();
+        }
+    
+        if (audioCtx.state !== 'running') return;
+    
+        const now = audioCtx.currentTime;
+    
+        // Basic waveforms
+        if (['square', 'triangle', 'sawtooth', 'sine'].includes(timbre)) {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+    
+            oscillator.type = timbre;
+            oscillator.frequency.setValueAtTime(frequency, now);
+    
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.2, now + 0.02);
+            gainNode.gain.linearRampToValueAtTime(0.12, now + 0.08);
+            gainNode.gain.setValueAtTime(0.12, now + duration - 0.15);
+            gainNode.gain.linearRampToValueAtTime(0, now + duration);
+    
             if (state.djMode.filterEnabled) {
                 const filter = audioCtx.createBiquadFilter();
                 filter.type = 'lowpass';
                 filter.frequency.setValueAtTime(state.djMode.filterCutoff, now);
                 filter.Q.setValueAtTime(state.djMode.resonance, now);
-
+    
+                oscillator.connect(filter);
+                filter.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+            } else {
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+            }
+    
+            oscillator.start(now);
+            oscillator.stop(now + duration);
+        }
+        // Piano
+        else if (timbre === 'piano') {
+            const harmonics = [1, 2, 3, 4];
+            const gains = [0.3, 0.15, 0.1, 0.05];
+    
+            harmonics.forEach((harmonic, index) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+    
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(frequency * harmonic, now);
+    
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(gains[index], now + 0.005);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    
+                if (state.djMode.filterEnabled) {
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(state.djMode.filterCutoff, now);
+                    filter.Q.setValueAtTime(state.djMode.resonance, now);
+    
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(audioCtx.destination);
+                } else {
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                }
+    
+                osc.start(now);
+                osc.stop(now + duration);
+            });
+        }
+        // Bell
+        else if (timbre === 'bell') {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+    
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(frequency, now);
+    
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.3, now + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration * 2);
+    
+            if (state.djMode.filterEnabled) {
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(state.djMode.filterCutoff, now);
+                filter.Q.setValueAtTime(state.djMode.resonance, now);
+    
                 osc.connect(filter);
                 filter.connect(gain);
                 gain.connect(audioCtx.destination);
@@ -196,105 +387,76 @@ async function playNote(frequency, timbre, duration = 0.25) {
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
             }
-
+    
+            osc.start(now);
+            osc.stop(now + duration * 2);
+        }
+        // Bass
+        else if (timbre === 'bass') {
+            const osc = audioCtx.createOscillator();
+            const filter = audioCtx.createBiquadFilter();
+            const djFilter = state.djMode.filterEnabled ? audioCtx.createBiquadFilter() : null;
+            const gain = audioCtx.createGain();
+    
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(frequency, now);
+    
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(800, now);
+            filter.Q.setValueAtTime(5, now);
+    
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.25, now + 0.01);
+            gain.gain.linearRampToValueAtTime(0.15, now + 0.05);
+            gain.gain.linearRampToValueAtTime(0, now + duration);
+    
+            osc.connect(filter);
+            if (djFilter) {
+                djFilter.type = 'lowpass';
+                djFilter.frequency.setValueAtTime(state.djMode.filterCutoff, now);
+                djFilter.Q.setValueAtTime(state.djMode.resonance, now);
+    
+                filter.connect(djFilter);
+                djFilter.connect(gain);
+            } else {
+                filter.connect(gain);
+            }
+            gain.connect(audioCtx.destination);
+    
             osc.start(now);
             osc.stop(now + duration);
-        });
-    }
-    // Bell
-    else if (timbre === 'bell') {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(frequency, now);
-
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.3, now + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + duration * 2);
-
-        if (state.djMode.filterEnabled) {
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(state.djMode.filterCutoff, now);
-            filter.Q.setValueAtTime(state.djMode.resonance, now);
-
-            osc.connect(filter);
-            filter.connect(gain);
-            gain.connect(audioCtx.destination);
-        } else {
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
         }
-
-        osc.start(now);
-        osc.stop(now + duration * 2);
-    }
-    // Bass
-    else if (timbre === 'bass') {
-        const osc = audioCtx.createOscillator();
-        const filter = audioCtx.createBiquadFilter();
-        const djFilter = state.djMode.filterEnabled ? audioCtx.createBiquadFilter() : null;
-        const gain = audioCtx.createGain();
-
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(frequency, now);
-
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(800, now);
-        filter.Q.setValueAtTime(5, now);
-
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.25, now + 0.01);
-        gain.gain.linearRampToValueAtTime(0.15, now + 0.05);
-        gain.gain.linearRampToValueAtTime(0, now + duration);
-
-        osc.connect(filter);
-        if (djFilter) {
-            djFilter.type = 'lowpass';
-            djFilter.frequency.setValueAtTime(state.djMode.filterCutoff, now);
-            djFilter.Q.setValueAtTime(state.djMode.resonance, now);
-
-            filter.connect(djFilter);
-            djFilter.connect(gain);
-        } else {
-            filter.connect(gain);
+        // Strings
+        else if (timbre === 'strings') {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+    
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(frequency, now);
+    
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.15, now + 0.1);
+            gain.gain.setValueAtTime(0.15, now + duration - 0.1);
+            gain.gain.linearRampToValueAtTime(0, now + duration);
+    
+            if (state.djMode.filterEnabled) {
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(state.djMode.filterCutoff, now);
+                filter.Q.setValueAtTime(state.djMode.resonance, now);
+    
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+            } else {
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+            }
+    
+            osc.start(now);
+            osc.stop(now + duration);
         }
-        gain.connect(audioCtx.destination);
-
-        osc.start(now);
-        osc.stop(now + duration);
-    }
-    // Strings
-    else if (timbre === 'strings') {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(frequency, now);
-
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.15, now + 0.1);
-        gain.gain.setValueAtTime(0.15, now + duration - 0.1);
-        gain.gain.linearRampToValueAtTime(0, now + duration);
-
-        if (state.djMode.filterEnabled) {
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(state.djMode.filterCutoff, now);
-            filter.Q.setValueAtTime(state.djMode.resonance, now);
-
-            osc.connect(filter);
-            filter.connect(gain);
-            gain.connect(audioCtx.destination);
-        } else {
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-        }
-
-        osc.start(now);
-        osc.stop(now + duration);
-    }
+    */
 }
 
 // ==================== Initialization ====================
@@ -404,16 +566,44 @@ function setupControls() {
     // Play/Stop toggle
     document.getElementById('playBtn').addEventListener('click', togglePlayStop);
 
-    // Ping-pong mode
-    const pingPongCheck = document.getElementById('pingPongCheck');
-    pingPongCheck.addEventListener('change', (e) => {
-        state.pingPongMode = e.target.checked;
+    // Options modal
+    const optionsBtn = document.getElementById('optionsBtn');
+    const optionsModal = document.getElementById('options-modal');
+    const optionsClose = document.getElementById('optionsClose');
+
+    optionsBtn.addEventListener('click', () => {
+        optionsModal.classList.add('visible');
     });
 
-    // Humanize mode (timing variation)
-    const humanizeCheck = document.getElementById('humanizeCheck');
-    humanizeCheck.addEventListener('change', (e) => {
-        state.humanize = e.target.checked;
+    optionsClose.addEventListener('click', () => {
+        optionsModal.classList.remove('visible');
+    });
+
+    optionsModal.addEventListener('click', (e) => {
+        if (e.target === optionsModal) {
+            optionsModal.classList.remove('visible');
+        }
+    });
+
+    // Options checkboxes
+    const optionMappings = [
+        { id: 'opt-pingPong', key: 'pingPong' },
+        { id: 'opt-humanize', key: 'humanize' },
+        { id: 'opt-loop', key: 'loop' },
+        { id: 'opt-reverb', key: 'reverb' },
+        { id: 'opt-octave', key: 'octaveDoubling' },
+        { id: 'opt-chord', key: 'chordMode' },
+        { id: 'opt-velocity', key: 'velocity' },
+        { id: 'opt-preview', key: 'previewSound' }
+    ];
+
+    optionMappings.forEach(({ id, key }) => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+            checkbox.addEventListener('change', (e) => {
+                state.options[key] = e.target.checked;
+            });
+        }
     });
 
     // Speed slider
@@ -766,6 +956,24 @@ function draw(e) {
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
 
+    // Preview Sound
+    if (state.options.previewSound) {
+        const now = Date.now();
+        // Play sound if enough time passed (e.g., 50ms) or significant Y change
+        if (now - state.lastDrawTime > 50 || Math.abs(pos.y - state.lastDrawY) > 20) {
+            const frequency = yToFrequency(pos.y, canvas.height);
+            const timbre = state.colorTimbres[state.currentColor];
+
+            // Call playSound directly for lower latency/overhead, skip reverb/chords for preview to keep it clean?
+            // Or use full playNote for full effect. Let's use playNote for full effect but short duration.
+            // Using a slightly shorter duration for preview
+            playNote(frequency, timbre, 0.1, 0.5);
+
+            state.lastDrawTime = now;
+            state.lastDrawY = pos.y;
+        }
+    }
+
     lastX = pos.x;
     lastY = pos.y;
 }
@@ -918,7 +1126,7 @@ function animate(currentTime) {
     const baseSpeed = 1200 / (5 * 1000);
     state.playbackPosition += deltaTime * baseSpeed * state.speed * state.playbackDirection;
 
-    if (state.pingPongMode) {
+    if (state.options.pingPong) {
         if (state.playbackPosition >= canvas.width) {
             state.playbackPosition = canvas.width - 1;
             state.playbackDirection = -1;
@@ -932,10 +1140,17 @@ function animate(currentTime) {
         }
     } else {
         if (state.playbackPosition >= canvas.width) {
-            state.playbackPosition = 0;
-            state.lastPlaybackX = -10;
-            state.activeFlashes = [];
-            state.playedGrids.clear();
+            if (state.options.loop) {
+                // Loop mode: restart from beginning
+                state.playbackPosition = 0;
+                state.lastPlaybackX = -10;
+                state.activeFlashes = [];
+                state.playedGrids.clear();
+            } else {
+                // Normal mode: stop playback
+                stop();
+                return;
+            }
         }
     }
 
@@ -1025,7 +1240,7 @@ function checkAndPlayNotes(x) {
     if (hasDrawing && detectedNotes.length > 0) {
         detectedNotes.forEach((note, index) => {
             // Humanize: add small random delay (0-50ms) for organic feel
-            const humanizeDelay = state.humanize ? Math.random() * 50 : 0;
+            const humanizeDelay = state.options.humanize ? Math.random() * 50 : 0;
             setTimeout(() => {
                 playNote(note.frequency, note.timbre);
             }, humanizeDelay);
