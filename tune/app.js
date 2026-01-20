@@ -47,38 +47,53 @@ const state = {
 const GRID_SIZE = 30;
 
 const COLOR_MAP = {
-    red: '#fc5c65',
-    blue: '#45aaf2',
-    green: '#26de81',
-    yellow: '#fed330'
+    red: '#e85a71',
+    blue: '#4a90a4',
+    green: '#5d9b84',
+    yellow: '#d4a574'
 };
 
-// Musical Scales
+// Musical Scales - Extended range (3 octaves)
 const SCALES = {
     pentatonic: [
+        130.81, 146.83, 164.81, 196.00, 220.00,
         261.63, 293.66, 329.63, 392.00, 440.00,
-        523.25, 587.33, 659.25, 783.99, 880.00, 1046.50
+        523.25, 587.33, 659.25, 783.99, 880.00,
+        1046.50, 1174.66, 1318.51, 1567.98, 1760.00
     ],
     major: [
+        130.81, 146.83, 164.81, 174.61, 196.00, 220.00, 246.94,
         261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88,
-        523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, 1046.50
+        523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77,
+        1046.50, 1174.66, 1318.51, 1396.91, 1567.98, 1760.00, 1975.53
     ],
     minor: [
+        130.81, 146.83, 155.56, 174.61, 196.00, 207.65, 233.08,
         261.63, 293.66, 311.13, 349.23, 392.00, 415.30, 466.16,
-        523.25, 587.33, 622.25, 698.46, 783.99, 830.61, 932.33, 1046.50
+        523.25, 587.33, 622.25, 698.46, 783.99, 830.61, 932.33,
+        1046.50, 1174.66, 1244.51, 1396.91, 1567.98, 1661.22, 1864.66
     ],
     blues: [
+        130.81, 155.56, 174.61, 185.00, 196.00, 233.08,
         261.63, 311.13, 349.23, 369.99, 392.00, 466.16,
-        523.25, 622.25, 698.46, 739.99, 783.99, 932.33, 1046.50
+        523.25, 622.25, 698.46, 739.99, 783.99, 932.33,
+        1046.50, 1244.51, 1396.91, 1479.98, 1567.98, 1864.66
     ],
     wholetone: [
+        130.81, 146.83, 164.81, 185.00, 207.65, 233.08,
         261.63, 293.66, 329.63, 369.99, 415.30, 466.16,
-        523.25, 587.33, 659.25, 739.99, 830.61, 932.33, 1046.50
+        523.25, 587.33, 659.25, 739.99, 830.61, 932.33,
+        1046.50, 1174.66, 1318.51, 1479.98, 1661.22, 1864.66
     ],
     chromatic: [
+        130.81, 138.59, 146.83, 155.56, 164.81, 174.61, 185.00, 196.00,
+        207.65, 220.00, 233.08, 246.94,
         261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392.00,
-        415.30, 440.00, 466.16, 493.88, 523.25, 554.37, 587.33, 622.25,
-        659.25, 698.46, 739.99, 783.99, 830.61, 880.00, 932.33, 987.77, 1046.50
+        415.30, 440.00, 466.16, 493.88,
+        523.25, 554.37, 587.33, 622.25, 659.25, 698.46, 739.99, 783.99,
+        830.61, 880.00, 932.33, 987.77,
+        1046.50, 1108.73, 1174.66, 1244.51, 1318.51, 1396.91, 1479.98, 1567.98,
+        1661.22, 1760.00, 1864.66, 1975.53
     ]
 };
 
@@ -300,6 +315,10 @@ function init() {
 function drawGrid() {
     const w = canvas.width;
     const h = canvas.height;
+
+    // Fill with white background first (needed for color inversion)
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, w, h);
 
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
     ctx.lineWidth = 1;
@@ -551,12 +570,16 @@ function clearColor(color) {
     const data = imageData.data;
 
     // Use hue-based detection to catch anti-aliased intermediate colors
-    // Color hue ranges (in degrees, 0-360)
+    // Updated hue ranges for new color palette:
+    // red: #e85a71 → hue ~350° (coral/pink)
+    // blue: #4a90a4 → hue ~195° (teal-blue)
+    // green: #5d9b84 → hue ~150° (sage green)
+    // yellow: #d4a574 → hue ~27° (tan/camel)
     const hueRanges = {
-        red: { hMin: 350, hMax: 360, hMin2: 0, hMax2: 20 },  // Red wraps around 0
-        blue: { hMin: 190, hMax: 220 },
-        green: { hMin: 130, hMax: 170 },
-        yellow: { hMin: 40, hMax: 60 }
+        red: { hMin: 340, hMax: 360, hMin2: 0, hMax2: 15 },  // Red/coral wraps around 0
+        blue: { hMin: 180, hMax: 210 },  // Teal-blue range
+        green: { hMin: 140, hMax: 170 },  // Sage green range
+        yellow: { hMin: 15, hMax: 45 }  // Tan/camel range
     };
 
     const range = hueRanges[color];
@@ -712,7 +735,7 @@ function draw(e) {
         state.djMode.filterCutoff = Math.exp(logFilter);
         state.djMode.filterCutoff = Math.max(200, Math.min(20000, state.djMode.filterCutoff));
 
-        const resonanceNormalized = Math.max(0, Math.min(1, deltaX / 800));
+        const resonanceNormalized = Math.max(0, Math.min(1, deltaX / 200));
         const logResMin = Math.log(0.5);
         const logResMax = Math.log(50);
         const logRes = logResMin + resonanceNormalized * (logResMax - logResMin);
@@ -774,45 +797,38 @@ function updateDJVisuals() {
 function drawDJGuides() {
     if (!state.djMode.active || !state.canvasSnapshot) return;
 
+    // Apply color inversion by manipulating pixel data directly
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+        data[i] = 255 - data[i];       // Red
+        data[i + 1] = 255 - data[i + 1]; // Green
+        data[i + 2] = 255 - data[i + 2]; // Blue
+        // Alpha stays the same
+    }
+    ctx.putImageData(imageData, 0, 0);
+
     ctx.save();
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.8)';
+
+    // Draw line connecting start point to current point
+    ctx.strokeStyle = '#fff';
     ctx.lineWidth = 2;
-    ctx.setLineDash([5, 5]);
-
-    ctx.beginPath();
-    ctx.moveTo(state.djMode.startX, 0);
-    ctx.lineTo(state.djMode.startX, canvas.height);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(0, state.djMode.startY);
-    ctx.lineTo(canvas.width, state.djMode.startY);
-    ctx.stroke();
-
-    ctx.setLineDash([]);
-
-    ctx.fillStyle = 'rgba(0, 255, 255, 0.6)';
-    ctx.beginPath();
-    ctx.arc(state.djMode.startX, state.djMode.startY, 8, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = 'rgba(255, 0, 255, 1)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(state.djMode.currentX, state.djMode.currentY, 12, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)';
-    ctx.lineWidth = 2;
-
     ctx.beginPath();
     ctx.moveTo(state.djMode.startX, state.djMode.startY);
-    ctx.lineTo(state.djMode.startX, state.djMode.currentY);
+    ctx.lineTo(state.djMode.currentX, state.djMode.currentY);
     ctx.stroke();
 
+    // Start point (small filled circle)
+    ctx.fillStyle = '#fff';
     ctx.beginPath();
-    ctx.moveTo(state.djMode.startX, state.djMode.currentY);
-    ctx.lineTo(state.djMode.currentX, state.djMode.currentY);
+    ctx.arc(state.djMode.startX, state.djMode.startY, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Current point (larger circle outline)
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(state.djMode.currentX, state.djMode.currentY, 10, 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.restore();
@@ -1012,14 +1028,34 @@ function checkAndPlayNotes(x) {
 }
 
 function getColorFromRGB(r, g, b) {
+    // Skip near-gray pixels (grid lines, etc)
     const maxDiff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
-    if (maxDiff < 50) return null;
+    if (maxDiff < 30) return null;
+
+    // New color palette detection:
+    // red: #e85a71 (R:232, G:90, B:113) - R dominant, low G
+    // blue: #4a90a4 (R:74, G:144, B:164) - B highest, G mid, R low
+    // green: #5d9b84 (R:93, G:155, B:132) - G highest
+    // yellow: #d4a574 (R:212, G:165, B:116) - R highest, G mid-high, B low
 
     let color = null;
-    if (r > 200 && g < 150 && b < 150) color = 'red';
-    else if (r < 150 && g > 150 && b > 200) color = 'blue';
-    else if (r < 150 && g > 200 && b < 200) color = 'green';
-    else if (r > 200 && g > 200 && b < 150) color = 'yellow';
+
+    // Red: R is much higher than G, and R > B
+    if (r > 180 && r > g + 80 && r > b + 50) {
+        color = 'red';
+    }
+    // Blue: B is highest, G is mid, R is low
+    else if (b > r && b > 120 && r < 120) {
+        color = 'blue';
+    }
+    // Green: G is highest, moderate difference from others
+    else if (g > r && g > b && g > 120 && r < 150) {
+        color = 'green';
+    }
+    // Yellow/Tan: R highest, G mid-high, B lowest
+    else if (r > 180 && g > 130 && b < 150 && r > b + 50 && g > b) {
+        color = 'yellow';
+    }
 
     if (color) {
         return { color: color, timbre: state.colorTimbres[color] };
