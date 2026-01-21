@@ -1166,7 +1166,7 @@
 
         // Helper function to draw a single cell
         function drawCell(row, col, corner) {
-            if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return;
+            if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return null;
 
             const gridCell = grid[row][col];
 
@@ -1197,6 +1197,17 @@
                     gridCell.inverted = false;
                 }
             }
+            return gridCell;
+        }
+
+        // Helper function to force a cell to a specific state (for symmetry sync)
+        function forceCellState(row, col, state) {
+            if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return;
+            const gridCell = grid[row][col];
+            gridCell.type = state.type;
+            gridCell.corner = state.corner;
+            gridCell.color = state.color;
+            gridCell.inverted = state.inverted;
         }
 
         function handleClick(clientX, clientY) {
@@ -1218,31 +1229,43 @@
             }
 
             // Draw at primary position
-            drawCell(row, col, corner);
+            const resultState = drawCell(row, col, corner);
+            if (!resultState) return;
 
             // Draw at symmetric positions
             if (symmetryMode === 'x' || symmetryMode === 'xy') {
                 // X-axis symmetry (left-right mirror)
                 const symCol = GRID_SIZE - 1 - col;
-                const symCorner = flipCorner(corner, true, false);
-                drawCell(row, symCol, symCorner);
+                const symCorner = flipCorner(resultState.corner, true, false);
+
+                forceCellState(row, symCol, {
+                    ...resultState,
+                    corner: symCorner
+                });
             }
 
             if (symmetryMode === 'y' || symmetryMode === 'xy') {
                 // Y-axis symmetry (top-bottom mirror)
                 const symRow = GRID_SIZE - 1 - row;
-                const symCorner = flipCorner(corner, false, true);
-                drawCell(symRow, col, symCorner);
+                const symCorner = flipCorner(resultState.corner, false, true);
+
+                forceCellState(symRow, col, {
+                    ...resultState,
+                    corner: symCorner
+                });
             }
 
             if (symmetryMode === 'xy') {
                 // Both axes symmetry (diagonal mirror)
                 const symRow = GRID_SIZE - 1 - row;
                 const symCol = GRID_SIZE - 1 - col;
-                const symCorner = flipCorner(corner, true, true);
-                drawCell(symRow, symCol, symCorner);
-            }
+                const symCorner = flipCorner(resultState.corner, true, true);
 
+                forceCellState(symRow, symCol, {
+                    ...resultState,
+                    corner: symCorner
+                });
+            }
             render();
             saveState();
             didInteract = true; // Mark that drawing occurred
