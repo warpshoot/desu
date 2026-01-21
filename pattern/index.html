@@ -667,6 +667,7 @@
     <div id="save-overlay"></div>
     <div id="save-ui">
         <h3>範囲をドラッグして選択</h3>
+        <div id="selection-size" style="display:none; font-size: 13px; color: #666; margin-bottom: 8px;"></div>
 
         <div class="option-group">
             <div class="option-group-label">倍率</div>
@@ -1956,6 +1957,16 @@
                 selCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';
                 selCtx.fillRect(rectX, rectY, rectW, rectH);
 
+                // サイズ表示を更新
+                const sizeDisplay = document.getElementById('selection-size');
+                if (sizeDisplay) {
+                    const canvasRect = canvas.getBoundingClientRect();
+                    const displayW = Math.round(rectW / scale);
+                    const displayH = Math.round(rectH / scale);
+                    sizeDisplay.textContent = `${displayW}px × ${displayH}px`;
+                    sizeDisplay.style.display = 'block';
+                }
+
                 // 選択確定後、モーダルを表示して確認モードに
                 document.getElementById('save-ui').classList.remove('hidden-during-selection');
                 document.getElementById('save-ui').classList.add('in-confirmation-mode');
@@ -2071,6 +2082,12 @@
             selectionStart = null;
             selectionEnd = null;
             selCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+
+            // サイズ表示を非表示
+            const sizeDisplay = document.getElementById('selection-size');
+            if (sizeDisplay) {
+                sizeDisplay.style.display = 'none';
+            }
 
             // 確認モードを解除
             document.getElementById('save-ui').classList.remove('in-confirmation-mode');

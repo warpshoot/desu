@@ -1295,6 +1295,12 @@ document.getElementById('redoSelectionBtn').addEventListener('click', () => {
     // 選択範囲をクリア
     confirmedSelection = null;
 
+    // サイズ表示を非表示
+    const sizeDisplay = document.getElementById('selection-size');
+    if (sizeDisplay) {
+        sizeDisplay.style.display = 'none';
+    }
+
     // 確定モードを解除
     document.getElementById('save-ui').classList.remove('in-confirmation-mode');
 
@@ -1409,6 +1415,13 @@ overlay.addEventListener('pointerup', (e) => {
         if (cw > 0 && ch > 0) {
             // 選択範囲を確定（保存はしない）
             confirmedSelection = { x: cx, y: cy, w: cw, h: ch };
+
+            // サイズ表示を更新
+            const sizeDisplay = document.getElementById('selection-size');
+            if (sizeDisplay) {
+                sizeDisplay.textContent = `${cw}px × ${ch}px`;
+                sizeDisplay.style.display = 'block';
+            }
 
             // 確定モードに入る
             document.getElementById('save-ui').classList.add('in-confirmation-mode');

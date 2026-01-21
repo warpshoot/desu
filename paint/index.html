@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>DESU™ paint</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body class="light">
     <canvas id="canvas"></canvas>
     <canvas id="lasso-canvas"></canvas>
@@ -16,20 +19,20 @@
     <div id="toolbar-left">
         <div class="tool-btn active" id="penBtn" data-tool="pen">
             <svg viewBox="0 0 24 24">
-                <path d="M4 18 Q8 8 12 12 Q16 16 20 6" fill="none"/>
+                <path d="M4 18 Q8 8 12 12 Q16 16 20 6" fill="none" />
             </svg>
             <div class="tool-tooltip">ペン (B)</div>
         </div>
         <div class="tool-btn" id="fillBtn" data-tool="fill">
             <svg viewBox="0 0 24 24">
-                <path d="M6 8 L10 4 L18 12 L14 16 Z" class="filled"/>
-                <path d="M16 16 Q18 18 17 21 Q16 24 15 21 Q14 18 16 16 Z" class="filled"/>
+                <path d="M6 8 L10 4 L18 12 L14 16 Z" class="filled" />
+                <path d="M16 16 Q18 18 17 21 Q16 24 15 21 Q14 18 16 16 Z" class="filled" />
             </svg>
             <div class="tool-tooltip">塗りつぶし (G)</div>
         </div>
         <div class="tool-btn" id="colorBtn">
             <svg viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="8" id="colorCircle" class="filled"/>
+                <circle cx="12" cy="12" r="8" id="colorCircle" class="filled" />
             </svg>
             <div class="tool-tooltip">色切り替え (X)</div>
         </div>
@@ -41,19 +44,19 @@
         <div class="tool-btn" id="noiseBtn">
             <svg viewBox="0 0 24 24">
                 <!-- 頭蓋骨 -->
-                <ellipse cx="12" cy="10" rx="6" ry="7" class="filled"/>
+                <ellipse cx="12" cy="10" rx="6" ry="7" class="filled" />
                 <!-- 下顎 -->
-                <rect x="8" y="15" width="8" height="4" rx="1" class="filled"/>
+                <rect x="8" y="15" width="8" height="4" rx="1" class="filled" />
                 <!-- 目 -->
-                <ellipse cx="9.5" cy="9" rx="1.5" ry="2" fill="white"/>
-                <ellipse cx="14.5" cy="9" rx="1.5" ry="2" fill="white"/>
+                <ellipse cx="9.5" cy="9" rx="1.5" ry="2" fill="white" />
+                <ellipse cx="14.5" cy="9" rx="1.5" ry="2" fill="white" />
                 <!-- 鼻 -->
-                <path d="M11 12 L12 14 L13 12 Z" fill="white"/>
+                <path d="M11 12 L12 14 L13 12 Z" fill="white" />
                 <!-- 歯 -->
-                <line x1="9" y1="17" x2="9" y2="19" stroke="white" stroke-width="0.8"/>
-                <line x1="11" y1="17" x2="11" y2="19" stroke="white" stroke-width="0.8"/>
-                <line x1="13" y1="17" x2="13" y2="19" stroke="white" stroke-width="0.8"/>
-                <line x1="15" y1="17" x2="15" y2="19" stroke="white" stroke-width="0.8"/>
+                <line x1="9" y1="17" x2="9" y2="19" stroke="white" stroke-width="0.8" />
+                <line x1="11" y1="17" x2="11" y2="19" stroke="white" stroke-width="0.8" />
+                <line x1="13" y1="17" x2="13" y2="19" stroke="white" stroke-width="0.8" />
+                <line x1="15" y1="17" x2="15" y2="19" stroke="white" stroke-width="0.8" />
             </svg>
             <div class="tool-tooltip">ノイズ (N)</div>
         </div>
@@ -63,21 +66,22 @@
     <div id="toolbar-right">
         <div class="tool-btn" id="saveBtn">
             <svg viewBox="0 0 24 24">
-                <path d="M12 4 L12 16 M6 12 L12 18 L18 12"/>
-                <path d="M4 20 L20 20"/>
+                <path d="M12 4 L12 16 M6 12 L12 18 L18 12" />
+                <path d="M4 20 L20 20" />
             </svg>
             <div class="tool-tooltip tool-tooltip-bottom">保存 (⌘S)</div>
         </div>
         <div class="tool-btn" id="clearBtn">
             <svg viewBox="0 0 24 24">
-                <path d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34"/>
+                <path
+                    d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34" />
             </svg>
             <div class="tool-tooltip tool-tooltip-bottom">クリア (Del)</div>
         </div>
         <div class="tool-btn" id="invertBtn">
             <svg viewBox="0 0 24 24">
-                <path d="M12 4 A8 8 0 0 0 12 20 Z"/>
-                <path d="M12 4 A8 8 0 0 1 12 20 Z" class="filled"/>
+                <path d="M12 4 A8 8 0 0 0 12 20 Z" />
+                <path d="M12 4 A8 8 0 0 1 12 20 Z" class="filled" />
             </svg>
             <div class="tool-tooltip tool-tooltip-bottom">反転 (I)</div>
         </div>
@@ -86,8 +90,8 @@
     <!-- ズームリセットボタン -->
     <div id="resetZoomBtn">
         <svg viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="8"/>
-            <path d="M12 7 L12 17 M7 12 L17 12"/>
+            <circle cx="12" cy="12" r="8" />
+            <path d="M12 7 L12 17 M7 12 L17 12" />
         </svg>
     </div>
 
@@ -95,6 +99,7 @@
     <div id="save-overlay"></div>
     <div id="save-ui">
         <h3>範囲をドラッグして選択</h3>
+        <div id="selection-size" style="display:none; font-size: 13px; color: #666; margin-bottom: 8px;"></div>
 
         <div class="option-group">
             <div class="option-group-label">縦横比</div>
@@ -173,4 +178,5 @@
     <script src="https://unpkg.com/gif.js@0.2.0/dist/gif.js"></script>
     <script src="js/app.js"></script>
 </body>
+
 </html>

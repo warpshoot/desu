@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>DESU™ sketch Layer</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body class="light">
     <!-- キャンバス白背景 -->
     <div id="canvas-background"></div>
@@ -22,42 +25,44 @@
         <div class="tool-group">
             <div class="tool-btn" id="penBtn" data-tool="pen" data-layer="line">
                 <svg viewBox="0 0 24 24">
-                    <path d="M4 18 Q8 14, 12 12 T20 6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                    <path d="M4 18 Q8 14, 12 12 T20 6" stroke-width="2.5" stroke-linecap="round" fill="none" />
                 </svg>
                 <div class="tool-tooltip">ペン (P)</div>
             </div>
             <button class="layer-visible-btn" id="lineVisibleBtn" data-layer="line">
                 <svg viewBox="0 0 24 24" class="eye-icon">
-                    <path d="M2 12 C2 12 5 5 12 5 C19 5 22 12 22 12 C22 12 19 19 12 19 C5 19 2 12 2 12 Z"/>
-                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M2 12 C2 12 5 5 12 5 C19 5 22 12 22 12 C22 12 19 19 12 19 C5 19 2 12 2 12 Z" />
+                    <circle cx="12" cy="12" r="3" />
                 </svg>
             </button>
             <div class="opacity-slider-container" id="lineOpacityContainer">
-                <input type="range" class="layer-opacity" id="lineOpacity" min="0" max="100" value="100" data-layer="line">
+                <input type="range" class="layer-opacity" id="lineOpacity" min="0" max="100" value="100"
+                    data-layer="line">
             </div>
         </div>
 
         <div class="tool-group">
             <div class="tool-btn active" id="sketchBtn" data-tool="sketch" data-layer="rough">
                 <svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="8" fill="#808080"/>
+                    <circle cx="12" cy="12" r="8" fill="#808080" />
                 </svg>
                 <div class="tool-tooltip">アタリ (B)</div>
             </div>
             <button class="layer-visible-btn" id="roughVisibleBtn" data-layer="rough">
                 <svg viewBox="0 0 24 24" class="eye-icon">
-                    <path d="M2 12 C2 12 5 5 12 5 C19 5 22 12 22 12 C22 12 19 19 12 19 C5 19 2 12 2 12 Z"/>
-                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M2 12 C2 12 5 5 12 5 C19 5 22 12 22 12 C22 12 19 19 12 19 C5 19 2 12 2 12 Z" />
+                    <circle cx="12" cy="12" r="3" />
                 </svg>
             </button>
             <div class="opacity-slider-container" id="roughOpacityContainer">
-                <input type="range" class="layer-opacity" id="roughOpacity" min="0" max="100" value="100" data-layer="rough">
+                <input type="range" class="layer-opacity" id="roughOpacity" min="0" max="100" value="100"
+                    data-layer="rough">
             </div>
         </div>
 
         <div class="tool-btn" id="eraserBtn" data-tool="eraser">
             <svg viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="8" fill="#fff" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="8" fill="#fff" stroke="currentColor" stroke-width="2" />
             </svg>
             <div class="tool-tooltip">消しゴム (E)</div>
         </div>
@@ -75,14 +80,15 @@
     <div id="toolbar-right">
         <div class="tool-btn" id="saveBtn">
             <svg viewBox="0 0 24 24">
-                <path d="M12 4 L12 16 M6 12 L12 18 L18 12"/>
-                <path d="M4 20 L20 20"/>
+                <path d="M12 4 L12 16 M6 12 L12 18 L18 12" />
+                <path d="M4 20 L20 20" />
             </svg>
             <div class="tool-tooltip tool-tooltip-bottom">保存 (⌘S)</div>
         </div>
         <div class="tool-btn" id="clearBtn">
             <svg viewBox="0 0 24 24">
-                <path d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34"/>
+                <path
+                    d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34" />
             </svg>
             <div class="tool-tooltip tool-tooltip-bottom">クリア (Del)</div>
         </div>
@@ -91,8 +97,8 @@
     <!-- ズームリセットボタン -->
     <div id="resetZoomBtn">
         <svg viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="8"/>
-            <path d="M12 7 L12 17 M7 12 L17 12"/>
+            <circle cx="12" cy="12" r="8" />
+            <path d="M12 7 L12 17 M7 12 L17 12" />
         </svg>
     </div>
 
@@ -100,6 +106,7 @@
     <div id="save-overlay"></div>
     <div id="save-ui">
         <h3>範囲をドラッグして選択</h3>
+        <div id="selection-size" style="display:none; font-size: 13px; color: #666; margin-bottom: 8px;"></div>
 
         <div class="option-group">
             <div class="option-group-label">縦横比</div>
@@ -170,4 +177,5 @@
 
     <script src="js/app.js"></script>
 </body>
+
 </html>
