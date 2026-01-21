@@ -320,16 +320,7 @@ body.dark .option-btn.active {
     cursor: not-allowed;
 }
 
-/* 確定モード時はオプション部分を非表示 */
-#save-ui.in-confirmation-mode .option-group,
-#save-ui.in-confirmation-mode label,
-#save-ui.in-confirmation-mode #saveAllBtn {
-    display: none;
-}
 
-#save-ui.in-confirmation-mode h3 {
-    margin-bottom: 16px;
-}
 
 .save-btn {
     padding: 10px 20px;
