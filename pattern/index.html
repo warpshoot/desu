@@ -1668,7 +1668,7 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'pattern-grid.png';
+                a.download = 'desu_pattern_' + Date.now() + '.png';
                 a.click();
                 URL.revokeObjectURL(url);
             });
@@ -2029,6 +2029,10 @@
                             } else if (cell.type === 'rect') {
                                 tempCtx.fillStyle = cell.color;
                                 tempCtx.fillRect(cellX, cellY, CELL_SIZE, CELL_SIZE);
+                                // BLEED FIX: Add stroke to cover gaps
+                                tempCtx.strokeStyle = cell.color;
+                                tempCtx.lineWidth = 1;
+                                tempCtx.strokeRect(cellX, cellY, CELL_SIZE, CELL_SIZE);
                             }
                         }
                     }
@@ -2122,6 +2126,10 @@
                             } else if (cell.type === 'rect') {
                                 tempCtx.fillStyle = cell.color;
                                 tempCtx.fillRect(cellX, cellY, CELL_SIZE, CELL_SIZE);
+                                // BLEED FIX: Add stroke to cover gaps
+                                tempCtx.strokeStyle = cell.color;
+                                tempCtx.lineWidth = 1;
+                                tempCtx.strokeRect(cellX, cellY, CELL_SIZE, CELL_SIZE);
                             }
                         }
                     }
@@ -2141,7 +2149,7 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'pattern-grid-selection.png';
+                a.download = 'desu_pattern_' + Date.now() + '.png';
                 a.click();
                 URL.revokeObjectURL(url);
             });
