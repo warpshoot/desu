@@ -87,7 +87,7 @@ function addToDebugLog(message, isError = false) {
 }
 
 // console.logを上書き
-console.log = function(...args) {
+console.log = function (...args) {
     originalLog.apply(console, args);
     const message = args.map(arg =>
         typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
@@ -96,7 +96,7 @@ console.log = function(...args) {
 };
 
 // console.errorを上書き
-console.error = function(...args) {
+console.error = function (...args) {
     originalError.apply(console, args);
     const message = 'ERROR: ' + args.map(arg =>
         typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
@@ -517,7 +517,7 @@ function getBounds(points) {
     const maxX = Math.min(canvas.width, Math.ceil(Math.max(...xs)) + 1);
     const maxY = Math.min(canvas.height, Math.ceil(Math.max(...ys)) + 1);
 
-    console.log('getBounds: canvas size=', canvas.width, 'x', canvas.height, 'bounds=', {minX, minY, width: maxX - minX, height: maxY - minY});
+    console.log('getBounds: canvas size=', canvas.width, 'x', canvas.height, 'bounds=', { minX, minY, width: maxX - minX, height: maxY - minY });
 
     return {
         minX,
@@ -603,7 +603,7 @@ function drawPenLine(x, y) {
     const brushSizeEl = document.getElementById('brushSize');
     const brushSize = brushSizeEl ? parseFloat(brushSizeEl.value) : 3;
 
-    console.log('drawPenLine: from', lastPenPoint, 'to', {x, y}, 'brushSize=', brushSize, 'isErasing=', isErasing);
+    console.log('drawPenLine: from', lastPenPoint, 'to', { x, y }, 'brushSize=', brushSize, 'isErasing=', isErasing);
 
     lineCtx.lineWidth = brushSize;
     lineCtx.lineCap = 'round';
@@ -1483,7 +1483,7 @@ async function saveRegion(x, y, w, h) {
         }
 
         const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
-        const fileName = 'desu_sketch_' + Date.now() + '.png';
+        const fileName = 'desu_sketch-layer_' + Date.now() + '.png';
 
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1678,7 +1678,7 @@ document.addEventListener('keydown', (e) => {
     // 修飾キーが押されている場合はスキップ
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
-    switch(e.key.toLowerCase()) {
+    switch (e.key.toLowerCase()) {
         case '1':
             // アタリレイヤーをアクティブに
             switchLayer('rough');

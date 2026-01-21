@@ -514,7 +514,7 @@ edgeToggle.addEventListener('change', () => {
 // Download button handler
 downloadBtn.addEventListener('click', () => {
     const link = document.createElement('a');
-    link.download = 'manga-tone-output.png';
+    link.download = 'desu_tone_' + Date.now() + '.png';
     link.href = outputCanvas.toDataURL();
     link.click();
 });

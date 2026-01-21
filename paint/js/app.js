@@ -87,7 +87,7 @@ function addToDebugLog(message, isError = false) {
 }
 
 // console.logを上書き
-console.log = function(...args) {
+console.log = function (...args) {
     originalLog.apply(console, args);
     const message = args.map(arg =>
         typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
@@ -96,7 +96,7 @@ console.log = function(...args) {
 };
 
 // console.errorを上書き
-console.error = function(...args) {
+console.error = function (...args) {
     originalError.apply(console, args);
     const message = 'ERROR: ' + args.map(arg =>
         typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
@@ -581,8 +581,8 @@ function generateGlitchFrames(imgData, transparent, noiseLevel = 1) {
             // レベル1: 通常の8方向1ピクセル移動
             const offsets = [
                 [-1, -1], [0, -1], [1, -1],
-                [-1,  0],          [1,  0],
-                [-1,  1], [0,  1], [1,  1]
+                [-1, 0], [1, 0],
+                [-1, 1], [0, 1], [1, 1]
             ];
 
             shuffled.forEach(p => {
@@ -1400,7 +1400,7 @@ async function saveRegion(x, y, w, h) {
             });
 
             blob = await createGIF(scaledFrames, outputW, outputH, updateProgress);
-            fileName = `desu_${Date.now()}.gif`;
+            fileName = `desu_paint_${Date.now()}.gif`;
             console.log('GIF生成完了');
 
             document.getElementById('generating').style.display = 'none';
@@ -1439,7 +1439,7 @@ async function saveRegion(x, y, w, h) {
             }
 
             blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
-            fileName = `desu_${Date.now()}.png`;
+            fileName = `desu_paint_${Date.now()}.png`;
         }
 
         // iOS Safari対応：download属性で直接ダウンロード
@@ -1547,7 +1547,7 @@ document.addEventListener('keydown', (e) => {
     // 修飾キーが押されている場合はスキップ
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
-    switch(e.key.toLowerCase()) {
+    switch (e.key.toLowerCase()) {
         case 'b':
             // ペンツール（Photoshop準拠）
             document.getElementById('penBtn').click();
