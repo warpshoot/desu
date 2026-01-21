@@ -7,7 +7,8 @@
     user-select: none;
 }
 
-html, body {
+html,
+body {
     width: 100%;
     height: 100%;
     overflow: hidden;
@@ -320,6 +321,11 @@ body.dark .option-btn.active {
     cursor: not-allowed;
 }
 
+/* 確定モード時は縦横比とsaveAllBtnを非表示 */
+#save-ui.in-confirmation-mode .aspect-ratio-group,
+#save-ui.in-confirmation-mode #saveAllBtn {
+    display: none;
+}
 
 
 .save-btn {
@@ -431,7 +437,9 @@ body.dark .save-btn.primary {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* デバッグログ表示 */

@@ -1027,6 +1027,16 @@ document.querySelectorAll('[data-scale]').forEach(btn => {
         document.querySelectorAll('[data-scale]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         selectedScale = parseInt(btn.dataset.scale);
+
+        // サイズ表示を更新（確定済みの場合のみ）
+        if (confirmedSelection) {
+            const sizeDisplay = document.getElementById('selection-size');
+            if (sizeDisplay) {
+                const finalW = confirmedSelection.w * selectedScale;
+                const finalH = confirmedSelection.h * selectedScale;
+                sizeDisplay.textContent = `${finalW}px × ${finalH}px`;
+            }
+        }
     });
 });
 
@@ -1312,7 +1322,9 @@ overlay.addEventListener('pointerup', (e) => {
             // サイズ表示を更新
             const sizeDisplay = document.getElementById('selection-size');
             if (sizeDisplay) {
-                sizeDisplay.textContent = `${cw}px × ${ch}px`;
+                const finalW = cw * selectedScale;
+                const finalH = ch * selectedScale;
+                sizeDisplay.textContent = `${finalW}px × ${finalH}px`;
                 sizeDisplay.style.display = 'block';
             }
 

@@ -320,6 +320,11 @@ body.dark .option-btn.active {
     cursor: not-allowed;
 }
 
+/* 確定モード時は縦横比とsaveAllBtnを非表示 */
+#save-ui.in-confirmation-mode .aspect-ratio-group,
+#save-ui.in-confirmation-mode #saveAllBtn {
+    display: none;
+}
 
 
 .save-btn {

@@ -1961,8 +1961,8 @@
                 const sizeDisplay = document.getElementById('selection-size');
                 if (sizeDisplay) {
                     const canvasRect = canvas.getBoundingClientRect();
-                    const displayW = Math.round(rectW / scale);
-                    const displayH = Math.round(rectH / scale);
+                    const displayW = Math.round(rectW / scale * selectedScale);
+                    const displayH = Math.round(rectH / scale * selectedScale);
                     sizeDisplay.textContent = `${displayW}px × ${displayH}px`;
                     sizeDisplay.style.display = 'block';
                 }
@@ -2075,6 +2075,29 @@
                 }, 1500);
             }
         });
+
+        // 倍率選択
+        document.querySelectorAll('[data-scale]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-scale]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedScale = parseInt(btn.dataset.scale);
+
+                // サイズ表示を更新（確定済みの場合のみ）
+                if (confirmedSelection) {
+                    const sizeDisplay = document.getElementById('selection-size');
+                    if (sizeDisplay) {
+                        const canvasRect = canvas.getBoundingClientRect();
+                        const w = confirmedSelection.w / scale;
+                        const h = confirmedSelection.h / scale;
+                        const finalW = Math.round(w * selectedScale);
+                        const finalH = Math.round(h * selectedScale);
+                        sizeDisplay.textContent = `${finalW}px × ${finalH}px`;
+                    }
+                }
+            });
+        });
+
 
         // Redo selection button
         document.getElementById('redoSelectionBtn').addEventListener('click', () => {
