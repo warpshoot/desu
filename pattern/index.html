@@ -1655,6 +1655,10 @@
                         } else if (cell.type === 'rect') {
                             tempCtx.fillStyle = cell.color;
                             tempCtx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                            // BLEED FIX: Add stroke to cover gaps
+                            tempCtx.strokeStyle = cell.color;
+                            tempCtx.lineWidth = 1;
+                            tempCtx.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
                         }
                     }
                 }
@@ -1692,6 +1696,11 @@
             }
             context.closePath();
             context.fill();
+
+            // BLEED FIX: Add stroke to cover gaps
+            context.lineWidth = 1;
+            context.strokeStyle = color;
+            context.stroke();
         }
 
         function drawArcToContext(context, x, y, size, corner, color, inverted) {
@@ -1715,6 +1724,11 @@
             }
             context.closePath();
             context.fill();
+
+            // BLEED FIX: Add stroke to cover gaps
+            context.lineWidth = 1;
+            context.strokeStyle = color;
+            context.stroke();
         }
 
         // Scale buttons
