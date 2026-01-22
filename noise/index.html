@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>DESU™ noise</title>
+    <!-- Corrected common CSS path from common.css to style.css based on directory listing -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="favicon.ico">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #fff;
+            min-height: 100vh;
+            padding: 20px;
+            padding-top: 80px;
+        }
+
+        /* Hamburger Menu */
+        .hamburger {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            width: 30px;
+            height: 30px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            z-index: 1001;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+        }
+
+        .hamburger span {
+            width: 30px;
+            height: 3px;
+            background: #333;
+            border-radius: 10px;
+            transition: all 0.3s linear;
+            position: relative;
+            transform-origin: 1px;
+        }
+
+        .hamburger.active span:nth-child(1) {
+            transform: rotate(45deg);
+        }
+
+        .hamburger.active span:nth-child(2) {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+
+        .hamburger.active span:nth-child(3) {
+            transform: rotate(-45deg);
+        }
+
+        /* Navigation Menu */
+        .nav-menu {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 250px;
+            height: 100vh;
+            background: #fff;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            transition: left 0.3s ease;
+            z-index: 1000;
+            padding-top: 80px;
+        }
+
+        .nav-menu.active {
+            left: 0;
+        }
+
+        .nav-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .nav-list li {
+            border-bottom: 1px solid #eee;
+        }
+
+        .nav-list a {
+            display: block;
+            padding: 20px 30px;
+            color: #333;
+            text-decoration: none;
+            font-size: 18px;
+            transition: background 0.2s;
+        }
+
+        .nav-list a:hover {
+            background: #f5f5f5;
+        }
+
+        /* Logo */
+        .site-logo {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            height: 40px;
+            z-index: 100;
+        }
+
+        /* Header gradient overlay */
+        .header-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #000;
+            border: 2px solid #fff;
+            padding: 30px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 30px;
+            color: #fff;
+        }
+
+        .upload-area {
+            border: 2px dashed #fff;
+            padding: 60px 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            background: #000;
+        }
+
+        .upload-area.dragover {
+            border-color: #fff;
+            background: #fff;
+            color: #000;
+        }
+
+        .upload-area.has-image {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #fff;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .controls {
+            display: none;
+        }
+
+        .controls.active {
+            display: block;
+        }
+
+        .control-section {
+            margin-bottom: 20px;
+        }
+
+        .control-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .levels-container {
+            margin-bottom: 15px;
+        }
+
+        .levels-slider-container {
+            position: relative;
+            height: 40px;
+            padding: 10px 0;
+        }
+
+        .levels-track {
+            position: relative;
+            height: 6px;
+            background: linear-gradient(to right, #000 0%, #888 50%, #fff 100%);
+            border: 1px solid #fff;
+            cursor: pointer;
+        }
+
+        .levels-handle {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            cursor: grab;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .levels-handle:active {
+            cursor: grabbing;
+        }
+
+        .levels-handle.dragging {
+            z-index: 3;
+        }
+
+        #blackHandle {
+            background: #000;
+            border-color: #fff;
+        }
+
+        #midHandle {
+            background: #888;
+            border-color: #fff;
+        }
+
+        #whiteHandle {
+            background: #fff;
+            border-color: #000;
+        }
+
+        .option-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .option-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .option-btn {
+            background: #000;
+            color: #fff;
+            border: 2px solid #fff;
+            padding: 8px 16px;
+            margin-right: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            flex: 1;
+            transition: all 0.2s;
+        }
+
+        .option-btn:hover {
+            background: #333;
+        }
+
+        .option-btn.active {
+            background: #fff;
+            color: #000;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #fff;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: #fff;
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        .btn-primary:disabled {
+            background: #000;
+            color: #fff;
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .output-canvas {
+            display: none;
+            max-width: 600px;
+            width: 100%;
+            border: 2px solid #fff;
+            margin: 20px auto 0;
+            transition: all 0.2s;
+        }
+
+        .output-canvas.active {
+            display: block;
+        }
+
+        #generating-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #fff;
+        }
+
+        #generating-overlay.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #fff;
+            border-top: 4px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        #progress-text {
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px 20px 20px;
+            color: #000;
+            font-size: 14px;
+            position: relative;
+            z-index: 51;
+        }
+
+        footer a {
+            color: #000;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header gradient -->
+    <div class="header-gradient"></div>
+
+    <!-- Hamburger Menu -->
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+
+    <!-- Navigation Menu -->
+    <nav class="nav-menu" id="navMenu">
+        <ul class="nav-list">
+            <li><a href="../episodes/">Episodes</a></li>
+            <li><a href="../characters/">Characters</a></li>
+            <li><a href="../tools/">Tools</a></li>
+        </ul>
+    </nav>
+
+    <!-- Logo -->
+    <a href="../" class="logo-link">
+        <img src="desu_logo.png" alt="DESU™" class="site-logo">
+    </a>
+
+    <div class="container">
+        <h1>DESU™ noise</h1>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📷</div>
+            <div class="upload-text">Select Image</div>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+
+        <canvas id="outputCanvas" class="output-canvas"></canvas>
+
+        <div class="controls" id="controls">
+            <!-- Levels Section -->
+            <div class="control-section">
+                <div class="control-section-title">Levels</div>
+                <div class="levels-container">
+                    <div class="levels-slider-container">
+                        <div class="levels-track" id="levelsTrack">
+                            <div class="levels-handle" id="blackHandle" data-point="black"></div>
+                            <div class="levels-handle" id="midHandle" data-point="mid"></div>
+                            <div class="levels-handle" id="whiteHandle" data-point="white"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Noise Pattern -->
+            <div class="control-section">
+                <div class="control-section-title">Noise Pattern</div>
+                <div class="option-buttons" id="noiseButtons">
+                    <button class="option-btn active" data-noise="1">1</button>
+                    <button class="option-btn" data-noise="2">2</button>
+                    <button class="option-btn" data-noise="3">3</button>
+                    <button class="option-btn" data-noise="4">4</button>
+                    <button class="option-btn" data-noise="5">5</button>
+                </div>
+            </div>
+
+            <!-- Scale -->
+            <div class="control-section">
+                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                    <div class="control-section-title">Scale</div>
+                    <div id="sizeDisplay"
+                        style="font-size: 12px; font-weight: 600; font-family: monospace; color: #fff;"></div>
+                </div>
+                <div class="option-buttons" id="scaleButtons">
+                    <button class="option-btn active" data-scale="1">1x</button>
+                    <button class="option-btn" data-scale="2">2x</button>
+                    <button class="option-btn" data-scale="3">3x</button>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="control-section">
+                <button class="btn btn-primary" id="generateBtn" disabled>Generate GIF</button>
+                <button class="btn btn-primary" id="resetBtn" disabled style="margin-top: 10px;">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generating Overlay -->
+    <div id="generating-overlay">
+        <div class="spinner"></div>
+        <div id="progress-text">Generating GIF... 0%</div>
+    </div>
+
+    <footer>
+        <p>© 2026 <a href="https://warpshoot.github.io/" target="_blank">wpy</a></p>
+    </footer>
+
+    <!-- gif.js CDN (Matches paint/index.html) -->
+    <script src="https://unpkg.com/gif.js@0.2.0/dist/gif.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Hamburger menu
+        const hamburger = document.getElementById('hamburger');
+        const navMenu = document.getElementById('navMenu');
+
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('active');
+            navMenu.classList.toggle('active');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!hamburger.contains(e.target) && !navMenu.contains(e.target)) {
+                hamburger.classList.remove('active');
+                navMenu.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+
+</html>
