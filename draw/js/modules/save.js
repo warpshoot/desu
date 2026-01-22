@@ -109,7 +109,7 @@ export async function saveRegion(x, y, w, h) {
         }
 
         const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
-        const fileName = 'desu_sketch-layer_' + Date.now() + '.png';
+        const fileName = 'desu_draw_' + Date.now() + '.png';
 
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -225,7 +225,7 @@ export async function copyToClipboard(x, y, w, h) {
         if (tempCanvas) { // tempCanvasが生成されていればダウンロードを試みる
             try {
                 const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
-                const fileName = 'desu_sketch-layer_' + Date.now() + '.png';
+                const fileName = 'desu_draw_' + Date.now() + '.png';
 
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
