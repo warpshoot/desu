@@ -107,19 +107,24 @@ console.error = function (...args) {
 // レイヤーcanvas
 const roughCanvas = document.getElementById('canvas-rough');
 const roughCtx = roughCanvas.getContext('2d', { willReadFrequently: true });
+const fillCanvas = document.getElementById('canvas-fill');
+const fillCtx = fillCanvas.getContext('2d', { willReadFrequently: true });
 const lineCanvas = document.getElementById('canvas-line');
 const lineCtx = lineCanvas.getContext('2d', { willReadFrequently: true });
 const lassoCanvas = document.getElementById('lasso-canvas');
 const lassoCtx = lassoCanvas.getContext('2d');
 
 // --- 状態 ---
-let currentTool = 'sketch';  // 'sketch', 'pen', or 'eraser'
-let activeLayer = 'rough';   // 'rough' or 'line'
+let currentTool = 'sketch';  // 'sketch', 'fill', 'pen' or 'eraser'
+let activeLayer = 'rough';   // 'rough', 'fill' or 'line'
+let eraserMode = 'lasso';    // 'lasso' or 'pen'
 
 // レイヤー表示状態
 let roughVisible = true;
+let fillVisible = true;
 let lineVisible = true;
 let roughOpacity = 1.0;
+let fillOpacity = 1.0;
 let lineOpacity = 1.0;
 
 // ズーム/パン
@@ -129,6 +134,8 @@ let translateX = 0, translateY = 0;
 // undo/redo用（ImageBitmap方式）- レイヤーごと
 let roughUndoStack = [];
 let roughRedoStack = [];
+let fillUndoStack = [];
+let fillRedoStack = [];
 let lineUndoStack = [];
 let lineRedoStack = [];
 const MAX_HISTORY = 15;
@@ -196,12 +203,18 @@ async function initCanvas() {
     roughCtx.fillStyle = '#fff';
     roughCtx.fillRect(0, 0, w, h);
 
+    // ベタ塗りレイヤー初期化（透明）
+    fillCanvas.width = w;
+    fillCanvas.height = h;
+    fillCtx.clearRect(0, 0, w, h);
+
     // ペン入れレイヤー初期化（透明）
     lineCanvas.width = w;
     lineCanvas.height = h;
     lineCtx.clearRect(0, 0, w, h);
 
     console.log('Canvas initialized - rough:', roughCanvas.width, 'x', roughCanvas.height);
+    console.log('Canvas initialized - fill:', fillCanvas.width, 'x', fillCanvas.height);
     console.log('Canvas initialized - line:', lineCanvas.width, 'x', lineCanvas.height);
 
     // その他のcanvas
@@ -214,9 +227,11 @@ async function initCanvas() {
 
     applyTransform();
 
-    // 両方のレイヤーの初期状態を保存
+    // 全レイヤーの初期状態を保存
     const roughBitmap = await createImageBitmap(roughCanvas);
     roughUndoStack.push(roughBitmap);
+    const fillBitmap = await createImageBitmap(fillCanvas);
+    fillUndoStack.push(fillBitmap);
     const lineBitmap = await createImageBitmap(lineCanvas);
     lineUndoStack.push(lineBitmap);
 }
@@ -226,6 +241,7 @@ function applyTransform() {
     const canvasBg = document.getElementById('canvas-background');
     canvasBg.style.transform = transform;
     roughCanvas.style.transform = transform;
+    fillCanvas.style.transform = transform;
     lineCanvas.style.transform = transform;
 
     const resetBtn = document.getElementById('resetZoomBtn');
@@ -403,8 +419,9 @@ function fillPolygonTransparent(points) {
         return;
     }
 
-    const ctx = lineCtx;
-    console.log('fillPolygonTransparent: points=', points.length);
+    // アクティブレイヤーを選択（ベタかペン入れ）
+    const ctx = activeLayer === 'fill' ? fillCtx : lineCtx;
+    console.log('fillPolygonTransparent: points=', points.length, 'layer=', activeLayer);
 
     const bounds = getBounds(points);
     console.log('fillPolygonTransparent: bounds=', bounds);
@@ -496,19 +513,29 @@ function finishLasso() {
 function fillPolygon(points, color) {
     if (points.length < 3) return;
 
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-        ctx.lineTo(points[i].x, points[i].y);
+    // ベタレイヤーの場合は100%黒固定
+    if (activeLayer === 'fill') {
+        fillPolygonNoAA(points, 0, 0, 0, 1.0);
+        return;
     }
-    ctx.closePath();
-    ctx.fill();
+
+    // roughレイヤーの場合（グレー固定）
+    if (activeLayer === 'rough') {
+        const ctx = roughCtx;
+        ctx.fillStyle = '#808080';  // グレー固定
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(points[i].x, points[i].y);
+        }
+        ctx.closePath();
+        ctx.fill();
+    }
 }
 
 function getBounds(points) {
     // アクティブレイヤーのcanvasサイズを取得
-    const canvas = activeLayer === 'rough' ? roughCanvas : lineCanvas;
+    const canvas = activeLayer === 'rough' ? roughCanvas : (activeLayer === 'fill' ? fillCanvas : lineCanvas);
 
     const xs = points.map(p => p.x);
     const ys = points.map(p => p.y);
@@ -549,7 +576,7 @@ function fillPolygonNoAA(points, r, g, b, alpha) {
     }
 
     // アクティブレイヤーに応じたctxを選択
-    const ctx = activeLayer === 'rough' ? roughCtx : lineCtx;
+    const ctx = activeLayer === 'rough' ? roughCtx : (activeLayer === 'fill' ? fillCtx : lineCtx);
     console.log('fillPolygonNoAA: activeLayer=', activeLayer, 'points=', points.length, 'color=', r, g, b, alpha);
 
     const bounds = getBounds(points);
@@ -576,7 +603,7 @@ function fillPolygonNoAA(points, r, g, b, alpha) {
                 data[i] = data[i] * (1 - alpha) + r * alpha;
                 data[i + 1] = data[i + 1] * (1 - alpha) + g * alpha;
                 data[i + 2] = data[i + 2] * (1 - alpha) + b * alpha;
-                // Alpha channel stays at 255 (opaque)
+                data[i + 3] = 255;  // Alpha channel = opaque
                 pixelsFilled++;
             }
         }
@@ -603,31 +630,34 @@ function drawPenLine(x, y) {
     const brushSizeEl = document.getElementById('brushSize');
     const brushSize = brushSizeEl ? parseFloat(brushSizeEl.value) : 3;
 
-    console.log('drawPenLine: from', lastPenPoint, 'to', { x, y }, 'brushSize=', brushSize, 'isErasing=', isErasing);
+    // \u30a2\u30af\u30c6\u30a3\u30d6\u30ec\u30a4\u30e4\u30fc\u306bctx\u3092\u9078\u629e
+    const ctx = activeLayer === 'rough' ? roughCtx : (activeLayer === 'fill' ? fillCtx : lineCtx);
 
-    lineCtx.lineWidth = brushSize;
-    lineCtx.lineCap = 'round';
-    lineCtx.lineJoin = 'round';
+    console.log('drawPenLine: from', lastPenPoint, 'to', { x, y }, 'brushSize=', brushSize, 'isErasing=', isErasing, 'activeLayer=', activeLayer);
+
+    ctx.lineWidth = brushSize;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
     if (isErasing) {
-        // 消しゴムモード: destination-outで透明にする
-        lineCtx.globalCompositeOperation = 'destination-out';
-        lineCtx.strokeStyle = 'rgba(0,0,0,1)';  // 色は何でもいい、alphaが重要
-        lineCtx.globalAlpha = 1.0;
+        // \u6d88\u3057\u30b4\u30e0\u30e2\u30fc\u30c9: destination-out\u3067\u900f\u660e\u306b\u3059\u308b
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.strokeStyle = 'rgba(0,0,0,1)';  // \u8272\u306f\u4f55\u3067\u3082\u3044\u3044\u3001alpha\u304c\u91cd\u8981
+        ctx.globalAlpha = 1.0;
     } else {
-        // 通常のペンモード
-        lineCtx.globalCompositeOperation = 'source-over';
-        lineCtx.strokeStyle = '#000000';
-        lineCtx.globalAlpha = 1.0;
+        // \u901a\u5e38\u306e\u30da\u30f3\u30e2\u30fc\u30c9
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = '#000000';
+        ctx.globalAlpha = 1.0;
     }
 
-    lineCtx.beginPath();
-    lineCtx.moveTo(lastPenPoint.x, lastPenPoint.y);
-    lineCtx.lineTo(x, y);
-    lineCtx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(lastPenPoint.x, lastPenPoint.y);
+    ctx.lineTo(x, y);
+    ctx.stroke();
 
-    // globalCompositeOperationを元に戻す
-    lineCtx.globalCompositeOperation = 'source-over';
+    // globalCompositeOperation\u3092\u5143\u306b\u623b\u3059
+    ctx.globalCompositeOperation = 'source-over';
 
     lastPenPoint = { x, y };
 }
@@ -647,9 +677,9 @@ async function endPenDrawing() {
 // undo/redo（ImageBitmap方式）- レイヤーごと
 // ============================================
 
-async function saveState() {
-    // アクティブレイヤーの状態を保存
-    if (activeLayer === 'rough') {
+// 指定したレイヤーの状態を保存
+async function saveLayerState(targetLayer) {
+    if (targetLayer === 'rough') {
         const bitmap = await createImageBitmap(roughCanvas);
         roughUndoStack.push(bitmap);
         console.log('Saved rough layer state - stack size:', roughUndoStack.length);
@@ -660,7 +690,18 @@ async function saveState() {
 
         roughRedoStack.forEach(b => b.close());
         roughRedoStack = [];
-    } else if (activeLayer === 'line') {
+    } else if (targetLayer === 'fill') {
+        const bitmap = await createImageBitmap(fillCanvas);
+        fillUndoStack.push(bitmap);
+        console.log('Saved fill layer state - stack size:', fillUndoStack.length);
+
+        if (fillUndoStack.length > MAX_HISTORY) {
+            fillUndoStack.shift().close();
+        }
+
+        fillRedoStack.forEach(b => b.close());
+        fillRedoStack = [];
+    } else if (targetLayer === 'line') {
         const bitmap = await createImageBitmap(lineCanvas);
         lineUndoStack.push(bitmap);
         console.log('Saved line layer state - stack size:', lineUndoStack.length);
@@ -672,6 +713,19 @@ async function saveState() {
         lineRedoStack.forEach(b => b.close());
         lineRedoStack = [];
     }
+}
+
+async function saveState() {
+    await saveLayerState(activeLayer);
+}
+
+async function saveAllStates() {
+    console.log('Saving all layers state');
+    await Promise.all([
+        saveLayerState('rough'),
+        saveLayerState('fill'),
+        saveLayerState('line')
+    ]);
 }
 
 function undo() {
@@ -689,6 +743,20 @@ function undo() {
         roughCtx.clearRect(0, 0, roughCanvas.width, roughCanvas.height);
         roughCtx.drawImage(prev, 0, 0);
         console.log('Undo complete - new stack size:', roughUndoStack.length);
+    } else if (activeLayer === 'fill') {
+        console.log('Undo fill layer - stack size:', fillUndoStack.length);
+        if (fillUndoStack.length <= 1) {
+            console.log('Cannot undo - at initial state');
+            return;
+        }
+
+        const current = fillUndoStack.pop();
+        fillRedoStack.push(current);
+
+        const prev = fillUndoStack[fillUndoStack.length - 1];
+        fillCtx.clearRect(0, 0, fillCanvas.width, fillCanvas.height);
+        fillCtx.drawImage(prev, 0, 0);
+        console.log('Undo complete - new stack size:', fillUndoStack.length);
     } else if (activeLayer === 'line') {
         console.log('Undo line layer - stack size:', lineUndoStack.length);
         if (lineUndoStack.length <= 1) {
@@ -715,6 +783,14 @@ function redo() {
 
         roughCtx.clearRect(0, 0, roughCanvas.width, roughCanvas.height);
         roughCtx.drawImage(next, 0, 0);
+    } else if (activeLayer === 'fill') {
+        if (fillRedoStack.length === 0) return;
+
+        const next = fillRedoStack.pop();
+        fillUndoStack.push(next);
+
+        fillCtx.clearRect(0, 0, fillCanvas.width, fillCanvas.height);
+        fillCtx.drawImage(next, 0, 0);
     } else if (activeLayer === 'line') {
         if (lineRedoStack.length === 0) return;
 
@@ -793,8 +869,13 @@ lineCanvas.addEventListener('pointerdown', (e) => {
             const p = getCanvasPoint(e.clientX, e.clientY);
             isErasing = false;
             startPenDrawing(p.x, p.y);
+        } else if (currentTool === 'eraser' && eraserMode === 'pen') {
+            // ペン消しゴム: ペン操作で消去
+            const p = getCanvasPoint(e.clientX, e.clientY);
+            isErasing = true;
+            startPenDrawing(p.x, p.y);
         } else {
-            // スケッチツールと消しゴム: 投げ縄
+            // スケッチツールと投げ縄消しゴム: 投げ縄
             startLasso(e.clientX, e.clientY);
         }
     }
@@ -940,10 +1021,22 @@ lineCanvas.addEventListener('pointerup', async (e) => {
                         fillPolygonNoAA(canvasPoints, 128, 128, 128, 0.2);
                         saveState();
                         strokeMade = true;
+                    } else if (currentTool === 'fill') {
+                        // ベタ塗りツール: 100%黒、アンチエイリアスなし
+                        console.log('Filling polygon with fill tool');
+                        fillPolygonNoAA(canvasPoints, 0, 0, 0, 1.0);
+                        saveState();
+                        strokeMade = true;
+                    } else if (currentTool === 'pen') {
+                        // ペンツール: 投げ縄で100%黒塗り
+                        console.log('Filling polygon with pen tool');
+                        fillPolygonNoAA(canvasPoints, 0, 0, 0, 1.0);
+                        saveState();
+                        strokeMade = true;
                     } else if (currentTool === 'eraser') {
                         console.log('Filling polygon with eraser tool');
-                        if (activeLayer === 'line') {
-                            // ペン入れレイヤー: 透明で塗りつぶし
+                        if (activeLayer === 'line' || activeLayer === 'fill') {
+                            // ペン入れレイヤー・ベタレイヤー: 透明で塗りつぶし
                             fillPolygonTransparent(canvasPoints);
                         } else {
                             // アタリレイヤー: 白で塗りつぶし
@@ -1013,20 +1106,28 @@ lineCanvas.addEventListener('pointercancel', (e) => {
 // アクティブレイヤーのUI表示を更新（消しゴム使用時）
 function updateActiveLayerIndicator() {
     const sketchBtn = document.getElementById('sketchBtn');
+    const fillBtn = document.getElementById('fillBtn');
     const penBtn = document.getElementById('penBtn');
 
     // 消しゴム使用時のみアクティブレイヤーを視覚的に表示
     if (currentTool === 'eraser') {
         if (activeLayer === 'rough') {
             sketchBtn.classList.add('layer-active');
+            fillBtn.classList.remove('layer-active');
+            penBtn.classList.remove('layer-active');
+        } else if (activeLayer === 'fill') {
+            fillBtn.classList.add('layer-active');
+            sketchBtn.classList.remove('layer-active');
             penBtn.classList.remove('layer-active');
         } else if (activeLayer === 'line') {
             penBtn.classList.add('layer-active');
             sketchBtn.classList.remove('layer-active');
+            fillBtn.classList.remove('layer-active');
         }
     } else {
         // 消しゴム以外の時はlayer-activeを削除
         sketchBtn.classList.remove('layer-active');
+        fillBtn.classList.remove('layer-active');
         penBtn.classList.remove('layer-active');
     }
 }
@@ -1036,8 +1137,8 @@ function updateBrushSizeVisibility() {
     const sizeSlider = document.getElementById('size-slider-container');
     if (!sizeSlider) return;
 
-    // ペンツール選択時のみ表示
-    if (currentTool === 'pen') {
+    // ペンツールまたはペン消しゴム選択時に表示
+    if (currentTool === 'pen' || (currentTool === 'eraser' && eraserMode === 'pen')) {
         sizeSlider.classList.remove('hidden');
     } else {
         sizeSlider.classList.add('hidden');
@@ -1056,6 +1157,10 @@ function switchLayer(newLayer) {
             currentTool = 'sketch';
             document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
             document.getElementById('sketchBtn').classList.add('active');
+        } else if (activeLayer === 'fill') {
+            currentTool = 'fill';
+            document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+            document.getElementById('fillBtn').classList.add('active');
         } else if (activeLayer === 'line') {
             currentTool = 'pen';
             document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
@@ -1076,11 +1181,36 @@ document.querySelectorAll('[data-tool]').forEach(btn => {
 
         // 同じツールを再度クリック→不透明度スライダーの表示切り替え
         if (wasActive && newTool !== 'eraser') {
-            const containerId = newTool === 'sketch' ? 'roughOpacityContainer' : 'lineOpacityContainer';
+            const containerIdMap = {
+                'sketch': 'roughOpacityContainer',
+                'fill': 'fillOpacityContainer',
+                'pen': 'lineOpacityContainer'
+            };
+            const containerId = containerIdMap[newTool];
             const container = document.getElementById(containerId);
             if (container) {
                 container.classList.toggle('visible');
             }
+            return;
+        }
+
+        // 消しゴムのモード切り替え
+        if (wasActive && newTool === 'eraser') {
+            // 消しゴムモードを切り替え
+            eraserMode = eraserMode === 'lasso' ? 'pen' : 'lasso';
+            const eraserBtn = document.getElementById('eraserBtn');
+            const tooltip = eraserBtn.querySelector('.tool-tooltip');
+
+            if (eraserMode === 'pen') {
+                eraserBtn.classList.add('pen-mode');
+                tooltip.textContent = '消しゴム (E) - ペン';
+            } else {
+                eraserBtn.classList.remove('pen-mode');
+                tooltip.textContent = '消しゴム (E) - 投げ縄';
+            }
+
+            updateBrushSizeVisibility();
+            console.log('Eraser mode switched to:', eraserMode);
             return;
         }
 
@@ -1107,16 +1237,52 @@ document.querySelectorAll('[data-tool]').forEach(btn => {
 });
 
 // クリア
+// 全消去（右上のボタン）
 document.getElementById('clearBtn').addEventListener('click', () => {
-    // アクティブレイヤーをクリア
-    if (activeLayer === 'rough') {
-        roughCtx.fillStyle = '#fff';
-        roughCtx.fillRect(0, 0, roughCanvas.width, roughCanvas.height);
-    } else if (activeLayer === 'line') {
-        lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
-    }
-    saveState();
+    // 全レイヤーをクリア
+    roughCtx.fillStyle = '#fff';
+    roughCtx.fillRect(0, 0, roughCanvas.width, roughCanvas.height);
+
+    fillCtx.clearRect(0, 0, fillCanvas.width, fillCanvas.height);
+
+    lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
+
+    saveAllStates();
+
+    // ツールチップを一時的に更新してフィードバック
+    const btn = document.getElementById('clearBtn');
+    const tooltip = btn.querySelector('.tool-tooltip');
+    const originalText = tooltip.textContent;
+    tooltip.textContent = '全消去しました';
+    setTimeout(() => {
+        tooltip.textContent = originalText;
+    }, 2000);
 });
+
+// レイヤー消去（左下の新ボタン）
+const layerClearBtn = document.getElementById('layerClearBtn');
+if (layerClearBtn) {
+    layerClearBtn.addEventListener('click', () => {
+        // アクティブレイヤーのみクリア
+        if (activeLayer === 'rough') {
+            roughCtx.fillStyle = '#fff';
+            roughCtx.fillRect(0, 0, roughCanvas.width, roughCanvas.height);
+        } else if (activeLayer === 'fill') {
+            fillCtx.clearRect(0, 0, fillCanvas.width, fillCanvas.height);
+        } else if (activeLayer === 'line') {
+            lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
+        }
+        saveState();
+
+        // ツールチップを一時的に更新してフィードバック
+        const tooltip = layerClearBtn.querySelector('.tool-tooltip');
+        const originalText = tooltip.textContent;
+        tooltip.textContent = 'レイヤー消去しました';
+        setTimeout(() => {
+            tooltip.textContent = originalText;
+        }, 1000);
+    });
+}
 
 // レイヤー表示/非表示
 const roughVisibleBtn = document.getElementById('roughVisibleBtn');
@@ -1138,6 +1304,15 @@ if (lineVisibleBtn) {
     });
 }
 
+const fillVisibleBtn = document.getElementById('fillVisibleBtn');
+if (fillVisibleBtn) {
+    fillVisibleBtn.addEventListener('click', () => {
+        fillVisible = !fillVisible;
+        fillCanvas.style.display = fillVisible ? 'block' : 'none';
+        fillVisibleBtn.classList.toggle('hidden', !fillVisible);
+    });
+}
+
 // レイヤー不透明度
 const roughOpacityInput = document.getElementById('roughOpacity');
 const lineOpacityInput = document.getElementById('lineOpacity');
@@ -1153,6 +1328,14 @@ if (lineOpacityInput) {
     lineOpacityInput.addEventListener('input', (e) => {
         lineOpacity = parseFloat(e.target.value) / 100;
         lineCanvas.style.opacity = lineOpacity;
+    });
+}
+
+const fillOpacityInput = document.getElementById('fillOpacity');
+if (fillOpacityInput) {
+    fillOpacityInput.addEventListener('input', (e) => {
+        fillOpacity = parseFloat(e.target.value) / 100;
+        fillCanvas.style.opacity = fillOpacity;
     });
 }
 
@@ -1336,6 +1519,18 @@ overlay.addEventListener('pointerdown', (e) => {
     document.getElementById('save-ui').classList.add('hidden-during-selection');
 });
 
+// UI上でのドラッグ開始をサポート
+document.getElementById('save-ui').addEventListener('pointerdown', (e) => {
+    // ボタンや入力要素上のクリックは除外
+    if (e.target.closest('button, input, label')) return;
+
+    if (!isSaveMode) return;
+    selectionStart = { x: e.clientX, y: e.clientY };
+    selectionEnd = { x: e.clientX, y: e.clientY };
+
+    document.getElementById('save-ui').classList.add('hidden-during-selection');
+});
+
 overlay.addEventListener('pointermove', (e) => {
     if (!isSaveMode || !selectionStart) return;
     selectionEnd = { x: e.clientX, y: e.clientY };
@@ -1444,6 +1639,9 @@ overlay.addEventListener('pointerup', (e) => {
             document.getElementById('copyClipboardBtn').style.display = 'inline-block';
             document.getElementById('redoSelectionBtn').style.display = 'inline-block';
         }
+    } else {
+        // 選択範囲が小さすぎる場合（クリックのみなど）、保存モードをキャンセルしてUIを閉じる
+        exitSaveMode();
     }
 
     selectionStart = null;
@@ -1452,12 +1650,13 @@ overlay.addEventListener('pointerup', (e) => {
 
 async function saveRegion(x, y, w, h) {
     const transparent = document.getElementById('transparentBg').checked;
-    const includeRough = document.getElementById('includeRough').checked;
     const outputScale = selectedScale;
 
     const flash = document.getElementById('flash');
-    flash.style.opacity = '0.7';
-    setTimeout(() => { flash.style.opacity = '0'; }, 100);
+    if (flash) {
+        flash.style.opacity = '0.7';
+        setTimeout(() => { flash.style.opacity = '0'; }, 100);
+    }
 
     try {
         const outputW = w * outputScale;
@@ -1470,17 +1669,26 @@ async function saveRegion(x, y, w, h) {
         const mergedCtx = mergedCanvas.getContext('2d');
         mergedCtx.imageSmoothingEnabled = false;
 
-        // アタリを含める場合は、アタリレイヤーを描画
-        if (includeRough) {
-            mergedCtx.drawImage(roughCanvas, x, y, w, h, 0, 0, w, h);
-        } else if (!transparent) {
-            // アタリを含めない & 背景不透過の場合、白背景を塗る
+        // 背景不透過の場合、白背景を塗る
+        if (!transparent) {
             mergedCtx.fillStyle = '#fff';
             mergedCtx.fillRect(0, 0, w, h);
         }
 
-        // ペン入れレイヤーを描画
-        mergedCtx.drawImage(lineCanvas, x, y, w, h, 0, 0, w, h);
+        // アタリレイヤー描画（表示されている場合）
+        if (roughVisible) {
+            mergedCtx.drawImage(roughCanvas, x, y, w, h, 0, 0, w, h);
+        }
+
+        // ベタレイヤー描画（表示されている場合）
+        if (fillVisible) {
+            mergedCtx.drawImage(fillCanvas, x, y, w, h, 0, 0, w, h);
+        }
+
+        // ペン入れレイヤー描画（表示されている場合）
+        if (lineVisible) {
+            mergedCtx.drawImage(lineCanvas, x, y, w, h, 0, 0, w, h);
+        }
 
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = outputW;
@@ -1529,12 +1737,13 @@ async function saveRegion(x, y, w, h) {
 
 async function copyToClipboard(x, y, w, h) {
     const transparent = document.getElementById('transparentBg').checked;
-    const includeRough = document.getElementById('includeRough').checked;
     const outputScale = selectedScale;
 
     const flash = document.getElementById('flash');
     flash.style.opacity = '0.7';
     setTimeout(() => { flash.style.opacity = '0'; }, 100);
+
+    let tempCanvas = null; // tempCanvasをtryブロックの外で宣言
 
     try {
         const outputW = w * outputScale;
@@ -1547,19 +1756,29 @@ async function copyToClipboard(x, y, w, h) {
         const mergedCtx = mergedCanvas.getContext('2d');
         mergedCtx.imageSmoothingEnabled = false;
 
-        // アタリを含める場合は、アタリレイヤーを描画
-        if (includeRough) {
-            mergedCtx.drawImage(roughCanvas, x, y, w, h, 0, 0, w, h);
-        } else if (!transparent) {
-            // アタリを含めない & 背景不透過の場合、白背景を塗る
+        // 背景不透過の場合、白背景を塗る
+        if (!transparent) {
             mergedCtx.fillStyle = '#fff';
             mergedCtx.fillRect(0, 0, w, h);
         }
 
-        // ペン入れレイヤーを描画
-        mergedCtx.drawImage(lineCanvas, x, y, w, h, 0, 0, w, h);
+        // 描画順序: rough -> fill -> line (表示されているもののみ)
+        // アタリレイヤー描画（表示されている場合）
+        if (roughVisible) {
+            mergedCtx.drawImage(roughCanvas, x, y, w, h, 0, 0, w, h);
+        }
 
-        const tempCanvas = document.createElement('canvas');
+        // ベタレイヤー描画（表示されている場合）
+        if (fillVisible) {
+            mergedCtx.drawImage(fillCanvas, x, y, w, h, 0, 0, w, h);
+        }
+
+        // ペン入れレイヤー描画（表示されている場合）
+        if (lineVisible) {
+            mergedCtx.drawImage(lineCanvas, x, y, w, h, 0, 0, w, h);
+        }
+
+        tempCanvas = document.createElement('canvas'); // ここでtempCanvasを初期化
         tempCanvas.width = outputW;
         tempCanvas.height = outputH;
         const tempCtx = tempCanvas.getContext('2d');
@@ -1607,7 +1826,31 @@ async function copyToClipboard(x, y, w, h) {
         // モーダルは閉じない
     } catch (err) {
         console.error('クリップボードコピーエラー:', err);
-        alert('クリップボードへのコピーに失敗しました: ' + err.message);
+        alert('クリップボードへのアクセスに失敗しました。画像をダウンロードします。');
+
+        // フォールバック: 画像ダウンロード
+        if (tempCanvas) { // tempCanvasが生成されていればダウンロードを試みる
+            try {
+                const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+                const fileName = 'desu_sketch-layer_' + Date.now() + '.png';
+
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                // ダウンロード成功後もモーダルは閉じない（コピーと同じ挙動）
+            } catch (downloadErr) {
+                console.error('ダウンロードエラー:', downloadErr);
+                alert('画像のダウンロードにも失敗しました: ' + downloadErr.message);
+            }
+        } else {
+            alert('エラーが発生し、画像を生成できませんでした。');
+        }
     }
 }
 
@@ -1617,8 +1860,9 @@ async function copyToClipboard(x, y, w, h) {
 
 window.addEventListener('orientationchange', () => {
     setTimeout(async () => {
-        // 両方のレイヤーの現在の状態を保存
+        // 全レイヤーの現在の状態を保存
         const roughBitmap = await createImageBitmap(roughCanvas);
+        const fillBitmap = await createImageBitmap(fillCanvas);
         const lineBitmap = await createImageBitmap(lineCanvas);
 
         const newWidth = window.innerWidth;
@@ -1631,6 +1875,12 @@ window.addEventListener('orientationchange', () => {
         roughCtx.fillRect(0, 0, newWidth, newHeight);
         roughCtx.drawImage(roughBitmap, 0, 0);
         roughBitmap.close();
+
+        // ベタレイヤーをリサイズ
+        fillCanvas.width = newWidth;
+        fillCanvas.height = newHeight;
+        fillCtx.drawImage(fillBitmap, 0, 0);
+        fillBitmap.close();
 
         // ペン入れレイヤーをリサイズ
         lineCanvas.width = newWidth;
@@ -1714,6 +1964,11 @@ document.addEventListener('keydown', (e) => {
             switchLayer('line');
             break;
 
+        case '3':
+            // ベタ塗りレイヤーをアクティブに
+            switchLayer('fill');
+            break;
+
         case 'b':
             // スケッチツール（アタリ）
             document.getElementById('sketchBtn').click();
@@ -1722,6 +1977,11 @@ document.addEventListener('keydown', (e) => {
         case 'p':
             // ペンツール
             document.getElementById('penBtn').click();
+            break;
+
+        case 'f':
+            // ベタ塗りツール
+            document.getElementById('fillBtn').click();
             break;
 
         case 'e':

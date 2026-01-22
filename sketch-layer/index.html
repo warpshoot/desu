@@ -17,6 +17,7 @@
 
     <!-- レイヤーcanvas -->
     <canvas id="canvas-rough"></canvas>
+    <canvas id="canvas-fill"></canvas>
     <canvas id="canvas-line"></canvas>
     <canvas id="lasso-canvas"></canvas>
 
@@ -42,6 +43,26 @@
         </div>
 
         <div class="tool-group">
+            <div class="tool-btn" id="fillBtn" data-tool="fill" data-layer="fill">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2 L4 10 L8 10 L8 14 L12 14 L12 10 L16 10 Z" fill="currentColor" />
+                    <rect x="4" y="16" width="16" height="6" fill="currentColor" />
+                </svg>
+                <div class="tool-tooltip">ベタ塗り (F)</div>
+            </div>
+            <button class="layer-visible-btn" id="fillVisibleBtn" data-layer="fill">
+                <svg viewBox="0 0 24 24" class="eye-icon">
+                    <path d="M2 12 C2 12 5 5 12 5 C19 5 22 12 22 12 C22 12 19 19 12 19 C5 19 2 12 2 12 Z" />
+                    <circle cx="12" cy="12" r="3" />
+                </svg>
+            </button>
+            <div class="opacity-slider-container" id="fillOpacityContainer">
+                <input type="range" class="layer-opacity" id="fillOpacity" min="0" max="100" value="100"
+                    data-layer="fill">
+            </div>
+        </div>
+
+        <div class="tool-group">
             <div class="tool-btn active" id="sketchBtn" data-tool="sketch" data-layer="rough">
                 <svg viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="8" fill="#808080" />
@@ -61,10 +82,21 @@
         </div>
 
         <div class="tool-btn" id="eraserBtn" data-tool="eraser">
-            <svg viewBox="0 0 24 24">
+            <svg viewBox="0 0 24 24" class="eraser-icon eraser-lasso">
                 <circle cx="12" cy="12" r="8" fill="#fff" stroke="currentColor" stroke-width="2" />
             </svg>
-            <div class="tool-tooltip">消しゴム (E)</div>
+            <svg viewBox="0 0 24 24" class="eraser-icon eraser-pen" style="display:none;">
+                <rect x="6" y="6" width="12" height="12" fill="#fff" stroke="currentColor" stroke-width="2" rx="2" />
+            </svg>
+            <div class="tool-tooltip">消しゴム (E) - 投げ縄</div>
+        </div>
+
+        <div class="tool-btn" id="layerClearBtn">
+            <svg viewBox="0 0 24 24">
+                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                    fill="currentColor" />
+            </svg>
+            <div class="tool-tooltip">レイヤー消去</div>
         </div>
 
         <!-- ブラシサイズスライダー -->
@@ -90,7 +122,7 @@
                 <path
                     d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34" />
             </svg>
-            <div class="tool-tooltip tool-tooltip-bottom">クリア (Del)</div>
+            <div class="tool-tooltip tool-tooltip-bottom">全消去</div>
         </div>
     </div>
 
@@ -128,10 +160,7 @@
             </div>
         </div>
 
-        <label>
-            <input type="checkbox" id="includeRough">
-            アタリを含める
-        </label>
+
         <label>
             <input type="checkbox" id="transparentBg">
             背景透過
