@@ -67,16 +67,20 @@ body {
         right: -100px;
         top: 20%;
     }
+
     25% {
         top: 40%;
     }
+
     50% {
         top: 30%;
         right: 50%;
     }
+
     75% {
         top: 50%;
     }
+
     100% {
         right: 110%;
         top: 35%;
@@ -283,7 +287,7 @@ nav {
     }
 }
 
-.content-inner > * {
+.content-inner>* {
     margin-left: 0 !important;
     padding-left: 0 !important;
     align-self: flex-start;
@@ -652,7 +656,7 @@ nav {
         padding-top: 50px;
     }
 
-    .site-logo {
+    .header .site-logo {
         max-width: 120px;
     }
 
