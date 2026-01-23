@@ -102,5 +102,9 @@ export const state = {
     selectionEnd: null,
     confirmedSelection: null,
     selectedAspect: 'free',
-    selectedScale: 1
+    selectedScale: 1,
+
+    // Brush Sizes
+    penSize: 2,
+    eraserSize: 5
 };

@@ -7,36 +7,51 @@ import {
 } from './state.js';
 
 function exitSaveMode() {
-    state.isSaveMode = false;
-    document.getElementById('save-overlay').style.display = 'none';
-    document.getElementById('save-ui').style.display = 'none';
-    document.getElementById('save-ui').classList.remove('hidden-during-selection');
-    document.getElementById('save-ui').classList.remove('in-confirmation-mode');
-    document.getElementById('selection-canvas').style.display = 'none';
-    document.getElementById('generating').style.display = 'none';
-    document.getElementById('toolbar-left').style.display = 'flex';
-    document.getElementById('toolbar-right').style.display = 'flex';
-    document.getElementById('layer-controls').style.display = 'flex';
-    document.getElementById('resetZoomBtn').style.display = '';  // インラインスタイルをクリア
-    document.getElementById('confirmSelectionBtn').style.display = 'none';
-    document.getElementById('copyClipboardBtn').style.display = 'none';
-    document.getElementById('redoSelectionBtn').style.display = 'none';
+    try {
+        state.isSaveMode = false;
 
-    // applyTransform() call needed here but creates circular dependency if imported from canvas.js?
-    // Using a custom event or callback might be cleaner, but for now we assume canvas state is preserved or re-applied by main/ui logic.
-    // Ideally, UI module handles mode switching.
+        const ids = [
+            'save-overlay', 'save-ui', 'selection-canvas', 'generating',
+            'toolbar-left', 'toolbar-right', 'layer-controls', 'resetZoomBtn',
+            'confirmSelectionBtn', 'copyClipboardBtn', 'redoSelectionBtn'
+        ];
 
-    const selCanvas = document.getElementById('selection-canvas');
-    const selCtx = selCanvas.getContext('2d');
-    selCtx.clearRect(0, 0, selCanvas.width, selCanvas.height);
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) {
+                // console.warn(`exitSaveMode: Element not found: ${id}`);
+                return;
+            }
 
-    state.selectionStart = null;
-    state.selectionEnd = null;
-    state.confirmedSelection = null;
+            if (id === 'save-overlay' || id === 'save-ui' || id === 'selection-canvas' || id === 'generating' ||
+                id === 'confirmSelectionBtn' || id === 'copyClipboardBtn' || id === 'redoSelectionBtn') {
+                el.style.display = 'none';
+            } else if (id === 'toolbar-left' || id === 'toolbar-right' || id === 'layer-controls') {
+                el.style.display = 'flex';
+            } else if (id === 'resetZoomBtn') {
+                el.style.display = '';
+            }
 
-    // Helper to re-apply transform if needed, or simply let main loop handle it.
-    // For this refactor, we'll dispatch a custom event that main.js or ui.js can listen to if needed.
-    document.dispatchEvent(new CustomEvent('saveModeExited'));
+            if (id === 'save-ui') {
+                el.classList.remove('hidden-during-selection');
+                el.classList.remove('in-confirmation-mode');
+            }
+        });
+
+        const selCanvas = document.getElementById('selection-canvas');
+        if (selCanvas) {
+            const selCtx = selCanvas.getContext('2d');
+            selCtx.clearRect(0, 0, selCanvas.width, selCanvas.height);
+        }
+
+        state.selectionStart = null;
+        state.selectionEnd = null;
+        state.confirmedSelection = null;
+
+        document.dispatchEvent(new CustomEvent('saveModeExited'));
+    } catch (e) {
+        console.error('Error in exitSaveMode:', e);
+    }
 }
 // Exporting exitSaveMode for UI module to use
 export { exitSaveMode };

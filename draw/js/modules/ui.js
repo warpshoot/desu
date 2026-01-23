@@ -37,6 +37,7 @@ export function initUI() {
     setupCreditModal();
     setupOrientationHandler();
     setupKeyboardShortcuts();
+    updateBrushSizeVisibility();
 }
 
 // ============================================
@@ -76,6 +77,22 @@ function updateBrushSizeVisibility() {
     }
 }
 
+function updateBrushSizeSlider() {
+    const brushSizeInput = document.getElementById('brushSize');
+    const sizeDisplay = document.getElementById('sizeDisplay');
+    if (!brushSizeInput || !sizeDisplay) return;
+
+    let size = state.penSize; // Default or fallback
+    if (state.currentTool === 'pen') {
+        size = state.penSize;
+    } else if (state.currentTool === 'eraser') {
+        size = state.eraserSize;
+    }
+
+    brushSizeInput.value = size;
+    sizeDisplay.textContent = size;
+}
+
 function switchLayer(newLayer) {
     if (state.activeLayer === newLayer) return;
 
@@ -100,6 +117,9 @@ function switchLayer(newLayer) {
 
     updateActiveLayerIndicator();
     updateBrushSizeVisibility();
+    if (state.currentTool === 'pen') {
+        updateBrushSizeSlider();
+    }
     // console.log('Layer switched to:', state.activeLayer, 'Tool:', state.currentTool);
 }
 
@@ -420,6 +440,7 @@ function setupToolButtons() {
                 if (state.eraserMode === 'pen') {
                     eraserBtn.classList.add('pen-mode');
                     tooltip.textContent = '消しゴム (E) - ペン';
+                    updateBrushSizeSlider();
                 } else {
                     eraserBtn.classList.remove('pen-mode');
                     tooltip.textContent = '消しゴム (E) - 投げ縄';
@@ -442,6 +463,7 @@ function setupToolButtons() {
 
             updateActiveLayerIndicator();
             updateBrushSizeVisibility();
+            updateBrushSizeSlider();
         });
     });
 }
@@ -505,7 +527,13 @@ function setupLayerControls() {
     const sizeDisplay = document.getElementById('sizeDisplay');
     if (brushSizeInput && sizeDisplay) {
         brushSizeInput.addEventListener('input', (e) => {
-            sizeDisplay.textContent = e.target.value;
+            const val = parseFloat(e.target.value);
+            sizeDisplay.textContent = val;
+            if (state.currentTool === 'pen') {
+                state.penSize = val;
+            } else if (state.currentTool === 'eraser') {
+                state.eraserSize = val;
+            }
         });
     }
 }
@@ -566,7 +594,6 @@ function setupSaveUI() {
         document.getElementById('selection-canvas').style.display = 'block';
         document.getElementById('toolbar-left').style.display = 'none';
         document.getElementById('toolbar-right').style.display = 'none';
-        document.getElementById('layer-controls').style.display = 'none';
         document.getElementById('resetZoomBtn').style.display = 'none';
     });
 
