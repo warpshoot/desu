@@ -123,12 +123,15 @@ body {
 }
 
 .site-logo {
-    max-width: 150px;
     height: auto;
     filter: grayscale(100%);
     display: block;
     cursor: pointer;
     transition: opacity 0.3s ease;
+}
+
+.header .site-logo {
+    max-width: 150px;
 }
 
 .site-logo:hover {
