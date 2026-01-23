@@ -167,21 +167,25 @@
 
         #playBtn {
             width: 100%;
-            height: 44px;
-            background: #000;
-            border: none;
-            border-top: 1px solid #333;
+            height: 50px;
+            background: #222;
+            border: 1px solid #444;
             color: #fff;
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 20px;
+            font-weight: 800;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            text-transform: uppercase;
         }
 
         #playBtn:hover {
-            background: #222;
+            background: #333;
+            border-color: #666;
+            transform: translateY(-1px);
         }
 
         .control-group {
@@ -256,12 +260,14 @@
         }
 
         .toolbar-btn {
-            width: 32px;
+            min-width: 32px;
             height: 32px;
+            padding: 0 10px;
             background: #fff;
             border: none;
             color: #000;
-            font-size: 14px;
+            font-size: 11px;
+            font-weight: bold;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -380,6 +386,13 @@
 
         body.playing .clear-btn-wrapper {
             display: none;
+        }
+
+        /* Playback UI Restrictions */
+        body.playing .canvas-toolbar button {
+            opacity: 0.3;
+            pointer-events: none;
+            filter: grayscale(100%);
         }
 
         /* DJ overlay */
@@ -516,16 +529,19 @@
         }
 
         #optionsBtn {
-            width: 32px;
+            width: auto;
+            padding: 0 12px;
             height: 32px;
             background: #fff;
             border: none;
             color: #000;
-            font-size: 16px;
+            font-size: 11px;
+            font-weight: bold;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            letter-spacing: 0.5px;
         }
 
         #optionsBtn:hover {
@@ -534,45 +550,11 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
-                padding-top: 70px;
-            }
 
-            h1 {
-                font-size: 20px;
-                padding: 15px;
-            }
-
-            .control-row-1 {
-                gap: 8px;
-                padding: 6px 15px;
-            }
-
+            /* ... existing responsive styles ... */
             #playBtn {
-                height: 40px;
-                font-size: 16px;
-            }
-
-            .color-btn {
-                width: 32px;
-                height: 32px;
-            }
-
-            #color-palette {
-                padding: 8px 15px;
-                gap: 10px;
-            }
-
-            .timbre-select {
-                font-size: 8px;
-                max-width: 55px;
-            }
-
-            .color-action-btn {
-                width: 16px;
-                height: 16px;
-                font-size: 9px;
+                height: 48px;
+                font-size: 18px;
             }
         }
     </style>
@@ -626,7 +608,7 @@
                 </select>
             </div>
 
-            <button id="optionsBtn" title="Options">⚙</button>
+            <button id="optionsBtn" title="Options">OPTIONS</button>
         </div>
 
         <div class="control-row-2">
@@ -643,7 +625,7 @@
         <div class="canvas-toolbar">
             <button class="toolbar-btn" id="undoBtn" title="Undo (Ctrl+Z)">←</button>
             <button class="toolbar-btn" id="redoBtn" title="Redo (Ctrl+Y)">→</button>
-            <button class="toolbar-btn" id="clearAllBtn" title="Clear All">🗑</button>
+            <button class="toolbar-btn" id="clearAllBtn" title="Clear All">CLEAR</button>
         </div>
 
         <!-- Color palette -->
@@ -770,7 +752,7 @@
                     <label for="opt-humanize">Humanize<span class="option-desc">Random timing variation</span></label>
                 </div>
                 <div class="option-item">
-                    <input type="checkbox" id="opt-loop">
+                    <input type="checkbox" id="opt-loop" checked>
                     <label for="opt-loop">Loop<span class="option-desc">Auto-repeat playback</span></label>
                 </div>
                 <div class="option-item">
@@ -778,15 +760,15 @@
                     <label for="opt-reverb">Reverb<span class="option-desc">Spatial depth effect</span></label>
                 </div>
                 <div class="option-item">
-                    <input type="checkbox" id="opt-octave">
+                    <input type="checkbox" id="opt-octave" checked>
                     <label for="opt-octave">Octave Doubling<span class="option-desc">Add octave layer</span></label>
                 </div>
                 <div class="option-item">
-                    <input type="checkbox" id="opt-chord">
+                    <input type="checkbox" id="opt-chord" checked>
                     <label for="opt-chord">Chord Mode<span class="option-desc">Auto-add harmonics</span></label>
                 </div>
                 <div class="option-item">
-                    <input type="checkbox" id="opt-preview">
+                    <input type="checkbox" id="opt-preview" checked>
                     <label for="opt-preview">Preview Sound<span class="option-desc">Sound while drawing</span></label>
                 </div>
             </div>

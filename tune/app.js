@@ -44,11 +44,11 @@ const state = {
     options: {
         pingPong: false,
         humanize: true,
-        loop: false,
+        loop: true,
         reverb: true,
-        octaveDoubling: false,
-        chordMode: false,
-        previewSound: false
+        octaveDoubling: true,
+        chordMode: true,
+        previewSound: true
     },
     // Audio nodes
     reverbNode: null,
