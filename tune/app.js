@@ -52,6 +52,8 @@ const state = {
     },
     // Audio nodes
     reverbNode: null,
+    masterGain: null,
+    masterVolume: 0.5,
     lastDrawTime: 0,
     lastDrawY: 0
 };
@@ -130,6 +132,13 @@ async function initAudio() {
         await new Promise(resolve => setTimeout(resolve, 100));
     }
 
+    // Initialize Master Gain
+    if (!state.masterGain) {
+        state.masterGain = state.audioContext.createGain();
+        state.masterGain.gain.value = state.masterVolume;
+        state.masterGain.connect(state.audioContext.destination);
+    }
+
     // Initialize Reverb if needed
     if (!state.reverbNode) {
         initReverb();
@@ -159,12 +168,12 @@ function initReverb() {
     convolver.buffer = impulse;
     state.reverbNode = convolver;
 
-    // Reverb gain (mix) - we can connect this to destination
+    // Reverb gain (mix) - connect to master gain instead of destination
     state.reverbGain = ctx.createGain();
     state.reverbGain.gain.value = 0.3; // 30% wet
 
     convolver.connect(state.reverbGain);
-    state.reverbGain.connect(ctx.destination);
+    state.reverbGain.connect(state.masterGain);
 }
 
 function getHarmonics(frequency, scale) {
@@ -268,11 +277,11 @@ function playSound(frequency, timbre, duration, volumeScale = 1.0) {
 
     // Reverb & Destination Connection
     if (state.options.reverb && state.reverbNode && state.reverbGain) {
-        // Connect to both Dry (Destination) and Wet (Reverb)
-        outputNode.connect(audioCtx.destination);
+        // Connect to both Dry (Master Gain) and Wet (Reverb)
+        outputNode.connect(state.masterGain);
         outputNode.connect(state.reverbNode);
     } else {
-        outputNode.connect(audioCtx.destination);
+        outputNode.connect(state.masterGain);
     }
 
     oscillator.start(now);
@@ -315,10 +324,10 @@ async function playNoteOld(frequency, timbre, duration = 0.25) {
     
                 oscillator.connect(filter);
                 filter.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
+                gainNode.connect(state.masterGain);
             } else {
                 oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
+                gainNode.connect(state.masterGain);
             }
     
             oscillator.start(now);
@@ -348,10 +357,10 @@ async function playNoteOld(frequency, timbre, duration = 0.25) {
     
                     osc.connect(filter);
                     filter.connect(gain);
-                    gain.connect(audioCtx.destination);
+                    gain.connect(state.masterGain);
                 } else {
                     osc.connect(gain);
-                    gain.connect(audioCtx.destination);
+                    gain.connect(state.masterGain);
                 }
     
                 osc.start(now);
@@ -378,10 +387,10 @@ async function playNoteOld(frequency, timbre, duration = 0.25) {
     
                 osc.connect(filter);
                 filter.connect(gain);
-                gain.connect(audioCtx.destination);
+                gain.connect(state.masterGain);
             } else {
                 osc.connect(gain);
-                gain.connect(audioCtx.destination);
+                gain.connect(state.masterGain);
             }
     
             osc.start(now);
@@ -417,7 +426,7 @@ async function playNoteOld(frequency, timbre, duration = 0.25) {
             } else {
                 filter.connect(gain);
             }
-            gain.connect(audioCtx.destination);
+            gain.connect(state.masterGain);
     
             osc.start(now);
             osc.stop(now + duration);
@@ -443,10 +452,10 @@ async function playNoteOld(frequency, timbre, duration = 0.25) {
     
                 osc.connect(filter);
                 filter.connect(gain);
-                gain.connect(audioCtx.destination);
+                gain.connect(state.masterGain);
             } else {
                 osc.connect(gain);
-                gain.connect(audioCtx.destination);
+                gain.connect(state.masterGain);
             }
     
             osc.start(now);
@@ -607,6 +616,17 @@ function setupControls() {
     speedSlider.addEventListener('input', (e) => {
         state.speed = parseFloat(e.target.value);
         speedValue.textContent = state.speed.toFixed(1);
+    });
+
+    // Volume slider
+    const volumeSlider = document.getElementById('volumeSlider');
+    const volumeValue = document.getElementById('volumeValue');
+    volumeSlider.addEventListener('input', (e) => {
+        state.masterVolume = parseFloat(e.target.value);
+        volumeValue.textContent = Math.round(state.masterVolume * 100) + '%';
+        if (state.masterGain) {
+            state.masterGain.gain.setTargetAtTime(state.masterVolume, state.audioContext.currentTime, 0.01);
+        }
     });
 
     // Scale selector
