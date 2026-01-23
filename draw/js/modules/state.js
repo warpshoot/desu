@@ -70,6 +70,8 @@ export const state = {
     // Touch & Gesture
     touchStartTime: 0,
     touchStartPos: null,
+    drawingPointerId: null, // ID of the pointer responsible for drawing
+    totalDragDistance: 0,   // Total distance moved during the current gesture
 
     // Pinch Zoom
     isPinching: false,

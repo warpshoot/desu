@@ -165,6 +165,10 @@ function setupPointerEvents() {
         if (state.activePointers.size === 1 && canDraw) {
             const p = getCanvasPoint(e.clientX, e.clientY);
 
+            // Register this pointer as the drawing pointer
+            state.drawingPointerId = e.pointerId;
+            state.totalDragDistance = 0;
+
             if (state.currentTool === 'pen') {
                 state.isErasing = false;
                 startPenDrawing(p.x, p.y);
@@ -229,16 +233,25 @@ function setupPointerEvents() {
             return;
         }
 
-        // Drawing
-        if (state.isPenDrawing && state.activePointers.size === 1) {
+        // Drawing - Only process events from the registered drawing pointer
+        if (state.drawingPointerId === e.pointerId && state.activePointers.size === 1) {
             const p = getCanvasPoint(e.clientX, e.clientY);
-            drawPenLine(p.x, p.y);
-            state.strokeMade = true;
-        }
 
-        if (state.isLassoing && state.activePointers.size === 1) {
-            updateLasso(e.clientX, e.clientY);
-            state.strokeMade = true;
+            // Calculate distance for gesture handling
+            if (state.lastPenPoint) {
+                // Simple Manhattan distance for performance or Euclidian
+                state.totalDragDistance += Math.hypot(p.x - state.lastPenPoint.x, p.y - state.lastPenPoint.y);
+            }
+
+            if (state.isPenDrawing) {
+                drawPenLine(p.x, p.y);
+                state.strokeMade = true;
+            }
+
+            if (state.isLassoing) {
+                updateLasso(e.clientX, e.clientY);
+                state.strokeMade = true;
+            }
         }
     });
 
@@ -255,8 +268,20 @@ function setupPointerEvents() {
         }
 
         if (state.isPenDrawing && state.activePointers.size === 1) {
-            await endPenDrawing();
-            skipUndoGestureThisEvent = true;
+
+            // Check for valid undo gesture: 2 fingers, short duration, small drag distance
+            const duration = Date.now() - state.touchStartTime;
+            if (state.maxFingers === 2 && duration < 400 && state.totalDragDistance < 10) {
+                // It was likely a 2-finger tap, so cancel the stroke
+                state.isPenDrawing = false;
+                state.lastPenPoint = null;
+                // Force undo to clean up the micro-stroke
+                undo();
+                skipUndoGestureThisEvent = true;
+            } else {
+                await endPenDrawing();
+                skipUndoGestureThisEvent = true;
+            }
         }
 
         if (state.isLassoing) {
