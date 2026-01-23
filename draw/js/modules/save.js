@@ -97,6 +97,14 @@ export async function saveRegion(x, y, w, h) {
         if (state.lineVisible) {
             mergedCtx.drawImage(lineCanvas, x, y, w, h, 0, 0, w, h);
         }
+        if (state.line2Visible) {
+            const l2 = document.getElementById('canvas-line-2');
+            mergedCtx.drawImage(l2, x, y, w, h, 0, 0, w, h);
+        }
+        if (state.line3Visible) {
+            const l3 = document.getElementById('canvas-line-3');
+            mergedCtx.drawImage(l3, x, y, w, h, 0, 0, w, h);
+        }
 
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = outputW;
@@ -184,6 +192,14 @@ export async function copyToClipboard(x, y, w, h) {
         // ペン入れレイヤー描画（表示されている場合）
         if (state.lineVisible) {
             mergedCtx.drawImage(lineCanvas, x, y, w, h, 0, 0, w, h);
+        }
+        if (state.line2Visible) {
+            const l2 = document.getElementById('canvas-line-2');
+            mergedCtx.drawImage(l2, x, y, w, h, 0, 0, w, h);
+        }
+        if (state.line3Visible) {
+            const l3 = document.getElementById('canvas-line-3');
+            mergedCtx.drawImage(l3, x, y, w, h, 0, 0, w, h);
         }
 
         tempCanvas = document.createElement('canvas'); // ここでtempCanvasを初期化

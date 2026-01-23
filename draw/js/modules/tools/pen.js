@@ -3,7 +3,9 @@ import {
     state,
     roughCtx,
     fillCtx,
-    lineCtx
+    lineCtx,
+    line2Ctx,
+    line3Ctx
 } from '../state.js';
 import { saveState } from '../history.js';
 
@@ -20,7 +22,20 @@ export function drawPenLine(x, y) {
     const brushSize = brushSizeEl ? parseFloat(brushSizeEl.value) : 3;
 
     // アクティブレイヤーにctxを選択
-    const ctx = state.activeLayer === 'rough' ? roughCtx : (state.activeLayer === 'fill' ? fillCtx : lineCtx);
+    let ctx;
+    if (state.activeLayer === 'rough') {
+        ctx = roughCtx;
+    } else if (state.activeLayer === 'fill') {
+        ctx = fillCtx;
+    } else if (state.activeLayer === 'line') {
+        ctx = lineCtx;
+    } else if (state.activeLayer === 'line2') {
+        ctx = line2Ctx;
+    } else if (state.activeLayer === 'line3') {
+        ctx = line3Ctx;
+    } else {
+        ctx = lineCtx; // default fallback
+    }
 
     // console.log('drawPenLine: from', state.lastPenPoint, 'to', { x, y }, 'brushSize=', brushSize, 'isErasing=', state.isErasing, 'activeLayer=', state.activeLayer);
 

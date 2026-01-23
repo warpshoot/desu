@@ -5,6 +5,8 @@ import {
     roughCanvas, roughCtx,
     fillCanvas, fillCtx,
     lineCanvas, lineCtx,
+    line2Canvas, line2Ctx,
+    line3Canvas, line3Ctx,
     lassoCanvas, selectionCanvas
 } from './state.js';
 
@@ -35,6 +37,16 @@ export async function initCanvas() {
     lineCanvas.height = h;
     lineCtx.clearRect(0, 0, w, h);
 
+    // Initialize Line2 Layer (Transparent)
+    line2Canvas.width = w;
+    line2Canvas.height = h;
+    line2Ctx.clearRect(0, 0, w, h);
+
+    // Initialize Line3 Layer (Transparent)
+    line3Canvas.width = w;
+    line3Canvas.height = h;
+    line3Ctx.clearRect(0, 0, w, h);
+
     // console.log('Canvas initialized - rough:', roughCanvas.width, 'x', roughCanvas.height);
     // console.log('Canvas initialized - fill:', fillCanvas.width, 'x', fillCanvas.height);
     // console.log('Canvas initialized - line:', lineCanvas.width, 'x', lineCanvas.height);
@@ -61,6 +73,8 @@ export function applyTransform() {
     roughCanvas.style.transform = transform;
     fillCanvas.style.transform = transform;
     lineCanvas.style.transform = transform;
+    line2Canvas.style.transform = transform;
+    line3Canvas.style.transform = transform;
 
     const resetBtn = document.getElementById('resetZoomBtn');
     if (Math.abs(state.scale - 1) > 0.01 || Math.abs(state.translateX) > 1 || Math.abs(state.translateY) > 1) {

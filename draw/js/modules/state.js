@@ -1,6 +1,4 @@
-
 // DOM Elements - Canvas
-// 使用頻度の高い要素はexport letで公開し、initDOM()で初期化する
 export let canvasBg = null;
 export let roughCanvas = null;
 export let roughCtx = null;
@@ -8,6 +6,10 @@ export let fillCanvas = null;
 export let fillCtx = null;
 export let lineCanvas = null;
 export let lineCtx = null;
+export let line2Canvas = null;
+export let line2Ctx = null;
+export let line3Canvas = null;
+export let line3Ctx = null;
 export let lassoCanvas = null;
 export let lassoCtx = null;
 export let selectionCanvas = null;
@@ -24,28 +26,37 @@ export function initDOM() {
     lineCanvas = document.getElementById('canvas-line');
     lineCtx = lineCanvas.getContext('2d', { willReadFrequently: true });
 
+    line2Canvas = document.getElementById('canvas-line-2');
+    line2Ctx = line2Canvas.getContext('2d', { willReadFrequently: true });
+
+    line3Canvas = document.getElementById('canvas-line-3');
+    line3Ctx = line3Canvas.getContext('2d', { willReadFrequently: true });
+
     lassoCanvas = document.getElementById('lasso-canvas');
     lassoCtx = lassoCanvas.getContext('2d');
 
     selectionCanvas = document.getElementById('selection-canvas');
-
-    // console.log('DOM initialized in state module');
 }
 
 // State Object to manage application state
 export const state = {
     // Tool settings
     currentTool: 'sketch',  // 'sketch', 'fill', 'pen' or 'eraser'
-    activeLayer: 'rough',   // 'rough', 'fill' or 'line'
+    activeLayer: 'rough',   // 'rough', 'fill', 'line', 'line2' or 'line3'
     eraserMode: 'lasso',    // 'lasso' or 'pen'
 
     // Layer visibility
     roughVisible: true,
     fillVisible: true,
     lineVisible: true,
+    line2Visible: true,
+    line3Visible: true,
+
     roughOpacity: 1.0,
     fillOpacity: 1.0,
     lineOpacity: 1.0,
+    line2Opacity: 1.0,
+    line3Opacity: 1.0,
 
     // Zoom & Pan
     scale: 1,
@@ -60,6 +71,10 @@ export const state = {
     fillRedoStack: [],
     lineUndoStack: [],
     lineRedoStack: [],
+    line2UndoStack: [],
+    line2RedoStack: [],
+    line3UndoStack: [],
+    line3RedoStack: [],
 
     // Pointer Management
     activePointers: new Map(),

@@ -48,11 +48,15 @@ function updateActiveLayerIndicator() {
     const sketchBtn = document.getElementById('sketchBtn');
     const fillBtn = document.getElementById('fillBtn');
     const penBtn = document.getElementById('penBtn');
+    const penBtn2 = document.getElementById('penBtn2');
+    const penBtn3 = document.getElementById('penBtn3');
 
     // Remove active class first
     sketchBtn.classList.remove('layer-active');
     fillBtn.classList.remove('layer-active');
-    penBtn.classList.remove('layer-active');
+    if (penBtn) penBtn.classList.remove('layer-active');
+    if (penBtn2) penBtn2.classList.remove('layer-active');
+    if (penBtn3) penBtn3.classList.remove('layer-active');
 
     // Only show indicator when eraser is active
     if (state.currentTool === 'eraser') {
@@ -61,7 +65,11 @@ function updateActiveLayerIndicator() {
         } else if (state.activeLayer === 'fill') {
             fillBtn.classList.add('layer-active');
         } else if (state.activeLayer === 'line') {
-            penBtn.classList.add('layer-active');
+            if (penBtn) penBtn.classList.add('layer-active');
+        } else if (state.activeLayer === 'line2') {
+            if (penBtn2) penBtn2.classList.add('layer-active');
+        } else if (state.activeLayer === 'line3') {
+            if (penBtn3) penBtn3.classList.add('layer-active');
         }
     }
 }
@@ -112,6 +120,14 @@ function switchLayer(newLayer) {
             state.currentTool = 'pen';
             document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
             document.getElementById('penBtn').classList.add('active');
+        } else if (state.activeLayer === 'line2') {
+            state.currentTool = 'pen';
+            document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+            document.getElementById('penBtn2').classList.add('active');
+        } else if (state.activeLayer === 'line3') {
+            state.currentTool = 'pen';
+            document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+            document.getElementById('penBtn3').classList.add('active');
         }
     }
 
@@ -120,7 +136,6 @@ function switchLayer(newLayer) {
     if (state.currentTool === 'pen') {
         updateBrushSizeSlider();
     }
-    // console.log('Layer switched to:', state.activeLayer, 'Tool:', state.currentTool);
 }
 
 
@@ -423,10 +438,20 @@ function setupToolButtons() {
                 const containerIdMap = {
                     'sketch': 'roughOpacityContainer',
                     'fill': 'fillOpacityContainer',
-                    'pen': 'lineOpacityContainer'
+                    'pen': state.activeLayer === 'line2' ? 'line2OpacityContainer' : (state.activeLayer === 'line3' ? 'line3OpacityContainer' : 'lineOpacityContainer')
                 };
-                const containerId = containerIdMap[newTool];
-                const container = document.getElementById(containerId);
+
+                // Special check for pen buttons to ensure we toggle the correct container for the clicked button
+                // (Since data-tool is same 'pen' for all 3 buttons)
+                let targetContainerId = containerIdMap[newTool];
+
+                if (newTool === 'pen') {
+                    if (btn.dataset.layer === 'line') targetContainerId = 'lineOpacityContainer';
+                    else if (btn.dataset.layer === 'line2') targetContainerId = 'line2OpacityContainer';
+                    else if (btn.dataset.layer === 'line3') targetContainerId = 'line3OpacityContainer';
+                }
+
+                const container = document.getElementById(targetContainerId);
                 if (container) container.classList.toggle('visible');
                 return;
             }
@@ -497,6 +522,24 @@ function setupLayerControls() {
         });
     }
 
+    const line2VisibleBtn = document.getElementById('line2VisibleBtn');
+    if (line2VisibleBtn) {
+        line2VisibleBtn.addEventListener('click', () => {
+            state.line2Visible = !state.line2Visible;
+            document.getElementById('canvas-line-2').style.display = state.line2Visible ? 'block' : 'none';
+            line2VisibleBtn.classList.toggle('hidden', !state.line2Visible);
+        });
+    }
+
+    const line3VisibleBtn = document.getElementById('line3VisibleBtn');
+    if (line3VisibleBtn) {
+        line3VisibleBtn.addEventListener('click', () => {
+            state.line3Visible = !state.line3Visible;
+            document.getElementById('canvas-line-3').style.display = state.line3Visible ? 'block' : 'none';
+            line3VisibleBtn.classList.toggle('hidden', !state.line3Visible);
+        });
+    }
+
     // Opacity Sliders
     const roughOpacityInput = document.getElementById('roughOpacity');
     if (roughOpacityInput) {
@@ -522,6 +565,22 @@ function setupLayerControls() {
         });
     }
 
+    const line2OpacityInput = document.getElementById('line2Opacity');
+    if (line2OpacityInput) {
+        line2OpacityInput.addEventListener('input', (e) => {
+            state.line2Opacity = parseFloat(e.target.value) / 100;
+            document.getElementById('canvas-line-2').style.opacity = state.line2Opacity;
+        });
+    }
+
+    const line3OpacityInput = document.getElementById('line3Opacity');
+    if (line3OpacityInput) {
+        line3OpacityInput.addEventListener('input', (e) => {
+            state.line3Opacity = parseFloat(e.target.value) / 100;
+            document.getElementById('canvas-line-3').style.opacity = state.line3Opacity;
+        });
+    }
+
     // Brush Size
     const brushSizeInput = document.getElementById('brushSize');
     const sizeDisplay = document.getElementById('sizeDisplay');
@@ -544,6 +603,8 @@ function setupClearButtons() {
         roughCanvas.getContext('2d').fillRect(0, 0, roughCanvas.width, roughCanvas.height);
         fillCanvas.getContext('2d').clearRect(0, 0, fillCanvas.width, fillCanvas.height);
         lineCanvas.getContext('2d').clearRect(0, 0, lineCanvas.width, lineCanvas.height);
+        document.getElementById('canvas-line-2').getContext('2d').clearRect(0, 0, lineCanvas.width, lineCanvas.height);
+        document.getElementById('canvas-line-3').getContext('2d').clearRect(0, 0, lineCanvas.width, lineCanvas.height);
 
         saveAllStates();
 
@@ -565,6 +626,12 @@ function setupClearButtons() {
                 fillCanvas.getContext('2d').clearRect(0, 0, fillCanvas.width, fillCanvas.height);
             } else if (state.activeLayer === 'line') {
                 lineCanvas.getContext('2d').clearRect(0, 0, lineCanvas.width, lineCanvas.height);
+            } else if (state.activeLayer === 'line2') {
+                const l2 = document.getElementById('canvas-line-2');
+                l2.getContext('2d').clearRect(0, 0, l2.width, l2.height);
+            } else if (state.activeLayer === 'line3') {
+                const l3 = document.getElementById('canvas-line-3');
+                l3.getContext('2d').clearRect(0, 0, l3.width, l3.height);
             }
             saveState();
 

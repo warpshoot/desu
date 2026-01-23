@@ -20,6 +20,8 @@
     <canvas id="canvas-rough"></canvas>
     <canvas id="canvas-fill"></canvas>
     <canvas id="canvas-line"></canvas>
+    <canvas id="canvas-line-2"></canvas>
+    <canvas id="canvas-line-3"></canvas>
     <canvas id="lasso-canvas"></canvas>
 
     <!-- 左下ツールバー -->
@@ -29,7 +31,7 @@
                 <svg viewBox="0 0 24 24">
                     <path d="M4 18 Q8 14, 12 12 T20 6" stroke-width="2.5" stroke-linecap="round" fill="none" />
                 </svg>
-                <div class="tool-tooltip">ペン (P)</div>
+                <div class="tool-tooltip">ペン 1 (P1)</div>
             </div>
             <button class="layer-visible-btn" id="lineVisibleBtn" data-layer="line">
                 <svg viewBox="0 0 24 24" class="eye-icon">
@@ -40,6 +42,44 @@
             <div class="opacity-slider-container" id="lineOpacityContainer">
                 <input type="range" class="layer-opacity" id="lineOpacity" min="0" max="100" value="100"
                     data-layer="line">
+            </div>
+        </div>
+
+        <div class="tool-group">
+            <div class="tool-btn" id="penBtn2" data-tool="pen" data-layer="line2">
+                <svg viewBox="0 0 24 24">
+                    <path d="M4 18 Q8 14, 12 12 T20 6" stroke-width="2.5" stroke-linecap="round" fill="none" />
+                </svg>
+                <div class="tool-tooltip">ペン 2 (P2)</div>
+            </div>
+            <button class="layer-visible-btn" id="line2VisibleBtn" data-layer="line2">
+                <svg viewBox="0 0 24 24" class="eye-icon">
+                    <path d="M2 12 C2 12 5 5 12 5 C19 5 22 12 22 12 C22 12 19 19 12 19 C5 19 2 12 2 12 Z" />
+                    <circle cx="12" cy="12" r="3" />
+                </svg>
+            </button>
+            <div class="opacity-slider-container" id="line2OpacityContainer">
+                <input type="range" class="layer-opacity" id="line2Opacity" min="0" max="100" value="100"
+                    data-layer="line2">
+            </div>
+        </div>
+
+        <div class="tool-group">
+            <div class="tool-btn" id="penBtn3" data-tool="pen" data-layer="line3">
+                <svg viewBox="0 0 24 24">
+                    <path d="M4 18 Q8 14, 12 12 T20 6" stroke-width="2.5" stroke-linecap="round" fill="none" />
+                </svg>
+                <div class="tool-tooltip">ペン 3 (P3)</div>
+            </div>
+            <button class="layer-visible-btn" id="line3VisibleBtn" data-layer="line3">
+                <svg viewBox="0 0 24 24" class="eye-icon">
+                    <path d="M2 12 C2 12 5 5 12 5 C19 5 22 12 22 12 C22 12 19 19 12 19 C5 19 2 12 2 12 Z" />
+                    <circle cx="12" cy="12" r="3" />
+                </svg>
+            </button>
+            <div class="opacity-slider-container" id="line3OpacityContainer">
+                <input type="range" class="layer-opacity" id="line3Opacity" min="0" max="100" value="100"
+                    data-layer="line3">
             </div>
         </div>
 

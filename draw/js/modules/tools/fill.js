@@ -4,9 +4,26 @@ import {
     roughCanvas, roughCtx,
     fillCanvas, fillCtx,
     lineCanvas, lineCtx,
-    lassoCanvas, lassoCtx
+    lassoCanvas, lassoCtx,
+    line2Canvas, line2Ctx,
+    line3Canvas, line3Ctx
 } from '../state.js';
 import { getCanvasPoint, getBounds, isPointInPolygon } from '../utils.js';
+
+function getActiveContextAndCanvas() {
+    if (state.activeLayer === 'rough') return { canvas: roughCanvas, ctx: roughCtx };
+    if (state.activeLayer === 'fill') return { canvas: fillCanvas, ctx: fillCtx };
+    if (state.activeLayer === 'line') return { canvas: lineCanvas, ctx: lineCtx };
+    if (state.activeLayer === 'line2') return {
+        canvas: line2Canvas,
+        ctx: line2Ctx
+    };
+    if (state.activeLayer === 'line3') return {
+        canvas: line3Canvas,
+        ctx: line3Ctx
+    };
+    return { canvas: lineCanvas, ctx: lineCtx };
+}
 
 // ============================================
 // 塗りつぶし（スキャンライン法）
@@ -14,9 +31,7 @@ import { getCanvasPoint, getBounds, isPointInPolygon } from '../utils.js';
 
 export function floodFill(startX, startY, fillColor) {
     // アクティブレイヤーに応じたcanvasとctxを選択
-    // Note: fill layer uses a different context logic in some cases, but for bucket fill:
-    const canvas = state.activeLayer === 'rough' ? roughCanvas : (state.activeLayer === 'fill' ? fillCanvas : lineCanvas);
-    const ctx = state.activeLayer === 'rough' ? roughCtx : (state.activeLayer === 'fill' ? fillCtx : lineCtx);
+    const { canvas, ctx } = getActiveContextAndCanvas();
 
     const w = canvas.width, h = canvas.height;
 
@@ -93,8 +108,7 @@ export function floodFillTransparent(startX, startY) {
     // Only applies to line or fill layer technically, but original code used lineCanvas hardcoded for some reason?
     // Checking logic: "ペン入れレイヤー用" comment suggests it was for line layer clean up.
     // If active layer is fill, we should probably target fill canvas.
-    const canvas = state.activeLayer === 'fill' ? fillCanvas : lineCanvas;
-    const ctx = state.activeLayer === 'fill' ? fillCtx : lineCtx;
+    const { canvas, ctx } = getActiveContextAndCanvas();
 
     const w = canvas.width, h = canvas.height;
 
@@ -172,8 +186,7 @@ export function fillPolygonTransparent(points) {
     }
 
     // アクティブレイヤーを選択（ベタかペン入れ）
-    const ctx = state.activeLayer === 'fill' ? fillCtx : lineCtx;
-    const canvas = state.activeLayer === 'fill' ? fillCanvas : lineCanvas;
+    const { canvas, ctx } = getActiveContextAndCanvas();
 
     // console.log('fillPolygonTransparent: points=', points.length, 'layer=', state.activeLayer);
 
@@ -216,8 +229,7 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
     }
 
     // アクティブレイヤーに応じたctxを選択
-    const ctx = state.activeLayer === 'rough' ? roughCtx : (state.activeLayer === 'fill' ? fillCtx : lineCtx);
-    const canvas = state.activeLayer === 'rough' ? roughCanvas : (state.activeLayer === 'fill' ? fillCanvas : lineCanvas);
+    const { canvas, ctx } = getActiveContextAndCanvas();
 
     // console.log('fillPolygonNoAA: activeLayer=', state.activeLayer, 'points=', points.length, 'color=', r, g, b, alpha);
 

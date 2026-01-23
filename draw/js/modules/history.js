@@ -2,7 +2,9 @@ import {
     state,
     roughCanvas, roughCtx,
     fillCanvas, fillCtx,
-    lineCanvas, lineCtx
+    lineCanvas, lineCtx,
+    line2Canvas, line2Ctx,
+    line3Canvas, line3Ctx
 } from './state.js';
 
 // Save the state of a specific layer
@@ -40,6 +42,26 @@ export async function saveLayerState(targetLayer) {
 
         state.lineRedoStack.forEach(b => b.close());
         state.lineRedoStack = [];
+    } else if (targetLayer === 'line2') {
+        const bitmap = await createImageBitmap(line2Canvas);
+        state.line2UndoStack.push(bitmap);
+
+        if (state.line2UndoStack.length > state.MAX_HISTORY) {
+            state.line2UndoStack.shift().close();
+        }
+
+        state.line2RedoStack.forEach(b => b.close());
+        state.line2RedoStack = [];
+    } else if (targetLayer === 'line3') {
+        const bitmap = await createImageBitmap(line3Canvas);
+        state.line3UndoStack.push(bitmap);
+
+        if (state.line3UndoStack.length > state.MAX_HISTORY) {
+            state.line3UndoStack.shift().close();
+        }
+
+        state.line3RedoStack.forEach(b => b.close());
+        state.line3RedoStack = [];
     }
 }
 
@@ -54,7 +76,9 @@ export async function saveAllStates() {
     await Promise.all([
         saveLayerState('rough'),
         saveLayerState('fill'),
-        saveLayerState('line')
+        saveLayerState('line'),
+        saveLayerState('line2'),
+        saveLayerState('line3')
     ]);
 }
 
@@ -102,6 +126,24 @@ export function undo() {
         lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
         lineCtx.drawImage(prev, 0, 0);
         // console.log('Undo complete - new stack size:', state.lineUndoStack.length);
+    } else if (state.activeLayer === 'line2') {
+        if (state.line2UndoStack.length <= 1) return;
+
+        const current = state.line2UndoStack.pop();
+        state.line2RedoStack.push(current);
+
+        const prev = state.line2UndoStack[state.line2UndoStack.length - 1];
+        line2Ctx.clearRect(0, 0, line2Canvas.width, line2Canvas.height);
+        line2Ctx.drawImage(prev, 0, 0);
+    } else if (state.activeLayer === 'line3') {
+        if (state.line3UndoStack.length <= 1) return;
+
+        const current = state.line3UndoStack.pop();
+        state.line3RedoStack.push(current);
+
+        const prev = state.line3UndoStack[state.line3UndoStack.length - 1];
+        line3Ctx.clearRect(0, 0, line3Canvas.width, line3Canvas.height);
+        line3Ctx.drawImage(prev, 0, 0);
     }
 }
 
@@ -131,5 +173,21 @@ export function redo() {
 
         lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
         lineCtx.drawImage(next, 0, 0);
+    } else if (state.activeLayer === 'line2') {
+        if (state.line2RedoStack.length === 0) return;
+
+        const next = state.line2RedoStack.pop();
+        state.line2UndoStack.push(next);
+
+        line2Ctx.clearRect(0, 0, line2Canvas.width, line2Canvas.height);
+        line2Ctx.drawImage(next, 0, 0);
+    } else if (state.activeLayer === 'line3') {
+        if (state.line3RedoStack.length === 0) return;
+
+        const next = state.line3RedoStack.pop();
+        state.line3UndoStack.push(next);
+
+        line3Ctx.clearRect(0, 0, line3Canvas.width, line3Canvas.height);
+        line3Ctx.drawImage(next, 0, 0);
     }
 }
