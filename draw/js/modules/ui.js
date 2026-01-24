@@ -338,14 +338,8 @@ function setupPointerEvents() {
             if (totalDist < 20 && state.lassoPoints.length > 0) {
                 // Tap detected
                 if (state.currentTool === 'eraser') {
-                    const startP = state.lassoPoints[0];
                     const p = getCanvasPoint(state.lassoPoints[0].x, state.lassoPoints[0].y);
-
-                    if (state.activeLayer === 'line' || state.activeLayer === 'rough') {
-                        floodFillTransparent(p.x, p.y);
-                    } else {
-                        floodFill(p.x, p.y, [255, 255, 255, 255]);
-                    }
+                    floodFillTransparent(p.x, p.y);
                     saveState();
                     state.strokeMade = true;
                 } else if (state.currentTool === 'fill') {
