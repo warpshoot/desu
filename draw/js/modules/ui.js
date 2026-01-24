@@ -558,14 +558,10 @@ function setupToolButtons() {
     if (activeBtn) {
         activateTool(activeBtn);
     }
-
-    updateOpacitySliderVisibility();
 }
 
 function activateTool(btn) {
     const toolType = btn.dataset.tool;
-
-    document.querySelectorAll('.opacity-slider-container').forEach(c => c.classList.remove('visible'));
 
     // Check button state to set correct tool
     let selectedTool = 'pen'; // Default
@@ -592,7 +588,6 @@ function activateTool(btn) {
     btn.classList.add('active');
 
     updateActiveLayerIndicator();
-    updateOpacitySliderVisibility();
     updateBrushSizeVisibility();
     updateBrushSizeSlider();
 
@@ -787,24 +782,14 @@ function flashLayer(layerName) {
     }, 500);
 }
 
-function updateOpacitySliderVisibility() {
-    // Hide all first
+function hideAllOpacitySliders() {
     document.querySelectorAll('.opacity-slider-container').forEach(c => c.classList.remove('visible'));
+}
 
-    // Show for active layer
-    const containerIdMap = {
-        'rough': 'roughOpacityContainer',
-        'fill': 'fillOpacityContainer',
-        'line': 'lineOpacityContainer',
-        'line2': 'line2OpacityContainer',
-        'line3': 'line3OpacityContainer'
-    };
-
-    const targetId = containerIdMap[state.activeLayer];
-    if (targetId) {
-        const container = document.getElementById(targetId);
-        if (container) container.classList.add('visible');
-    }
+function showOpacitySlider(containerId) {
+    hideAllOpacitySliders();
+    const container = document.getElementById(containerId);
+    if (container) container.classList.add('visible');
 }
 
 function setupColorPickers() {
@@ -821,51 +806,58 @@ function setupColorPickers() {
 }
 
 function setupLayerControls() {
-    // Visibility Toggles
-    const roughVisibleBtn = document.getElementById('roughVisibleBtn');
-    if (roughVisibleBtn) {
-        roughVisibleBtn.addEventListener('click', () => {
-            state.roughVisible = !state.roughVisible;
-            roughCanvas.style.display = state.roughVisible ? 'block' : 'none';
-            roughVisibleBtn.classList.toggle('hidden', !state.roughVisible);
-        });
-    }
+    // Visibility Toggles + Long Press for Opacity Slider
+    const layerConfig = [
+        { btnId: 'lineVisibleBtn', stateKey: 'lineVisible', canvasEl: lineCanvas, sliderId: 'lineOpacityContainer' },
+        { btnId: 'line2VisibleBtn', stateKey: 'line2Visible', canvasId: 'canvas-line-2', sliderId: 'line2OpacityContainer' },
+        { btnId: 'line3VisibleBtn', stateKey: 'line3Visible', canvasId: 'canvas-line-3', sliderId: 'line3OpacityContainer' },
+        { btnId: 'fillVisibleBtn', stateKey: 'fillVisible', canvasEl: fillCanvas, sliderId: 'fillOpacityContainer' },
+        { btnId: 'roughVisibleBtn', stateKey: 'roughVisible', canvasEl: roughCanvas, sliderId: 'roughOpacityContainer' }
+    ];
 
-    const fillVisibleBtn = document.getElementById('fillVisibleBtn');
-    if (fillVisibleBtn) {
-        fillVisibleBtn.addEventListener('click', () => {
-            state.fillVisible = !state.fillVisible;
-            fillCanvas.style.display = state.fillVisible ? 'block' : 'none';
-            fillVisibleBtn.classList.toggle('hidden', !state.fillVisible);
-        });
-    }
+    layerConfig.forEach(({ btnId, stateKey, canvasEl, canvasId, sliderId }) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
 
-    const lineVisibleBtn = document.getElementById('lineVisibleBtn');
-    if (lineVisibleBtn) {
-        lineVisibleBtn.addEventListener('click', () => {
-            state.lineVisible = !state.lineVisible;
-            lineCanvas.style.display = state.lineVisible ? 'block' : 'none';
-            lineVisibleBtn.classList.toggle('hidden', !state.lineVisible);
-        });
-    }
+        let longPressTimer = null;
+        let isLongPress = false;
 
-    const line2VisibleBtn = document.getElementById('line2VisibleBtn');
-    if (line2VisibleBtn) {
-        line2VisibleBtn.addEventListener('click', () => {
-            state.line2Visible = !state.line2Visible;
-            document.getElementById('canvas-line-2').style.display = state.line2Visible ? 'block' : 'none';
-            line2VisibleBtn.classList.toggle('hidden', !state.line2Visible);
+        btn.addEventListener('pointerdown', () => {
+            isLongPress = false;
+            longPressTimer = setTimeout(() => {
+                isLongPress = true;
+                showOpacitySlider(sliderId);
+            }, 400);
         });
-    }
 
-    const line3VisibleBtn = document.getElementById('line3VisibleBtn');
-    if (line3VisibleBtn) {
-        line3VisibleBtn.addEventListener('click', () => {
-            state.line3Visible = !state.line3Visible;
-            document.getElementById('canvas-line-3').style.display = state.line3Visible ? 'block' : 'none';
-            line3VisibleBtn.classList.toggle('hidden', !state.line3Visible);
+        const cancelTimer = () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        };
+        btn.addEventListener('pointerup', cancelTimer);
+        btn.addEventListener('pointerleave', cancelTimer);
+        btn.addEventListener('pointercancel', cancelTimer);
+
+        btn.addEventListener('click', () => {
+            if (isLongPress) {
+                isLongPress = false;
+                return;
+            }
+            state[stateKey] = !state[stateKey];
+            const canvas = canvasEl || document.getElementById(canvasId);
+            canvas.style.display = state[stateKey] ? 'block' : 'none';
+            btn.classList.toggle('hidden', !state[stateKey]);
         });
-    }
+    });
+
+    // Dismiss opacity slider on outside click
+    document.addEventListener('pointerdown', (e) => {
+        if (!e.target.closest('.opacity-slider-container') && !e.target.closest('.layer-visible-btn')) {
+            hideAllOpacitySliders();
+        }
+    });
 
     // Opacity Sliders
     const roughOpacityInput = document.getElementById('roughOpacity');
