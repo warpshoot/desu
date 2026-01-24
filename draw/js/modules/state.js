@@ -79,6 +79,8 @@ export const state = {
     line2RedoStack: [],
     line3UndoStack: [],
     line3RedoStack: [],
+    globalUndoStack: [],
+    globalRedoStack: [],
 
     // Pointer Management
     activePointers: new Map(),
