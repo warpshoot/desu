@@ -569,11 +569,11 @@ function activateTool(btn) {
 
     // Check button state to set correct tool
     let selectedTool = 'pen'; // Default
-    if (btn.classList.contains('fill-mode')) selectedTool = 'fill';
+    if (toolType === 'eraser') selectedTool = 'eraser';
+    else if (btn.classList.contains('fill-mode')) selectedTool = 'fill';
     else if (btn.classList.contains('sketch-mode')) selectedTool = 'sketch';
     else if (btn.classList.contains('sketch-pen-mode')) selectedTool = 'sketch_pen';
     else if (btn.classList.contains('pen-mode')) selectedTool = 'pen';
-    else if (toolType === 'eraser') selectedTool = 'eraser';
     else {
         // Fallback to data-tool
         const type = btn.dataset.tool;
