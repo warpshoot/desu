@@ -81,7 +81,7 @@ body {
 #toolbar-left {
     position: fixed;
     left: 12px;
-    bottom: 120px;
+    bottom: max(12px, env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     gap: 8px;
