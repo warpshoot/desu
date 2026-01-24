@@ -44,7 +44,9 @@ body {
 }
 
 #canvas-rough {
-    z-index: 10;
+    z-index: 5;
+    mix-blend-mode: multiply;
+    /* アタリは乗算で重ねる */
 }
 
 #canvas-fill {
@@ -52,7 +54,7 @@ body {
 }
 
 #canvas-line {
-    z-index: 30;
+    z-index: 50;
 }
 
 #canvas-line-2 {
@@ -61,7 +63,7 @@ body {
 }
 
 #canvas-line-3 {
-    z-index: 50;
+    z-index: 30;
     pointer-events: none;
 }
 
@@ -101,8 +103,9 @@ body {
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    border: 2px solid #666;
-    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #666;
+    background: rgba(255, 255, 255, 0.6);
+    /* 60% Opacity as requested */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -110,6 +113,44 @@ body {
     cursor: pointer;
     transition: transform 0.1s, background 0.1s;
     color: #333;
+    /* For color input filling */
+}
+
+/* Color Picker Button Styles */
+#inkColorBtnWrapper {
+    padding: 2px;
+    /* Slight padding for border visibility */
+}
+
+#bgColorBtnWrapper {
+    padding: 2px;
+    /* Slight padding for border visibility */
+    overflow: hidden;
+    /* Only clip color picker */
+}
+
+#inkColorBtn,
+#bgColorBtn {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+#inkColorBtn::-webkit-color-swatch-wrapper,
+#bgColorBtn::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+#inkColorBtn::-webkit-color-swatch,
+#bgColorBtn::-webkit-color-swatch {
+    border: none;
+    border-radius: 8px;
+    /* Match button radius minus padding */
 }
 
 .tool-btn svg {
@@ -122,13 +163,23 @@ body {
     stroke-linejoin: round;
 }
 
+.tool-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    pointer-events: none;
+    transition: filter 0.1s;
+}
+
+/* アイコン反転処理削除済み */
+
 .tool-btn svg .filled {
     fill: currentColor;
     stroke: none;
 }
 
 body.dark .tool-btn {
-    background: rgba(40, 40, 40, 0.9);
+    background: rgba(40, 40, 40, 0.6);
     border-color: #888;
     color: #fff;
 }
@@ -137,34 +188,186 @@ body.dark .tool-btn {
     transform: scale(0.92);
 }
 
-.tool-btn.active {
-    background: #333;
-    border-color: #fff;
-    color: #fff;
-}
 
-body.dark .tool-btn.active {
-    background: #fff;
-    border-color: #333;
-    color: #333;
-}
 
 /* 消しゴム使用時のアクティブレイヤー表示 */
 .tool-btn.layer-active {
     border-width: 4px;
 }
 
-/* 消しゴムアイコン切り替え */
-.eraser-icon {
-    display: block;
+/* --- Tool Icon Visibility System --- */
+
+/* 1. Base State: Hide All icons by default within buttons */
+.tool-btn img,
+.tool-btn .tool-icon {
+    display: none !important;
 }
 
-.tool-btn[data-tool="eraser"].pen-mode .eraser-lasso {
-    display: none;
+/* 2. Default View (No mode classes) - Show icon matching data-tool IF no override class is present */
+.tool-btn[data-tool="pen"]:not(.pen-mode):not(.fill-mode):not(.sketch-mode):not(.sketch-pen-mode) .tool-pen {
+    display: block !important;
+}
+
+.tool-btn[data-tool="fill"]:not(.pen-mode):not(.fill-mode):not(.sketch-mode):not(.sketch-pen-mode) .tool-fill {
+    display: block !important;
+}
+
+.tool-btn[data-tool="sketch"]:not(.pen-mode):not(.fill-mode):not(.sketch-mode):not(.sketch-pen-mode) .tool-sketch {
+    display: block !important;
+}
+
+/* 3. Mode Overrides (Classes take precedence) */
+/* Pen Mode: Force Pen Icon, Hide others */
+.tool-btn.pen-mode .tool-pen {
+    display: block !important;
+}
+
+.tool-btn.pen-mode .tool-fill {
+    display: none !important;
+}
+
+.tool-btn.pen-mode .tool-sketch {
+    display: none !important;
+}
+
+.tool-btn.pen-mode .tool-sketch-pen {
+    display: none !important;
+}
+
+/* Fill Mode: Force Fill Icon, Hide others */
+.tool-btn.fill-mode .tool-fill {
+    display: block !important;
+}
+
+.tool-btn.fill-mode .tool-pen {
+    display: none !important;
+}
+
+.tool-btn.fill-mode .tool-sketch {
+    display: none !important;
+}
+
+.tool-btn.fill-mode .tool-sketch-pen {
+    display: none !important;
+}
+
+/* Sketch Mode: Force Sketch Icon, Hide others */
+.tool-btn.sketch-mode .tool-sketch {
+    display: block !important;
+}
+
+.tool-btn.sketch-mode .tool-pen {
+    display: none !important;
+}
+
+.tool-btn.sketch-mode .tool-fill {
+    display: none !important;
+}
+
+.tool-btn.sketch-mode .tool-sketch-pen {
+    display: none !important;
+}
+
+/* Sketch Pen Mode: Force Sketch Pen Icon, Hide others */
+.tool-btn.sketch-pen-mode .tool-sketch-pen {
+    display: block !important;
+    filter: opacity(0.5) !important;
+    /* Grey look base */
+}
+
+.tool-btn.sketch-pen-mode .tool-pen {
+    display: none !important;
+}
+
+.tool-btn.sketch-pen-mode .tool-fill {
+    display: none !important;
+}
+
+.tool-btn.sketch-pen-mode .tool-sketch {
+    display: none !important;
+}
+
+.tool-btn.sketch-pen-mode .tool-sketch-pen {
+    display: block !important;
+    filter: opacity(0.5) !important;
+    /* Grey look base */
+}
+
+.tool-btn.sketch-pen-mode .tool-pen {
+    display: none !important;
+}
+
+.tool-btn.sketch-pen-mode .tool-fill {
+    display: none !important;
+}
+
+/* Eraser Toggles */
+.tool-btn[data-tool="eraser"] .eraser-lasso {
+    display: block !important;
+}
+
+.tool-btn[data-tool="eraser"] .eraser-pen {
+    display: none !important;
 }
 
 .tool-btn[data-tool="eraser"].pen-mode .eraser-pen {
-    display: block;
+    display: block !important;
+}
+
+.tool-btn[data-tool="eraser"].pen-mode .eraser-lasso {
+    display: none !important;
+}
+
+/* Active State: Border Thickness instead of Inversion */
+.tool-btn.active {
+    border-width: 4px !important;
+    border-color: #333;
+    /* Default active color (black) */
+    background: white;
+    /* Maintain white bg to see black icon */
+    color: #333;
+}
+
+body.dark .tool-btn.active {
+    border-color: #fff;
+    background: #444;
+    color: #fff;
+}
+
+/* Remove Invert Filter completely */
+/* Specific handling for Sketch Pen (Grey) when active */
+.tool-btn.active.sketch-pen-mode .tool-sketch-pen {
+    filter: opacity(0.5) !important;
+    /* Keep grey, remove invert */
+}
+
+/* Color Updates for Border/Text */
+#layerClearBtn {
+    color: #4a90e2;
+    /* Eraser Blue */
+}
+
+/* Force Blue border for Eraser and Clear */
+#eraserBtn,
+#layerClearBtn {
+    border-color: #4a90e2;
+}
+
+/* When Eraser/Clear is active, keep blue border but make it thick */
+#eraserBtn.active,
+#layerClearBtn:active,
+/* Clear button is momentary */
+#layerClearBtn.active {
+    border-color: #4a90e2 !important;
+    border-width: 4px !important;
+    color: #4a90e2 !important;
+    background: white !important;
+    /* Keep white bg */
+}
+
+/* Adjust Layer Clear momentary active state */
+#layerClearBtn:active {
+    transform: scale(0.95);
 }
 
 /* ツールグループ（ツール + 目アイコン + 不透明度スライダー） */
@@ -177,15 +380,17 @@ body.dark .tool-btn.active {
 .layer-visible-btn {
     width: 32px;
     height: 32px;
-    border: none;
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 8px;
+    padding: 0;
+    border: 1px solid #ccc;
+    background: rgba(255, 255, 255, 0.6);
+    /* 60% Opacity */
+    border-radius: 50%;
     cursor: pointer;
-    padding: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: background 0.2s, opacity 0.2s;
+    flex-shrink: 0;
 }
 
 .layer-visible-btn:hover {
@@ -227,7 +432,8 @@ body.dark .layer-visible-btn .eye-icon {
     display: none;
     align-items: center;
     padding: 4px 8px;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.6);
+    /* 60% Opacity */
     border-radius: 8px;
 }
 
@@ -238,7 +444,7 @@ body.dark .layer-visible-btn .eye-icon {
 }
 
 body.dark .opacity-slider-container {
-    background: rgba(40, 40, 40, 0.9);
+    background: rgba(40, 40, 40, 0.6);
 }
 
 .layer-opacity {
@@ -908,16 +1114,21 @@ body.help-mode #credit-btn {
 
 
 /* 右上ツールバーの各ボタンで吹き出しの位置をずらす（縦と横にずらす） */
-#toolbar-right .tool-btn:nth-child(1) .tool-tooltip-bottom {
+/* 右上ツールバーの各ボタンで吹き出しの位置をずらす（縦と横にずらす） */
+/* 右上ツールバーの各ボタンで吹き出しの位置をずらす（縦と横にずらす） */
+#bgColorBtnWrapper .tool-tooltip-bottom {
     top: 60px;
-    left: calc(50% - 20px);
-    /* 左にずらす */
+    left: 50%;
 }
 
-#toolbar-right .tool-btn:nth-child(2) .tool-tooltip-bottom {
+#saveBtn .tool-tooltip-bottom {
     top: 90px;
-    left: calc(50% + 20px);
-    /* 右にずらす */
+    left: 50%;
+}
+
+#clearBtn .tool-tooltip-bottom {
+    top: 120px;
+    left: 50%;
 }
 
 /* レスポンシブ調整 - クレジットモーダル */
@@ -970,3 +1181,118 @@ body.help-mode #credit-btn {
 }
 
 /* 古いレイヤーコントロールのスタイルは削除済み - ツールバーに統合 */
+
+/* Layer Flash Animation */
+@keyframes layer-flash {
+    0% {
+        filter: none;
+    }
+
+    10% {
+        filter: invert(1) drop-shadow(0 0 2px #00ffff) drop-shadow(0 0 6px #00ffff);
+    }
+
+    40% {
+        filter: invert(1) drop-shadow(0 0 2px #00ffff) drop-shadow(0 0 6px #00ffff);
+    }
+
+    100% {
+        filter: none;
+    }
+}
+
+.layer-flash {
+    animation: layer-flash 0.4s ease-out;
+}
+
+/* --- Tool Mode Selection Menu --- */
+#tool-mode-menu {
+    position: fixed;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    padding: 6px;
+    display: flex;
+    flex-direction: row;
+    /* Horizontal */
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    min-width: auto;
+
+    /* Initially hidden */
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.9);
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+#tool-mode-menu.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1);
+}
+
+.menu-item {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.1s;
+    border: 2px solid transparent;
+}
+
+.menu-item img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+}
+
+.menu-item:active {
+    background: #e0e0e0;
+}
+
+.menu-item.selected {
+    background: #f0f0f0;
+    border-color: #333;
+    /* Highlight selected */
+}
+
+/* Sketch Pen Icon Style in Menu */
+.sketch-pen-tint {
+    filter: opacity(0.5);
+    /* Grey */
+}
+
+/* Dark Mode Support */
+body.dark #tool-mode-menu {
+    background: rgba(40, 40, 40, 0.95);
+    border-color: #555;
+}
+
+body.dark .menu-item.selected {
+    background: #555;
+    border-color: #fff;
+}
+
+body.dark .layer-visible-btn {
+    background: rgba(40, 40, 40, 0.6);
+    border-color: #666;
+}
+
+body.dark .opacity-slider-container {
+    background: rgba(40, 40, 40, 0.6);
+    border-color: #666;
+}
+
+body.dark .menu-item img {
+    filter: invert(1);
+}
+
+body.dark .sketch-pen-tint {
+    filter: invert(1) opacity(0.5);
+}

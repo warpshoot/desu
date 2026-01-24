@@ -20,7 +20,7 @@ import {
 import {
     saveRegion, copyToClipboard, exitSaveMode
 } from './save.js';
-import { applyTransform } from './canvas.js';
+import { applyTransform, updateBackgroundColor, hexToRgba } from './canvas.js';
 
 
 // ============================================
@@ -30,8 +30,9 @@ import { applyTransform } from './canvas.js';
 export function initUI() {
     setupPointerEvents();
     setupToolButtons();
+    setupColorPickers();
     setupLayerControls();
-    setupClearButtons();
+    setupClearButtons(); // Added this as it was missing from init but defined
     setupZoomControls();
     setupSaveUI();
     setupCreditModal();
@@ -204,7 +205,7 @@ function setupPointerEvents() {
             state.drawingPointerId = e.pointerId;
             state.totalDragDistance = 0;
 
-            if (state.currentTool === 'pen') {
+            if (state.currentTool === 'pen' || state.currentTool === 'sketch_pen') {
                 state.isErasing = false;
                 startPenDrawing(p.x, p.y);
             } else if (state.currentTool === 'eraser' && state.eraserMode === 'pen') {
@@ -337,15 +338,35 @@ function setupPointerEvents() {
             if (totalDist < 20 && state.lassoPoints.length > 0) {
                 // Tap detected
                 if (state.currentTool === 'eraser') {
-                    const startP = state.lassoPoints[0]; // Canvas relative? No, lassoPoints are stored as clientXY in startLasso??
-                    // Wait, startLasso stores {x,y} from clientX/Y.
+                    const startP = state.lassoPoints[0];
                     const p = getCanvasPoint(state.lassoPoints[0].x, state.lassoPoints[0].y);
 
-                    if (state.activeLayer === 'line') {
+                    if (state.activeLayer === 'line' || state.activeLayer === 'rough') {
                         floodFillTransparent(p.x, p.y);
                     } else {
-                        floodFill(p.x, p.y, [255, 255, 255, 255]); // Erase rough with white
+                        floodFill(p.x, p.y, [255, 255, 255, 255]);
                     }
+                    saveState();
+                    state.strokeMade = true;
+                } else if (state.currentTool === 'fill') {
+                    // Hybrid Fill: Tap => Bucket Fill (Black)
+                    const p = getCanvasPoint(state.lassoPoints[0].x, state.lassoPoints[0].y);
+                    floodFill(p.x, p.y, [0, 0, 0, 255]);
+                    saveState();
+                    state.strokeMade = true;
+                } else if (state.currentTool === 'sketch') {
+                    // Hybrid Sketch: Tap => Bucket Fill (Grey Transparent)
+                    const p = getCanvasPoint(state.lassoPoints[0].x, state.lassoPoints[0].y);
+                    floodFill(p.x, p.y, [128, 128, 128, 51]); // 20% alpha approx (51/255)
+                    // Note: floodFill function assumes opaque override? Need to check fill.js
+                    // fillPolygonNoAA handles transparent blend. 
+                    // floodFill function normally takes [r,g,b,a] and replaces?
+                    // If floodFill is opaque replacement, it might not blend.
+                    // For now, let's try. Ideally we use a blend-aware floodfill.
+                    // The standard floodFill replaces pixels matching target color.
+                    // If we want transparency blend, floodFill algorithm needs update.
+                    // But for now let's apply the color.
+                    floodFill(p.x, p.y, [128, 128, 128, 51]);
                     saveState();
                     state.strokeMade = true;
                 }
@@ -359,31 +380,33 @@ function setupPointerEvents() {
                 const canvasPoints = finishLasso();
 
                 if (canvasPoints && canvasPoints.length >= 3) {
-                    if (state.currentTool === 'sketch') {
+                    if (state.currentTool === 'sketch' || state.currentTool === 'sketch_pen') {
                         // 20%透明度のグレー、アンチエイリアスなし
-                        // console.log('Filling polygon with sketch tool');
+                        // Note: sketch_pen usually draws lines, but if user drags it acts as lasso?
+                        // If we want sketch_pen to ONLY be pen, we should prevent Lasso start.
+                        // But 'startLasso' is default for non-pen tools. 
+                        // In pointerdown, we check: if currentTool === 'pen' || currentTool === 'sketch_pen' -> startPenDrawing.
+                        // So sketch_pen should NOT reach here unless logic in pointerdown allows it.
+                        // Assuming pointerdown handles 'sketch_pen' as PEN.
+                        // But 'sketch' tool uses Lasso.
+
+                        // If currentTool is 'sketch', fill grey
                         fillPolygonNoAA(canvasPoints, 128, 128, 128, 0.2);
                         saveState();
                         state.strokeMade = true;
-                    } else if (state.currentTool === 'fill') {
-                        // ベタ塗りツール: 100%黒、アンチエイリアスなし
-                        // console.log('Filling polygon with fill tool');
-                        fillPolygonNoAA(canvasPoints, 0, 0, 0, 1.0);
-                        saveState();
-                        state.strokeMade = true;
-                    } else if (state.currentTool === 'pen') {
-                        // ペンツール: 投げ縄で100%黒塗り
-                        // console.log('Filling polygon with pen tool');
+                    } else if (state.currentTool === 'fill' || state.currentTool === 'pen') {
+                        // ベタ塗り系: 100%黒
+                        // 'pen' might reach here if we allow lassoing with pen tool (e.g. by modifier? or if logic falls through)
+                        // But Pen uses startPenDrawing. 
+                        // If 'fill' tool: fills black.
                         fillPolygonNoAA(canvasPoints, 0, 0, 0, 1.0);
                         saveState();
                         state.strokeMade = true;
                     } else if (state.currentTool === 'eraser') {
-                        // console.log('Filling polygon with eraser tool');
-                        if (state.activeLayer === 'line' || state.activeLayer === 'fill') {
-                            // ペン入れレイヤー・ベタレイヤー: 透明で塗りつぶし
+                        // ... existing eraser logic ...
+                        if (state.activeLayer === 'line' || state.activeLayer === 'fill' || state.activeLayer === 'line2' || state.activeLayer === 'line3' || state.activeLayer === 'rough') {
                             fillPolygonTransparent(canvasPoints);
                         } else {
-                            // アタリレイヤー: 白で塗りつぶし
                             fillPolygonNoAA(canvasPoints, 255, 255, 255, 1.0);
                         }
                         saveState();
@@ -427,70 +450,380 @@ function setupPointerEvents() {
     });
 }
 
+// Long Press State
+let currentMenuTargetBtn = null;
+
 function setupToolButtons() {
+    // Menu item click handlers (Event Delegation)
+    const menuContainer = document.getElementById('tool-mode-menu');
+    if (menuContainer) {
+        menuContainer.addEventListener('click', (e) => {
+            const item = e.target.closest('.menu-item');
+            if (!item) return;
+
+            e.stopPropagation(); // prevent closing immediately
+            const mode = item.dataset.mode;
+            if (currentMenuTargetBtn && mode) {
+                applyToolMode(currentMenuTargetBtn, mode);
+                hideToolMenu();
+            }
+        });
+    }
+
+    // Close menu on outside click
+    document.addEventListener('pointerdown', (e) => {
+        if (!e.target.closest('#tool-mode-menu') &&
+            !e.target.closest('.tool-btn') &&
+            document.getElementById('tool-mode-menu').classList.contains('visible')) {
+            hideToolMenu();
+        }
+    });
+
     document.querySelectorAll('[data-tool]').forEach(btn => {
-        btn.addEventListener('click', () => {
+        let isLongPressActive = false;
+        let longPressTimer = null;
+
+        // Pointer Down: Start Timer
+        btn.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.tool-tooltip')) return; // Ignore tooltip clicks if any
+
+            isLongPressActive = false;
+            longPressTimer = setTimeout(() => {
+                isLongPressActive = true;
+                showToolMenu(btn);
+            }, 400); // Reduced to 400ms for better feel
+        });
+
+        // Pointer Up/Leave/Cancel: Cancel Timer
+        const cancelTimer = () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        };
+        btn.addEventListener('pointerup', cancelTimer);
+        btn.addEventListener('pointerleave', cancelTimer);
+        btn.addEventListener('pointercancel', cancelTimer); // Handle cancellation
+
+        // Click Handler (Short Tap)
+        btn.addEventListener('click', (e) => {
+            if (isLongPressActive) {
+                // Ignore click if long press triggered
+                e.stopPropagation();
+                e.preventDefault();
+                isLongPressActive = false;
+                return;
+            }
+
+            // --- Existing Tap Logic ---
             const wasActive = btn.classList.contains('active');
-            const newTool = btn.dataset.tool;
+            const toolType = btn.dataset.tool;
 
-            if (wasActive && newTool !== 'eraser') {
-                // Toggle opacity slider
-                const containerIdMap = {
-                    'sketch': 'roughOpacityContainer',
-                    'fill': 'fillOpacityContainer',
-                    'pen': state.activeLayer === 'line2' ? 'line2OpacityContainer' : (state.activeLayer === 'line3' ? 'line3OpacityContainer' : 'lineOpacityContainer')
-                };
-
-                // Special check for pen buttons to ensure we toggle the correct container for the clicked button
-                // (Since data-tool is same 'pen' for all 3 buttons)
-                let targetContainerId = containerIdMap[newTool];
-
-                if (newTool === 'pen') {
-                    if (btn.dataset.layer === 'line') targetContainerId = 'lineOpacityContainer';
-                    else if (btn.dataset.layer === 'line2') targetContainerId = 'line2OpacityContainer';
-                    else if (btn.dataset.layer === 'line3') targetContainerId = 'line3OpacityContainer';
+            if (wasActive) {
+                if (btn.id === 'eraserBtn' || toolType === 'eraser') {
+                    // Eraser Toggle Logic
+                    const nextMode = state.eraserMode === 'lasso' ? 'eraser_pen' : 'eraser_lasso';
+                    applyToolMode(btn, nextMode);
+                    return;
                 }
 
-                const container = document.getElementById(targetContainerId);
-                if (container) container.classList.toggle('visible');
+                // 4-Way Toggle for Layer Buttons (Pen/Fill/Sketch/SketchPen)
+                // Cycle: pen -> fill -> sketch -> sketch_pen -> pen ...
+
+                // Determine current mode
+                let currentMode = 'pen';
+                // Check classes first
+                if (btn.classList.contains('fill-mode')) currentMode = 'fill';
+                else if (btn.classList.contains('sketch-mode')) currentMode = 'sketch';
+                else if (btn.classList.contains('sketch-pen-mode')) currentMode = 'sketch_pen';
+                else if (btn.classList.contains('pen-mode')) currentMode = 'pen';
+                else {
+                    const type = btn.dataset.tool;
+                    if (type === 'fill') currentMode = 'fill';
+                    else if (type === 'sketch') currentMode = 'sketch';
+                    else currentMode = 'pen';
+                }
+
+                let nextMode = 'pen';
+                if (currentMode === 'pen') nextMode = 'fill';
+                else if (currentMode === 'fill') nextMode = 'sketch';
+                else if (currentMode === 'sketch') nextMode = 'sketch_pen';
+                else if (currentMode === 'sketch_pen') nextMode = 'pen';
+
+                applyToolMode(btn, nextMode);
                 return;
             }
 
-            if (wasActive && newTool === 'eraser') {
-                // Toggle Eraser Mode
-                state.eraserMode = state.eraserMode === 'lasso' ? 'pen' : 'lasso';
-                const eraserBtn = document.getElementById('eraserBtn');
-                const tooltip = eraserBtn.querySelector('.tool-tooltip');
-
-                if (state.eraserMode === 'pen') {
-                    eraserBtn.classList.add('pen-mode');
-                    tooltip.textContent = '消しゴム (E) - ペン';
-                    updateBrushSizeSlider();
-                } else {
-                    eraserBtn.classList.remove('pen-mode');
-                    tooltip.textContent = '消しゴム (E) - 投げ縄';
-                }
-
-                updateBrushSizeVisibility();
-                return;
-            }
-
-            // Switch Tool
-            document.querySelectorAll('.opacity-slider-container').forEach(c => c.classList.remove('visible'));
-            state.currentTool = newTool;
-
-            if (btn.dataset.layer) {
-                state.activeLayer = btn.dataset.layer;
-            }
-
-            document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            updateActiveLayerIndicator();
-            updateBrushSizeVisibility();
-            updateBrushSizeSlider();
+            // --- Switch Tool (Inactive -> Active) ---
+            activateTool(btn);
         });
     });
+
+    // Sync Initial State from HTML
+    const activeBtn = document.querySelector('.tool-btn.active');
+    if (activeBtn) {
+        activateTool(activeBtn);
+    }
+
+    updateOpacitySliderVisibility();
+}
+
+function activateTool(btn) {
+    const toolType = btn.dataset.tool;
+
+    document.querySelectorAll('.opacity-slider-container').forEach(c => c.classList.remove('visible'));
+
+    // Check button state to set correct tool
+    let selectedTool = 'pen'; // Default
+    if (btn.classList.contains('fill-mode')) selectedTool = 'fill';
+    else if (btn.classList.contains('sketch-mode')) selectedTool = 'sketch';
+    else if (btn.classList.contains('sketch-pen-mode')) selectedTool = 'sketch_pen';
+    else if (btn.classList.contains('pen-mode')) selectedTool = 'pen';
+    else if (toolType === 'eraser') selectedTool = 'eraser';
+    else {
+        // Fallback to data-tool
+        const type = btn.dataset.tool;
+        if (type === 'fill') selectedTool = 'fill';
+        else if (type === 'sketch') selectedTool = 'sketch';
+        else selectedTool = 'pen';
+    }
+
+    state.currentTool = selectedTool;
+
+    if (btn.dataset.layer) {
+        state.activeLayer = btn.dataset.layer;
+    }
+
+    document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    updateActiveLayerIndicator();
+    updateOpacitySliderVisibility();
+    updateBrushSizeVisibility();
+    updateBrushSizeSlider();
+
+    // Flash the layer to indicate selection (Only on Activation)
+    if (btn.dataset.layer) {
+        flashLayer(btn.dataset.layer);
+    }
+}
+
+// Helper to apply mode logic (used by both Cycle and Menu)
+function applyToolMode(btn, mode) {
+    // Check if Eraser Mode
+    if (mode === 'eraser_lasso' || mode === 'eraser_pen') {
+        state.eraserMode = (mode === 'eraser_pen') ? 'pen' : 'lasso';
+        const tooltip = btn.querySelector('.tool-tooltip');
+
+        if (state.eraserMode === 'pen') {
+            btn.classList.add('pen-mode');
+            if (tooltip) tooltip.textContent = '消ペン (6)';
+        } else {
+            btn.classList.remove('pen-mode');
+            if (tooltip) tooltip.textContent = '投げ縄消し (6)';
+        }
+
+        // Active tool update if currently active
+        // state.currentTool is simply 'eraser' for both, but behavior depends on eraserMode
+        if (btn.classList.contains('active')) {
+            updateBrushSizeSlider(); // Brush size might change context
+            updateBrushSizeVisibility();
+        }
+        return;
+    }
+
+    // Normal Tool Modes
+    // Reset Classes
+    btn.classList.remove('fill-mode', 'sketch-mode', 'sketch-pen-mode', 'pen-mode');
+
+    let nextTool = 'pen';
+    let tooltipText = '';
+
+    let shortcut = '';
+    if (btn.id === 'penBtn') shortcut = ' (1)';
+    else if (btn.id === 'penBtn2') shortcut = ' (2)';
+    else if (btn.id === 'penBtn3') shortcut = ' (3)';
+    else if (btn.id === 'fillBtn') shortcut = ' (4)';
+    else if (btn.id === 'sketchBtn') shortcut = ' (5)';
+    else if (btn.id === 'eraserBtn') shortcut = ' (6)';
+
+    if (mode === 'pen') {
+        nextTool = 'pen';
+        tooltipText = 'ペン' + shortcut;
+    } else if (mode === 'fill') {
+        nextTool = 'fill';
+        tooltipText = '投げ縄塗り/塗りつぶし' + shortcut;
+    } else if (mode === 'sketch') {
+        nextTool = 'sketch';
+        tooltipText = '薄投げ縄塗り/薄塗りつぶし' + shortcut;
+    } else if (mode === 'sketch_pen') {
+        nextTool = 'sketch_pen';
+        tooltipText = '薄ペン' + shortcut;
+    }
+
+    // Add Mode Class
+    if (mode === 'fill') btn.classList.add('fill-mode');
+    else if (mode === 'sketch') btn.classList.add('sketch-mode');
+    else if (mode === 'sketch_pen') btn.classList.add('sketch-pen-mode');
+    else if (mode === 'pen') btn.classList.add('pen-mode');
+
+    // Update State (only if button is active)
+    if (btn.classList.contains('active')) {
+        state.currentTool = nextTool;
+        updateBrushSizeVisibility();
+        updateBrushSizeSlider();
+    }
+
+    // Update Tooltip
+    const tooltip = btn.querySelector('.tool-tooltip');
+    if (tooltip) tooltip.textContent = tooltipText;
+
+    // NO Flash here (per user request: only on tool switch, not mode switch)
+}
+
+function showToolMenu(btn) {
+    // Auto-activate tool if not active
+    if (!btn.classList.contains('active')) {
+        activateTool(btn);
+    }
+
+    const menu = document.getElementById('tool-mode-menu');
+    currentMenuTargetBtn = btn;
+
+    // Determine Menu Type (Eraser vs Drawing)
+    const isEraser = (btn.id === 'eraserBtn' || btn.dataset.tool === 'eraser');
+
+    // Toggle Menu Items Visibility
+    if (isEraser) {
+        menu.querySelectorAll('.drawing-mode').forEach(el => el.style.display = 'none');
+        menu.querySelectorAll('.eraser-mode').forEach(el => el.style.display = 'flex');
+    } else {
+        menu.querySelectorAll('.drawing-mode').forEach(el => el.style.display = 'flex');
+        menu.querySelectorAll('.eraser-mode').forEach(el => el.style.display = 'none');
+    }
+
+    // Highlight current selection
+    menu.querySelectorAll('.menu-item').forEach(item => item.classList.remove('selected'));
+
+    let currentMode;
+    if (isEraser) {
+        currentMode = (state.eraserMode === 'pen') ? 'eraser_pen' : 'eraser_lasso';
+    } else {
+        currentMode = 'pen';
+        if (btn.classList.contains('fill-mode')) currentMode = 'fill';
+        else if (btn.classList.contains('sketch-mode')) currentMode = 'sketch';
+        else if (btn.classList.contains('sketch-pen-mode')) currentMode = 'sketch_pen';
+        else if (btn.classList.contains('pen-mode')) currentMode = 'pen';
+        else {
+            const type = btn.dataset.tool;
+            if (type === 'fill') currentMode = 'fill';
+            else if (type === 'sketch') currentMode = 'sketch';
+        }
+    }
+
+    const selectedItem = menu.querySelector(`.menu-item[data-mode="${currentMode}"]`);
+    if (selectedItem) selectedItem.classList.add('selected');
+
+    // Position Menu
+    const rect = btn.getBoundingClientRect();
+    const isLeft = rect.left < window.innerWidth / 2;
+    const isBottom = rect.top > window.innerHeight / 2;
+
+    // Horizontal
+    if (isLeft) {
+        menu.style.left = `${rect.right + 10}px`;
+        menu.style.right = 'auto';
+    } else {
+        menu.style.right = `${window.innerWidth - rect.left + 10}px`;
+        menu.style.left = 'auto';
+    }
+
+    // Vertical
+    if (isBottom) {
+        // Show upwards from bottom aligned with button bottom
+        menu.style.bottom = `${window.innerHeight - rect.bottom}px`;
+        menu.style.top = 'auto';
+    } else {
+        // Show downwards from top
+        menu.style.top = `${rect.top}px`;
+        menu.style.bottom = 'auto';
+    }
+
+    menu.classList.remove('hidden');
+    requestAnimationFrame(() => menu.classList.add('visible'));
+}
+
+function hideToolMenu() {
+    const menu = document.getElementById('tool-mode-menu');
+    menu.classList.remove('visible');
+    setTimeout(() => {
+        if (!menu.classList.contains('visible')) {
+            // menu.classList.add('hidden'); // hidden class logic handled by opacity transition?
+            // Actually hidden class is good for pointer events.
+            // But CSS handles opacity. Let's just keep it simple.
+        }
+    }, 200);
+}
+
+function flashLayer(layerName) {
+    const layerMap = {
+        'rough': 'canvas-rough',
+        'fill': 'canvas-fill',
+        'line': 'canvas-line',
+        'line2': 'canvas-line-2',
+        'line3': 'canvas-line-3'
+    };
+
+    const canvasId = layerMap[layerName];
+    if (!canvasId) return;
+
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    // Reset animation
+    canvas.classList.remove('layer-flash');
+    void canvas.offsetWidth; // Trigger reflow
+
+    // Start animation
+    canvas.classList.add('layer-flash');
+
+    // Remove class after animation ends to clean up
+    setTimeout(() => {
+        canvas.classList.remove('layer-flash');
+    }, 500);
+}
+
+function updateOpacitySliderVisibility() {
+    // Hide all first
+    document.querySelectorAll('.opacity-slider-container').forEach(c => c.classList.remove('visible'));
+
+    // Show for active layer
+    const containerIdMap = {
+        'rough': 'roughOpacityContainer',
+        'fill': 'fillOpacityContainer',
+        'line': 'lineOpacityContainer',
+        'line2': 'line2OpacityContainer',
+        'line3': 'line3OpacityContainer'
+    };
+
+    const targetId = containerIdMap[state.activeLayer];
+    if (targetId) {
+        const container = document.getElementById(targetId);
+        if (container) container.classList.add('visible');
+    }
+}
+
+function setupColorPickers() {
+    const bgBtn = document.getElementById('bgColorBtn');
+
+    if (bgBtn) {
+        bgBtn.addEventListener('input', (e) => {
+            updateBackgroundColor(e.target.value);
+        });
+        bgBtn.addEventListener('change', (e) => {
+            saveState();
+        });
+    }
 }
 
 function setupLayerControls() {
@@ -599,8 +932,7 @@ function setupLayerControls() {
 
 function setupClearButtons() {
     document.getElementById('clearBtn').addEventListener('click', () => {
-        roughCanvas.getContext('2d').fillStyle = '#fff';
-        roughCanvas.getContext('2d').fillRect(0, 0, roughCanvas.width, roughCanvas.height);
+        roughCanvas.getContext('2d').clearRect(0, 0, roughCanvas.width, roughCanvas.height);
         fillCanvas.getContext('2d').clearRect(0, 0, fillCanvas.width, fillCanvas.height);
         lineCanvas.getContext('2d').clearRect(0, 0, lineCanvas.width, lineCanvas.height);
         document.getElementById('canvas-line-2').getContext('2d').clearRect(0, 0, lineCanvas.width, lineCanvas.height);
@@ -620,8 +952,7 @@ function setupClearButtons() {
         layerClearBtn.addEventListener('click', () => {
             if (state.activeLayer === 'rough') {
                 const ctx = roughCanvas.getContext('2d');
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(0, 0, roughCanvas.width, roughCanvas.height);
+                ctx.clearRect(0, 0, roughCanvas.width, roughCanvas.height);
             } else if (state.activeLayer === 'fill') {
                 fillCanvas.getContext('2d').clearRect(0, 0, fillCanvas.width, fillCanvas.height);
             } else if (state.activeLayer === 'line') {
@@ -634,6 +965,10 @@ function setupClearButtons() {
                 l3.getContext('2d').clearRect(0, 0, l3.width, l3.height);
             }
             saveState();
+
+            // Visual feedback
+            layerClearBtn.classList.add('active');
+            setTimeout(() => layerClearBtn.classList.remove('active'), 200);
 
             const tooltip = layerClearBtn.querySelector('.tool-tooltip');
             const originalText = tooltip.textContent;
@@ -939,28 +1274,38 @@ function setupKeyboardShortcuts() {
         // Tools
         if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
             switch (e.code) {
-                case 'KeyE': // Eraser
-                    const eraserBtn = document.getElementById('eraserBtn');
-                    if (state.currentTool === 'eraser') {
-                        // Toggle Mode
-                        eraserBtn.click(); // Reuse existing logic
-                    } else {
-                        // Switch to Eraser
-                        eraserBtn.click();
-                    }
+                case 'Digit1': // Pen 1
+                    document.getElementById('penBtn').click();
                     break;
-                case 'KeyB': // Brush / Sketch
-                case 'KeyS': // Sketch
-                case 'Digit1': // Layer 1 (Rough)
-                    document.getElementById('sketchBtn').click();
+                case 'Digit2': // Pen 2
+                    document.getElementById('penBtn2').click();
                     break;
-                case 'KeyF': // Fill
-                case 'Digit2': // Layer 2 (Fill)
+                case 'Digit3': // Pen 3
+                    document.getElementById('penBtn3').click();
+                    break;
+                case 'Digit4': // Fill
                     document.getElementById('fillBtn').click();
                     break;
-                case 'KeyP': // Pen
-                case 'Digit3': // Layer 3 (Line)
-                    document.getElementById('penBtn').click();
+                case 'Digit5': // Sketch
+                    document.getElementById('sketchBtn').click();
+                    break;
+                case 'Digit6': // Eraser
+                    document.getElementById('eraserBtn').click();
+                    break;
+                case 'Digit7': // Layer Clear
+                    const layerClearBtn = document.getElementById('layerClearBtn');
+                    if (layerClearBtn) layerClearBtn.click();
+                    break;
+
+                case 'Delete':
+                case 'Backspace':
+                    // Trigger active layer clear (All Clear or Layer Clear?)
+                    // User requested "Del" for "All Clear" in Top Right.
+                    // This logic triggers "layerClearBtn" (Top Right? No, Top Right is clearBtn).
+                    // Wait, previous step I mapped Del to clearBtn.
+                    // I should KEEP Del -> clearBtn (All Clear).
+                    const clearBtn = document.getElementById('clearBtn');
+                    if (clearBtn) clearBtn.click();
                     break;
             }
         }

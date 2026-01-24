@@ -28,10 +28,11 @@
     <div id="toolbar-left">
         <div class="tool-group">
             <div class="tool-btn" id="penBtn" data-tool="pen" data-layer="line">
-                <svg viewBox="0 0 24 24">
-                    <path d="M4 18 Q8 14, 12 12 T20 6" stroke-width="2.5" stroke-linecap="round" fill="none" />
-                </svg>
-                <div class="tool-tooltip">ペン 1 (P1)</div>
+                <img src="icons/pen.png" class="tool-icon tool-pen" alt="Pen">
+                <img src="icons/bet.png" class="tool-icon tool-fill" style="display:none;" alt="Fill">
+                <img src="icons/ata.png" class="tool-icon tool-sketch" style="display:none;" alt="Sketch">
+                <img src="icons/pen.png" class="tool-icon tool-sketch-pen" style="display:none;" alt="Sketch Pen">
+                <div class="tool-tooltip">ペン (1)</div>
             </div>
             <button class="layer-visible-btn" id="lineVisibleBtn" data-layer="line">
                 <svg viewBox="0 0 24 24" class="eye-icon">
@@ -47,10 +48,11 @@
 
         <div class="tool-group">
             <div class="tool-btn" id="penBtn2" data-tool="pen" data-layer="line2">
-                <svg viewBox="0 0 24 24">
-                    <path d="M4 18 Q8 14, 12 12 T20 6" stroke-width="2.5" stroke-linecap="round" fill="none" />
-                </svg>
-                <div class="tool-tooltip">ペン 2 (P2)</div>
+                <img src="icons/pen.png" class="tool-icon tool-pen" alt="Pen">
+                <img src="icons/bet.png" class="tool-icon tool-fill" style="display:none;" alt="Fill">
+                <img src="icons/ata.png" class="tool-icon tool-sketch" style="display:none;" alt="Sketch">
+                <img src="icons/pen.png" class="tool-icon tool-sketch-pen" style="display:none;" alt="Sketch Pen">
+                <div class="tool-tooltip">ペン (2)</div>
             </div>
             <button class="layer-visible-btn" id="line2VisibleBtn" data-layer="line2">
                 <svg viewBox="0 0 24 24" class="eye-icon">
@@ -66,10 +68,11 @@
 
         <div class="tool-group">
             <div class="tool-btn" id="penBtn3" data-tool="pen" data-layer="line3">
-                <svg viewBox="0 0 24 24">
-                    <path d="M4 18 Q8 14, 12 12 T20 6" stroke-width="2.5" stroke-linecap="round" fill="none" />
-                </svg>
-                <div class="tool-tooltip">ペン 3 (P3)</div>
+                <img src="icons/pen.png" class="tool-icon tool-pen" alt="Pen">
+                <img src="icons/bet.png" class="tool-icon tool-fill" style="display:none;" alt="Fill">
+                <img src="icons/ata.png" class="tool-icon tool-sketch" style="display:none;" alt="Sketch">
+                <img src="icons/pen.png" class="tool-icon tool-sketch-pen" style="display:none;" alt="Sketch Pen">
+                <div class="tool-tooltip">ペン (3)</div>
             </div>
             <button class="layer-visible-btn" id="line3VisibleBtn" data-layer="line3">
                 <svg viewBox="0 0 24 24" class="eye-icon">
@@ -85,11 +88,11 @@
 
         <div class="tool-group">
             <div class="tool-btn" id="fillBtn" data-tool="fill" data-layer="fill">
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 2 L4 10 L8 10 L8 14 L12 14 L12 10 L16 10 Z" fill="currentColor" />
-                    <rect x="4" y="16" width="16" height="6" fill="currentColor" />
-                </svg>
-                <div class="tool-tooltip">ベタ塗り (F)</div>
+                <img src="icons/bet.png" class="tool-icon tool-fill" alt="Fill">
+                <img src="icons/pen.png" class="tool-icon tool-pen" style="display:none;" alt="Pen">
+                <img src="icons/ata.png" class="tool-icon tool-sketch" style="display:none;" alt="Sketch">
+                <img src="icons/pen.png" class="tool-icon tool-sketch-pen" style="display:none;" alt="Sketch Pen">
+                <div class="tool-tooltip">投げ縄塗り/塗りつぶし (4)</div>
             </div>
             <button class="layer-visible-btn" id="fillVisibleBtn" data-layer="fill">
                 <svg viewBox="0 0 24 24" class="eye-icon">
@@ -105,10 +108,11 @@
 
         <div class="tool-group">
             <div class="tool-btn active" id="sketchBtn" data-tool="sketch" data-layer="rough">
-                <svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="8" fill="#808080" />
-                </svg>
-                <div class="tool-tooltip">アタリ (B)</div>
+                <img src="icons/ata.png" class="tool-icon tool-sketch" alt="Sketch">
+                <img src="icons/pen.png" class="tool-icon tool-pen" style="display:none;" alt="Pen">
+                <img src="icons/bet.png" class="tool-icon tool-fill" style="display:none;" alt="Fill">
+                <img src="icons/pen.png" class="tool-icon tool-sketch-pen" style="display:none;" alt="Sketch Pen">
+                <div class="tool-tooltip">薄投げ縄塗り/薄塗りつぶし (5)</div>
             </div>
             <button class="layer-visible-btn" id="roughVisibleBtn" data-layer="rough">
                 <svg viewBox="0 0 24 24" class="eye-icon">
@@ -123,21 +127,17 @@
         </div>
 
         <div class="tool-btn" id="eraserBtn" data-tool="eraser">
-            <svg viewBox="0 0 24 24" class="eraser-icon eraser-lasso">
-                <circle cx="12" cy="12" r="8" fill="#fff" stroke="currentColor" stroke-width="2" />
-            </svg>
-            <svg viewBox="0 0 24 24" class="eraser-icon eraser-pen" style="display:none;">
-                <rect x="6" y="6" width="12" height="12" fill="#fff" stroke="currentColor" stroke-width="2" rx="2" />
-            </svg>
-            <div class="tool-tooltip">消しゴム (E) - 投げ縄</div>
+            <img src="icons/er1.png" class="tool-icon eraser-lasso" alt="Eraser Lasso">
+            <img src="icons/er2.svg" class="tool-icon eraser-pen" alt="Eraser Pen">
+            <div class="tool-tooltip">投げ縄消し (6)</div>
         </div>
 
         <div class="tool-btn" id="layerClearBtn">
             <svg viewBox="0 0 24 24">
-                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-                    fill="currentColor" />
+                <path
+                    d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34" />
             </svg>
-            <div class="tool-tooltip">レイヤー消去</div>
+            <div class="tool-tooltip">レイヤー消去 (7)</div>
         </div>
 
         <!-- ブラシサイズスライダー -->
@@ -151,6 +151,12 @@
 
     <!-- 右上ツールバー -->
     <div id="toolbar-right">
+        <!-- Color Pickers -->
+        <div class="tool-btn" id="bgColorBtnWrapper">
+            <input type="color" id="bgColorBtn" value="#ffffff" title="背景色">
+            <div class="tool-tooltip tool-tooltip-bottom">背景色</div>
+        </div>
+
         <div class="tool-btn" id="saveBtn">
             <svg viewBox="0 0 24 24">
                 <path d="M12 4 L12 16 M6 12 L12 18 L18 12" />
@@ -158,12 +164,13 @@
             </svg>
             <div class="tool-tooltip tool-tooltip-bottom">保存 (⌘S)</div>
         </div>
+
         <div class="tool-btn" id="clearBtn">
             <svg viewBox="0 0 24 24">
                 <path
                     d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34" />
             </svg>
-            <div class="tool-tooltip tool-tooltip-bottom">全消去</div>
+            <div class="tool-tooltip tool-tooltip-bottom">全消去 (Del)</div>
         </div>
     </div>
 
@@ -245,6 +252,33 @@
         </div>
     </div>
 
+    <!-- Tool Mode Selection Menu (Popover) -->
+    <!-- Tool Mode Selection Menu (Popover) -->
+    <div id="tool-mode-menu" class="hidden">
+        <!-- Drawing Modes -->
+        <div class="menu-item drawing-mode" data-mode="pen">
+            <img src="icons/pen.png" alt="Pen">
+        </div>
+        <div class="menu-item drawing-mode" data-mode="fill">
+            <img src="icons/bet.png" alt="Fill">
+        </div>
+        <div class="menu-item drawing-mode" data-mode="sketch">
+            <img src="icons/ata.png" alt="Sketch">
+        </div>
+        <div class="menu-item drawing-mode" data-mode="sketch_pen">
+            <img src="icons/pen.png" class="sketch-pen-tint" alt="Sketch Pen">
+        </div>
+
+        <!-- Eraser Modes -->
+        <div class="menu-item eraser-mode" data-mode="eraser_lasso" style="display:none;">
+            <img src="icons/er1.png" alt="Eraser Lasso">
+        </div>
+        <div class="menu-item eraser-mode" data-mode="eraser_pen" style="display:none;">
+            <img src="icons/er2.svg" alt="Eraser Pen">
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script type="module" src="js/main.js"></script>
 </body>
 

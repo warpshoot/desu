@@ -24,8 +24,7 @@ export async function initCanvas() {
     // Initialize Rough Layer
     roughCanvas.width = w;
     roughCanvas.height = h;
-    roughCtx.fillStyle = '#fff';
-    roughCtx.fillRect(0, 0, w, h);
+    roughCtx.clearRect(0, 0, w, h);
 
     // Initialize Fill Layer (Transparent)
     fillCanvas.width = w;
@@ -63,6 +62,20 @@ export async function initCanvas() {
     // Initial state saved in history is handled by history.js or main.js logic
     // Returning true to signal completion
     return true;
+}
+
+// Convert Hex to RGBA [r,g,b,a]
+export function hexToRgba(hex, alpha = 255) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return [r, g, b, alpha];
+}
+
+// Update Background Color
+export function updateBackgroundColor(color) {
+    state.canvasColor = color;
+    canvasBg.style.backgroundColor = color;
 }
 
 // Apply zoom and pan transformations via CSS

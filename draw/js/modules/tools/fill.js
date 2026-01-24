@@ -253,11 +253,36 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
             if (isPointInPolygon(canvasX, canvasY, points)) {
                 const i = (py * bounds.width + px) * 4;
 
-                // Alpha blend: new = old * (1 - alpha) + new * alpha
-                data[i] = data[i] * (1 - alpha) + r * alpha;
-                data[i + 1] = data[i + 1] * (1 - alpha) + g * alpha;
-                data[i + 2] = data[i + 2] * (1 - alpha) + b * alpha;
-                data[i + 3] = 255;  // Alpha channel = opaque
+                // Existing pixel data (normalized 0-1 for alpha)
+                const dr = data[i];
+                const dg = data[i + 1];
+                const db = data[i + 2];
+                const da = data[i + 3] / 255.0;
+
+                // Source color (normalized 0-1 for alpha)
+                // r, g, b are 0-255. alpha is 0.0-1.0
+                const sr = r;
+                const sg = g;
+                const sb = b;
+                const sa = alpha;
+
+                // Simple Alpha Compositing (Source Over)
+                // outA = srcA + dstA * (1 - srcA)
+                const outA = sa + da * (1.0 - sa);
+
+                if (outA > 0) {
+                    // outRGB = (srcRGB * srcA + dstRGB * dstA * (1 - srcA)) / outA
+                    const outR = (sr * sa + dr * da * (1.0 - sa)) / outA;
+                    const outG = (sg * sa + dg * da * (1.0 - sa)) / outA;
+                    const outB = (sb * sa + db * da * (1.0 - sa)) / outA;
+
+                    data[i] = outR;
+                    data[i + 1] = outG;
+                    data[i + 2] = outB;
+                    data[i + 3] = outA * 255.0;
+                } else {
+                    data[i + 3] = 0;
+                }
                 pixelsFilled++;
             }
         }

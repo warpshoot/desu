@@ -77,9 +77,9 @@ export async function saveRegion(x, y, w, h) {
         const mergedCtx = mergedCanvas.getContext('2d');
         mergedCtx.imageSmoothingEnabled = false;
 
-        // 背景不透過の場合、白背景を塗る
+        // 背景不透過の場合、カスタム背景色を塗る
         if (!transparent) {
-            mergedCtx.fillStyle = '#fff';
+            mergedCtx.fillStyle = state.canvasColor;
             mergedCtx.fillRect(0, 0, w, h);
         }
 
@@ -172,9 +172,9 @@ export async function copyToClipboard(x, y, w, h) {
         const mergedCtx = mergedCanvas.getContext('2d');
         mergedCtx.imageSmoothingEnabled = false;
 
-        // 背景不透過の場合、白背景を塗る
+        // 背景不透過の場合、カスタム背景色を塗る
         if (!transparent) {
-            mergedCtx.fillStyle = '#fff';
+            mergedCtx.fillStyle = state.canvasColor;
             mergedCtx.fillRect(0, 0, w, h);
         }
 

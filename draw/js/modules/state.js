@@ -40,8 +40,12 @@ export function initDOM() {
 
 // State Object to manage application state
 export const state = {
+    // Color State
+    inkColor: '#000000',
+    canvasColor: '#ffffff',
+
     // Tool settings
-    currentTool: 'sketch',  // 'sketch', 'fill', 'pen' or 'eraser'
+    currentTool: 'pen',  // 'pen', 'fill', 'eraser'
     activeLayer: 'rough',   // 'rough', 'fill', 'line', 'line2' or 'line3'
     eraserMode: 'lasso',    // 'lasso' or 'pen'
 
