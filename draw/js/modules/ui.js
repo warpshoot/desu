@@ -620,7 +620,7 @@ function applyToolMode(btn, mode) {
             if (tooltip) tooltip.textContent = '消ペン (6)';
         } else {
             btn.classList.remove('pen-mode');
-            if (tooltip) tooltip.textContent = '投げ縄消し (6)';
+            if (tooltip) tooltip.textContent = '投げ縄消し/消しつぶし (6)';
         }
 
         // Active tool update if currently active
