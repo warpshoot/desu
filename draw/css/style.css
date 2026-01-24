@@ -370,6 +370,7 @@ body.dark .tool-btn.active {
 
 /* ツールグループ（ツール + 目アイコン + 不透明度スライダー） */
 .tool-group {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -425,24 +426,32 @@ body.dark .layer-visible-btn .eye-icon {
     opacity: 0.3;
 }
 
-/* 不透明度スライダー */
+/* 不透明度スライダー（フローティングポップアップ） */
 .opacity-slider-container {
     display: none;
     align-items: center;
-    padding: 4px 8px;
-    background: rgba(255, 255, 255, 0.6);
-    /* 60% Opacity */
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    position: absolute;
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 200;
+    pointer-events: auto;
+    opacity: 0;
+    transition: opacity 0.15s ease;
 }
-
-
 
 .opacity-slider-container.visible {
     display: flex;
+    opacity: 1;
 }
 
 body.dark .opacity-slider-container {
-    background: rgba(40, 40, 40, 0.6);
+    background: rgba(40, 40, 40, 0.95);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .layer-opacity {
@@ -1282,10 +1291,6 @@ body.dark .layer-visible-btn {
     border-color: #666;
 }
 
-body.dark .opacity-slider-container {
-    background: rgba(40, 40, 40, 0.6);
-    border-color: #666;
-}
 
 body.dark .menu-item img {
     filter: invert(1);
