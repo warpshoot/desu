@@ -7,187 +7,134 @@ import {
     line3Canvas, line3Ctx
 } from './state.js';
 
-// Save the state of a specific layer
+const layerMap = {
+    rough: { canvas: () => roughCanvas, ctx: () => roughCtx, undo: 'roughUndoStack', redo: 'roughRedoStack' },
+    fill: { canvas: () => fillCanvas, ctx: () => fillCtx, undo: 'fillUndoStack', redo: 'fillRedoStack' },
+    line: { canvas: () => lineCanvas, ctx: () => lineCtx, undo: 'lineUndoStack', redo: 'lineRedoStack' },
+    line2: { canvas: () => line2Canvas, ctx: () => line2Ctx, undo: 'line2UndoStack', redo: 'line2RedoStack' },
+    line3: { canvas: () => line3Canvas, ctx: () => line3Ctx, undo: 'line3UndoStack', redo: 'line3RedoStack' }
+};
+
+// Save the state of a specific layer (bitmap only, no global stack)
 export async function saveLayerState(targetLayer) {
-    if (targetLayer === 'rough') {
-        const bitmap = await createImageBitmap(roughCanvas);
-        state.roughUndoStack.push(bitmap);
-        // console.log('Saved rough layer state - stack size:', state.roughUndoStack.length);
+    const layer = layerMap[targetLayer];
+    if (!layer) return;
 
-        if (state.roughUndoStack.length > state.MAX_HISTORY) {
-            state.roughUndoStack.shift().close();
-        }
+    const bitmap = await createImageBitmap(layer.canvas());
+    state[layer.undo].push(bitmap);
 
-        state.roughRedoStack.forEach(b => b.close());
-        state.roughRedoStack = [];
-    } else if (targetLayer === 'fill') {
-        const bitmap = await createImageBitmap(fillCanvas);
-        state.fillUndoStack.push(bitmap);
-        // console.log('Saved fill layer state - stack size:', state.fillUndoStack.length);
-
-        if (state.fillUndoStack.length > state.MAX_HISTORY) {
-            state.fillUndoStack.shift().close();
-        }
-
-        state.fillRedoStack.forEach(b => b.close());
-        state.fillRedoStack = [];
-    } else if (targetLayer === 'line') {
-        const bitmap = await createImageBitmap(lineCanvas);
-        state.lineUndoStack.push(bitmap);
-        // console.log('Saved line layer state - stack size:', state.lineUndoStack.length);
-
-        if (state.lineUndoStack.length > state.MAX_HISTORY) {
-            state.lineUndoStack.shift().close();
-        }
-
-        state.lineRedoStack.forEach(b => b.close());
-        state.lineRedoStack = [];
-    } else if (targetLayer === 'line2') {
-        const bitmap = await createImageBitmap(line2Canvas);
-        state.line2UndoStack.push(bitmap);
-
-        if (state.line2UndoStack.length > state.MAX_HISTORY) {
-            state.line2UndoStack.shift().close();
-        }
-
-        state.line2RedoStack.forEach(b => b.close());
-        state.line2RedoStack = [];
-    } else if (targetLayer === 'line3') {
-        const bitmap = await createImageBitmap(line3Canvas);
-        state.line3UndoStack.push(bitmap);
-
-        if (state.line3UndoStack.length > state.MAX_HISTORY) {
-            state.line3UndoStack.shift().close();
-        }
-
-        state.line3RedoStack.forEach(b => b.close());
-        state.line3RedoStack = [];
+    if (state[layer.undo].length > state.MAX_HISTORY) {
+        state[layer.undo].shift().close();
     }
+
+    state[layer.redo].forEach(b => b.close());
+    state[layer.redo] = [];
 }
 
-// Save state of the currently active layer
+// Save state of the currently active layer + record in global history
 export async function saveState() {
     await saveLayerState(state.activeLayer);
+    state.globalUndoStack.push(state.activeLayer);
+    if (state.globalUndoStack.length > state.MAX_HISTORY) {
+        state.globalUndoStack.shift();
+    }
+    state.globalRedoStack = [];
 }
 
-// Save states of all layers (used for Clear All)
-export async function saveAllStates() {
-    // console.log('Saving all layers state');
-    await Promise.all([
-        saveLayerState('rough'),
-        saveLayerState('fill'),
-        saveLayerState('line'),
-        saveLayerState('line2'),
-        saveLayerState('line3')
-    ]);
-}
-
-// Undo operation
-export function undo() {
-    if (state.activeLayer === 'rough') {
-        // console.log('Undo rough layer - stack size:', state.roughUndoStack.length);
-        if (state.roughUndoStack.length <= 1) {
-            // console.log('Cannot undo - at initial state');
-            return;
+// Save states of all layers (init: no global record; clear all: record as group)
+export async function saveAllStates(isInit = false) {
+    const layers = ['rough', 'fill', 'line', 'line2', 'line3'];
+    await Promise.all(layers.map(l => saveLayerState(l)));
+    if (!isInit) {
+        state.globalUndoStack.push(layers);
+        if (state.globalUndoStack.length > state.MAX_HISTORY) {
+            state.globalUndoStack.shift();
         }
-
-        const current = state.roughUndoStack.pop();
-        state.roughRedoStack.push(current);
-
-        const prev = state.roughUndoStack[state.roughUndoStack.length - 1];
-        roughCtx.clearRect(0, 0, roughCanvas.width, roughCanvas.height);
-        roughCtx.drawImage(prev, 0, 0);
-        // console.log('Undo complete - new stack size:', state.roughUndoStack.length);
-    } else if (state.activeLayer === 'fill') {
-        // console.log('Undo fill layer - stack size:', state.fillUndoStack.length);
-        if (state.fillUndoStack.length <= 1) {
-            // console.log('Cannot undo - at initial state');
-            return;
-        }
-
-        const current = state.fillUndoStack.pop();
-        state.fillRedoStack.push(current);
-
-        const prev = state.fillUndoStack[state.fillUndoStack.length - 1];
-        fillCtx.clearRect(0, 0, fillCanvas.width, fillCanvas.height);
-        fillCtx.drawImage(prev, 0, 0);
-        // console.log('Undo complete - new stack size:', state.fillUndoStack.length);
-    } else if (state.activeLayer === 'line') {
-        // console.log('Undo line layer - stack size:', state.lineUndoStack.length);
-        if (state.lineUndoStack.length <= 1) {
-            // console.log('Cannot undo - at initial state');
-            return;
-        }
-
-        const current = state.lineUndoStack.pop();
-        state.lineRedoStack.push(current);
-
-        const prev = state.lineUndoStack[state.lineUndoStack.length - 1];
-        lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
-        lineCtx.drawImage(prev, 0, 0);
-        // console.log('Undo complete - new stack size:', state.lineUndoStack.length);
-    } else if (state.activeLayer === 'line2') {
-        if (state.line2UndoStack.length <= 1) return;
-
-        const current = state.line2UndoStack.pop();
-        state.line2RedoStack.push(current);
-
-        const prev = state.line2UndoStack[state.line2UndoStack.length - 1];
-        line2Ctx.clearRect(0, 0, line2Canvas.width, line2Canvas.height);
-        line2Ctx.drawImage(prev, 0, 0);
-    } else if (state.activeLayer === 'line3') {
-        if (state.line3UndoStack.length <= 1) return;
-
-        const current = state.line3UndoStack.pop();
-        state.line3RedoStack.push(current);
-
-        const prev = state.line3UndoStack[state.line3UndoStack.length - 1];
-        line3Ctx.clearRect(0, 0, line3Canvas.width, line3Canvas.height);
-        line3Ctx.drawImage(prev, 0, 0);
+        state.globalRedoStack = [];
     }
 }
 
-// Redo operation
+// Internal: undo a single layer's bitmap stack
+function undoLayer(targetLayer) {
+    const layer = layerMap[targetLayer];
+    if (!layer) return false;
+    if (state[layer.undo].length <= 1) return false;
+
+    const current = state[layer.undo].pop();
+    state[layer.redo].push(current);
+
+    const prev = state[layer.undo][state[layer.undo].length - 1];
+    const ctx = layer.ctx();
+    const canvas = layer.canvas();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(prev, 0, 0);
+    return true;
+}
+
+// Internal: redo a single layer's bitmap stack
+function redoLayer(targetLayer) {
+    const layer = layerMap[targetLayer];
+    if (!layer) return false;
+    if (state[layer.redo].length === 0) return false;
+
+    const next = state[layer.redo].pop();
+    state[layer.undo].push(next);
+
+    const ctx = layer.ctx();
+    const canvas = layer.canvas();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(next, 0, 0);
+    return true;
+}
+
+// Restore a layer to its last saved state (for canceling in-progress strokes)
+export function restoreLayer(targetLayer) {
+    const layer = layerMap[targetLayer];
+    if (!layer) return;
+    if (state[layer.undo].length === 0) return;
+
+    const prev = state[layer.undo][state[layer.undo].length - 1];
+    const ctx = layer.ctx();
+    const canvas = layer.canvas();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(prev, 0, 0);
+}
+
+// Global undo
+export function undo() {
+    if (state.globalUndoStack.length === 0) return;
+
+    const entry = state.globalUndoStack.pop();
+    const layers = Array.isArray(entry) ? entry : [entry];
+
+    let success = false;
+    for (const l of layers) {
+        if (undoLayer(l)) success = true;
+    }
+
+    if (success) {
+        state.globalRedoStack.push(entry);
+    } else {
+        // Put it back if nothing was actually undone
+        state.globalUndoStack.push(entry);
+    }
+}
+
+// Global redo
 export function redo() {
-    if (state.activeLayer === 'rough') {
-        if (state.roughRedoStack.length === 0) return;
+    if (state.globalRedoStack.length === 0) return;
 
-        const next = state.roughRedoStack.pop();
-        state.roughUndoStack.push(next);
+    const entry = state.globalRedoStack.pop();
+    const layers = Array.isArray(entry) ? entry : [entry];
 
-        roughCtx.clearRect(0, 0, roughCanvas.width, roughCanvas.height);
-        roughCtx.drawImage(next, 0, 0);
-    } else if (state.activeLayer === 'fill') {
-        if (state.fillRedoStack.length === 0) return;
+    let success = false;
+    for (const l of layers) {
+        if (redoLayer(l)) success = true;
+    }
 
-        const next = state.fillRedoStack.pop();
-        state.fillUndoStack.push(next);
-
-        fillCtx.clearRect(0, 0, fillCanvas.width, fillCanvas.height);
-        fillCtx.drawImage(next, 0, 0);
-    } else if (state.activeLayer === 'line') {
-        if (state.lineRedoStack.length === 0) return;
-
-        const next = state.lineRedoStack.pop();
-        state.lineUndoStack.push(next);
-
-        lineCtx.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
-        lineCtx.drawImage(next, 0, 0);
-    } else if (state.activeLayer === 'line2') {
-        if (state.line2RedoStack.length === 0) return;
-
-        const next = state.line2RedoStack.pop();
-        state.line2UndoStack.push(next);
-
-        line2Ctx.clearRect(0, 0, line2Canvas.width, line2Canvas.height);
-        line2Ctx.drawImage(next, 0, 0);
-    } else if (state.activeLayer === 'line3') {
-        if (state.line3RedoStack.length === 0) return;
-
-        const next = state.line3RedoStack.pop();
-        state.line3UndoStack.push(next);
-
-        line3Ctx.clearRect(0, 0, line3Canvas.width, line3Canvas.height);
-        line3Ctx.drawImage(next, 0, 0);
+    if (success) {
+        state.globalUndoStack.push(entry);
+    } else {
+        state.globalRedoStack.push(entry);
     }
 }

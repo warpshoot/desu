@@ -15,7 +15,7 @@ import {
     getCanvasPoint
 } from './utils.js';
 import {
-    undo, redo, saveState, saveAllStates
+    undo, redo, saveState, saveAllStates, restoreLayer
 } from './history.js';
 import {
     saveRegion, copyToClipboard, exitSaveMode
@@ -311,8 +311,8 @@ function setupPointerEvents() {
                 // It was likely a 2-finger tap, so cancel the stroke
                 state.isPenDrawing = false;
                 state.lastPenPoint = null;
-                // Force undo to clean up the micro-stroke
-                undo();
+                // Restore layer to last saved state to discard micro-stroke
+                restoreLayer(state.activeLayer);
                 skipUndoGestureThisEvent = true;
             } else {
                 await endPenDrawing();

@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('App starting...');
         initDOM();
         await initCanvas();
-        await saveAllStates(); // Initialize history
+        await saveAllStates(true); // Initialize history
         initUI();
         console.log('App initialized.');
     } catch (e) {
