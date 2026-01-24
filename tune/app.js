@@ -903,6 +903,7 @@ function getCoordinates(e) {
 }
 
 function startDrawing(e) {
+    initAudio();
     const pos = getCoordinates(e);
 
     // DJ Mode: During playback, start DJ control
