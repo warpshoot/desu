@@ -125,8 +125,6 @@ body {
 #bgColorBtnWrapper {
     padding: 2px;
     /* Slight padding for border visibility */
-    overflow: hidden;
-    /* Only clip color picker */
 }
 
 #inkColorBtn,
