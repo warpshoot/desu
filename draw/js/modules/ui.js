@@ -1,7 +1,7 @@
 
 import {
     state,
-    lineCanvas, lassoCanvas,
+    lineCanvas, lassoCanvas, eventCanvas,
     canvasBg, roughCanvas, fillCanvas
 } from './state.js';
 import {
@@ -146,11 +146,11 @@ function switchLayer(newLayer) {
 
 function setupPointerEvents() {
     // --- pointerdown ---
-    lineCanvas.addEventListener('pointerdown', (e) => {
+    eventCanvas.addEventListener('pointerdown', (e) => {
         if (state.isSaveMode) return;
 
         e.preventDefault();
-        lineCanvas.setPointerCapture(e.pointerId);
+        eventCanvas.setPointerCapture(e.pointerId);
         state.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
         // console.log('pointerdown - id:', e.pointerId, 'type:', e.pointerType);
@@ -192,7 +192,7 @@ function setupPointerEvents() {
             state.panStartY = e.clientY;
             state.panStartTranslateX = state.translateX;
             state.panStartTranslateY = state.translateY;
-            lineCanvas.style.cursor = 'grabbing';
+            eventCanvas.style.cursor = 'grabbing';
             return;
         }
 
@@ -219,7 +219,7 @@ function setupPointerEvents() {
     });
 
     // --- pointermove ---
-    lineCanvas.addEventListener('pointermove', (e) => {
+    eventCanvas.addEventListener('pointermove', (e) => {
         if (!state.activePointers.has(e.pointerId)) return;
         if (state.isSaveMode) return;
 
@@ -292,7 +292,7 @@ function setupPointerEvents() {
     });
 
     // --- pointerup ---
-    lineCanvas.addEventListener('pointerup', async (e) => {
+    eventCanvas.addEventListener('pointerup', async (e) => {
         if (state.isSaveMode) return;
 
         e.preventDefault();
@@ -300,7 +300,7 @@ function setupPointerEvents() {
 
         if (state.isPanning) {
             state.isPanning = false;
-            lineCanvas.style.cursor = state.isSpacePressed ? 'grab' : '';
+            eventCanvas.style.cursor = state.isSpacePressed ? 'grab' : '';
         }
 
         if (state.isPenDrawing && state.activePointers.size === 1) {
@@ -435,7 +435,7 @@ function setupPointerEvents() {
         }
     });
 
-    lineCanvas.addEventListener('pointercancel', (e) => {
+    eventCanvas.addEventListener('pointercancel', (e) => {
         state.activePointers.delete(e.pointerId);
         state.isLassoing = false;
         state.isPenDrawing = false;
@@ -1227,6 +1227,10 @@ function setupOrientationHandler() {
             document.getElementById('canvas-background').style.width = newWidth + 'px';
             document.getElementById('canvas-background').style.height = newHeight + 'px';
 
+            // Update event canvas
+            eventCanvas.width = newWidth;
+            eventCanvas.height = newHeight;
+
             applyTransform();
         }, 300);
     });
@@ -1241,7 +1245,7 @@ function setupKeyboardShortcuts() {
         // Space key (Palm mode)
         if (e.code === 'Space') {
             state.isSpacePressed = true;
-            lineCanvas.style.cursor = 'grab';
+            eventCanvas.style.cursor = 'grab';
         }
 
         // Undo / Redo
@@ -1300,7 +1304,7 @@ function setupKeyboardShortcuts() {
     window.addEventListener('keyup', (e) => {
         if (e.code === 'Space') {
             state.isSpacePressed = false;
-            lineCanvas.style.cursor = '';
+            eventCanvas.style.cursor = '';
         }
     });
 }

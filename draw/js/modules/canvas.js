@@ -7,7 +7,8 @@ import {
     lineCanvas, lineCtx,
     line2Canvas, line2Ctx,
     line3Canvas, line3Ctx,
-    lassoCanvas, selectionCanvas
+    lassoCanvas, selectionCanvas,
+    eventCanvas
 } from './state.js';
 
 // Initialize all canvases
@@ -57,6 +58,10 @@ export async function initCanvas() {
     selectionCanvas.width = w;
     selectionCanvas.height = h;
 
+    // Initialize event canvas (transparent, for capturing pointer events)
+    eventCanvas.width = w;
+    eventCanvas.height = h;
+
     applyTransform();
 
     // Initial state saved in history is handled by history.js or main.js logic
@@ -88,6 +93,7 @@ export function applyTransform() {
     lineCanvas.style.transform = transform;
     line2Canvas.style.transform = transform;
     line3Canvas.style.transform = transform;
+    eventCanvas.style.transform = transform;
 
     const resetBtn = document.getElementById('resetZoomBtn');
     if (Math.abs(state.scale - 1) > 0.01 || Math.abs(state.translateX) > 1 || Math.abs(state.translateY) > 1) {

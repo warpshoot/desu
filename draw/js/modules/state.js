@@ -13,6 +13,7 @@ export let line3Ctx = null;
 export let lassoCanvas = null;
 export let lassoCtx = null;
 export let selectionCanvas = null;
+export let eventCanvas = null;
 
 export function initDOM() {
     canvasBg = document.getElementById('canvas-background');
@@ -36,6 +37,8 @@ export function initDOM() {
     lassoCtx = lassoCanvas.getContext('2d');
 
     selectionCanvas = document.getElementById('selection-canvas');
+
+    eventCanvas = document.getElementById('event-canvas');
 }
 
 // State Object to manage application state
