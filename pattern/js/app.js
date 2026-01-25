@@ -623,9 +623,9 @@
         });
 
         canvas.addEventListener('pointermove', (e) => {
+            if (!activePointers.has(e.pointerId)) return;
             if (isSaveMode) return;
 
-            if (!activePointers.has(e.pointerId)) return;
             e.preventDefault();
 
             const pointer = activePointers.get(e.pointerId);
@@ -689,6 +689,7 @@
                 updateTransform();
                 wasPanning = true; // Mark that panning has occurred
                 didInteract = true; // Mark interaction occurred
+                return;
             }
 
             // Jitter threshold for general interaction
@@ -702,9 +703,24 @@
         });
 
         canvas.addEventListener('pointerup', (e) => {
+            if (isSaveMode) return;
+
+            e.preventDefault();
+
+            // Reset panning state early if this pointer was panning
+            if (isPanning) {
+                isPanning = false;
+                canvas.style.cursor = isSpacePressed ? 'grab' : '';
+            }
+
             const pointer = activePointers.get(e.pointerId);
 
-            // Always clean up pointer state, even in save mode
+            // If significant movement occurred for this specific pointer, mark interaction
+            if (pointer && pointer.totalMove > 8) {
+                didInteract = true;
+            }
+
+            // Clean up pointer - moved after state checks
             activePointers.delete(e.pointerId);
 
             // Try to release pointer capture if it was set
@@ -712,13 +728,6 @@
                 canvas.releasePointerCapture(e.pointerId);
             } catch (err) {
                 // Ignore error if pointer was not captured
-            }
-
-            if (isSaveMode) return;
-
-            // If significant movement occurred for this specific pointer, mark interaction
-            if (pointer && pointer.totalMove > 8) {
-                didInteract = true;
             }
 
             // Reset pinch if fingers dropped below 2
