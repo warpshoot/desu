@@ -77,6 +77,19 @@ body {
     z-index: 50;
 }
 
+/* イベントキャプチャ用の透明キャンバス (常に最上位) */
+#event-canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    touch-action: none;
+    transform-origin: 0 0;
+    z-index: 60;
+    /* 透明だがポインターイベントは受け取る */
+    pointer-events: auto;
+}
+
 /* 左下ツールバー */
 #toolbar-left {
     position: fixed;
