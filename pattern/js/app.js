@@ -29,6 +29,7 @@
         let isAltPressed = false;
         let isPanning = false;
         let wasPanning = false; // Track if panning occurred during this interaction
+        let wasPinching = false; // Track if pinching occurred during this interaction
         let panStartX = 0;
         let panStartY = 0;
         let lastPanX = 0;
@@ -577,6 +578,7 @@
                 maxFingers = 1;
                 isPinching = false;
                 wasPanning = false; // Reset panning flag for new interaction
+                wasPinching = false; // Reset pinching flag for new interaction
                 didInteract = false; // Reset interaction flag
             }
             maxFingers = Math.max(maxFingers, activePointers.size);
@@ -649,6 +651,7 @@
 
                 if (distDelta > 10 || centerDelta > 10) {
                     isPinching = true;
+                    wasPinching = true; // Track that pinching occurred
                     // Also consider this interaction if meaningful movement happened
                     didInteract = true;
                 }
@@ -658,10 +661,9 @@
                     const oldScale = scale;
                     scale = Math.max(0.1, Math.min(20, scale * zoomFactor));
 
+                    // Zoom anchored at the pinch center (midpoint of two fingers)
                     translateX = center.x - (center.x - translateX) * (scale / oldScale);
                     translateY = center.y - (center.y - translateY) * (scale / oldScale);
-                    translateX += center.x - lastPinchCenter.x;
-                    translateY += center.y - lastPinchCenter.y;
 
                     updateTransform();
                     lastPinchDist = dist;
@@ -724,18 +726,20 @@
                     if (maxFingers === 3) redo();
                 }
 
-                // Reset state
+                // Reset state (but keep wasPinching for click handler)
                 touchStartTime = 0;
                 maxFingers = 0;
                 isPinching = false;
                 didInteract = false;
+                // Note: wasPinching is NOT reset here - it's used by click handler
             }
         });
 
         canvas.addEventListener('click', (e) => {
             if (activePointers.size === 0) {
-                // Skip click if panning occurred or space is pressed (unless doing zoom)
-                if (wasPanning) {
+                // Skip click if panning or pinching occurred
+                if (wasPanning || wasPinching) {
+                    wasPinching = false; // Reset for next interaction
                     return;
                 }
 
