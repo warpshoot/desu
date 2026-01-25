@@ -75,11 +75,9 @@
             canvas.style.width = size + 'px';
             canvas.style.height = size + 'px';
 
-            // Center canvas
-            const centerX = (window.innerWidth - size) / 2;
-            const centerY = (window.innerHeight - size) / 2;
-            canvas.style.left = centerX + 'px';
-            canvas.style.top = centerY + 'px';
+            // Position canvas at 0,0 (like draw app)
+            canvas.style.left = '0px';
+            canvas.style.top = '0px';
 
             render();
         }
@@ -100,11 +98,11 @@
             // Don't scale too small
             if (scale < 0.5) scale = 0.5;
 
-            // Center the scaled canvas
+            // Center the scaled canvas (canvas is at 0,0, so translate is absolute)
             const scaledWidth = size * scale;
             const scaledHeight = size * scale;
-            translateX = (window.innerWidth - scaledWidth) / 2 - parseFloat(canvas.style.left || 0);
-            translateY = (window.innerHeight - scaledHeight) / 2 - parseFloat(canvas.style.top || 0);
+            translateX = (window.innerWidth - scaledWidth) / 2;
+            translateY = (window.innerHeight - scaledHeight) / 2;
 
             updateTransform();
         }
