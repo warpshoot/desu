@@ -727,7 +727,7 @@
                 // Only trigger if no meaningful interaction occurred (pure tap gesture)
                 const duration = Date.now() - touchStartTime;
 
-                // Thresholds: 
+                // Thresholds:
                 // duration < 400ms (fast tap)
                 // !didInteract (no significant movement/panning/zooming)
                 if (duration < 400 && !didInteract) {
@@ -735,12 +735,12 @@
                     if (maxFingers === 3) redo();
                 }
 
-                // Reset state (but keep wasPinching for click handler)
+                // Reset state (but keep wasPanning/wasPinching for click handler)
                 touchStartTime = 0;
                 maxFingers = 0;
                 isPinching = false;
                 didInteract = false;
-                // Note: wasPinching is NOT reset here - it's used by click handler
+                // Note: wasPanning and wasPinching are NOT reset here - they're used by click handler
             }
         });
 
@@ -766,6 +766,7 @@
             // Reset pan
             if (activePointers.size === 0) {
                 isPanning = false;
+                wasPanning = false;
                 wasPinching = false;
                 canvas.style.cursor = isSpacePressed ? 'grab' : '';
                 touchStartTime = 0;
@@ -778,6 +779,7 @@
             if (activePointers.size === 0) {
                 // Skip click if panning or pinching occurred
                 if (wasPanning || wasPinching) {
+                    wasPanning = false; // Reset for next interaction
                     wasPinching = false; // Reset for next interaction
                     return;
                 }
