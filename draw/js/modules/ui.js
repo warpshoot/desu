@@ -79,7 +79,7 @@ function updateBrushSizeVisibility() {
     const sizeSlider = document.getElementById('size-slider-container');
     if (!sizeSlider) return;
 
-    if (state.currentTool === 'pen' || (state.currentTool === 'eraser' && state.eraserMode === 'pen')) {
+    if (state.currentTool === 'pen' || state.currentTool === 'sketch_pen' || (state.currentTool === 'eraser' && state.eraserMode === 'pen')) {
         sizeSlider.classList.remove('hidden');
     } else {
         sizeSlider.classList.add('hidden');
@@ -94,6 +94,8 @@ function updateBrushSizeSlider() {
     let size = state.penSize; // Default or fallback
     if (state.currentTool === 'pen') {
         size = state.penSize;
+    } else if (state.currentTool === 'sketch_pen') {
+        size = state.sketchPenSize;
     } else if (state.currentTool === 'eraser') {
         size = state.eraserSize;
     }
@@ -909,6 +911,8 @@ function setupLayerControls() {
             sizeDisplay.textContent = val;
             if (state.currentTool === 'pen') {
                 state.penSize = val;
+            } else if (state.currentTool === 'sketch_pen') {
+                state.sketchPenSize = val;
             } else if (state.currentTool === 'eraser') {
                 state.eraserSize = val;
             }
