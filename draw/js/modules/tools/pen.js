@@ -78,9 +78,16 @@ export function startPenDrawing(x, y) {
 export function drawPenLine(x, y) {
     if (!state.isPenDrawing || !state.lastPenPoint) return;
 
-    const brushSizeEl = document.getElementById('brushSize');
-    const brushSize = Math.floor(brushSizeEl ? parseFloat(brushSizeEl.value) : 3);
-    const size = Math.max(1, brushSize);
+    // Get brush size from state based on current tool
+    let brushSize;
+    if (state.isErasing) {
+        brushSize = state.eraserSize;
+    } else if (state.currentTool === 'sketch_pen') {
+        brushSize = state.sketchPenSize;
+    } else {
+        brushSize = state.penSize;
+    }
+    const size = Math.max(1, Math.floor(brushSize));
 
     // Get active context
     let ctx;
