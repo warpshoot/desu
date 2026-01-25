@@ -94,8 +94,8 @@
             const scaleX = availableWidth / size;
             const scaleY = availableHeight / size;
 
-            // Use smaller scale to fit, max 3x
-            scale = Math.min(scaleX, scaleY, 3);
+            // Use larger scale to fit the longer dimension, max 3x
+            scale = Math.min(Math.max(scaleX, scaleY), 3);
 
             // Don't scale too small
             if (scale < 0.5) scale = 0.5;
