@@ -676,9 +676,12 @@
                     translateY += center.y - lastPinchCenter.y;
 
                     updateTransform();
-                    lastPinchDist = dist;
-                    lastPinchCenter = center;
                 }
+
+                // Update last values OUTSIDE of isPinching check (like draw app)
+                // This prevents jumps when isPinching becomes true
+                lastPinchDist = dist;
+                lastPinchCenter = center;
                 return;
             }
 
