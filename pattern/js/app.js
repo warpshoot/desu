@@ -564,6 +564,12 @@
             if (isSaveMode) return;
 
             e.preventDefault();
+
+            // Defensive: ensure old entry is removed before adding new one
+            if (activePointers.has(e.pointerId)) {
+                activePointers.delete(e.pointerId);
+            }
+
             canvas.setPointerCapture(e.pointerId);
             // Track position and total movement
             activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY, totalMove: 0 });
@@ -664,6 +670,10 @@
                     // Zoom anchored at the pinch center (midpoint of two fingers)
                     translateX = center.x - (center.x - translateX) * (scale / oldScale);
                     translateY = center.y - (center.y - translateY) * (scale / oldScale);
+
+                    // Handle pan during pinch (when pinch center moves)
+                    translateX += center.x - lastPinchCenter.x;
+                    translateY += center.y - lastPinchCenter.y;
 
                     updateTransform();
                     lastPinchDist = dist;
