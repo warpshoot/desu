@@ -865,29 +865,24 @@
 
         // Symmetry mode toggle
         function updateSymmetryIcon() {
-            const lineV = document.getElementById('symmetryLineV');
-            const lineH = document.getElementById('symmetryLineH');
+            const icon = document.getElementById('symmetryIcon');
             const btn = document.getElementById('symmetryBtn');
 
             switch (symmetryMode) {
                 case 'none':
-                    lineV.style.display = 'none';
-                    lineH.style.display = 'none';
+                    icon.src = 'icons/sym.png';
                     btn.classList.remove('active');
                     break;
                 case 'x':
-                    lineV.style.display = 'block';
-                    lineH.style.display = 'none';
+                    icon.src = 'icons/sym_x.png';
                     btn.classList.add('active');
                     break;
                 case 'y':
-                    lineV.style.display = 'none';
-                    lineH.style.display = 'block';
+                    icon.src = 'icons/sym_y.png';
                     btn.classList.add('active');
                     break;
                 case 'xy':
-                    lineV.style.display = 'block';
-                    lineH.style.display = 'block';
+                    icon.src = 'icons/sym_xy.png';
                     btn.classList.add('active');
                     break;
             }
