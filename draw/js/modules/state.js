@@ -132,6 +132,5 @@ export const state = {
 
     // Brush Sizes
     penSize: 2,
-    sketchPenSize: 1,
     eraserSize: 5
 };
