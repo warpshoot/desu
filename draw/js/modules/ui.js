@@ -444,6 +444,33 @@ function setupPointerEvents() {
         state.isPinching = false;
         lassoCanvas.style.display = 'none';
     });
+
+    // Ctrl + Space + Click: Zoom in/out
+    eventCanvas.addEventListener('click', (e) => {
+        if (state.isSaveMode) return;
+        if (state.activePointers.size === 0) {
+            // Skip click if panning or pinching occurred
+            if (state.isPanning || state.isPinching) {
+                return;
+            }
+
+            // Ctrl + Space + Click: Zoom in/out
+            if (state.isCtrlPressed && state.isSpacePressed) {
+                e.preventDefault();
+                const zoomAmount = state.isAltPressed ? 0.8 : 1.25;
+                const oldScale = state.scale;
+                state.scale = Math.max(0.1, Math.min(20, state.scale * zoomAmount));
+
+                const centerX = e.clientX;
+                const centerY = e.clientY;
+
+                state.translateX = centerX - (centerX - state.translateX) * (state.scale / oldScale);
+                state.translateY = centerY - (centerY - state.translateY) * (state.scale / oldScale);
+
+                applyTransform();
+            }
+        }
+    });
 }
 
 // Long Press State
@@ -1246,10 +1273,14 @@ function setupKeyboardShortcuts() {
         if (state.isSaveMode) return;
         if (e.target.tagName === 'INPUT') return; // スライダー操作中などは無視
 
+        // Track modifier keys
+        if (e.key === 'Control' || e.metaKey) state.isCtrlPressed = true;
+        if (e.key === 'Alt') state.isAltPressed = true;
+
         // Space key (Palm mode)
         if (e.code === 'Space') {
             state.isSpacePressed = true;
-            eventCanvas.style.cursor = 'grab';
+            eventCanvas.style.cursor = state.isCtrlPressed ? 'zoom-in' : 'grab';
         }
 
         // Undo / Redo
@@ -1306,6 +1337,9 @@ function setupKeyboardShortcuts() {
     });
 
     window.addEventListener('keyup', (e) => {
+        if (e.key === 'Control' || e.metaKey) state.isCtrlPressed = false;
+        if (e.key === 'Alt') state.isAltPressed = false;
+
         if (e.code === 'Space') {
             state.isSpacePressed = false;
             eventCanvas.style.cursor = '';
