@@ -106,6 +106,8 @@ export const state = {
 
     // Pan (Palm mode)
     isSpacePressed: false,
+    isCtrlPressed: false,
+    isAltPressed: false,
     isPanning: false,
     panStartX: 0,
     panStartY: 0,
