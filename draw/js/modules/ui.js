@@ -1,7 +1,7 @@
 
 import {
     state,
-    lineCanvas, lassoCanvas, eventCanvas,
+    lineCanvas, lassoCanvas, lassoCtx, eventCanvas,
     canvasBg, roughCanvas, fillCanvas
 } from './state.js';
 import {
@@ -184,8 +184,26 @@ function setupPointerEvents() {
 
         // 2 fingers = Pinch/Pan
         if (state.activePointers.size === 2) {
-            state.isLassoing = false;
-            lassoCanvas.style.display = 'none';
+            // Cancel any ongoing drawing immediately
+            if (state.isLassoing) {
+                state.isLassoing = false;
+                lassoCanvas.style.display = 'none';
+                lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+            }
+            if (state.isPenDrawing) {
+                state.isPenDrawing = false;
+                state.lastPenPoint = null;
+                // Restore layer to remove the initial dot that was drawn
+                restoreLayer(state.activeLayer);
+                // Clear sketch pen buffer if it was being used
+                if (state.currentTool === 'sketch_pen' && lassoCanvas.style.display === 'block') {
+                    lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+                    lassoCanvas.style.display = 'none';
+                    lassoCanvas.style.opacity = '1.0';
+                    lassoCanvas.style.transform = '';
+                }
+            }
+
             state.isPinching = false;
 
             const pts = Array.from(state.activePointers.values());
