@@ -93,6 +93,7 @@ export function applyTransform() {
     lineCanvas.style.transform = transform;
     line2Canvas.style.transform = transform;
     line3Canvas.style.transform = transform;
+    lassoCanvas.style.transform = transform;
     eventCanvas.style.transform = transform;
 
     const resetBtn = document.getElementById('resetZoomBtn');
