@@ -151,6 +151,10 @@ function setupPointerEvents() {
     eventCanvas.addEventListener('pointerdown', (e) => {
         if (state.isSaveMode) return;
 
+        // Don't handle events that originated from UI elements (like sliders, buttons, etc.)
+        // This prevents interference with UI controls, especially with pen tablets
+        if (e.target !== eventCanvas) return;
+
         e.preventDefault();
         eventCanvas.setPointerCapture(e.pointerId);
         state.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -297,6 +301,9 @@ function setupPointerEvents() {
     eventCanvas.addEventListener('pointerup', async (e) => {
         if (state.isSaveMode) return;
 
+        // Don't handle events that originated from UI elements
+        if (e.target !== eventCanvas) return;
+
         e.preventDefault();
         let skipUndoGestureThisEvent = false;
 
@@ -438,6 +445,9 @@ function setupPointerEvents() {
     });
 
     eventCanvas.addEventListener('pointercancel', (e) => {
+        // Don't handle events that originated from UI elements
+        if (e.target !== eventCanvas) return;
+
         state.activePointers.delete(e.pointerId);
         state.isLassoing = false;
         state.isPenDrawing = false;
@@ -448,6 +458,10 @@ function setupPointerEvents() {
     // Ctrl + Space + Click: Zoom in/out
     eventCanvas.addEventListener('click', (e) => {
         if (state.isSaveMode) return;
+
+        // Don't handle events that originated from UI elements
+        if (e.target !== eventCanvas) return;
+
         if (state.activePointers.size === 0) {
             // Skip click if panning or pinching occurred
             if (state.isPanning || state.isPinching) {
