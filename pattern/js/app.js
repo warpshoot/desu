@@ -874,11 +874,13 @@
                     btn.classList.remove('active');
                     break;
                 case 'x':
-                    icon.src = 'icons/sym_x.png';
+                    // 'x' in code = left-right mirror = y軸対称
+                    icon.src = 'icons/sym_y.png';
                     btn.classList.add('active');
                     break;
                 case 'y':
-                    icon.src = 'icons/sym_y.png';
+                    // 'y' in code = top-bottom mirror = x軸対称
+                    icon.src = 'icons/sym_x.png';
                     btn.classList.add('active');
                     break;
                 case 'xy':
