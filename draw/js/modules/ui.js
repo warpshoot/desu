@@ -1271,19 +1271,12 @@ function setupOrientationHandler() {
 function setupKeyboardShortcuts() {
     window.addEventListener('keydown', (e) => {
         if (state.isSaveMode) return;
-        if (e.target.tagName === 'INPUT') return; // スライダー操作中などは無視
 
-        // Track modifier keys
+        // Track modifier keys (always track these)
         if (e.key === 'Control' || e.metaKey) state.isCtrlPressed = true;
         if (e.key === 'Alt') state.isAltPressed = true;
 
-        // Space key (Palm mode)
-        if (e.code === 'Space') {
-            state.isSpacePressed = true;
-            eventCanvas.style.cursor = state.isCtrlPressed ? 'zoom-in' : 'grab';
-        }
-
-        // Undo / Redo
+        // Undo / Redo (should work even when INPUT is focused)
         if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
             e.preventDefault();
             if (e.shiftKey) {
@@ -1291,9 +1284,20 @@ function setupKeyboardShortcuts() {
             } else {
                 undo();
             }
+            return;
         } else if ((e.ctrlKey || e.metaKey) && e.code === 'KeyY') {
             e.preventDefault();
             redo();
+            return;
+        }
+
+        // Skip other shortcuts if INPUT is focused (e.g., brush size slider)
+        if (e.target.tagName === 'INPUT') return;
+
+        // Space key (Palm mode)
+        if (e.code === 'Space') {
+            state.isSpacePressed = true;
+            eventCanvas.style.cursor = state.isCtrlPressed ? 'zoom-in' : 'grab';
         }
 
         // Tools
