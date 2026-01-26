@@ -332,12 +332,14 @@ function setupPointerEvents() {
             // Check for valid undo gesture: 2 fingers, short duration, small drag distance
             const duration = Date.now() - state.touchStartTime;
             if (state.maxFingers === 2 && duration < 400 && state.totalDragDistance < 10) {
-                // It was likely a 2-finger tap, so cancel the stroke
+                // It was likely a 2-finger tap for undo gesture
+                // Cancel the micro-stroke that may have started
                 state.isPenDrawing = false;
                 state.lastPenPoint = null;
                 // Restore layer to last saved state to discard micro-stroke
                 restoreLayer(state.activeLayer);
-                skipUndoGestureThisEvent = true;
+                // Don't skip undo gesture - let it execute below
+                skipUndoGestureThisEvent = false;
             } else {
                 await endPenDrawing();
                 skipUndoGestureThisEvent = true;
