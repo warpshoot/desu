@@ -151,9 +151,17 @@ function setupPointerEvents() {
     eventCanvas.addEventListener('pointerdown', (e) => {
         if (state.isSaveMode) return;
 
-        // Don't handle events that originated from UI elements (like sliders, buttons, etc.)
+        // Don't handle events from interactive UI elements (sliders, buttons)
         // This prevents interference with UI controls, especially with pen tablets
-        if (e.target !== eventCanvas) return;
+        // But still allow gesture detection (undo/redo) to work
+        const isInteractiveUI = e.target.tagName === 'INPUT' ||
+                                e.target.tagName === 'BUTTON' ||
+                                e.target.closest('.tool-btn') ||
+                                e.target.closest('.layer-visible-btn') ||
+                                e.target.closest('.save-btn') ||
+                                e.target.closest('.option-btn');
+
+        if (isInteractiveUI) return;
 
         e.preventDefault();
         eventCanvas.setPointerCapture(e.pointerId);
@@ -301,8 +309,15 @@ function setupPointerEvents() {
     eventCanvas.addEventListener('pointerup', async (e) => {
         if (state.isSaveMode) return;
 
-        // Don't handle events that originated from UI elements
-        if (e.target !== eventCanvas) return;
+        // Don't handle events from interactive UI elements
+        const isInteractiveUI = e.target.tagName === 'INPUT' ||
+                                e.target.tagName === 'BUTTON' ||
+                                e.target.closest('.tool-btn') ||
+                                e.target.closest('.layer-visible-btn') ||
+                                e.target.closest('.save-btn') ||
+                                e.target.closest('.option-btn');
+
+        if (isInteractiveUI) return;
 
         e.preventDefault();
         let skipUndoGestureThisEvent = false;
@@ -317,12 +332,14 @@ function setupPointerEvents() {
             // Check for valid undo gesture: 2 fingers, short duration, small drag distance
             const duration = Date.now() - state.touchStartTime;
             if (state.maxFingers === 2 && duration < 400 && state.totalDragDistance < 10) {
-                // It was likely a 2-finger tap, so cancel the stroke
+                // It was likely a 2-finger tap for undo gesture
+                // Cancel the micro-stroke that may have started
                 state.isPenDrawing = false;
                 state.lastPenPoint = null;
                 // Restore layer to last saved state to discard micro-stroke
                 restoreLayer(state.activeLayer);
-                skipUndoGestureThisEvent = true;
+                // Don't skip undo gesture - let it execute below
+                skipUndoGestureThisEvent = false;
             } else {
                 await endPenDrawing();
                 skipUndoGestureThisEvent = true;
@@ -445,8 +462,15 @@ function setupPointerEvents() {
     });
 
     eventCanvas.addEventListener('pointercancel', (e) => {
-        // Don't handle events that originated from UI elements
-        if (e.target !== eventCanvas) return;
+        // Don't handle events from interactive UI elements
+        const isInteractiveUI = e.target.tagName === 'INPUT' ||
+                                e.target.tagName === 'BUTTON' ||
+                                e.target.closest('.tool-btn') ||
+                                e.target.closest('.layer-visible-btn') ||
+                                e.target.closest('.save-btn') ||
+                                e.target.closest('.option-btn');
+
+        if (isInteractiveUI) return;
 
         state.activePointers.delete(e.pointerId);
         state.isLassoing = false;
@@ -459,8 +483,15 @@ function setupPointerEvents() {
     eventCanvas.addEventListener('click', (e) => {
         if (state.isSaveMode) return;
 
-        // Don't handle events that originated from UI elements
-        if (e.target !== eventCanvas) return;
+        // Don't handle events from interactive UI elements
+        const isInteractiveUI = e.target.tagName === 'INPUT' ||
+                                e.target.tagName === 'BUTTON' ||
+                                e.target.closest('.tool-btn') ||
+                                e.target.closest('.layer-visible-btn') ||
+                                e.target.closest('.save-btn') ||
+                                e.target.closest('.option-btn');
+
+        if (isInteractiveUI) return;
 
         if (state.activePointers.size === 0) {
             // Skip click if panning or pinching occurred
