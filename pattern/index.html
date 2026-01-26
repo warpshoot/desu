@@ -91,6 +91,12 @@
             stroke: none;
         }
 
+        .tool-btn img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+
         .tool-btn:active {
             transform: scale(0.92);
         }
@@ -585,21 +591,15 @@
     <!-- 左下ツールバー -->
     <div id="toolbar-left">
         <div class="tool-btn active" id="triangleBtn" data-tool="triangle" title="三角形 (1)">
-            <svg viewBox="0 0 24 24">
-                <path d="M12 6 L20 18 L4 18 Z" class="filled" />
-            </svg>
+            <img src="icons/triangle.png" alt="三角形">
             <div class="tool-tooltip">三角形 (1)</div>
         </div>
         <div class="tool-btn" id="arcBtn" data-tool="arc" title="円弧 (2)">
-            <svg viewBox="0 0 24 24">
-                <path d="M6 18 Q6 6 18 6" stroke-width="3" fill="none" />
-            </svg>
+            <img src="icons/arc.png" alt="円弧">
             <div class="tool-tooltip">円弧 (2)</div>
         </div>
         <div class="tool-btn" id="rectBtn" data-tool="rect" title="矩形 (3)">
-            <svg viewBox="0 0 24 24">
-                <rect x="6" y="6" width="12" height="12" class="filled" />
-            </svg>
+            <img src="icons/rect.png" alt="矩形">
             <div class="tool-tooltip">矩形 (3)</div>
         </div>
         <div class="color-btn" id="fillColorBtn" title="塗りつぶし色 (X)">
@@ -613,19 +613,7 @@
             <div class="tool-tooltip">背景色</div>
         </div>
         <div class="tool-btn" id="symmetryBtn" title="対称描画 (S)">
-            <svg viewBox="0 0 24 24" id="symmetrySvg">
-                <!-- 蝶ベース（対称マーク） -->
-                <ellipse cx="8" cy="10" rx="2.5" ry="3.5" fill="currentColor" opacity="0.4" />
-                <ellipse cx="16" cy="10" rx="2.5" ry="3.5" fill="currentColor" opacity="0.4" />
-                <ellipse cx="8" cy="14" rx="2.5" ry="3.5" fill="currentColor" opacity="0.4" />
-                <ellipse cx="16" cy="14" rx="2.5" ry="3.5" fill="currentColor" opacity="0.4" />
-                <circle cx="12" cy="12" r="2" fill="currentColor" />
-                <!-- 軸線（none時は非表示） -->
-                <line id="symmetryLineV" x1="12" y1="4" x2="12" y2="20" stroke="currentColor" stroke-width="2"
-                    style="display: none;" />
-                <line id="symmetryLineH" x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2"
-                    style="display: none;" />
-            </svg>
+            <img id="symmetryIcon" src="icons/sym.png" alt="対称描画">
             <div class="tool-tooltip">対称描画 (S)</div>
         </div>
     </div>
