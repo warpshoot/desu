@@ -347,19 +347,34 @@ function setupPointerEvents() {
         }
 
         if (state.isLassoing) {
-            // Logic moved to finishLasso, but we need to handle tap detection here
-            // because finishLasso expects to just finish a valid lasso.
-            // Tap detection relies on distance check.
-
-            // Calculate total distance to differentiate tap vs lasso
-            let totalDist = 0;
-            if (state.lassoPoints.length > 0) {
-                totalDist = state.lassoPoints.reduce((acc, p, i) => {
-                    if (i === 0) return 0;
-                    const prev = state.lassoPoints[i - 1];
-                    return acc + Math.hypot(p.x - prev.x, p.y - prev.y);
-                }, 0);
-            }
+            // Check if this was a 2-finger gesture (pan/pinch) - cancel the lasso if so
+            const duration = Date.now() - state.touchStartTime;
+            if (state.maxFingers === 2 && duration < 400 && state.totalDragDistance < 10) {
+                // It was likely a 2-finger tap/pan attempt - cancel the micro-lasso
+                state.isLassoing = false;
+                state.lassoPoints = [];
+                lassoCanvas.style.display = 'none';
+                lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+                // Don't skip undo gesture - let it execute below
+                skipUndoGestureThisEvent = false;
+            } else if (state.maxFingers >= 2 && state.isPinching) {
+                // User performed pinch/pan - cancel lasso silently
+                state.isLassoing = false;
+                state.lassoPoints = [];
+                lassoCanvas.style.display = 'none';
+                lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+                skipUndoGestureThisEvent = true;
+            } else {
+                // Normal lasso finish - tap detection or lasso completion
+                // Calculate total distance to differentiate tap vs lasso
+                let totalDist = 0;
+                if (state.lassoPoints.length > 0) {
+                    totalDist = state.lassoPoints.reduce((acc, p, i) => {
+                        if (i === 0) return 0;
+                        const prev = state.lassoPoints[i - 1];
+                        return acc + Math.hypot(p.x - prev.x, p.y - prev.y);
+                    }, 0);
+                }
 
             if (totalDist < 20 && state.lassoPoints.length > 0) {
                 // Tap detected
@@ -434,6 +449,7 @@ function setupPointerEvents() {
                     }
                 }
             }
+            } // End of lasso handling else block
         }
 
         state.activePointers.delete(e.pointerId);

@@ -69,6 +69,9 @@ export function startPenDrawing(x, y) {
         lassoCanvas.style.display = 'block';
         lassoCanvas.style.opacity = '0.5'; // Preview transparency
         lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+        // Apply transform for sketch pen (it draws in canvas coordinates)
+        const transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
+        lassoCanvas.style.transform = transform;
     }
 
     // Draw the initial point (dot)
@@ -186,6 +189,8 @@ export async function endPenDrawing() {
             lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
             lassoCanvas.style.display = 'none';
             lassoCanvas.style.opacity = '1.0';
+            // Reset transform (lasso tools use screen coordinates)
+            lassoCanvas.style.transform = '';
         }
 
         await saveState();
