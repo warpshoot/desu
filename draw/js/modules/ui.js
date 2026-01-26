@@ -1,7 +1,7 @@
 
 import {
     state,
-    lineCanvas, lassoCanvas, eventCanvas,
+    lineCanvas, lassoCanvas, lassoCtx, eventCanvas,
     canvasBg, roughCanvas, fillCanvas
 } from './state.js';
 import {
@@ -79,7 +79,7 @@ function updateBrushSizeVisibility() {
     const sizeSlider = document.getElementById('size-slider-container');
     if (!sizeSlider) return;
 
-    if (state.currentTool === 'pen' || state.currentTool === 'sketch_pen' || (state.currentTool === 'eraser' && state.eraserMode === 'pen')) {
+    if (state.currentTool === 'pen' || (state.currentTool === 'eraser' && state.eraserMode === 'pen')) {
         sizeSlider.classList.remove('hidden');
     } else {
         sizeSlider.classList.add('hidden');
@@ -94,8 +94,6 @@ function updateBrushSizeSlider() {
     let size = state.penSize; // Default or fallback
     if (state.currentTool === 'pen') {
         size = state.penSize;
-    } else if (state.currentTool === 'sketch_pen') {
-        size = state.sketchPenSize;
     } else if (state.currentTool === 'eraser') {
         size = state.eraserSize;
     }
@@ -184,8 +182,19 @@ function setupPointerEvents() {
 
         // 2 fingers = Pinch/Pan
         if (state.activePointers.size === 2) {
-            state.isLassoing = false;
-            lassoCanvas.style.display = 'none';
+            // Cancel any ongoing drawing immediately
+            if (state.isLassoing) {
+                state.isLassoing = false;
+                lassoCanvas.style.display = 'none';
+                lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+            }
+            if (state.isPenDrawing) {
+                state.isPenDrawing = false;
+                state.lastPenPoint = null;
+                // Restore layer to remove the initial dot that was drawn
+                restoreLayer(state.activeLayer);
+            }
+
             state.isPinching = false;
 
             const pts = Array.from(state.activePointers.values());
@@ -219,7 +228,7 @@ function setupPointerEvents() {
             state.drawingPointerId = e.pointerId;
             state.totalDragDistance = 0;
 
-            if (state.currentTool === 'pen' || state.currentTool === 'sketch_pen') {
+            if (state.currentTool === 'pen') {
                 state.isErasing = false;
                 startPenDrawing(p.x, p.y);
             } else if (state.currentTool === 'eraser' && state.eraserMode === 'pen') {
@@ -415,17 +424,8 @@ function setupPointerEvents() {
                 const canvasPoints = finishLasso();
 
                 if (canvasPoints && canvasPoints.length >= 3) {
-                    if (state.currentTool === 'sketch' || state.currentTool === 'sketch_pen') {
+                    if (state.currentTool === 'sketch') {
                         // 20%透明度のグレー、アンチエイリアスなし
-                        // Note: sketch_pen usually draws lines, but if user drags it acts as lasso?
-                        // If we want sketch_pen to ONLY be pen, we should prevent Lasso start.
-                        // But 'startLasso' is default for non-pen tools. 
-                        // In pointerdown, we check: if currentTool === 'pen' || currentTool === 'sketch_pen' -> startPenDrawing.
-                        // So sketch_pen should NOT reach here unless logic in pointerdown allows it.
-                        // Assuming pointerdown handles 'sketch_pen' as PEN.
-                        // But 'sketch' tool uses Lasso.
-
-                        // If currentTool is 'sketch', fill grey
                         fillPolygonNoAA(canvasPoints, 128, 128, 128, 0.2);
                         saveState();
                         state.strokeMade = true;
@@ -611,15 +611,14 @@ function setupToolButtons() {
                     return;
                 }
 
-                // 4-Way Toggle for Layer Buttons (Pen/Fill/Sketch/SketchPen)
-                // Cycle: pen -> fill -> sketch -> sketch_pen -> pen ...
+                // 3-Way Toggle for Layer Buttons (Pen/Fill/Sketch)
+                // Cycle: pen -> fill -> sketch -> pen ...
 
                 // Determine current mode
                 let currentMode = 'pen';
                 // Check classes first
                 if (btn.classList.contains('fill-mode')) currentMode = 'fill';
                 else if (btn.classList.contains('sketch-mode')) currentMode = 'sketch';
-                else if (btn.classList.contains('sketch-pen-mode')) currentMode = 'sketch_pen';
                 else if (btn.classList.contains('pen-mode')) currentMode = 'pen';
                 else {
                     const type = btn.dataset.tool;
@@ -631,8 +630,7 @@ function setupToolButtons() {
                 let nextMode = 'pen';
                 if (currentMode === 'pen') nextMode = 'fill';
                 else if (currentMode === 'fill') nextMode = 'sketch';
-                else if (currentMode === 'sketch') nextMode = 'sketch_pen';
-                else if (currentMode === 'sketch_pen') nextMode = 'pen';
+                else if (currentMode === 'sketch') nextMode = 'pen';
 
                 applyToolMode(btn, nextMode);
                 return;
@@ -658,7 +656,6 @@ function activateTool(btn) {
     if (toolType === 'eraser') selectedTool = 'eraser';
     else if (btn.classList.contains('fill-mode')) selectedTool = 'fill';
     else if (btn.classList.contains('sketch-mode')) selectedTool = 'sketch';
-    else if (btn.classList.contains('sketch-pen-mode')) selectedTool = 'sketch_pen';
     else if (btn.classList.contains('pen-mode')) selectedTool = 'pen';
     else {
         // Fallback to data-tool
@@ -713,7 +710,7 @@ function applyToolMode(btn, mode) {
 
     // Normal Tool Modes
     // Reset Classes
-    btn.classList.remove('fill-mode', 'sketch-mode', 'sketch-pen-mode', 'pen-mode');
+    btn.classList.remove('fill-mode', 'sketch-mode', 'pen-mode');
 
     let nextTool = 'pen';
     let tooltipText = '';
@@ -735,15 +732,11 @@ function applyToolMode(btn, mode) {
     } else if (mode === 'sketch') {
         nextTool = 'sketch';
         tooltipText = '薄投げ縄塗り/薄塗りつぶし' + shortcut;
-    } else if (mode === 'sketch_pen') {
-        nextTool = 'sketch_pen';
-        tooltipText = '薄ペン' + shortcut;
     }
 
     // Add Mode Class
     if (mode === 'fill') btn.classList.add('fill-mode');
     else if (mode === 'sketch') btn.classList.add('sketch-mode');
-    else if (mode === 'sketch_pen') btn.classList.add('sketch-pen-mode');
     else if (mode === 'pen') btn.classList.add('pen-mode');
 
     // Update State (only if button is active)
@@ -791,7 +784,6 @@ function showToolMenu(btn) {
         currentMode = 'pen';
         if (btn.classList.contains('fill-mode')) currentMode = 'fill';
         else if (btn.classList.contains('sketch-mode')) currentMode = 'sketch';
-        else if (btn.classList.contains('sketch-pen-mode')) currentMode = 'sketch_pen';
         else if (btn.classList.contains('pen-mode')) currentMode = 'pen';
         else {
             const type = btn.dataset.tool;
@@ -999,8 +991,6 @@ function setupLayerControls() {
             sizeDisplay.textContent = val;
             if (state.currentTool === 'pen') {
                 state.penSize = val;
-            } else if (state.currentTool === 'sketch_pen') {
-                state.sketchPenSize = val;
             } else if (state.currentTool === 'eraser') {
                 state.eraserSize = val;
             }

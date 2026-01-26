@@ -216,15 +216,15 @@ body.dark .tool-btn {
 }
 
 /* 2. Default View (No mode classes) - Show icon matching data-tool IF no override class is present */
-.tool-btn[data-tool="pen"]:not(.pen-mode):not(.fill-mode):not(.sketch-mode):not(.sketch-pen-mode) .tool-pen {
+.tool-btn[data-tool="pen"]:not(.pen-mode):not(.fill-mode):not(.sketch-mode) .tool-pen {
     display: block !important;
 }
 
-.tool-btn[data-tool="fill"]:not(.pen-mode):not(.fill-mode):not(.sketch-mode):not(.sketch-pen-mode) .tool-fill {
+.tool-btn[data-tool="fill"]:not(.pen-mode):not(.fill-mode):not(.sketch-mode) .tool-fill {
     display: block !important;
 }
 
-.tool-btn[data-tool="sketch"]:not(.pen-mode):not(.fill-mode):not(.sketch-mode):not(.sketch-pen-mode) .tool-sketch {
+.tool-btn[data-tool="sketch"]:not(.pen-mode):not(.fill-mode):not(.sketch-mode) .tool-sketch {
     display: block !important;
 }
 
@@ -242,10 +242,6 @@ body.dark .tool-btn {
     display: none !important;
 }
 
-.tool-btn.pen-mode .tool-sketch-pen {
-    display: none !important;
-}
-
 /* Fill Mode: Force Fill Icon, Hide others */
 .tool-btn.fill-mode .tool-fill {
     display: block !important;
@@ -259,10 +255,6 @@ body.dark .tool-btn {
     display: none !important;
 }
 
-.tool-btn.fill-mode .tool-sketch-pen {
-    display: none !important;
-}
-
 /* Sketch Mode: Force Sketch Icon, Hide others */
 .tool-btn.sketch-mode .tool-sketch {
     display: block !important;
@@ -273,43 +265,6 @@ body.dark .tool-btn {
 }
 
 .tool-btn.sketch-mode .tool-fill {
-    display: none !important;
-}
-
-.tool-btn.sketch-mode .tool-sketch-pen {
-    display: none !important;
-}
-
-/* Sketch Pen Mode: Force Sketch Pen Icon, Hide others */
-.tool-btn.sketch-pen-mode .tool-sketch-pen {
-    display: block !important;
-    filter: opacity(0.5) !important;
-    /* Grey look base */
-}
-
-.tool-btn.sketch-pen-mode .tool-pen {
-    display: none !important;
-}
-
-.tool-btn.sketch-pen-mode .tool-fill {
-    display: none !important;
-}
-
-.tool-btn.sketch-pen-mode .tool-sketch {
-    display: none !important;
-}
-
-.tool-btn.sketch-pen-mode .tool-sketch-pen {
-    display: block !important;
-    filter: opacity(0.5) !important;
-    /* Grey look base */
-}
-
-.tool-btn.sketch-pen-mode .tool-pen {
-    display: none !important;
-}
-
-.tool-btn.sketch-pen-mode .tool-fill {
     display: none !important;
 }
 
@@ -347,11 +302,6 @@ body.dark .tool-btn.active {
 }
 
 /* Remove Invert Filter completely */
-/* Specific handling for Sketch Pen (Grey) when active */
-.tool-btn.active.sketch-pen-mode .tool-sketch-pen {
-    filter: opacity(0.5) !important;
-    /* Keep grey, remove invert */
-}
 
 /* Color Updates for Border/Text */
 #layerClearBtn {
@@ -1237,12 +1187,6 @@ body.help-mode #credit-btn {
     /* Highlight selected */
 }
 
-/* Sketch Pen Icon Style in Menu */
-.sketch-pen-tint {
-    filter: opacity(0.5);
-    /* Grey */
-}
-
 /* Dark Mode Support */
 body.dark #tool-mode-menu {
     background: rgba(40, 40, 40, 0.95);
@@ -1262,8 +1206,4 @@ body.dark .layer-visible-btn {
 
 body.dark .menu-item img {
     filter: invert(1);
-}
-
-body.dark .sketch-pen-tint {
-    filter: invert(1) opacity(0.5);
 }

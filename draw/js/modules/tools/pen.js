@@ -5,9 +5,7 @@ import {
     fillCtx,
     lineCtx,
     line2Ctx,
-    line3Ctx,
-    lassoCanvas,
-    lassoCtx
+    line3Ctx
 } from '../state.js';
 import { saveState } from '../history.js';
 
@@ -63,17 +61,6 @@ export function startPenDrawing(x, y) {
     state.isPenDrawing = true;
     state.lastPenPoint = { x, y };
 
-    // If Sketch Pen, use temp buffer regardless of layer
-    if (state.currentTool === 'sketch_pen' && !state.isErasing) {
-        // Setup Lasso Canvas as buffer for Sketch Pen
-        lassoCanvas.style.display = 'block';
-        lassoCanvas.style.opacity = '0.5'; // Preview transparency
-        lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
-        // Apply transform for sketch pen (it draws in canvas coordinates)
-        const transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
-        lassoCanvas.style.transform = transform;
-    }
-
     // Draw the initial point (dot)
     drawPenLine(x, y);
 }
@@ -85,8 +72,6 @@ export function drawPenLine(x, y) {
     let brushSize;
     if (state.isErasing) {
         brushSize = state.eraserSize;
-    } else if (state.currentTool === 'sketch_pen') {
-        brushSize = state.sketchPenSize;
     } else {
         brushSize = state.penSize;
     }
@@ -113,30 +98,25 @@ export function drawPenLine(x, y) {
         }
     } else {
         // Determine Color
-        if (state.currentTool === 'sketch' || state.currentTool === 'sketch_pen') {
-            color = '#808080'; // Sketch stays gray for now as requested "Monochrome Ink + BG" usually implies main ink
+        if (state.currentTool === 'sketch') {
+            color = '#808080'; // Grey for sketch
         } else {
             color = '#000000'; // Fixed Black
         }
 
-        // Drawing logic
-        if (state.currentTool === 'sketch_pen') {
-            ctx = lassoCtx; // Draw to buffer
+        // Standard Pen - draw to active layer
+        if (state.activeLayer === 'rough') {
+            ctx = roughCtx;
+        } else if (state.activeLayer === 'fill') {
+            ctx = fillCtx;
+        } else if (state.activeLayer === 'line') {
+            ctx = lineCtx;
+        } else if (state.activeLayer === 'line2') {
+            ctx = line2Ctx;
+        } else if (state.activeLayer === 'line3') {
+            ctx = line3Ctx;
         } else {
-            // Standard Pen
-            if (state.activeLayer === 'rough') {
-                ctx = roughCtx;
-            } else if (state.activeLayer === 'fill') {
-                ctx = fillCtx;
-            } else if (state.activeLayer === 'line') {
-                ctx = lineCtx;
-            } else if (state.activeLayer === 'line2') {
-                ctx = line2Ctx;
-            } else if (state.activeLayer === 'line3') {
-                ctx = line3Ctx;
-            } else {
-                ctx = lineCtx;
-            }
+            ctx = lineCtx;
         }
     }
 
@@ -170,28 +150,6 @@ export async function endPenDrawing() {
     if (state.isPenDrawing) {
         state.isPenDrawing = false;
         state.lastPenPoint = null;
-
-        // If Sketch Pen, transfer buffer to Active Layer
-        if (state.currentTool === 'sketch_pen' && !state.isErasing) {
-            let targetCtx;
-            if (state.activeLayer === 'rough') targetCtx = roughCtx;
-            else if (state.activeLayer === 'fill') targetCtx = fillCtx;
-            else if (state.activeLayer === 'line') targetCtx = lineCtx;
-            else if (state.activeLayer === 'line2') targetCtx = line2Ctx;
-            else if (state.activeLayer === 'line3') targetCtx = line3Ctx;
-            else targetCtx = lineCtx;
-
-            targetCtx.globalAlpha = 0.5; // Merge with alpha
-            targetCtx.drawImage(lassoCanvas, 0, 0);
-            targetCtx.globalAlpha = 1.0;
-
-            // Clean up buffer
-            lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
-            lassoCanvas.style.display = 'none';
-            lassoCanvas.style.opacity = '1.0';
-            // Reset transform (lasso tools use screen coordinates)
-            lassoCanvas.style.transform = '';
-        }
 
         await saveState();
     }

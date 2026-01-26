@@ -93,9 +93,7 @@ export function applyTransform() {
     lineCanvas.style.transform = transform;
     line2Canvas.style.transform = transform;
     line3Canvas.style.transform = transform;
-    // Note: lassoCanvas transform is handled separately
-    // - For lasso tools (sketch/fill/eraser): no transform (uses screen coordinates)
-    // - For sketch_pen: transform applied in startPenDrawing (uses canvas coordinates)
+    // Note: lassoCanvas transform is handled separately (uses screen coordinates for lasso tools)
     eventCanvas.style.transform = transform;
 
     const resetBtn = document.getElementById('resetZoomBtn');
