@@ -1092,8 +1092,14 @@
         // Reset zoom
         document.getElementById('resetZoomBtn').addEventListener('click', () => {
             scale = 1;
-            translateX = 0;
-            translateY = 0;
+
+            // Center the canvas (same as initial position)
+            const size = GRID_SIZE * CELL_SIZE;
+            const scaledWidth = size * scale;
+            const scaledHeight = size * scale;
+            translateX = (window.innerWidth - scaledWidth) / 2;
+            translateY = (window.innerHeight - scaledHeight) / 2;
+
             updateTransform();
         });
 
