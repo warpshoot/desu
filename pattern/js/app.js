@@ -414,19 +414,6 @@
             showToast('Redo');
         }
 
-        // Redo
-        function redo() {
-            if (redoStack.length === 0) return;
-
-            const next = redoStack.pop();
-            undoStack.push(next);
-
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(next, 0, 0);
-            ctx.scale(SCALE, SCALE);
-        }
-
         // Handle click
         // Helper function to flip corner for symmetry
         function flipCorner(corner, flipX, flipY) {
