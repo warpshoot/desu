@@ -36,6 +36,7 @@ import { getCanvasPoint } from './utils.js';
 // ============================================
 
 let lastUndoCheck = null;
+let undoCallCount = 0;
 
 function updateDebugDisplay() {
     const debugDiv = document.getElementById('debug-display');
@@ -48,11 +49,14 @@ strokeMade: ${state.strokeMade}<br>
 didInteract: ${state.didInteract}<br>
 maxFingers: ${state.maxFingers}<br>
 isPenDrawing: ${state.isPenDrawing}<br>
-pencilDetected: ${state.pencilDetected}
+isLassoing: ${state.isLassoing}<br>
+wasPinch: ${state.wasPinching}<br>
+wasPan: ${state.wasPanning}<br>
+undoCalls: ${undoCallCount}
     `.trim();
 
     if (lastUndoCheck) {
-        html += `<br><br>Last tap:<br>dur:${lastUndoCheck.duration}<br>maxF:${lastUndoCheck.maxFingers}<br>stroke:${lastUndoCheck.strokeMade}<br>inter:${lastUndoCheck.didInteract}<br>undo:${lastUndoCheck.undoCalled ? 'YES' : 'NO'}`;
+        html += `<br><br>Last tap:<br>dur:${lastUndoCheck.duration}<br>maxF:${lastUndoCheck.maxFingers}<br>stroke:${lastUndoCheck.strokeMade}<br>inter:${lastUndoCheck.didInteract}<br>wasPinch:${lastUndoCheck.wasPinching}<br>wasPan:${lastUndoCheck.wasPanning}<br>undo:${lastUndoCheck.undoCalled ? 'YES' : 'NO'}`;
     }
 
     debugDiv.innerHTML = html;
@@ -926,6 +930,7 @@ async function handlePointerUp(e) {
             // Note: maxFingers tracks maximum fingers seen during this touch session
             if (state.maxFingers === 2) {
                 console.log('[DEBUG] Calling undo()');
+                undoCallCount++;
                 undo();
                 updateAllThumbnails();
                 undoCalled = true;
@@ -941,6 +946,8 @@ async function handlePointerUp(e) {
             maxFingers: state.maxFingers,
             strokeMade: state.strokeMade,
             didInteract: state.didInteract,
+            wasPinching: state.wasPinching,
+            wasPanning: state.wasPanning,
             undoCalled: undoCalled
         };
         updateDebugDisplay();
