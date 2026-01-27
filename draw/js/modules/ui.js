@@ -239,7 +239,6 @@ function setupToolPanel() {
                 await saveState();
                 clearLayer(state.activeLayer);
                 updateLayerThumbnail(getActiveLayer());
-                await saveState();
                 flashLayer(state.activeLayer);
             } else if (eraserModes.includes(mode)) {
                 // Toggle: if same eraser mode, cycle to next
@@ -898,7 +897,6 @@ async function handlePointerUp(e) {
             const color = hexToRgba('#000000', 255);
             floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), color);
             updateLayerThumbnail(getActiveLayer());
-            await saveState();
         }
 
         // Finish Drawing Actions

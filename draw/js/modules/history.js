@@ -65,8 +65,7 @@ export function undo() {
     const current = state.undoStack.pop();
     state.redoStack.push(current);
 
-    const prev = state.undoStack[state.undoStack.length - 1];
-    restoreSnapshot(prev);
+    restoreSnapshot(current);
 }
 
 /**

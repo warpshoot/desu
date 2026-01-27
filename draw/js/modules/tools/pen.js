@@ -115,7 +115,5 @@ export async function endPenDrawing() {
     if (state.isPenDrawing) {
         state.isPenDrawing = false;
         state.lastPenPoint = null;
-
-        await saveState();
     }
 }
