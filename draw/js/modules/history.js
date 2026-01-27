@@ -69,8 +69,9 @@ export function undo() {
     const current = state.undoStack.pop();
     state.redoStack.push(current);
 
-    console.log('[DEBUG] Restoring snapshot, undoStack.length after pop:', state.undoStack.length);
-    restoreSnapshot(current);
+    const prev = state.undoStack[state.undoStack.length - 1];
+    console.log('[DEBUG] Restoring previous snapshot, undoStack.length after pop:', state.undoStack.length);
+    restoreSnapshot(prev);
 }
 
 /**
