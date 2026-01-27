@@ -797,8 +797,9 @@ function handleZoomClick(e) {
 function cancelCurrentOperation() {
     if (state.isLassoing) {
         finishLasso(); // Just finish, don't fill
-        const layer = getActiveLayer();
-        if (layer) restoreLayer(layer.id);
+        // Note: Don't call restoreLayer() here - lasso doesn't call saveState()
+        // on start, so there's nothing to restore. Calling restoreLayer() would
+        // restore to the state BEFORE the last completed operation.
     }
     if (state.isPenDrawing) {
         const layer = getActiveLayer();
