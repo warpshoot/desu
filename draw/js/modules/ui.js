@@ -801,9 +801,12 @@ function cancelCurrentOperation() {
         // on start, so there's nothing to restore. Calling restoreLayer() would
         // restore to the state BEFORE the last completed operation.
     }
-    if (state.isPenDrawing) {
+    if (state.isPenDrawing || state.isErasing) {
         const layer = getActiveLayer();
         if (layer) restoreLayer(layer.id);
+        // Remove the saveState() entry that was added when drawing started
+        // Otherwise undo() would restore to the same state (no visible change)
+        state.undoStack.pop();
         state.isPenDrawing = false;
         state.lastPenPoint = null;
     }
