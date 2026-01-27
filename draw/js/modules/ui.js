@@ -32,6 +32,24 @@ import { applyTransform, updateBackgroundColor, hexToRgba } from './canvas.js';
 import { getCanvasPoint } from './utils.js';
 
 // ============================================
+// Debug Display
+// ============================================
+
+function updateDebugDisplay() {
+    const debugDiv = document.getElementById('debug-display');
+    if (!debugDiv) return;
+
+    debugDiv.innerHTML = `
+undoStack: ${state.undoStack.length}<br>
+redoStack: ${state.redoStack.length}<br>
+strokeMade: ${state.strokeMade}<br>
+isPenDrawing: ${state.isPenDrawing}<br>
+pencilDetected: ${state.pencilDetected}<br>
+activePointers: ${state.activePointers.size}
+    `.trim();
+}
+
+// ============================================
 // UI Initializer
 // ============================================
 
@@ -46,6 +64,7 @@ export function initUI() {
     setupCreditModal();
     setupOrientationHandler();
     setupKeyboardShortcuts();
+    updateDebugDisplay();
 }
 
 // ============================================
@@ -735,6 +754,7 @@ async function handlePointerDown(e) {
         }
         state.strokeMade = true;
     }
+    updateDebugDisplay();
 }
 
 function handleZoomClick(e) {
@@ -936,6 +956,7 @@ async function handlePointerUp(e) {
         state.isLassoing = false;
         state.strokeMade = false;
         state.maxFingers = 0;
+        updateDebugDisplay();
     }
 }
 

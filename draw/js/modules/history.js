@@ -23,6 +23,7 @@ export async function saveState() {
     }
 
     state.undoStack.push(snapshot);
+    console.log('[DEBUG] saveState() called, undoStack.length now:', state.undoStack.length);
 
     // Limit history size
     if (state.undoStack.length > state.MAX_HISTORY) {
