@@ -73,9 +73,6 @@ export function deleteLayer(id) {
     layer.canvas.remove();
     layers.splice(index, 1);
 
-    layer.canvas.remove();
-    layers.splice(index, 1);
-
     updateLayerZIndices();
 
     // Set active layer to the one at same index or last

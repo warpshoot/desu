@@ -677,7 +677,7 @@ async function handlePointerDown(e) {
         state.initialPinchCenter = { ...state.lastPinchCenter };
 
         // Interrupt drawing if 2nd finger touches
-        if (state.isPenDrawing || state.isLassoing || state.isErasing) {
+        if (state.isPenDrawing || state.isLassoing || state.isErasing || state.drawingPending) {
             cancelCurrentOperation();
         }
         return;
@@ -707,7 +707,10 @@ async function handlePointerDown(e) {
             if (state.currentEraser === 'lasso') {
                 startLasso(e.clientX, e.clientY);
             } else {
+                state.drawingPending = true;
                 await saveState();
+                if (!state.drawingPending) return; // Aborted by 2nd finger
+                state.drawingPending = false;
                 state.isErasing = true;
                 startPenDrawing(canvasPoint.x, canvasPoint.y);
             }
@@ -715,7 +718,10 @@ async function handlePointerDown(e) {
             if (state.currentTool === 'fill' || state.currentTool === 'sketch') {
                 startLasso(e.clientX, e.clientY);
             } else {
+                state.drawingPending = true;
                 await saveState();
+                if (!state.drawingPending) return; // Aborted by 2nd finger
+                state.drawingPending = false;
                 startPenDrawing(canvasPoint.x, canvasPoint.y);
             }
         }
@@ -754,6 +760,7 @@ function cancelCurrentOperation() {
     state.isLassoing = false;
     state.strokeMade = false;
     state.didInteract = false;
+    state.drawingPending = false;
 }
 
 async function handlePointerMove(e) {
