@@ -13,6 +13,7 @@ import {
     getActiveLayerCtx,
     getActiveLayerCanvas,
     clearLayer,
+    moveLayer,
     MAX_LAYERS
 } from './state.js';
 import {
@@ -63,13 +64,31 @@ function setupLayerPanel() {
             const btn = document.createElement('div');
             btn.className = 'layer-btn' + (layer.id === state.activeLayer ? ' active' : '');
             btn.dataset.layerId = layer.id;
-            btn.textContent = layer.id;
+            // Removed text content for thumbnail
+            // btn.textContent = layer.id;
 
             if (!layer.visible) {
                 btn.classList.add('hidden-layer');
             }
 
             btn.style.opacity = layer.opacity;
+
+            // Set thumbnail
+            if (layer.thumbnail) {
+                btn.style.backgroundImage = `url(${layer.thumbnail})`;
+                btn.style.backgroundSize = 'contain';
+                btn.style.backgroundRepeat = 'no-repeat';
+                btn.style.backgroundPosition = 'center';
+            } else {
+                // Generate initial thumbnail if missing (e.g. new layer)
+                updateLayerThumbnail(layer);
+                if (layer.thumbnail) {
+                    btn.style.backgroundImage = `url(${layer.thumbnail})`;
+                    btn.style.backgroundSize = 'contain';
+                    btn.style.backgroundRepeat = 'no-repeat';
+                    btn.style.backgroundPosition = 'center';
+                }
+            }
 
             layerButtons.appendChild(btn);
         }
@@ -86,6 +105,7 @@ function setupLayerPanel() {
         const layer = createLayer();
         if (layer) {
             await resetHistory();
+            updateAllThumbnails();
             renderLayerButtons();
             updateActiveLayerIndicator();
         }
@@ -218,6 +238,7 @@ function setupToolPanel() {
                 // Instant layer clear - no toggle
                 await saveState();
                 clearLayer(state.activeLayer);
+                updateLayerThumbnail(getActiveLayer());
                 await saveState();
                 flashLayer(state.activeLayer);
             } else if (eraserModes.includes(mode)) {
@@ -374,6 +395,25 @@ function setupLayerMenuActions(menu, layerId) {
     const newDeleteBtn = deleteBtn.cloneNode(true);
     deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
 
+    // Move buttons
+    const moveButtons = menu.querySelectorAll('.layer-move-btn');
+    moveButtons.forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+
+        newBtn.addEventListener('click', () => {
+            const direction = newBtn.dataset.dir;
+            if (moveLayer(layerId, direction)) {
+                window.renderLayerButtons(); // Re-render list
+                // Keep menu open but update position or close? 
+                // Closing is safer as positions change
+                hideAllMenus();
+                // Flash the moved layer
+                flashLayer(layerId);
+            }
+        });
+    });
+
     // Opacity slider
     newSlider.addEventListener('input', (e) => {
         const layer = getLayer(layerId);
@@ -460,6 +500,88 @@ function updateBrushSizeSlider() {
     } else {
         slider.value = state.penSize;
         display.textContent = state.penSize;
+    }
+}
+
+// ============================================
+// Thumbnail Helper
+// ============================================
+
+export function updateLayerThumbnail(layer) {
+    if (!layer) return;
+
+    // Create offscreen canvas for thumbnail generation if not exists
+    if (!state.thumbCanvas) {
+        state.thumbCanvas = document.createElement('canvas');
+        state.thumbCanvas.width = 48;
+        state.thumbCanvas.height = 32;
+        state.thumbCtx = state.thumbCanvas.getContext('2d');
+    }
+
+    const ctx = state.thumbCtx;
+    ctx.clearRect(0, 0, 48, 32);
+
+    // Draw layer content scaled down
+    // We need to keep aspect ratio or fill? 48x32 is 3:2. Screen is 9:16 approx.
+    // Let's fit "contain" style.
+    const sWidth = layer.canvas.width;
+    const sHeight = layer.canvas.height;
+    const dWidth = 48;
+    const dHeight = 32;
+
+    // Simple scale to fit height or width?
+    // Let's just draw the whole canvas into the thumbnail rect directly (stretch)
+    // or maintain aspect ratio?
+    // Stretcing might look weird but "contain" in button background handles display.
+    // But if we generate a distorted image, "contain" will show distorted image.
+    // Better generate a proper thumbnail.
+    // Actually, let's just draw full canvas to small canvas.
+    // If the aspect ratios differ, it will stretch.
+    // Layer buttons are 48x32. Window is variable.
+    // Let's rely on the button's background-size: contain.
+    // The generated image should be representative.
+    // Drawing the whole canvas into 48x32 will stretch it.
+    // If we use it as background-image with 'contain', it will un-stretch it IF the element has same aspect ratio.
+    // The button is 48x32 fixed.
+    // So we should generate an image that represents the whole canvas.
+    // If we stretch it here, and then show it in 48x32 button, it will fill the button.
+    // If the canvas is tall (mobile), and button is wide, the image is squashed vertically.
+    // If we use background-size: contain, we want the source image to have correct aspect ratio?
+    // No, 'contain' scales the image to fit.
+    // If we create a 48x32 image that is a squashed version of the canvas...
+    // displaying it 'contain' inside a 48x32 button will show the squashed image filling the button.
+    // We want to show the layer content with correct aspect ratio.
+    // So we should capture the canvas as is (or scaled maintaining aspect ratio).
+    // Actually, `toDataURL` returns the full image if we don't draw to a temp canvas.
+    // But full image is too big (~MBs). We MUST scale down.
+    // So:
+    // 1. Calculate aspect ratio.
+    // 2. Draw scaled image to temp canvas (centering it?)
+    // OR just draw distinct pixels?
+    // Let's just draw the full canvas into 48x32 and let it stretch.
+    // Wait, if it stretches, it looks bad.
+    // We should preserve aspect ratio in the thumbnail canvas.
+    // Canvas: W x H. Thumb: 48 x 32.
+    // Scale = min(48/W, 32/H).
+    // Draw at center.
+
+    const scale = Math.min(dWidth / sWidth, dHeight / sHeight);
+    const drawW = sWidth * scale;
+    const drawH = sHeight * scale;
+    const offsetX = (dWidth - drawW) / 2;
+    const offsetY = (dHeight - drawH) / 2;
+
+    ctx.drawImage(layer.canvas, 0, 0, sWidth, sHeight, offsetX, offsetY, drawW, drawH);
+
+    layer.thumbnail = state.thumbCanvas.toDataURL();
+
+    // Immediately update DOM
+    const btn = document.querySelector(`.layer-btn[data-layer-id="${layer.id}"]`);
+    if (btn) {
+        btn.style.backgroundImage = `url(${layer.thumbnail})`;
+        btn.style.backgroundSize = 'contain';
+        btn.style.backgroundRepeat = 'no-repeat';
+        btn.style.backgroundPosition = 'center';
     }
 }
 
@@ -752,8 +874,10 @@ async function handlePointerUp(e) {
             // Note: maxFingers tracks maximum fingers seen during this touch session
             if (state.maxFingers === 2) {
                 undo();
+                updateAllThumbnails();
             } else if (state.maxFingers === 3) {
                 redo();
+                updateAllThumbnails();
             }
         }
 
@@ -763,6 +887,7 @@ async function handlePointerUp(e) {
             await saveState();
             const color = hexToRgba('#000000', 255);
             floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), color);
+            updateLayerThumbnail(getActiveLayer());
             await saveState();
         }
 
@@ -777,10 +902,12 @@ async function handlePointerUp(e) {
                     } else {
                         fillPolygon(points);
                     }
+                    updateLayerThumbnail(getActiveLayer());
                     await saveState();
                 }
             } else if (state.isPenDrawing) {
                 await endPenDrawing();
+                updateLayerThumbnail(getActiveLayer());
             }
             state.drawingPointerId = null;
         }
@@ -855,6 +982,10 @@ function setupColorPickers() {
             state.penSize = size;
         }
     });
+
+    // Prevent events from bubbling to canvas (fixes slider drag issue)
+    brushSizeSlider.addEventListener('pointerdown', (e) => e.stopPropagation());
+    brushSizeSlider.addEventListener('pointermove', (e) => e.stopPropagation());
 }
 
 // ============================================
@@ -1216,12 +1347,14 @@ function setupKeyboardShortcuts() {
         if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
             e.preventDefault();
             undo();
+            updateAllThumbnails();
         }
 
         // Redo: Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y
         if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z') || (e.shiftKey && e.key === 'Z'))) {
             e.preventDefault();
             redo();
+            updateAllThumbnails();
         }
 
         // Save: Ctrl/Cmd + S
@@ -1293,5 +1426,11 @@ function setupKeyboardShortcuts() {
         }
         if (!e.ctrlKey && !e.metaKey) state.isCtrlPressed = false;
         if (!e.altKey) state.isAltPressed = false;
+    });
+}
+
+export function updateAllThumbnails() {
+    layers.forEach(layer => {
+        updateLayerThumbnail(layer);
     });
 }

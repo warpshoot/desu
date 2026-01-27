@@ -153,10 +153,7 @@
         <div id="progress-text">準備中...</div>
     </div>
 
-    <!-- デバッグログ -->
-    <div id="debug-activator"></div>
-    <div id="debug-toggle">🐛</div>
-    <div id="debug-log"></div>
+    <!-- デバッグログ (削除済み) -->
 
     <!-- クレジットボタンとモーダル -->
     <div id="credit-btn">?</div>
@@ -208,6 +205,16 @@
             <svg viewBox="0 0 24 24" class="eye-icon">
                 <path d="M2 12 C2 12 5 5 12 5 C19 5 22 12 22 12 C22 12 19 19 12 19 C5 19 2 12 2 12 Z" />
                 <circle cx="12" cy="12" r="3" />
+            </svg>
+        </div>
+        <div class="menu-item layer-move-btn" data-dir="up" title="上へ">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 8 L6 14 L18 14 Z" fill="currentColor" />
+            </svg>
+        </div>
+        <div class="menu-item layer-move-btn" data-dir="down" title="下へ">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 16 L6 10 L18 10 Z" fill="currentColor" />
             </svg>
         </div>
         <div class="menu-item layer-delete danger" title="削除">

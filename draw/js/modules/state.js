@@ -73,25 +73,15 @@ export function deleteLayer(id) {
     layer.canvas.remove();
     layers.splice(index, 1);
 
-    // Renumber layers so they are always 1, 2, 3, ...
-    renumberLayers();
+    layer.canvas.remove();
+    layers.splice(index, 1);
+
     updateLayerZIndices();
 
     // Set active layer to the one at same index or last
     state.activeLayer = layers[Math.min(index, layers.length - 1)].id;
 
     return true;
-}
-
-/**
- * Renumber layers so IDs are always 1, 2, 3, ... (maintains keyboard shortcut mapping)
- */
-function renumberLayers() {
-    layers.forEach((layer, index) => {
-        layer.id = index + 1;
-        layer.canvas.id = `layer-${layer.id}`;
-    });
-    nextLayerId = layers.length + 1;
 }
 
 /**
@@ -142,6 +132,30 @@ export function clearLayer(id) {
     layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
 }
 
+/**
+ * Move layer up or down in the stack
+ * direction: 'up' (higher z-index) or 'down' (lower z-index)
+ */
+export function moveLayer(id, direction) {
+    const index = layers.findIndex(l => l.id === id);
+    if (index === -1) return false;
+
+    if (direction === 'up') {
+        if (index >= layers.length - 1) return false; // Already at top
+        // Swap with next
+        [layers[index], layers[index + 1]] = [layers[index + 1], layers[index]];
+    } else if (direction === 'down') {
+        if (index <= 0) return false; // Already at bottom
+        // Swap with prev
+        [layers[index], layers[index - 1]] = [layers[index - 1], layers[index]];
+    } else {
+        return false;
+    }
+
+    updateLayerZIndices();
+    return true;
+}
+
 // ============================================
 // State Object to manage application state
 // ============================================
@@ -162,7 +176,7 @@ export const state = {
     translateY: 0,
 
     // Global History (unified, no per-layer stacks)
-    MAX_HISTORY: 15,
+    MAX_HISTORY: 10,
     undoStack: [],   // Each entry: Map<layerId, ImageBitmap>
     redoStack: [],
 
