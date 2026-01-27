@@ -905,6 +905,12 @@ async function handlePointerUp(e) {
     if (state.isSaveMode) return;
     e.preventDefault();
 
+    // Skip if this pointer was already processed (can happen when both
+    // pointerleave and pointerup fire for the same finger)
+    if (!state.activePointers.has(e.pointerId)) {
+        return;
+    }
+
     if (state.isPanning) {
         state.isPanning = false;
         eventCanvas.style.cursor = '';
@@ -943,13 +949,9 @@ async function handlePointerUp(e) {
                 undo();
                 updateAllThumbnails();
                 undoCalled = true;
-                // Reset maxFingers to prevent duplicate undo calls
-                // (can happen if event listeners fire multiple times)
-                state.maxFingers = 0;
             } else if (state.maxFingers === 3) {
                 redo();
                 updateAllThumbnails();
-                state.maxFingers = 0;
             }
         }
 
