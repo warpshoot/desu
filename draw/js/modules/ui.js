@@ -708,7 +708,10 @@ async function handlePointerDown(e) {
             } else {
                 state.drawingPending = true;
                 await saveState();
-                if (!state.drawingPending) return; // Aborted by 2nd finger
+                if (!state.drawingPending) {
+                    state.undoStack.pop(); // Revert save if aborted
+                    return;
+                }
                 state.drawingPending = false;
                 state.isErasing = true;
                 startPenDrawing(canvasPoint.x, canvasPoint.y);
@@ -719,7 +722,10 @@ async function handlePointerDown(e) {
             } else {
                 state.drawingPending = true;
                 await saveState();
-                if (!state.drawingPending) return; // Aborted by 2nd finger
+                if (!state.drawingPending) {
+                    state.undoStack.pop(); // Revert save if aborted
+                    return;
+                }
                 state.drawingPending = false;
                 startPenDrawing(canvasPoint.x, canvasPoint.y);
             }
@@ -911,7 +917,6 @@ async function handlePointerUp(e) {
                         fillPolygon(points);
                     }
                     updateLayerThumbnail(getActiveLayer());
-                    await saveState();
                 }
             } else if (state.isPenDrawing) {
                 await endPenDrawing();
