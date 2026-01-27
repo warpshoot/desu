@@ -721,9 +721,12 @@ async function handlePointerDown(e) {
                 startLasso(e.clientX, e.clientY);
             } else {
                 state.drawingPending = true;
+                console.log('[DEBUG] Before saveState, undoStack.length:', state.undoStack.length);
                 await saveState();
+                console.log('[DEBUG] After saveState, undoStack.length:', state.undoStack.length);
                 if (!state.drawingPending) {
                     state.undoStack.pop(); // Revert save if aborted
+                    console.log('[DEBUG] Drawing aborted, popped from undoStack');
                     return;
                 }
                 state.drawingPending = false;
@@ -885,9 +888,11 @@ async function handlePointerUp(e) {
 
         // Check for gestures (Undo/Redo)
         // Trigger if: short tap, no significant movement/interaction
+        console.log('[DEBUG] Undo check:', { duration, didInteract: state.didInteract, strokeMade: state.strokeMade, maxFingers: state.maxFingers, undoStackLength: state.undoStack.length });
         if (duration < 400 && !state.didInteract && !state.strokeMade) {
             // Note: maxFingers tracks maximum fingers seen during this touch session
             if (state.maxFingers === 2) {
+                console.log('[DEBUG] Calling undo()');
                 undo();
                 updateAllThumbnails();
             } else if (state.maxFingers === 3) {

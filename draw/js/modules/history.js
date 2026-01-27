@@ -60,11 +60,16 @@ export async function saveInitialState() {
  * Undo last action
  */
 export function undo() {
-    if (state.undoStack.length <= 1) return; // Keep at least initial state
+    console.log('[DEBUG] undo() called, undoStack.length:', state.undoStack.length);
+    if (state.undoStack.length <= 1) {
+        console.log('[DEBUG] undo() aborted, undoStack.length <= 1');
+        return; // Keep at least initial state
+    }
 
     const current = state.undoStack.pop();
     state.redoStack.push(current);
 
+    console.log('[DEBUG] Restoring snapshot, undoStack.length after pop:', state.undoStack.length);
     restoreSnapshot(current);
 }
 
