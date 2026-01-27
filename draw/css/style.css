@@ -402,7 +402,6 @@ body {
 #bgColorBtnWrapper {
     padding: 2px;
     border-radius: 50% !important;
-    overflow: hidden;
 }
 
 #bgColorBtn {

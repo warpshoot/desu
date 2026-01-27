@@ -782,7 +782,7 @@ async function handlePointerMove(e) {
         const distDelta = Math.abs(dist - state.initialPinchDist);
         const centerDelta = Math.hypot(center.x - state.initialPinchCenter.x, center.y - state.initialPinchCenter.y);
 
-        if (distDelta > 10 || centerDelta > 10) {
+        if (distDelta > 20 || centerDelta > 20) {
             state.isPinching = true;
             state.wasPinching = true;
             state.didInteract = true;
@@ -820,7 +820,7 @@ async function handlePointerMove(e) {
     }
 
     // Interaction threshold
-    if (pointer.totalMove > 5) {
+    if (pointer.totalMove > 20) {
         state.didInteract = true;
     }
 
@@ -849,7 +849,7 @@ async function handlePointerUp(e) {
     }
 
     const pointer = state.activePointers.get(e.pointerId);
-    if (pointer && pointer.totalMove > 8) {
+    if (pointer && pointer.totalMove > 20) {
         state.didInteract = true;
     }
 
