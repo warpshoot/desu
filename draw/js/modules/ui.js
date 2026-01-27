@@ -43,9 +43,10 @@ function updateDebugDisplay() {
 undoStack: ${state.undoStack.length}<br>
 redoStack: ${state.redoStack.length}<br>
 strokeMade: ${state.strokeMade}<br>
+didInteract: ${state.didInteract}<br>
+maxFingers: ${state.maxFingers}<br>
 isPenDrawing: ${state.isPenDrawing}<br>
-pencilDetected: ${state.pencilDetected}<br>
-activePointers: ${state.activePointers.size}
+pencilDetected: ${state.pencilDetected}
     `.trim();
 }
 
