@@ -1,44 +1,431 @@
-
 import {
     state,
-    lineCanvas, lassoCanvas, lassoCtx, eventCanvas,
-    canvasBg, roughCanvas, fillCanvas
+    layers,
+    lassoCanvas,
+    lassoCtx,
+    eventCanvas,
+    canvasBg,
+    layerContainer,
+    createLayer,
+    deleteLayer,
+    getLayer,
+    getActiveLayer,
+    getActiveLayerCtx,
+    getActiveLayerCanvas,
+    clearLayer,
+    MAX_LAYERS
 } from './state.js';
 import {
     startPenDrawing, drawPenLine, endPenDrawing
 } from './tools/pen.js';
 import {
     startLasso, updateLasso, finishLasso,
-    floodFill, floodFillTransparent, fillPolygonNoAA, fillPolygonTransparent
+    fillPolygon, fillPolygonTransparent, floodFill, floodFillTransparent
 } from './tools/fill.js';
+import { saveState, undo, redo, restoreLayer, resetHistory } from './history.js';
 import {
-    getCanvasPoint
-} from './utils.js';
-import {
-    undo, redo, saveState, saveAllStates, restoreLayer
-} from './history.js';
-import {
-    saveRegion, copyToClipboard, exitSaveMode
+    showSelectionUI, hideSelectionUI, confirmSelection, redoSelection,
+    saveSelectedRegion, saveAllCanvas, copyToClipboard, saveRegion
 } from './save.js';
 import { applyTransform, updateBackgroundColor, hexToRgba } from './canvas.js';
-
+import { getCanvasPoint } from './utils.js';
 
 // ============================================
 // UI Initializer
 // ============================================
 
 export function initUI() {
+    setupLayerPanel();
+    setupToolPanel();
     setupPointerEvents();
-    setupToolButtons();
     setupColorPickers();
-    setupLayerControls();
-    setupClearButtons(); // Added this as it was missing from init but defined
+    setupClearButtons();
     setupZoomControls();
     setupSaveUI();
     setupCreditModal();
     setupOrientationHandler();
     setupKeyboardShortcuts();
+}
+
+// ============================================
+// Layer Panel (Dynamic Layer Buttons)
+// ============================================
+
+function setupLayerPanel() {
+    const layerButtons = document.getElementById('layer-buttons');
+    const addBtn = document.getElementById('addLayerBtn');
+
+    // Re-render layer buttons
+    function renderLayerButtons() {
+        layerButtons.innerHTML = '';
+
+        for (const layer of layers) {
+            const btn = document.createElement('div');
+            btn.className = 'layer-btn' + (layer.id === state.activeLayer ? ' active' : '');
+            btn.dataset.layerId = layer.id;
+            btn.textContent = layer.id;
+
+            if (!layer.visible) {
+                btn.classList.add('hidden-layer');
+            }
+
+            btn.style.opacity = layer.opacity;
+
+            layerButtons.appendChild(btn);
+        }
+
+        // Show/hide add button based on max layers
+        addBtn.style.display = layers.length >= MAX_LAYERS ? 'none' : 'flex';
+    }
+
+    // Initial render
+    renderLayerButtons();
+
+    // Add layer button
+    addBtn.addEventListener('click', async () => {
+        const layer = createLayer();
+        if (layer) {
+            await resetHistory();
+            renderLayerButtons();
+            updateActiveLayerIndicator();
+        }
+    });
+
+    // Layer button click/long-press handlers
+    let longPressTimer = null;
+    let longPressTriggered = false;
+
+    layerButtons.addEventListener('pointerdown', (e) => {
+        const btn = e.target.closest('.layer-btn');
+        if (!btn) return;
+
+        longPressTriggered = false;
+        longPressTimer = setTimeout(() => {
+            longPressTriggered = true;
+            showLayerMenu(btn);
+        }, 500);
+    });
+
+    layerButtons.addEventListener('pointerup', (e) => {
+        clearTimeout(longPressTimer);
+        if (longPressTriggered) return;
+
+        const btn = e.target.closest('.layer-btn');
+        if (!btn) return;
+
+        // Close any open menus first
+        hideAllMenus();
+
+        // Quick tap: switch layer (and always flash)
+        const layerId = parseInt(btn.dataset.layerId);
+        flashLayer(layerId);
+
+        if (layerId !== state.activeLayer) {
+            state.activeLayer = layerId;
+            renderLayerButtons();
+            updateActiveLayerIndicator();
+        }
+    });
+
+    layerButtons.addEventListener('pointerleave', () => {
+        clearTimeout(longPressTimer);
+    });
+
+    layerButtons.addEventListener('pointercancel', () => {
+        clearTimeout(longPressTimer);
+    });
+
+    // Expose render function for external updates
+    window.renderLayerButtons = renderLayerButtons;
+}
+
+// ============================================
+// Tool Panel (Draw + Eraser)
+// ============================================
+
+function setupToolPanel() {
+    const drawBtn = document.getElementById('drawToolBtn');
+    const eraserBtn = document.getElementById('eraserToolBtn');
+
+    // Tool button click/long-press
+    let longPressTimer = null;
+    let longPressTriggered = false;
+
+    function setupToolButton(btn, menuId, isEraser) {
+        btn.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            longPressTriggered = false;
+            longPressTimer = setTimeout(() => {
+                longPressTriggered = true;
+                showToolMenu(menuId, btn);
+            }, 500);
+        });
+
+        btn.addEventListener('pointerup', () => {
+            clearTimeout(longPressTimer);
+            if (longPressTriggered) return;
+
+            // Quick tap: activate/toggle
+            if (isEraser) {
+                state.isEraserActive = true;
+                state.isErasing = true;
+            } else {
+                state.isEraserActive = false;
+                state.isErasing = false;
+            }
+            updateToolButtonStates();
+            updateBrushSizeSlider();
+        });
+
+        btn.addEventListener('pointerleave', () => clearTimeout(longPressTimer));
+        btn.addEventListener('pointercancel', () => clearTimeout(longPressTimer));
+    }
+
+    setupToolButton(drawBtn, 'draw-tool-menu', false);
+    setupToolButton(eraserBtn, 'eraser-tool-menu', true);
+
+    // Setup draw tool menu - toggle behavior
+    const drawMenu = document.getElementById('draw-tool-menu');
+    const drawModes = ['pen', 'fill', 'sketch'];
+    drawMenu.querySelectorAll('.menu-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const mode = item.dataset.mode;
+
+            // Toggle: if same tool, cycle to next
+            if (state.currentTool === mode && !state.isEraserActive) {
+                const currentIndex = drawModes.indexOf(mode);
+                state.currentTool = drawModes[(currentIndex + 1) % drawModes.length];
+            } else {
+                state.currentTool = mode;
+            }
+
+            state.isEraserActive = false;
+            state.isErasing = false;
+            updateDrawToolIcon();
+            updateToolButtonStates();
+            hideAllMenus();
+        });
+    });
+
+    // Setup eraser tool menu - toggle behavior (except layer_clear)
+    const eraserMenu = document.getElementById('eraser-tool-menu');
+    const eraserModes = ['eraser_lasso', 'eraser_pen'];
+    eraserMenu.querySelectorAll('.menu-item').forEach(item => {
+        item.addEventListener('click', async () => {
+            const mode = item.dataset.mode;
+
+            if (mode === 'layer_clear') {
+                // Instant layer clear - no toggle
+                await saveState();
+                clearLayer(state.activeLayer);
+                await saveState();
+                flashLayer(state.activeLayer);
+            } else if (eraserModes.includes(mode)) {
+                // Toggle: if same eraser mode, cycle to next
+                const eraserType = mode === 'eraser_lasso' ? 'lasso' : 'pen';
+                if (state.currentEraser === eraserType && state.isEraserActive) {
+                    const currentIndex = eraserModes.indexOf(mode);
+                    const nextMode = eraserModes[(currentIndex + 1) % eraserModes.length];
+                    state.currentEraser = nextMode === 'eraser_lasso' ? 'lasso' : 'pen';
+                } else {
+                    state.currentEraser = eraserType;
+                }
+                state.isEraserActive = true;
+                state.isErasing = true;
+                updateEraserToolIcon();
+                updateToolButtonStates();
+            }
+
+            hideAllMenus();
+        });
+    });
+
+    // Initial state
+    updateToolButtonStates();
+}
+
+function updateDrawToolIcon() {
+    const btn = document.getElementById('drawToolBtn');
+    btn.querySelectorAll('.tool-icon').forEach(icon => {
+        icon.style.display = 'none';
+        icon.classList.remove('active');
+    });
+
+    let selector;
+    switch (state.currentTool) {
+        case 'fill': selector = '.tool-fill'; break;
+        case 'sketch': selector = '.tool-sketch'; break;
+        default: selector = '.tool-pen'; break;
+    }
+
+    const activeIcon = btn.querySelector(selector);
+    if (activeIcon) {
+        activeIcon.style.display = 'block';
+        activeIcon.classList.add('active');
+    }
+}
+
+function updateEraserToolIcon() {
+    const btn = document.getElementById('eraserToolBtn');
+    btn.querySelectorAll('.tool-icon').forEach(icon => {
+        icon.style.display = 'none';
+        icon.classList.remove('active');
+    });
+
+    const selector = state.currentEraser === 'pen' ? '.eraser-pen' : '.eraser-lasso';
+    const activeIcon = btn.querySelector(selector);
+    if (activeIcon) {
+        activeIcon.style.display = 'block';
+        activeIcon.classList.add('active');
+    }
+}
+
+function updateToolButtonStates() {
+    const drawBtn = document.getElementById('drawToolBtn');
+    const eraserBtn = document.getElementById('eraserToolBtn');
+
+    drawBtn.classList.toggle('active', !state.isEraserActive);
+    eraserBtn.classList.toggle('active', state.isEraserActive);
+
     updateBrushSizeVisibility();
+}
+
+// ============================================
+// Tool Menus (Long Press Popovers)
+// ============================================
+
+function showToolMenu(menuId, anchorBtn) {
+    hideAllMenus();
+
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+
+    // Remove active class from all menu items
+    menu.querySelectorAll('.menu-item').forEach(item => {
+        item.classList.remove('active');
+    });
+
+    // Add active class to current tool
+    if (menuId === 'draw-tool-menu') {
+        const activeMode = state.currentTool;
+        const activeItem = menu.querySelector(`[data-mode="${activeMode}"]`);
+        if (activeItem) activeItem.classList.add('active');
+    } else if (menuId === 'eraser-tool-menu') {
+        const activeMode = state.currentEraser === 'lasso' ? 'eraser_lasso' : 'eraser_pen';
+        const activeItem = menu.querySelector(`[data-mode="${activeMode}"]`);
+        if (activeItem) activeItem.classList.add('active');
+    }
+
+    const rect = anchorBtn.getBoundingClientRect();
+    menu.style.left = rect.right + 10 + 'px';
+    menu.style.top = rect.top + 'px';
+    menu.classList.remove('hidden');
+
+    // Close on outside click
+    setTimeout(() => {
+        document.addEventListener('pointerdown', handleOutsideClick);
+    }, 10);
+}
+
+function showLayerMenu(anchorBtn) {
+    hideAllMenus();
+
+    const menu = document.getElementById('layer-menu');
+    const layerId = parseInt(anchorBtn.dataset.layerId);
+    const layer = getLayer(layerId);
+    if (!menu || !layer) return;
+
+    // Update slider value
+    const slider = document.getElementById('layerOpacitySlider');
+    slider.value = layer.opacity * 100;
+
+    // Update visibility toggle
+    const visToggle = menu.querySelector('.layer-visible-toggle');
+    visToggle.classList.toggle('hidden-state', !layer.visible);
+
+    // Store target layer
+    menu.dataset.targetLayerId = layerId;
+
+    const rect = anchorBtn.getBoundingClientRect();
+    menu.style.left = rect.right + 10 + 'px';
+    menu.style.top = rect.top + 'px';
+    menu.classList.remove('hidden');
+
+    // Setup menu actions
+    setupLayerMenuActions(menu, layerId);
+
+    setTimeout(() => {
+        document.addEventListener('pointerdown', handleOutsideClick);
+    }, 10);
+}
+
+function setupLayerMenuActions(menu, layerId) {
+    const slider = document.getElementById('layerOpacitySlider');
+    const visToggle = menu.querySelector('.layer-visible-toggle');
+    const deleteBtn = menu.querySelector('.layer-delete');
+
+    // Remove old listeners
+    const newSlider = slider.cloneNode(true);
+    slider.parentNode.replaceChild(newSlider, slider);
+
+    const newVisToggle = visToggle.cloneNode(true);
+    visToggle.parentNode.replaceChild(newVisToggle, visToggle);
+
+    const newDeleteBtn = deleteBtn.cloneNode(true);
+    deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+
+    // Opacity slider
+    newSlider.addEventListener('input', (e) => {
+        const layer = getLayer(layerId);
+        if (layer) {
+            layer.opacity = e.target.value / 100;
+            layer.canvas.style.opacity = layer.opacity;
+
+            const btn = document.querySelector(`.layer-btn[data-layer-id="${layerId}"]`);
+            if (btn) btn.style.opacity = layer.opacity;
+        }
+    });
+
+    // Visibility toggle
+    newVisToggle.addEventListener('click', () => {
+        const layer = getLayer(layerId);
+        if (layer) {
+            layer.visible = !layer.visible;
+            layer.canvas.style.display = layer.visible ? 'block' : 'none';
+            newVisToggle.classList.toggle('hidden-state', !layer.visible);
+
+            const btn = document.querySelector(`.layer-btn[data-layer-id="${layerId}"]`);
+            if (btn) btn.classList.toggle('hidden-layer', !layer.visible);
+        }
+    });
+
+    // Delete button
+    newDeleteBtn.addEventListener('click', async () => {
+        if (layers.length <= 1) return; // Can't delete last layer
+
+        if (deleteLayer(layerId)) {
+            await resetHistory();
+            window.renderLayerButtons();
+            updateActiveLayerIndicator();
+            hideAllMenus();
+        }
+    });
+
+    // Disable delete if only one layer
+    newDeleteBtn.classList.toggle('disabled', layers.length <= 1);
+}
+
+function hideAllMenus() {
+    document.querySelectorAll('.tool-menu').forEach(menu => {
+        menu.classList.add('hidden');
+    });
+    document.removeEventListener('pointerdown', handleOutsideClick);
+}
+
+function handleOutsideClick(e) {
+    if (!e.target.closest('.tool-menu') && !e.target.closest('.layer-btn') && !e.target.closest('.tool-btn')) {
+        hideAllMenus();
+    }
 }
 
 // ============================================
@@ -46,1008 +433,402 @@ export function initUI() {
 // ============================================
 
 function updateActiveLayerIndicator() {
-    const sketchBtn = document.getElementById('sketchBtn');
-    const fillBtn = document.getElementById('fillBtn');
-    const penBtn = document.getElementById('penBtn');
-    const penBtn2 = document.getElementById('penBtn2');
-    const penBtn3 = document.getElementById('penBtn3');
-
-    // Remove active class first
-    sketchBtn.classList.remove('layer-active');
-    fillBtn.classList.remove('layer-active');
-    if (penBtn) penBtn.classList.remove('layer-active');
-    if (penBtn2) penBtn2.classList.remove('layer-active');
-    if (penBtn3) penBtn3.classList.remove('layer-active');
-
-    // Only show indicator when eraser is active
-    if (state.currentTool === 'eraser') {
-        if (state.activeLayer === 'rough') {
-            sketchBtn.classList.add('layer-active');
-        } else if (state.activeLayer === 'fill') {
-            fillBtn.classList.add('layer-active');
-        } else if (state.activeLayer === 'line') {
-            if (penBtn) penBtn.classList.add('layer-active');
-        } else if (state.activeLayer === 'line2') {
-            if (penBtn2) penBtn2.classList.add('layer-active');
-        } else if (state.activeLayer === 'line3') {
-            if (penBtn3) penBtn3.classList.add('layer-active');
-        }
+    // Flash effect on layer switch
+    const layer = getActiveLayer();
+    if (layer) {
+        flashLayer(layer.id);
     }
 }
 
 function updateBrushSizeVisibility() {
-    const sizeSlider = document.getElementById('size-slider-container');
-    if (!sizeSlider) return;
+    const container = document.getElementById('size-slider-container');
 
-    if (state.currentTool === 'pen' || (state.currentTool === 'eraser' && state.eraserMode === 'pen')) {
-        sizeSlider.classList.remove('hidden');
-    } else {
-        sizeSlider.classList.add('hidden');
-    }
+    // Show slider always, but disable for lasso-based tools
+    const isPenMode = (state.currentTool === 'pen' || state.currentTool === 'sketch') && !state.isEraserActive;
+    const isEraserPen = state.isEraserActive && state.currentEraser === 'pen';
+
+    container.classList.toggle('disabled', !(isPenMode || isEraserPen));
 }
 
 function updateBrushSizeSlider() {
-    const brushSizeInput = document.getElementById('brushSize');
-    const sizeDisplay = document.getElementById('sizeDisplay');
-    if (!brushSizeInput || !sizeDisplay) return;
+    const slider = document.getElementById('brushSize');
+    const display = document.getElementById('sizeDisplay');
 
-    let size = state.penSize; // Default or fallback
-    if (state.currentTool === 'pen') {
-        size = state.penSize;
-    } else if (state.currentTool === 'eraser') {
-        size = state.eraserSize;
-    }
-
-    brushSizeInput.value = size;
-    sizeDisplay.textContent = size;
-}
-
-function switchLayer(newLayer) {
-    if (state.activeLayer === newLayer) return;
-
-    state.activeLayer = newLayer;
-
-    // Auto-switch tool if not using eraser
-    if (state.currentTool !== 'eraser') {
-        if (state.activeLayer === 'rough') {
-            state.currentTool = 'sketch';
-            document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
-            document.getElementById('sketchBtn').classList.add('active');
-        } else if (state.activeLayer === 'fill') {
-            state.currentTool = 'fill';
-            document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
-            document.getElementById('fillBtn').classList.add('active');
-        } else if (state.activeLayer === 'line') {
-            state.currentTool = 'pen';
-            document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
-            document.getElementById('penBtn').classList.add('active');
-        } else if (state.activeLayer === 'line2') {
-            state.currentTool = 'pen';
-            document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
-            document.getElementById('penBtn2').classList.add('active');
-        } else if (state.activeLayer === 'line3') {
-            state.currentTool = 'pen';
-            document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
-            document.getElementById('penBtn3').classList.add('active');
-        }
-    }
-
-    updateActiveLayerIndicator();
-    updateBrushSizeVisibility();
-    if (state.currentTool === 'pen') {
-        updateBrushSizeSlider();
+    if (state.isEraserActive) {
+        slider.value = state.eraserSize;
+        display.textContent = state.eraserSize;
+    } else {
+        slider.value = state.penSize;
+        display.textContent = state.penSize;
     }
 }
 
+function flashLayer(layerId) {
+    const layer = getLayer(layerId);
+    if (!layer) return;
+
+    const canvas = layer.canvas;
+
+    // Blue flash effect using CSS filter
+    canvas.style.transition = 'filter 0.1s';
+    canvas.style.filter = 'drop-shadow(0 0 6px #00aaff) brightness(1.2)';
+
+    setTimeout(() => {
+        canvas.style.filter = 'none';
+        setTimeout(() => {
+            canvas.style.transition = '';
+        }, 200);
+    }, 200);
+}
 
 // ============================================
 // Event Listeners Setup
 // ============================================
 
 function setupPointerEvents() {
-    // --- pointerdown ---
-    eventCanvas.addEventListener('pointerdown', (e) => {
-        if (state.isSaveMode) return;
+    eventCanvas.addEventListener('pointerdown', handlePointerDown);
+    eventCanvas.addEventListener('pointermove', handlePointerMove);
+    eventCanvas.addEventListener('pointerup', handlePointerUp);
+    eventCanvas.addEventListener('pointercancel', handlePointerCancel);
+    eventCanvas.addEventListener('pointerleave', handlePointerUp);
 
-        // Don't handle events from interactive UI elements (sliders, buttons)
-        // This prevents interference with UI controls, especially with pen tablets
-        // But still allow gesture detection (undo/redo) to work
-        const isInteractiveUI = e.target.tagName === 'INPUT' ||
-                                e.target.tagName === 'BUTTON' ||
-                                e.target.closest('.tool-btn') ||
-                                e.target.closest('.layer-visible-btn') ||
-                                e.target.closest('.save-btn') ||
-                                e.target.closest('.option-btn');
+    // Prevent context menu
+    eventCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        if (isInteractiveUI) return;
+    // Touch events for pinch zoom
+    eventCanvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    eventCanvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    eventCanvas.addEventListener('touchend', handleTouchEnd, { passive: false });
 
-        e.preventDefault();
-        eventCanvas.setPointerCapture(e.pointerId);
-        state.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-        // console.log('pointerdown - id:', e.pointerId, 'type:', e.pointerType);
-
-        if (e.pointerType === 'pen') {
-            state.pencilDetected = true;
-        }
-
-        if (state.activePointers.size === 1) {
-            state.touchStartTime = Date.now();
-            state.touchStartPos = { x: e.clientX, y: e.clientY };
-            state.maxFingers = 1;
-            state.isPinching = false;
-            state.strokeMade = false;
-        }
-        state.maxFingers = Math.max(state.maxFingers, state.activePointers.size);
-
-        // 2 fingers = Pinch/Pan
-        if (state.activePointers.size === 2) {
-            // Cancel any ongoing drawing immediately
-            if (state.isLassoing) {
-                state.isLassoing = false;
-                lassoCanvas.style.display = 'none';
-                lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
-            }
-            if (state.isPenDrawing) {
-                state.isPenDrawing = false;
-                state.lastPenPoint = null;
-                // Restore layer to remove the initial dot that was drawn
-                restoreLayer(state.activeLayer);
-            }
-
-            state.isPinching = false;
-
-            const pts = Array.from(state.activePointers.values());
-            state.lastPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-            state.lastPinchCenter = {
-                x: (pts[0].x + pts[1].x) / 2,
-                y: (pts[0].y + pts[1].y) / 2
-            };
-            state.initialPinchDist = state.lastPinchDist;
-            state.initialPinchCenter = { x: state.lastPinchCenter.x, y: state.lastPinchCenter.y };
-            return;
-        }
-
-        // Palm Mode (Space key)
-        if (state.activePointers.size === 1 && state.isSpacePressed) {
-            state.isPanning = true;
-            state.panStartX = e.clientX;
-            state.panStartY = e.clientY;
-            state.panStartTranslateX = state.translateX;
-            state.panStartTranslateY = state.translateY;
-            eventCanvas.style.cursor = 'grabbing';
-            return;
-        }
-
-        const canDraw = e.pointerType === 'pen' || e.pointerType === 'mouse' || (e.pointerType === 'touch' && !state.pencilDetected);
-
-        if (state.activePointers.size === 1 && canDraw) {
-            const p = getCanvasPoint(e.clientX, e.clientY);
-
-            // Register this pointer as the drawing pointer
-            state.drawingPointerId = e.pointerId;
-            state.totalDragDistance = 0;
-
-            if (state.currentTool === 'pen') {
-                state.isErasing = false;
-                startPenDrawing(p.x, p.y);
-            } else if (state.currentTool === 'eraser' && state.eraserMode === 'pen') {
-                state.isErasing = true;
-                startPenDrawing(p.x, p.y);
-            } else {
-                // sketch or lasso eraser
-                startLasso(e.clientX, e.clientY);
-            }
-        }
-    });
-
-    // --- pointermove ---
-    eventCanvas.addEventListener('pointermove', (e) => {
-        if (!state.activePointers.has(e.pointerId)) return;
-        if (state.isSaveMode) return;
-
-        e.preventDefault();
-        state.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-        // Pinch Zoom / Pan
-        if (state.activePointers.size === 2) {
-            const pts = Array.from(state.activePointers.values());
-            const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-            const center = {
-                x: (pts[0].x + pts[1].x) / 2,
-                y: (pts[0].y + pts[1].y) / 2
-            };
-
-            const distDelta = Math.abs(dist - state.initialPinchDist);
-            const centerDelta = Math.hypot(center.x - state.initialPinchCenter.x, center.y - state.initialPinchCenter.y);
-
-            if (distDelta > 10 || centerDelta > 10) {
-                state.isPinching = true;
-            }
-
-            if (state.isPinching) {
-                const zoomFactor = dist / state.lastPinchDist;
-                const oldScale = state.scale;
-                state.scale = Math.max(0.1, Math.min(20, state.scale * zoomFactor));
-
-                state.translateX = center.x - (center.x - state.translateX) * (state.scale / oldScale);
-                state.translateY = center.y - (center.y - state.translateY) * (state.scale / oldScale);
-
-                state.translateX += center.x - state.lastPinchCenter.x;
-                state.translateY += center.y - state.lastPinchCenter.y;
-
-                applyTransform();
-            }
-
-            state.lastPinchDist = dist;
-            state.lastPinchCenter = center;
-            return;
-        }
-
-        // Palm Pan
-        if (state.isPanning && state.activePointers.size === 1) {
-            state.translateX = state.panStartTranslateX + (e.clientX - state.panStartX);
-            state.translateY = state.panStartTranslateY + (e.clientY - state.panStartY);
-            applyTransform();
-            return;
-        }
-
-        // Drawing - Only process events from the registered drawing pointer
-        if (state.drawingPointerId === e.pointerId && state.activePointers.size === 1) {
-            const p = getCanvasPoint(e.clientX, e.clientY);
-
-            // Calculate distance for gesture handling
-            if (state.lastPenPoint) {
-                // Simple Manhattan distance for performance or Euclidian
-                state.totalDragDistance += Math.hypot(p.x - state.lastPenPoint.x, p.y - state.lastPenPoint.y);
-            }
-
-            if (state.isPenDrawing) {
-                drawPenLine(p.x, p.y);
-                state.strokeMade = true;
-            }
-
-            if (state.isLassoing) {
-                updateLasso(e.clientX, e.clientY);
-                state.strokeMade = true;
-            }
-        }
-    });
-
-    // --- pointerup ---
-    eventCanvas.addEventListener('pointerup', async (e) => {
-        if (state.isSaveMode) return;
-
-        // Don't handle events from interactive UI elements
-        const isInteractiveUI = e.target.tagName === 'INPUT' ||
-                                e.target.tagName === 'BUTTON' ||
-                                e.target.closest('.tool-btn') ||
-                                e.target.closest('.layer-visible-btn') ||
-                                e.target.closest('.save-btn') ||
-                                e.target.closest('.option-btn');
-
-        if (isInteractiveUI) return;
-
-        e.preventDefault();
-        let skipUndoGestureThisEvent = false;
-
-        if (state.isPanning) {
-            state.isPanning = false;
-            eventCanvas.style.cursor = state.isSpacePressed ? 'grab' : '';
-        }
-
-        if (state.isPenDrawing && state.activePointers.size === 1) {
-
-            // Check for valid undo gesture: 2 fingers, short duration, small drag distance
-            const duration = Date.now() - state.touchStartTime;
-            if (state.maxFingers === 2 && duration < 400 && state.totalDragDistance < 10) {
-                // It was likely a 2-finger tap for undo gesture
-                // Cancel the micro-stroke that may have started
-                state.isPenDrawing = false;
-                state.lastPenPoint = null;
-                // Restore layer to last saved state to discard micro-stroke
-                restoreLayer(state.activeLayer);
-                // Don't skip undo gesture - let it execute below
-                skipUndoGestureThisEvent = false;
-            } else {
-                await endPenDrawing();
-                skipUndoGestureThisEvent = true;
-            }
-        }
-
-        if (state.isLassoing) {
-            // Check if this was a 2-finger gesture (pan/pinch) - cancel the lasso if so
-            const duration = Date.now() - state.touchStartTime;
-            if (state.maxFingers === 2 && duration < 400 && state.totalDragDistance < 10) {
-                // It was likely a 2-finger tap/pan attempt - cancel the micro-lasso
-                state.isLassoing = false;
-                state.lassoPoints = [];
-                lassoCanvas.style.display = 'none';
-                lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
-                // Don't skip undo gesture - let it execute below
-                skipUndoGestureThisEvent = false;
-            } else if (state.maxFingers >= 2 && state.isPinching) {
-                // User performed pinch/pan - cancel lasso silently
-                state.isLassoing = false;
-                state.lassoPoints = [];
-                lassoCanvas.style.display = 'none';
-                lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
-                skipUndoGestureThisEvent = true;
-            } else {
-                // Normal lasso finish - tap detection or lasso completion
-                // Calculate total distance to differentiate tap vs lasso
-                let totalDist = 0;
-                if (state.lassoPoints.length > 0) {
-                    totalDist = state.lassoPoints.reduce((acc, p, i) => {
-                        if (i === 0) return 0;
-                        const prev = state.lassoPoints[i - 1];
-                        return acc + Math.hypot(p.x - prev.x, p.y - prev.y);
-                    }, 0);
-                }
-
-            if (totalDist < 20 && state.lassoPoints.length > 0) {
-                // Tap detected
-                if (state.currentTool === 'eraser') {
-                    const p = getCanvasPoint(state.lassoPoints[0].x, state.lassoPoints[0].y);
-                    floodFillTransparent(p.x, p.y);
-                    saveState();
-                    state.strokeMade = true;
-                } else if (state.currentTool === 'fill') {
-                    // Hybrid Fill: Tap => Bucket Fill (Black)
-                    const p = getCanvasPoint(state.lassoPoints[0].x, state.lassoPoints[0].y);
-                    floodFill(p.x, p.y, [0, 0, 0, 255]);
-                    saveState();
-                    state.strokeMade = true;
-                } else if (state.currentTool === 'sketch') {
-                    // Hybrid Sketch: Tap => Bucket Fill (Grey Transparent)
-                    const p = getCanvasPoint(state.lassoPoints[0].x, state.lassoPoints[0].y);
-                    floodFill(p.x, p.y, [128, 128, 128, 51]); // 20% alpha approx (51/255)
-                    // Note: floodFill function assumes opaque override? Need to check fill.js
-                    // fillPolygonNoAA handles transparent blend. 
-                    // floodFill function normally takes [r,g,b,a] and replaces?
-                    // If floodFill is opaque replacement, it might not blend.
-                    // For now, let's try. Ideally we use a blend-aware floodfill.
-                    // The standard floodFill replaces pixels matching target color.
-                    // If we want transparency blend, floodFill algorithm needs update.
-                    // But for now let's apply the color.
-                    floodFill(p.x, p.y, [128, 128, 128, 51]);
-                    saveState();
-                    state.strokeMade = true;
-                }
-
-                // Reset lasso state
-                state.isLassoing = false;
-                state.lassoPoints = [];
-                lassoCanvas.style.display = 'none';
-            } else {
-                // Regular lasso finish
-                const canvasPoints = finishLasso();
-
-                if (canvasPoints && canvasPoints.length >= 3) {
-                    if (state.currentTool === 'sketch') {
-                        // 20%透明度のグレー、アンチエイリアスなし
-                        fillPolygonNoAA(canvasPoints, 128, 128, 128, 0.2);
-                        saveState();
-                        state.strokeMade = true;
-                    } else if (state.currentTool === 'fill' || state.currentTool === 'pen') {
-                        // ベタ塗り系: 100%黒
-                        // 'pen' might reach here if we allow lassoing with pen tool (e.g. by modifier? or if logic falls through)
-                        // But Pen uses startPenDrawing. 
-                        // If 'fill' tool: fills black.
-                        fillPolygonNoAA(canvasPoints, 0, 0, 0, 1.0);
-                        saveState();
-                        state.strokeMade = true;
-                    } else if (state.currentTool === 'eraser') {
-                        // ... existing eraser logic ...
-                        if (state.activeLayer === 'line' || state.activeLayer === 'fill' || state.activeLayer === 'line2' || state.activeLayer === 'line3' || state.activeLayer === 'rough') {
-                            fillPolygonTransparent(canvasPoints);
-                        } else {
-                            fillPolygonNoAA(canvasPoints, 255, 255, 255, 1.0);
-                        }
-                        saveState();
-                        state.strokeMade = true;
-                    }
-                }
-            }
-            } // End of lasso handling else block
-        }
-
-        state.activePointers.delete(e.pointerId);
-
-        const wasOneFingerDrawing = state.maxFingers === 1 && state.strokeMade;
-
-        if (state.activePointers.size === 0) {
-            const duration = Date.now() - state.touchStartTime;
-
-            if (state.maxFingers >= 2 && duration < 400 && !state.isPinching && !state.strokeMade && !skipUndoGestureThisEvent) {
-                if (state.maxFingers === 2) undo();
-                if (state.maxFingers === 3) redo();
-            }
-
-            state.maxFingers = 0;
-            state.touchStartPos = null;
-            state.strokeMade = false;
-            state.isPinching = false;
-        } else if (wasOneFingerDrawing && state.activePointers.size > 0) {
-            state.activePointers.clear();
-            state.maxFingers = 0;
-            state.touchStartPos = null;
-            state.strokeMade = false;
-            state.isPinching = false;
-        }
-    });
-
-    eventCanvas.addEventListener('pointercancel', (e) => {
-        // Don't handle events from interactive UI elements
-        const isInteractiveUI = e.target.tagName === 'INPUT' ||
-                                e.target.tagName === 'BUTTON' ||
-                                e.target.closest('.tool-btn') ||
-                                e.target.closest('.layer-visible-btn') ||
-                                e.target.closest('.save-btn') ||
-                                e.target.closest('.option-btn');
-
-        if (isInteractiveUI) return;
-
-        state.activePointers.delete(e.pointerId);
-        state.isLassoing = false;
-        state.isPenDrawing = false;
-        state.isPinching = false;
-        lassoCanvas.style.display = 'none';
-    });
-
-    // Ctrl + Space + Click: Zoom in/out
-    eventCanvas.addEventListener('click', (e) => {
-        if (state.isSaveMode) return;
-
-        // Don't handle events from interactive UI elements
-        const isInteractiveUI = e.target.tagName === 'INPUT' ||
-                                e.target.tagName === 'BUTTON' ||
-                                e.target.closest('.tool-btn') ||
-                                e.target.closest('.layer-visible-btn') ||
-                                e.target.closest('.save-btn') ||
-                                e.target.closest('.option-btn');
-
-        if (isInteractiveUI) return;
-
-        if (state.activePointers.size === 0) {
-            // Skip click if panning or pinching occurred
-            if (state.isPanning || state.isPinching) {
-                return;
-            }
-
-            // Ctrl + Space + Click: Zoom in/out
-            if (state.isCtrlPressed && state.isSpacePressed) {
-                e.preventDefault();
-                const zoomAmount = state.isAltPressed ? 0.8 : 1.25;
-                const oldScale = state.scale;
-                state.scale = Math.max(0.1, Math.min(20, state.scale * zoomAmount));
-
-                const centerX = e.clientX;
-                const centerY = e.clientY;
-
-                state.translateX = centerX - (centerX - state.translateX) * (state.scale / oldScale);
-                state.translateY = centerY - (centerY - state.translateY) * (state.scale / oldScale);
-
-                applyTransform();
-            }
-        }
-    });
+    // Wheel for zoom
+    eventCanvas.addEventListener('wheel', handleWheel, { passive: false });
 }
 
-// Long Press State
-let currentMenuTargetBtn = null;
+async function handlePointerDown(e) {
+    if (state.isSaveMode) return;
 
-function setupToolButtons() {
-    // Menu item click handlers (Event Delegation)
-    const menuContainer = document.getElementById('tool-mode-menu');
-    if (menuContainer) {
-        menuContainer.addEventListener('click', (e) => {
-            const item = e.target.closest('.menu-item');
-            if (!item) return;
+    // Track active pointers
+    state.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-            e.stopPropagation(); // prevent closing immediately
-            const mode = item.dataset.mode;
-            if (currentMenuTargetBtn && mode) {
-                applyToolMode(currentMenuTargetBtn, mode);
-                hideToolMenu();
-            }
-        });
+    // Detect pencil
+    if (e.pointerType === 'pen') {
+        state.pencilDetected = true;
     }
 
-    // Close menu on outside click
-    document.addEventListener('pointerdown', (e) => {
-        if (!e.target.closest('#tool-mode-menu') &&
-            !e.target.closest('.tool-btn') &&
-            document.getElementById('tool-mode-menu').classList.contains('visible')) {
-            hideToolMenu();
-        }
-    });
+    // Zoom with Ctrl + Space + Click (zoom in) or Ctrl + Space + Alt + Click (zoom out)
+    if (state.isSpacePressed && state.isCtrlPressed) {
+        const zoomFactor = state.isAltPressed ? 0.8 : 1.25;
+        const newScale = Math.max(0.1, Math.min(10, state.scale * zoomFactor));
 
-    document.querySelectorAll('[data-tool]').forEach(btn => {
-        let isLongPressActive = false;
-        let longPressTimer = null;
+        // Zoom centered on click position
+        const clickX = e.clientX;
+        const clickY = e.clientY;
 
-        // Pointer Down: Start Timer
-        btn.addEventListener('pointerdown', (e) => {
-            if (e.target.closest('.tool-tooltip')) return; // Ignore tooltip clicks if any
+        // Calculate the point in canvas space before zoom
+        const canvasX = (clickX - state.translateX) / state.scale;
+        const canvasY = (clickY - state.translateY) / state.scale;
 
-            isLongPressActive = false;
-            longPressTimer = setTimeout(() => {
-                isLongPressActive = true;
-                showToolMenu(btn);
-            }, 400); // Reduced to 400ms for better feel
-        });
+        // Update scale
+        state.scale = newScale;
 
-        // Pointer Up/Leave/Cancel: Cancel Timer
-        const cancelTimer = () => {
-            if (longPressTimer) {
-                clearTimeout(longPressTimer);
-                longPressTimer = null;
-            }
-        };
-        btn.addEventListener('pointerup', cancelTimer);
-        btn.addEventListener('pointerleave', cancelTimer);
-        btn.addEventListener('pointercancel', cancelTimer); // Handle cancellation
+        // Adjust translation so the click point stays under the cursor
+        state.translateX = clickX - canvasX * state.scale;
+        state.translateY = clickY - canvasY * state.scale;
 
-        // Click Handler (Short Tap)
-        btn.addEventListener('click', (e) => {
-            if (isLongPressActive) {
-                // Ignore click if long press triggered
-                e.stopPropagation();
-                e.preventDefault();
-                isLongPressActive = false;
-                return;
-            }
-
-            // --- Existing Tap Logic ---
-            const wasActive = btn.classList.contains('active');
-            const toolType = btn.dataset.tool;
-
-            if (wasActive) {
-                if (btn.id === 'eraserBtn' || toolType === 'eraser') {
-                    // Eraser Toggle Logic
-                    const nextMode = state.eraserMode === 'lasso' ? 'eraser_pen' : 'eraser_lasso';
-                    applyToolMode(btn, nextMode);
-                    return;
-                }
-
-                // 3-Way Toggle for Layer Buttons (Pen/Fill/Sketch)
-                // Cycle: pen -> fill -> sketch -> pen ...
-
-                // Determine current mode
-                let currentMode = 'pen';
-                // Check classes first
-                if (btn.classList.contains('fill-mode')) currentMode = 'fill';
-                else if (btn.classList.contains('sketch-mode')) currentMode = 'sketch';
-                else if (btn.classList.contains('pen-mode')) currentMode = 'pen';
-                else {
-                    const type = btn.dataset.tool;
-                    if (type === 'fill') currentMode = 'fill';
-                    else if (type === 'sketch') currentMode = 'sketch';
-                    else currentMode = 'pen';
-                }
-
-                let nextMode = 'pen';
-                if (currentMode === 'pen') nextMode = 'fill';
-                else if (currentMode === 'fill') nextMode = 'sketch';
-                else if (currentMode === 'sketch') nextMode = 'pen';
-
-                applyToolMode(btn, nextMode);
-                return;
-            }
-
-            // --- Switch Tool (Inactive -> Active) ---
-            activateTool(btn);
-        });
-    });
-
-    // Sync Initial State from HTML
-    const activeBtn = document.querySelector('.tool-btn.active');
-    if (activeBtn) {
-        activateTool(activeBtn);
-    }
-}
-
-function activateTool(btn) {
-    const toolType = btn.dataset.tool;
-
-    // Check button state to set correct tool
-    let selectedTool = 'pen'; // Default
-    if (toolType === 'eraser') selectedTool = 'eraser';
-    else if (btn.classList.contains('fill-mode')) selectedTool = 'fill';
-    else if (btn.classList.contains('sketch-mode')) selectedTool = 'sketch';
-    else if (btn.classList.contains('pen-mode')) selectedTool = 'pen';
-    else {
-        // Fallback to data-tool
-        const type = btn.dataset.tool;
-        if (type === 'fill') selectedTool = 'fill';
-        else if (type === 'sketch') selectedTool = 'sketch';
-        else selectedTool = 'pen';
-    }
-
-    state.currentTool = selectedTool;
-
-    if (btn.dataset.layer) {
-        state.activeLayer = btn.dataset.layer;
-    }
-
-    document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-
-    updateActiveLayerIndicator();
-    updateBrushSizeVisibility();
-    updateBrushSizeSlider();
-
-    // Flash the layer to indicate selection (Only on Activation)
-    if (btn.dataset.layer) {
-        flashLayer(btn.dataset.layer);
-    }
-}
-
-// Helper to apply mode logic (used by both Cycle and Menu)
-function applyToolMode(btn, mode) {
-    // Check if Eraser Mode
-    if (mode === 'eraser_lasso' || mode === 'eraser_pen') {
-        state.eraserMode = (mode === 'eraser_pen') ? 'pen' : 'lasso';
-        const tooltip = btn.querySelector('.tool-tooltip');
-
-        if (state.eraserMode === 'pen') {
-            btn.classList.add('pen-mode');
-            if (tooltip) tooltip.textContent = '消ペン (6)';
-        } else {
-            btn.classList.remove('pen-mode');
-            if (tooltip) tooltip.textContent = '投げ縄消し/消しつぶし (6)';
-        }
-
-        // Active tool update if currently active
-        // state.currentTool is simply 'eraser' for both, but behavior depends on eraserMode
-        if (btn.classList.contains('active')) {
-            updateBrushSizeSlider(); // Brush size might change context
-            updateBrushSizeVisibility();
-        }
+        applyTransform();
         return;
     }
 
-    // Normal Tool Modes
-    // Reset Classes
-    btn.classList.remove('fill-mode', 'sketch-mode', 'pen-mode');
-
-    let nextTool = 'pen';
-    let tooltipText = '';
-
-    let shortcut = '';
-    if (btn.id === 'penBtn') shortcut = ' (1)';
-    else if (btn.id === 'penBtn2') shortcut = ' (2)';
-    else if (btn.id === 'penBtn3') shortcut = ' (3)';
-    else if (btn.id === 'fillBtn') shortcut = ' (4)';
-    else if (btn.id === 'sketchBtn') shortcut = ' (5)';
-    else if (btn.id === 'eraserBtn') shortcut = ' (6)';
-
-    if (mode === 'pen') {
-        nextTool = 'pen';
-        tooltipText = 'ペン' + shortcut;
-    } else if (mode === 'fill') {
-        nextTool = 'fill';
-        tooltipText = '投げ縄塗り/塗りつぶし' + shortcut;
-    } else if (mode === 'sketch') {
-        nextTool = 'sketch';
-        tooltipText = '薄投げ縄塗り/薄塗りつぶし' + shortcut;
+    // Pan with space or two fingers
+    if (state.isSpacePressed || state.activePointers.size > 1) {
+        state.isPanning = true;
+        state.panStartX = e.clientX;
+        state.panStartY = e.clientY;
+        state.panStartTranslateX = state.translateX;
+        state.panStartTranslateY = state.translateY;
+        return;
     }
 
-    // Add Mode Class
-    if (mode === 'fill') btn.classList.add('fill-mode');
-    else if (mode === 'sketch') btn.classList.add('sketch-mode');
-    else if (mode === 'pen') btn.classList.add('pen-mode');
+    // Record touch start info
+    state.touchStartTime = Date.now();
+    state.touchStartPos = { x: e.clientX, y: e.clientY };
+    state.totalDragDistance = 0;
+    state.drawingPointerId = e.pointerId;
+    state.strokeMade = false;
 
-    // Update State (only if button is active)
-    if (btn.classList.contains('active')) {
-        state.currentTool = nextTool;
-        updateBrushSizeVisibility();
-        updateBrushSizeSlider();
-    }
+    const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
-    // Update Tooltip
-    const tooltip = btn.querySelector('.tool-tooltip');
-    if (tooltip) tooltip.textContent = tooltipText;
-
-    // NO Flash here (per user request: only on tool switch, not mode switch)
-}
-
-function showToolMenu(btn) {
-    // Auto-activate tool if not active
-    if (!btn.classList.contains('active')) {
-        activateTool(btn);
-    }
-
-    const menu = document.getElementById('tool-mode-menu');
-    currentMenuTargetBtn = btn;
-
-    // Determine Menu Type (Eraser vs Drawing)
-    const isEraser = (btn.id === 'eraserBtn' || btn.dataset.tool === 'eraser');
-
-    // Toggle Menu Items Visibility
-    if (isEraser) {
-        menu.querySelectorAll('.drawing-mode').forEach(el => el.style.display = 'none');
-        menu.querySelectorAll('.eraser-mode').forEach(el => el.style.display = 'flex');
+    // Determine action based on tool
+    if (state.isEraserActive) {
+        // Eraser mode
+        if (state.currentEraser === 'lasso') {
+            startLasso(e.clientX, e.clientY);
+        } else {
+            // Pen eraser
+            await saveState();
+            state.isErasing = true;
+            startPenDrawing(canvasPoint.x, canvasPoint.y);
+        }
     } else {
-        menu.querySelectorAll('.drawing-mode').forEach(el => el.style.display = 'flex');
-        menu.querySelectorAll('.eraser-mode').forEach(el => el.style.display = 'none');
-    }
-
-    // Highlight current selection
-    menu.querySelectorAll('.menu-item').forEach(item => item.classList.remove('selected'));
-
-    let currentMode;
-    if (isEraser) {
-        currentMode = (state.eraserMode === 'pen') ? 'eraser_pen' : 'eraser_lasso';
-    } else {
-        currentMode = 'pen';
-        if (btn.classList.contains('fill-mode')) currentMode = 'fill';
-        else if (btn.classList.contains('sketch-mode')) currentMode = 'sketch';
-        else if (btn.classList.contains('pen-mode')) currentMode = 'pen';
-        else {
-            const type = btn.dataset.tool;
-            if (type === 'fill') currentMode = 'fill';
-            else if (type === 'sketch') currentMode = 'sketch';
+        // Drawing mode
+        if (state.currentTool === 'fill' || state.currentTool === 'sketch') {
+            // Lasso fill
+            startLasso(e.clientX, e.clientY);
+        } else {
+            // Pen drawing
+            await saveState();
+            startPenDrawing(canvasPoint.x, canvasPoint.y);
         }
     }
 
-    const selectedItem = menu.querySelector(`.menu-item[data-mode="${currentMode}"]`);
-    if (selectedItem) selectedItem.classList.add('selected');
-
-    // Position Menu
-    const rect = btn.getBoundingClientRect();
-    const isLeft = rect.left < window.innerWidth / 2;
-    const isBottom = rect.top > window.innerHeight / 2;
-
-    // Horizontal
-    if (isLeft) {
-        menu.style.left = `${rect.right + 10}px`;
-        menu.style.right = 'auto';
-    } else {
-        menu.style.right = `${window.innerWidth - rect.left + 10}px`;
-        menu.style.left = 'auto';
-    }
-
-    // Vertical
-    if (isBottom) {
-        // Show upwards from bottom aligned with button bottom
-        menu.style.bottom = `${window.innerHeight - rect.bottom}px`;
-        menu.style.top = 'auto';
-    } else {
-        // Show downwards from top
-        menu.style.top = `${rect.top}px`;
-        menu.style.bottom = 'auto';
-    }
-
-    menu.classList.remove('hidden');
-    requestAnimationFrame(() => menu.classList.add('visible'));
+    state.strokeMade = true;
 }
 
-function hideToolMenu() {
-    const menu = document.getElementById('tool-mode-menu');
-    menu.classList.remove('visible');
-    setTimeout(() => {
-        if (!menu.classList.contains('visible')) {
-            // menu.classList.add('hidden'); // hidden class logic handled by opacity transition?
-            // Actually hidden class is good for pointer events.
-            // But CSS handles opacity. Let's just keep it simple.
+async function handlePointerMove(e) {
+    if (state.isSaveMode) return;
+
+    // Update pointer position
+    if (state.activePointers.has(e.pointerId)) {
+        state.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+
+    // Calculate drag distance
+    if (state.touchStartPos) {
+        const dx = e.clientX - state.touchStartPos.x;
+        const dy = e.clientY - state.touchStartPos.y;
+        state.totalDragDistance += Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // Pan
+    if (state.isPanning) {
+        state.translateX = state.panStartTranslateX + (e.clientX - state.panStartX);
+        state.translateY = state.panStartTranslateY + (e.clientY - state.panStartY);
+        applyTransform();
+        return;
+    }
+
+    // Only handle drawing pointer
+    if (e.pointerId !== state.drawingPointerId) return;
+
+    const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
+
+    if (state.isLassoing) {
+        updateLasso(e.clientX, e.clientY);
+    } else if (state.isPenDrawing) {
+        drawPenLine(canvasPoint.x, canvasPoint.y);
+    }
+}
+
+async function handlePointerUp(e) {
+    state.activePointers.delete(e.pointerId);
+
+    if (state.isPanning && state.activePointers.size === 0) {
+        state.isPanning = false;
+        return;
+    }
+
+    if (e.pointerId !== state.drawingPointerId) return;
+    state.drawingPointerId = null;
+
+    const touchDuration = Date.now() - state.touchStartTime;
+    const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
+
+    // Check for two-finger tap (undo) - only if no stroke made
+    if (state.maxFingers >= 2 && touchDuration < 300 && state.totalDragDistance < 20 && !state.strokeMade) {
+        undo();
+        state.maxFingers = 0;
+        return;
+    }
+
+    state.maxFingers = 0;
+
+    // Finish current operation
+    if (state.isLassoing) {
+        const points = finishLasso();
+        if (points && points.length >= 3) {
+            await saveState();
+
+            if (state.isEraserActive) {
+                fillPolygonTransparent(points);
+            } else {
+                fillPolygon(points);
+            }
+
+            await saveState();
         }
-    }, 200);
+    } else if (state.isPenDrawing) {
+        await endPenDrawing();
+    }
+
+    // Handle tap for flood fill
+    if (state.currentTool === 'fill' && !state.isEraserActive && touchDuration < 200 && state.totalDragDistance < 10) {
+        await saveState();
+        const color = hexToRgba('#000000', 255);
+        floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), color);
+        await saveState();
+    }
+
+    state.isErasing = false;
 }
 
-function flashLayer(layerName) {
-    const layerMap = {
-        'rough': 'canvas-rough',
-        'fill': 'canvas-fill',
-        'line': 'canvas-line',
-        'line2': 'canvas-line-2',
-        'line3': 'canvas-line-3'
-    };
+function handlePointerCancel(e) {
+    state.activePointers.delete(e.pointerId);
 
-    const canvasId = layerMap[layerName];
-    if (!canvasId) return;
+    if (state.isLassoing) {
+        const layer = getActiveLayer();
+        if (layer) restoreLayer(layer.id);
+        finishLasso();
+    }
 
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
+    if (state.isPenDrawing) {
+        const layer = getActiveLayer();
+        if (layer) restoreLayer(layer.id);
+        state.isPenDrawing = false;
+        state.lastPenPoint = null;
+    }
 
-    // Reset animation
-    canvas.classList.remove('layer-flash');
-    void canvas.offsetWidth; // Trigger reflow
-
-    // Start animation
-    canvas.classList.add('layer-flash');
-
-    // Remove class after animation ends to clean up
-    setTimeout(() => {
-        canvas.classList.remove('layer-flash');
-    }, 500);
+    state.drawingPointerId = null;
+    state.isPanning = false;
+    state.isErasing = false;
 }
 
-function hideAllOpacitySliders() {
-    document.querySelectorAll('.opacity-slider-container').forEach(c => c.classList.remove('visible'));
+// Touch handlers for pinch zoom
+function handleTouchStart(e) {
+    state.maxFingers = Math.max(state.maxFingers, e.touches.length);
+
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        state.isPinching = true;
+
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+
+        state.initialPinchDist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+        state.initialPinchCenter = {
+            x: (touch1.clientX + touch2.clientX) / 2,
+            y: (touch1.clientY + touch2.clientY) / 2
+        };
+        state.lastPinchDist = state.initialPinchDist;
+        state.lastPinchCenter = { ...state.initialPinchCenter };
+    }
 }
 
-function showOpacitySlider(containerId) {
-    hideAllOpacitySliders();
-    const container = document.getElementById(containerId);
-    if (container) container.classList.add('visible');
+function handleTouchMove(e) {
+    if (state.isPinching && e.touches.length === 2) {
+        e.preventDefault();
+
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+
+        const currentDist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+        const currentCenter = {
+            x: (touch1.clientX + touch2.clientX) / 2,
+            y: (touch1.clientY + touch2.clientY) / 2
+        };
+
+        // Zoom
+        const scaleFactor = currentDist / state.lastPinchDist;
+        const newScale = Math.min(Math.max(state.scale * scaleFactor, 0.1), 10);
+
+        // Pan
+        const dx = currentCenter.x - state.lastPinchCenter.x;
+        const dy = currentCenter.y - state.lastPinchCenter.y;
+
+        // Adjust for zoom center
+        const zoomCenterX = currentCenter.x - state.translateX;
+        const zoomCenterY = currentCenter.y - state.translateY;
+
+        state.translateX += dx + zoomCenterX * (1 - scaleFactor);
+        state.translateY += dy + zoomCenterY * (1 - scaleFactor);
+        state.scale = newScale;
+
+        state.lastPinchDist = currentDist;
+        state.lastPinchCenter = currentCenter;
+
+        applyTransform();
+    }
 }
+
+function handleTouchEnd(e) {
+    if (e.touches.length < 2) {
+        state.isPinching = false;
+    }
+}
+
+function handleWheel(e) {
+    e.preventDefault();
+
+    const zoomSpeed = 0.001;
+    const delta = -e.deltaY * zoomSpeed;
+    const newScale = Math.min(Math.max(state.scale * (1 + delta), 0.1), 10);
+
+    // Zoom centered on mouse position
+    const rect = eventCanvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const scaleFactor = newScale / state.scale;
+    state.translateX = mouseX - (mouseX - state.translateX) * scaleFactor;
+    state.translateY = mouseY - (mouseY - state.translateY) * scaleFactor;
+    state.scale = newScale;
+
+    applyTransform();
+}
+
+// ============================================
+// Color Pickers
+// ============================================
 
 function setupColorPickers() {
-    const bgBtn = document.getElementById('bgColorBtn');
+    const bgColorBtn = document.getElementById('bgColorBtn');
 
-    if (bgBtn) {
-        bgBtn.addEventListener('input', (e) => {
-            updateBackgroundColor(e.target.value);
-        });
-        bgBtn.addEventListener('change', (e) => {
-            saveState();
-        });
-    }
-}
-
-function setupLayerControls() {
-    // Visibility Toggles + Long Press for Opacity Slider
-    const layerConfig = [
-        { btnId: 'lineVisibleBtn', stateKey: 'lineVisible', canvasEl: lineCanvas, sliderId: 'lineOpacityContainer' },
-        { btnId: 'line2VisibleBtn', stateKey: 'line2Visible', canvasId: 'canvas-line-2', sliderId: 'line2OpacityContainer' },
-        { btnId: 'line3VisibleBtn', stateKey: 'line3Visible', canvasId: 'canvas-line-3', sliderId: 'line3OpacityContainer' },
-        { btnId: 'fillVisibleBtn', stateKey: 'fillVisible', canvasEl: fillCanvas, sliderId: 'fillOpacityContainer' },
-        { btnId: 'roughVisibleBtn', stateKey: 'roughVisible', canvasEl: roughCanvas, sliderId: 'roughOpacityContainer' }
-    ];
-
-    layerConfig.forEach(({ btnId, stateKey, canvasEl, canvasId, sliderId }) => {
-        const btn = document.getElementById(btnId);
-        if (!btn) return;
-
-        let longPressTimer = null;
-        let isLongPress = false;
-
-        btn.addEventListener('pointerdown', () => {
-            isLongPress = false;
-            longPressTimer = setTimeout(() => {
-                isLongPress = true;
-                showOpacitySlider(sliderId);
-            }, 400);
-        });
-
-        const cancelTimer = () => {
-            if (longPressTimer) {
-                clearTimeout(longPressTimer);
-                longPressTimer = null;
-            }
-        };
-        btn.addEventListener('pointerup', cancelTimer);
-        btn.addEventListener('pointerleave', cancelTimer);
-        btn.addEventListener('pointercancel', cancelTimer);
-
-        btn.addEventListener('click', () => {
-            if (isLongPress) {
-                isLongPress = false;
-                return;
-            }
-            state[stateKey] = !state[stateKey];
-            const canvas = canvasEl || document.getElementById(canvasId);
-            canvas.style.display = state[stateKey] ? 'block' : 'none';
-            btn.classList.toggle('hidden', !state[stateKey]);
-        });
+    bgColorBtn.addEventListener('input', (e) => {
+        updateBackgroundColor(e.target.value);
     });
 
-    // Dismiss opacity slider on outside click
-    document.addEventListener('pointerdown', (e) => {
-        if (!e.target.closest('.opacity-slider-container') && !e.target.closest('.layer-visible-btn')) {
-            hideAllOpacitySliders();
+    // Brush size slider
+    const brushSizeSlider = document.getElementById('brushSize');
+    const sizeDisplay = document.getElementById('sizeDisplay');
+
+    brushSizeSlider.addEventListener('input', (e) => {
+        const size = parseInt(e.target.value);
+        sizeDisplay.textContent = size;
+
+        if (state.isEraserActive) {
+            state.eraserSize = size;
+        } else {
+            state.penSize = size;
         }
     });
-
-    // Opacity Sliders
-    const roughOpacityInput = document.getElementById('roughOpacity');
-    if (roughOpacityInput) {
-        roughOpacityInput.addEventListener('input', (e) => {
-            state.roughOpacity = parseFloat(e.target.value) / 100;
-            roughCanvas.style.opacity = state.roughOpacity;
-        });
-    }
-
-    const fillOpacityInput = document.getElementById('fillOpacity');
-    if (fillOpacityInput) {
-        fillOpacityInput.addEventListener('input', (e) => {
-            state.fillOpacity = parseFloat(e.target.value) / 100;
-            fillCanvas.style.opacity = state.fillOpacity;
-        });
-    }
-
-    const lineOpacityInput = document.getElementById('lineOpacity');
-    if (lineOpacityInput) {
-        lineOpacityInput.addEventListener('input', (e) => {
-            state.lineOpacity = parseFloat(e.target.value) / 100;
-            lineCanvas.style.opacity = state.lineOpacity;
-        });
-    }
-
-    const line2OpacityInput = document.getElementById('line2Opacity');
-    if (line2OpacityInput) {
-        line2OpacityInput.addEventListener('input', (e) => {
-            state.line2Opacity = parseFloat(e.target.value) / 100;
-            document.getElementById('canvas-line-2').style.opacity = state.line2Opacity;
-        });
-    }
-
-    const line3OpacityInput = document.getElementById('line3Opacity');
-    if (line3OpacityInput) {
-        line3OpacityInput.addEventListener('input', (e) => {
-            state.line3Opacity = parseFloat(e.target.value) / 100;
-            document.getElementById('canvas-line-3').style.opacity = state.line3Opacity;
-        });
-    }
-
-    // Brush Size
-    const brushSizeInput = document.getElementById('brushSize');
-    const sizeDisplay = document.getElementById('sizeDisplay');
-    if (brushSizeInput && sizeDisplay) {
-        brushSizeInput.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            sizeDisplay.textContent = val;
-            if (state.currentTool === 'pen') {
-                state.penSize = val;
-            } else if (state.currentTool === 'eraser') {
-                state.eraserSize = val;
-            }
-        });
-    }
 }
+
+// ============================================
+// Clear Buttons
+// ============================================
 
 function setupClearButtons() {
-    document.getElementById('clearBtn').addEventListener('click', () => {
-        roughCanvas.getContext('2d').clearRect(0, 0, roughCanvas.width, roughCanvas.height);
-        fillCanvas.getContext('2d').clearRect(0, 0, fillCanvas.width, fillCanvas.height);
-        lineCanvas.getContext('2d').clearRect(0, 0, lineCanvas.width, lineCanvas.height);
-        document.getElementById('canvas-line-2').getContext('2d').clearRect(0, 0, lineCanvas.width, lineCanvas.height);
-        document.getElementById('canvas-line-3').getContext('2d').clearRect(0, 0, lineCanvas.width, lineCanvas.height);
+    const clearBtn = document.getElementById('clearBtn');
 
-        saveAllStates();
+    clearBtn.addEventListener('click', async () => {
+        await saveState();
 
-        const btn = document.getElementById('clearBtn');
-        const tooltip = btn.querySelector('.tool-tooltip');
-        const originalText = tooltip.textContent;
-        tooltip.textContent = '全消去しました';
-        setTimeout(() => tooltip.textContent = originalText, 2000);
+        // Clear all layers
+        for (const layer of layers) {
+            layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+        }
+
+        await saveState();
     });
-
-    const layerClearBtn = document.getElementById('layerClearBtn');
-    if (layerClearBtn) {
-        layerClearBtn.addEventListener('click', () => {
-            if (state.activeLayer === 'rough') {
-                const ctx = roughCanvas.getContext('2d');
-                ctx.clearRect(0, 0, roughCanvas.width, roughCanvas.height);
-            } else if (state.activeLayer === 'fill') {
-                fillCanvas.getContext('2d').clearRect(0, 0, fillCanvas.width, fillCanvas.height);
-            } else if (state.activeLayer === 'line') {
-                lineCanvas.getContext('2d').clearRect(0, 0, lineCanvas.width, lineCanvas.height);
-            } else if (state.activeLayer === 'line2') {
-                const l2 = document.getElementById('canvas-line-2');
-                l2.getContext('2d').clearRect(0, 0, l2.width, l2.height);
-            } else if (state.activeLayer === 'line3') {
-                const l3 = document.getElementById('canvas-line-3');
-                l3.getContext('2d').clearRect(0, 0, l3.width, l3.height);
-            }
-            saveState();
-
-            // Visual feedback
-            layerClearBtn.classList.add('active');
-            setTimeout(() => layerClearBtn.classList.remove('active'), 200);
-
-            const tooltip = layerClearBtn.querySelector('.tool-tooltip');
-            const originalText = tooltip.textContent;
-            tooltip.textContent = 'レイヤー消去しました';
-            setTimeout(() => tooltip.textContent = originalText, 1000);
-        });
-    }
 }
 
+// ============================================
+// Zoom Controls
+// ============================================
+
 function setupZoomControls() {
-    document.getElementById('resetZoomBtn').addEventListener('click', () => {
+    const resetBtn = document.getElementById('resetZoomBtn');
+
+    resetBtn.addEventListener('click', () => {
         state.scale = 1;
         state.translateX = 0;
         state.translateY = 0;
@@ -1055,55 +836,181 @@ function setupZoomControls() {
     });
 }
 
+// ============================================
+// Save UI
+// ============================================
+
 function setupSaveUI() {
-    // Open Save UI
-    document.getElementById('saveBtn').addEventListener('click', () => {
+    const saveBtn = document.getElementById('saveBtn');
+    const saveOverlay = document.getElementById('save-overlay');
+    const saveUI = document.getElementById('save-ui');
+    const cancelBtn = document.getElementById('cancelSaveBtn');
+    const saveAllBtn = document.getElementById('saveAllBtn');
+    const confirmBtn = document.getElementById('confirmSelectionBtn');
+    const copyBtn = document.getElementById('copyClipboardBtn');
+    const redoBtn = document.getElementById('redoSelectionBtn');
+    const transparentBgCheckbox = document.getElementById('transparentBg');
+    const selCanvas = document.getElementById('selection-canvas');
+    const selCtx = selCanvas.getContext('2d');
+
+    saveBtn.addEventListener('click', () => {
         state.isSaveMode = true;
-        document.getElementById('save-overlay').style.display = 'block';
-        document.getElementById('save-ui').style.display = 'block';
-        document.getElementById('selection-canvas').style.display = 'block';
-        document.getElementById('toolbar-left').style.display = 'none';
-        document.getElementById('toolbar-right').style.display = 'none';
-        document.getElementById('resetZoomBtn').style.display = 'none';
-    });
-
-    // Close / Cancel
-    document.getElementById('cancelSaveBtn').addEventListener('click', exitSaveMode);
-
-    // Save All
-    document.getElementById('saveAllBtn').addEventListener('click', () => {
-        saveRegion(0, 0, roughCanvas.width, roughCanvas.height);
-    });
-
-    // Confirm Selection
-    document.getElementById('confirmSelectionBtn').addEventListener('click', () => {
-        if (state.confirmedSelection) {
-            saveRegion(state.confirmedSelection.x, state.confirmedSelection.y, state.confirmedSelection.w, state.confirmedSelection.h);
-        }
-    });
-
-    // Copy
-    document.getElementById('copyClipboardBtn').addEventListener('click', async () => {
-        if (state.confirmedSelection) {
-            await copyToClipboard(state.confirmedSelection.x, state.confirmedSelection.y, state.confirmedSelection.w, state.confirmedSelection.h);
-        }
-    });
-
-    // Redo Selection
-    document.getElementById('redoSelectionBtn').addEventListener('click', () => {
+        state.selectionStart = null;
+        state.selectionEnd = null;
         state.confirmedSelection = null;
-        const sizeDisplay = document.getElementById('selection-size');
-        if (sizeDisplay) sizeDisplay.style.display = 'none';
-        document.getElementById('save-ui').classList.remove('in-confirmation-mode');
-        document.getElementById('confirmSelectionBtn').style.display = 'none';
-        document.getElementById('copyClipboardBtn').style.display = 'none';
-        document.getElementById('redoSelectionBtn').style.display = 'none';
 
-        const selCanvas = document.getElementById('selection-canvas');
-        selCanvas.getContext('2d').clearRect(0, 0, selCanvas.width, selCanvas.height);
+        saveOverlay.style.display = 'block';
+        saveUI.style.display = 'block';
+
+        // Reset buttons to hidden state
+        confirmBtn.style.display = 'none';
+        copyBtn.style.display = 'none';
+        redoBtn.style.display = 'none';
+
+        // Reset size display
+        document.getElementById('selection-size').style.display = 'none';
+
+        showSelectionUI();
     });
 
-    // Aspect Ratio
+    cancelBtn.addEventListener('click', () => {
+        state.isSaveMode = false;
+        saveOverlay.style.display = 'none';
+        saveUI.style.display = 'none';
+        hideSelectionUI();
+    });
+
+    saveOverlay.addEventListener('click', () => {
+        state.isSaveMode = false;
+        saveOverlay.style.display = 'none';
+        saveUI.style.display = 'none';
+        hideSelectionUI();
+    });
+
+    saveAllBtn.addEventListener('click', () => {
+        saveAllCanvas(transparentBgCheckbox.checked);
+    });
+
+    confirmBtn.addEventListener('click', async () => {
+        if (state.confirmedSelection) {
+            const { x, y, w, h } = state.confirmedSelection;
+            await saveRegion(x, y, w, h);
+        }
+    });
+
+    copyBtn.addEventListener('click', async () => {
+        if (state.confirmedSelection) {
+            const { x, y, w, h } = state.confirmedSelection;
+            await copyToClipboard(x, y, w, h);
+        }
+    });
+
+    redoBtn.addEventListener('click', () => {
+        redoSelection();
+        // Hide confirm/copy buttons
+        confirmBtn.style.display = 'none';
+        copyBtn.style.display = 'none';
+        redoBtn.style.display = 'none';
+
+        // Hide size display
+        document.getElementById('selection-size').style.display = 'none';
+    });
+
+    // Selection rectangle drag events
+    let isSelecting = false;
+
+    selCanvas.addEventListener('pointerdown', (e) => {
+        if (!state.isSaveMode) return;
+        isSelecting = true;
+        saveUI.classList.add('hidden-during-selection');
+        state.selectionStart = { x: e.clientX, y: e.clientY };
+        state.selectionEnd = null;
+        state.confirmedSelection = null;
+        selCtx.clearRect(0, 0, selCanvas.width, selCanvas.height);
+
+        // Hide buttons when starting new selection
+        confirmBtn.style.display = 'none';
+        copyBtn.style.display = 'none';
+        redoBtn.style.display = 'none';
+    });
+
+    selCanvas.addEventListener('pointermove', (e) => {
+        if (!isSelecting || !state.isSaveMode) return;
+
+        let endX = e.clientX;
+        let endY = e.clientY;
+
+        // Apply aspect ratio constraint
+        if (state.selectedAspect && state.selectedAspect !== 'free') {
+            const startX = state.selectionStart.x;
+            const startY = state.selectionStart.y;
+            const dx = endX - startX;
+            const dy = endY - startY;
+
+            let targetRatio;
+            if (state.selectedAspect === '1:1') targetRatio = 1;
+            else if (state.selectedAspect === '4:3') targetRatio = 4 / 3;
+            else if (state.selectedAspect === '16:9') targetRatio = 16 / 9;
+            else targetRatio = null;
+
+            if (targetRatio) {
+                const absDx = Math.abs(dx);
+                const absDy = Math.abs(dy);
+
+                // Constrain to aspect ratio
+                if (absDx / targetRatio > absDy) {
+                    // Height is limiting factor
+                    endX = startX + Math.sign(dx) * absDy * targetRatio;
+                } else {
+                    // Width is limiting factor
+                    endY = startY + Math.sign(dy) * absDx / targetRatio;
+                }
+            }
+        }
+
+        state.selectionEnd = { x: endX, y: endY };
+        drawSelectionRect(selCtx, state.selectionStart, state.selectionEnd, selCanvas);
+        // Update size display during drag
+        updateSelectionSizeDisplay();
+    });
+
+    selCanvas.addEventListener('pointerup', (e) => {
+        if (!isSelecting || !state.isSaveMode) return;
+        isSelecting = false;
+        saveUI.classList.remove('hidden-during-selection');
+
+        // Use last calculated end point (with aspect ratio applied)
+        if (state.selectionStart && state.selectionEnd) {
+            // Calculate screen coordinates limits
+            const sx = Math.min(state.selectionStart.x, state.selectionEnd.x);
+            const sy = Math.min(state.selectionStart.y, state.selectionEnd.y);
+            const sw = Math.abs(state.selectionEnd.x - state.selectionStart.x);
+            const sh = Math.abs(state.selectionEnd.y - state.selectionStart.y);
+
+            // Convert to canvas coordinates for saving
+            const p1 = getCanvasPoint(sx, sy);
+            const p2 = getCanvasPoint(sx + sw, sy + sh);
+
+            state.confirmedSelection = {
+                x: p1.x,
+                y: p1.y,
+                w: Math.abs(p2.x - p1.x),
+                h: Math.abs(p2.y - p1.y)
+            };
+
+            // Show confirm/copy buttons only if valid selection (in screen pixels)
+            if (sw > 5 && sh > 5) {
+                confirmBtn.style.display = 'inline-block';
+                copyBtn.style.display = 'inline-block';
+                redoBtn.style.display = 'inline-block';
+
+                // Show final size
+                updateSelectionSizeDisplay();
+            }
+        }
+    });
+
+    // Aspect ratio buttons
     document.querySelectorAll('[data-aspect]').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('[data-aspect]').forEach(b => b.classList.remove('active'));
@@ -1112,292 +1019,224 @@ function setupSaveUI() {
         });
     });
 
-    // Scale
+    // Scale buttons
     document.querySelectorAll('[data-scale]').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('[data-scale]').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             state.selectedScale = parseInt(btn.dataset.scale);
 
+            // Update size display if selection exists
             if (state.confirmedSelection) {
-                const sizeDisplay = document.getElementById('selection-size');
-                if (sizeDisplay) {
-                    const finalW = state.confirmedSelection.w * state.selectedScale;
-                    const finalH = state.confirmedSelection.h * state.selectedScale;
-                    sizeDisplay.textContent = `${finalW}px × ${finalH}px`;
-                }
+                updateSelectionSizeDisplay();
             }
         });
     });
-
-    // Overlay Events for Selection
-    const overlay = document.getElementById('save-overlay');
-
-    overlay.addEventListener('pointerdown', (e) => {
-        if (!state.isSaveMode) return;
-        state.selectionStart = { x: e.clientX, y: e.clientY };
-        state.selectionEnd = { x: e.clientX, y: e.clientY };
-        document.getElementById('save-ui').classList.add('hidden-during-selection');
-    });
-
-    document.getElementById('save-ui').addEventListener('pointerdown', (e) => {
-        if (e.target.closest('button, input, label')) return;
-        if (!state.isSaveMode) return;
-        state.selectionStart = { x: e.clientX, y: e.clientY };
-        state.selectionEnd = { x: e.clientX, y: e.clientY };
-        document.getElementById('save-ui').classList.add('hidden-during-selection');
-    });
-
-    overlay.addEventListener('pointermove', (e) => {
-        if (!state.isSaveMode || !state.selectionStart) return;
-        state.selectionEnd = { x: e.clientX, y: e.clientY };
-
-        const selCanvas = document.getElementById('selection-canvas');
-        const selCtx = selCanvas.getContext('2d');
-        selCtx.clearRect(0, 0, selCanvas.width, selCanvas.height);
-
-        let rectX = state.selectionStart.x;
-        let rectY = state.selectionStart.y;
-        let rectW = state.selectionEnd.x - state.selectionStart.x;
-        let rectH = state.selectionEnd.y - state.selectionStart.y;
-
-        if (state.selectedAspect !== 'free') {
-            const aspectRatios = { '1:1': 1, '4:5': 0.8, '16:9': 16 / 9, '9:16': 9 / 16 };
-            const ratio = aspectRatios[state.selectedAspect];
-            const signW = rectW < 0 ? -1 : 1;
-            const signH = rectH < 0 ? -1 : 1;
-
-            if (Math.abs(rectW) / Math.abs(rectH) > ratio) {
-                rectW = Math.abs(rectH) * ratio * signW;
-            } else {
-                rectH = Math.abs(rectW) / ratio * signH;
-            }
-        }
-
-        selCtx.strokeStyle = '#000';
-        selCtx.lineWidth = 2;
-        selCtx.setLineDash([8, 8]);
-        selCtx.strokeRect(rectX, rectY, rectW, rectH);
-    });
-
-    overlay.addEventListener('pointerup', (e) => {
-        if (!state.isSaveMode || !state.selectionStart) return;
-
-        // Same logic as pointermove to finalize rect
-        state.selectionEnd = { x: e.clientX, y: e.clientY };
-        let rectX = state.selectionStart.x;
-        let rectY = state.selectionStart.y;
-        let rectW = state.selectionEnd.x - state.selectionStart.x;
-        let rectH = state.selectionEnd.y - state.selectionStart.y;
-
-        if (state.selectedAspect !== 'free') {
-            const aspectRatios = { '1:1': 1, '4:5': 0.8, '16:9': 16 / 9, '9:16': 9 / 16 };
-            const ratio = aspectRatios[state.selectedAspect];
-            const signW = rectW < 0 ? -1 : 1;
-            const signH = rectH < 0 ? -1 : 1;
-
-            if (Math.abs(rectW) / Math.abs(rectH) > ratio) {
-                rectW = Math.abs(rectH) * ratio * signW;
-            } else {
-                rectH = Math.abs(rectW) / ratio * signH;
-            }
-        }
-
-        // Convert to canvas coordinates
-        const x1 = Math.floor((Math.min(rectX, rectX + rectW) - state.translateX) / state.scale);
-        const y1 = Math.floor((Math.min(rectY, rectY + rectH) - state.translateY) / state.scale);
-        const x2 = Math.floor((Math.max(rectX, rectX + rectW) - state.translateX) / state.scale);
-        const y2 = Math.floor((Math.max(rectY, rectY + rectH) - state.translateY) / state.scale);
-
-        const w = x2 - x1;
-        const h = y2 - y1;
-
-        if (w > 5 && h > 5) {
-            const cx = Math.max(0, Math.min(x1, roughCanvas.width));
-            const cy = Math.max(0, Math.min(y1, roughCanvas.height));
-            const cw = Math.min(w, roughCanvas.width - cx);
-            const ch = Math.min(h, roughCanvas.height - cy);
-
-            if (cw > 0 && ch > 0) {
-                state.confirmedSelection = { x: cx, y: cy, w: cw, h: ch };
-
-                const sizeDisplay = document.getElementById('selection-size');
-                if (sizeDisplay) {
-                    const finalW = cw * state.selectedScale;
-                    const finalH = ch * state.selectedScale;
-                    sizeDisplay.textContent = `${finalW}px × ${finalH}px`;
-                    sizeDisplay.style.display = 'block';
-                }
-
-                document.getElementById('save-ui').classList.add('in-confirmation-mode');
-                document.getElementById('save-ui').classList.remove('hidden-during-selection');
-                document.getElementById('confirmSelectionBtn').style.display = 'inline-block';
-                document.getElementById('copyClipboardBtn').style.display = 'inline-block';
-                document.getElementById('redoSelectionBtn').style.display = 'inline-block';
-            }
-        } else {
-            exitSaveMode();
-        }
-
-        state.selectionStart = null;
-        state.selectionEnd = null;
-    });
 }
 
+function updateSelectionSizeDisplay() {
+    const sizeDiv = document.getElementById('selection-size');
+
+    let w = 0, h = 0;
+    const scale = state.selectedScale || 1;
+
+    if (state.selectionStart && state.selectionEnd) {
+        // Calculating from screen coordinates during drag
+        const screenW = Math.abs(state.selectionEnd.x - state.selectionStart.x);
+        const screenH = Math.abs(state.selectionEnd.y - state.selectionStart.y);
+
+        // Convert screen size to canvas size
+        w = Math.round(screenW / state.scale);
+        h = Math.round(screenH / state.scale);
+    } else if (state.confirmedSelection) {
+        // Already in canvas coordinates
+        w = state.confirmedSelection.w;
+        h = state.confirmedSelection.h;
+    }
+
+    if (w > 0 && h > 0) {
+        const finalW = Math.round(w * scale);
+        const finalH = Math.round(h * scale);
+
+        sizeDiv.textContent = `サイズ: ${finalW} x ${finalH} px`;
+        sizeDiv.style.display = 'block';
+    } else {
+        sizeDiv.style.display = 'none';
+    }
+}
+
+function drawSelectionRect(ctx, start, end, canvas) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const x = Math.min(start.x, end.x);
+    const y = Math.min(start.y, end.y);
+    const w = Math.abs(end.x - start.x);
+    const h = Math.abs(end.y - start.y);
+
+    // Dim outside area
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(x, y, w, h);
+
+    // Draw border
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.strokeRect(x, y, w, h);
+    ctx.setLineDash([]);
+}
+
+// ============================================
+// Credit Modal
+// ============================================
+
 function setupCreditModal() {
-    document.getElementById('credit-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        document.getElementById('credit-modal').classList.add('visible');
-        document.body.classList.add('help-mode');
+    const creditBtn = document.getElementById('credit-btn');
+    const creditModal = document.getElementById('credit-modal');
+    const modalContent = creditModal.querySelector('.credit-modal-content');
+
+    creditBtn.addEventListener('click', () => {
+        creditModal.classList.toggle('visible');
+        document.body.classList.toggle('help-mode', creditModal.classList.contains('visible'));
     });
 
-    document.getElementById('credit-modal').addEventListener('click', (e) => {
-        if (e.target.id === 'credit-modal') {
-            document.getElementById('credit-modal').classList.remove('visible');
+    // Close help mode on any click outside modal content (except links inside modal)
+    document.addEventListener('click', (e) => {
+        if (!document.body.classList.contains('help-mode')) return;
+
+        // If clicked inside modal content, only allow link navigation
+        if (modalContent && modalContent.contains(e.target)) {
+            // Let links work normally
+            if (e.target.tagName === 'A' || e.target.closest('a')) {
+                return;
+            }
+        }
+
+        // Close modal on any other click (including toolbar buttons, canvas, etc.)
+        if (e.target !== creditBtn && !creditBtn.contains(e.target)) {
+            creditModal.classList.remove('visible');
             document.body.classList.remove('help-mode');
         }
     });
-
-    document.addEventListener('click', (e) => {
-        if (!document.body.classList.contains('help-mode')) return;
-        const creditContent = document.getElementById('credit-content');
-        if (creditContent.contains(e.target)) return;
-
-        e.preventDefault();
-        e.stopPropagation();
-        document.getElementById('credit-modal').classList.remove('visible');
-        document.body.classList.remove('help-mode');
-    }, true);
 }
+
+// ============================================
+// Orientation Handler
+// ============================================
 
 function setupOrientationHandler() {
+    // Handle orientation change
     window.addEventListener('orientationchange', () => {
-        setTimeout(async () => {
-            const roughBitmap = await createImageBitmap(roughCanvas);
-            const fillBitmap = await createImageBitmap(fillCanvas);
-            const lineBitmap = await createImageBitmap(lineCanvas);
+        setTimeout(() => {
+            location.reload();
+        }, 100);
+    });
 
-            const newWidth = window.innerWidth;
-            const newHeight = window.innerHeight;
-
-            // Resize rough
-            roughCanvas.width = newWidth;
-            roughCanvas.height = newHeight;
-            const ctxR = roughCanvas.getContext('2d');
-            ctxR.fillStyle = '#fff';
-            ctxR.fillRect(0, 0, newWidth, newHeight);
-            ctxR.drawImage(roughBitmap, 0, 0);
-            roughBitmap.close();
-
-            // Resize fill
-            fillCanvas.width = newWidth;
-            fillCanvas.height = newHeight;
-            fillCanvas.getContext('2d').drawImage(fillBitmap, 0, 0);
-            fillBitmap.close();
-
-            // Resize line
-            lineCanvas.width = newWidth;
-            lineCanvas.height = newHeight;
-            lineCanvas.getContext('2d').drawImage(lineBitmap, 0, 0);
-            lineBitmap.close();
-
-            // Update utils
-            lassoCanvas.width = newWidth;
-            lassoCanvas.height = newHeight;
-            document.getElementById('selection-canvas').width = newWidth;
-            document.getElementById('selection-canvas').height = newHeight;
-            document.getElementById('canvas-background').style.width = newWidth + 'px';
-            document.getElementById('canvas-background').style.height = newHeight + 'px';
-
-            // Update event canvas
-            eventCanvas.width = newWidth;
-            eventCanvas.height = newHeight;
-
-            applyTransform();
-        }, 300);
+    // Handle resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            // Re-initialize canvas sizes if needed
+        }, 250);
     });
 }
 
+// ============================================
+// Keyboard Shortcuts
+// ============================================
 
 function setupKeyboardShortcuts() {
-    window.addEventListener('keydown', (e) => {
-        if (state.isSaveMode) return;
-
-        // Track modifier keys (always track these)
-        if (e.key === 'Control' || e.metaKey) state.isCtrlPressed = true;
-        if (e.key === 'Alt') state.isAltPressed = true;
-
-        // Undo / Redo (should work even when INPUT is focused)
-        if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
+    document.addEventListener('keydown', (e) => {
+        // Modifier key tracking
+        if (e.code === 'Space') {
             e.preventDefault();
-            if (e.shiftKey) {
-                redo();
-            } else {
-                undo();
-            }
-            return;
-        } else if ((e.ctrlKey || e.metaKey) && e.code === 'KeyY') {
+            state.isSpacePressed = true;
+            eventCanvas.style.cursor = 'grab';
+        }
+        if (e.ctrlKey || e.metaKey) state.isCtrlPressed = true;
+        if (e.altKey) state.isAltPressed = true;
+
+        // Undo: Ctrl/Cmd + Z
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            undo();
+        }
+
+        // Redo: Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z') || (e.shiftKey && e.key === 'Z'))) {
             e.preventDefault();
             redo();
-            return;
         }
 
-        // Skip other shortcuts if INPUT is focused (e.g., brush size slider)
-        if (e.target.tagName === 'INPUT') return;
-
-        // Space key (Palm mode)
-        if (e.code === 'Space') {
-            state.isSpacePressed = true;
-            eventCanvas.style.cursor = state.isCtrlPressed ? 'zoom-in' : 'grab';
+        // Save: Ctrl/Cmd + S
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            document.getElementById('saveBtn').click();
         }
 
-        // Tools
-        if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
-            switch (e.code) {
-                case 'Digit1': // Pen 1
-                    document.getElementById('penBtn').click();
-                    break;
-                case 'Digit2': // Pen 2
-                    document.getElementById('penBtn2').click();
-                    break;
-                case 'Digit3': // Pen 3
-                    document.getElementById('penBtn3').click();
-                    break;
-                case 'Digit4': // Fill
-                    document.getElementById('fillBtn').click();
-                    break;
-                case 'Digit5': // Sketch
-                    document.getElementById('sketchBtn').click();
-                    break;
-                case 'Digit6': // Eraser
-                    document.getElementById('eraserBtn').click();
-                    break;
-                case 'Digit7': // Layer Clear
-                    const layerClearBtn = document.getElementById('layerClearBtn');
-                    if (layerClearBtn) layerClearBtn.click();
-                    break;
+        // Clear: Delete or Backspace
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (!e.target.matches('input, textarea')) {
+                e.preventDefault();
+                document.getElementById('clearBtn').click();
+            }
+        }
 
-                case 'Delete':
-                case 'Backspace':
-                    // Trigger active layer clear (All Clear or Layer Clear?)
-                    // User requested "Del" for "All Clear" in Top Right.
-                    // This logic triggers "layerClearBtn" (Top Right? No, Top Right is clearBtn).
-                    // Wait, previous step I mapped Del to clearBtn.
-                    // I should KEEP Del -> clearBtn (All Clear).
-                    const clearBtn = document.getElementById('clearBtn');
-                    if (clearBtn) clearBtn.click();
-                    break;
+        // Zoom: + / - / 0
+        if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+            if (e.key === '+' || e.key === '=') {
+                e.preventDefault();
+                state.scale = Math.min(state.scale * 1.2, 10);
+                applyTransform();
+            }
+            if (e.key === '-' || e.key === '_') {
+                e.preventDefault();
+                state.scale = Math.max(state.scale / 1.2, 0.1);
+                applyTransform();
+            }
+            if (e.key === '0') {
+                e.preventDefault();
+                state.scale = 1;
+                state.translateX = 0;
+                state.translateY = 0;
+                applyTransform();
+            }
+        }
+
+        // Toggle draw/eraser: X
+        if (e.key === 'x' || e.key === 'X') {
+            if (!e.target.matches('input, textarea')) {
+                e.preventDefault();
+                state.isEraserActive = !state.isEraserActive;
+                state.isErasing = state.isEraserActive;
+                updateToolButtonStates();
+                updateBrushSizeVisibility();
+                updateBrushSizeSlider();
+            }
+        }
+
+        // Layer shortcuts: 1-5
+        if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+            const num = parseInt(e.key);
+            if (num >= 1 && num <= 5 && num <= layers.length) {
+                const layer = layers[num - 1];
+                if (layer) {
+                    state.activeLayer = layer.id;
+                    window.renderLayerButtons();
+                    updateActiveLayerIndicator();
+                    flashLayer(layer.id);
+                }
             }
         }
     });
 
-    window.addEventListener('keyup', (e) => {
-        if (e.key === 'Control' || e.metaKey) state.isCtrlPressed = false;
-        if (e.key === 'Alt') state.isAltPressed = false;
-
+    document.addEventListener('keyup', (e) => {
         if (e.code === 'Space') {
             state.isSpacePressed = false;
             eventCanvas.style.cursor = '';
         }
+        if (!e.ctrlKey && !e.metaKey) state.isCtrlPressed = false;
+        if (!e.altKey) state.isAltPressed = false;
     });
 }

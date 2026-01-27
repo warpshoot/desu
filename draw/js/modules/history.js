@@ -1,140 +1,134 @@
 import {
     state,
-    roughCanvas, roughCtx,
-    fillCanvas, fillCtx,
-    lineCanvas, lineCtx,
-    line2Canvas, line2Ctx,
-    line3Canvas, line3Ctx
+    layers,
+    getLayer,
+    getActiveLayer
 } from './state.js';
 
-const layerMap = {
-    rough: { canvas: () => roughCanvas, ctx: () => roughCtx, undo: 'roughUndoStack', redo: 'roughRedoStack' },
-    fill: { canvas: () => fillCanvas, ctx: () => fillCtx, undo: 'fillUndoStack', redo: 'fillRedoStack' },
-    line: { canvas: () => lineCanvas, ctx: () => lineCtx, undo: 'lineUndoStack', redo: 'lineRedoStack' },
-    line2: { canvas: () => line2Canvas, ctx: () => line2Ctx, undo: 'line2UndoStack', redo: 'line2RedoStack' },
-    line3: { canvas: () => line3Canvas, ctx: () => line3Ctx, undo: 'line3UndoStack', redo: 'line3RedoStack' }
-};
+// ============================================
+// Global History System (Unified)
+// ============================================
+// Each undo/redo entry stores a snapshot of ALL layers at that moment
+// Entry format: Map<layerId, ImageBitmap>
 
-// Save the state of a specific layer (bitmap only, no global stack)
-export async function saveLayerState(targetLayer) {
-    const layer = layerMap[targetLayer];
-    if (!layer) return;
-
-    const bitmap = await createImageBitmap(layer.canvas());
-    state[layer.undo].push(bitmap);
-
-    if (state[layer.undo].length > state.MAX_HISTORY) {
-        state[layer.undo].shift().close();
-    }
-
-    state[layer.redo].forEach(b => b.close());
-    state[layer.redo] = [];
-}
-
-// Save state of the currently active layer + record in global history
+/**
+ * Save current state of all visible layers to undo stack
+ */
 export async function saveState() {
-    await saveLayerState(state.activeLayer);
-    state.globalUndoStack.push(state.activeLayer);
-    if (state.globalUndoStack.length > state.MAX_HISTORY) {
-        state.globalUndoStack.shift();
-    }
-    state.globalRedoStack = [];
-}
+    const snapshot = new Map();
 
-// Save states of all layers (init: no global record; clear all: record as group)
-export async function saveAllStates(isInit = false) {
-    const layers = ['rough', 'fill', 'line', 'line2', 'line3'];
-    await Promise.all(layers.map(l => saveLayerState(l)));
-    if (!isInit) {
-        state.globalUndoStack.push(layers);
-        if (state.globalUndoStack.length > state.MAX_HISTORY) {
-            state.globalUndoStack.shift();
+    for (const layer of layers) {
+        const bitmap = await createImageBitmap(layer.canvas);
+        snapshot.set(layer.id, bitmap);
+    }
+
+    state.undoStack.push(snapshot);
+
+    // Limit history size
+    if (state.undoStack.length > state.MAX_HISTORY) {
+        const old = state.undoStack.shift();
+        // Clean up old bitmaps
+        for (const bitmap of old.values()) {
+            bitmap.close();
         }
-        state.globalRedoStack = [];
     }
+
+    // Clear redo stack on new action
+    for (const entry of state.redoStack) {
+        for (const bitmap of entry.values()) {
+            bitmap.close();
+        }
+    }
+    state.redoStack = [];
 }
 
-// Internal: undo a single layer's bitmap stack
-function undoLayer(targetLayer) {
-    const layer = layerMap[targetLayer];
-    if (!layer) return false;
-    if (state[layer.undo].length <= 1) return false;
+/**
+ * Save state for initialization (no redo clear)
+ */
+export async function saveInitialState() {
+    const snapshot = new Map();
 
-    const current = state[layer.undo].pop();
-    state[layer.redo].push(current);
+    for (const layer of layers) {
+        const bitmap = await createImageBitmap(layer.canvas);
+        snapshot.set(layer.id, bitmap);
+    }
 
-    const prev = state[layer.undo][state[layer.undo].length - 1];
-    const ctx = layer.ctx();
-    const canvas = layer.canvas();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(prev, 0, 0);
-    return true;
+    state.undoStack.push(snapshot);
 }
 
-// Internal: redo a single layer's bitmap stack
-function redoLayer(targetLayer) {
-    const layer = layerMap[targetLayer];
-    if (!layer) return false;
-    if (state[layer.redo].length === 0) return false;
-
-    const next = state[layer.redo].pop();
-    state[layer.undo].push(next);
-
-    const ctx = layer.ctx();
-    const canvas = layer.canvas();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(next, 0, 0);
-    return true;
-}
-
-// Restore a layer to its last saved state (for canceling in-progress strokes)
-export function restoreLayer(targetLayer) {
-    const layer = layerMap[targetLayer];
-    if (!layer) return;
-    if (state[layer.undo].length === 0) return;
-
-    const prev = state[layer.undo][state[layer.undo].length - 1];
-    const ctx = layer.ctx();
-    const canvas = layer.canvas();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(prev, 0, 0);
-}
-
-// Global undo
+/**
+ * Undo last action
+ */
 export function undo() {
-    if (state.globalUndoStack.length === 0) return;
+    if (state.undoStack.length <= 1) return; // Keep at least initial state
 
-    const entry = state.globalUndoStack.pop();
-    const layers = Array.isArray(entry) ? entry : [entry];
+    const current = state.undoStack.pop();
+    state.redoStack.push(current);
 
-    let success = false;
-    for (const l of layers) {
-        if (undoLayer(l)) success = true;
-    }
+    const prev = state.undoStack[state.undoStack.length - 1];
+    restoreSnapshot(prev);
+}
 
-    if (success) {
-        state.globalRedoStack.push(entry);
-    } else {
-        // Put it back if nothing was actually undone
-        state.globalUndoStack.push(entry);
+/**
+ * Redo last undone action
+ */
+export function redo() {
+    if (state.redoStack.length === 0) return;
+
+    const next = state.redoStack.pop();
+    state.undoStack.push(next);
+
+    restoreSnapshot(next);
+}
+
+/**
+ * Restore canvas contents from a snapshot
+ */
+function restoreSnapshot(snapshot) {
+    for (const layer of layers) {
+        const bitmap = snapshot.get(layer.id);
+        if (bitmap) {
+            layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+            layer.ctx.drawImage(bitmap, 0, 0);
+        }
     }
 }
 
-// Global redo
-export function redo() {
-    if (state.globalRedoStack.length === 0) return;
+/**
+ * Restore active layer to its last saved state (for canceling in-progress strokes)
+ */
+export function restoreLayer(layerId) {
+    if (state.undoStack.length === 0) return;
 
-    const entry = state.globalRedoStack.pop();
-    const layers = Array.isArray(entry) ? entry : [entry];
+    const lastSnapshot = state.undoStack[state.undoStack.length - 1];
+    const bitmap = lastSnapshot.get(layerId);
+    const layer = getLayer(layerId);
 
-    let success = false;
-    for (const l of layers) {
-        if (redoLayer(l)) success = true;
+    if (bitmap && layer) {
+        layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+        layer.ctx.drawImage(bitmap, 0, 0);
     }
+}
 
-    if (success) {
-        state.globalUndoStack.push(entry);
-    } else {
-        state.globalRedoStack.push(entry);
+/**
+ * Clear history when layers change (add/delete)
+ * This prevents issues with mismatched layer IDs
+ */
+export async function resetHistory() {
+    // Clear all existing history
+    for (const entry of state.undoStack) {
+        for (const bitmap of entry.values()) {
+            bitmap.close();
+        }
     }
+    for (const entry of state.redoStack) {
+        for (const bitmap of entry.values()) {
+            bitmap.close();
+        }
+    }
+    state.undoStack = [];
+    state.redoStack = [];
+
+    // Save fresh initial state
+    await saveInitialState();
 }

@@ -1,28 +1,20 @@
-
 import {
     state,
-    roughCanvas, roughCtx,
-    fillCanvas, fillCtx,
-    lineCanvas, lineCtx,
-    lassoCanvas, lassoCtx,
-    line2Canvas, line2Ctx,
-    line3Canvas, line3Ctx
+    lassoCanvas,
+    lassoCtx,
+    getActiveLayerCtx,
+    getActiveLayerCanvas
 } from '../state.js';
 import { getCanvasPoint, getBounds, isPointInPolygon } from '../utils.js';
 
+/**
+ * Get active layer's canvas and context
+ */
 function getActiveContextAndCanvas() {
-    if (state.activeLayer === 'rough') return { canvas: roughCanvas, ctx: roughCtx };
-    if (state.activeLayer === 'fill') return { canvas: fillCanvas, ctx: fillCtx };
-    if (state.activeLayer === 'line') return { canvas: lineCanvas, ctx: lineCtx };
-    if (state.activeLayer === 'line2') return {
-        canvas: line2Canvas,
-        ctx: line2Ctx
+    return {
+        canvas: getActiveLayerCanvas(),
+        ctx: getActiveLayerCtx()
     };
-    if (state.activeLayer === 'line3') return {
-        canvas: line3Canvas,
-        ctx: line3Ctx
-    };
-    return { canvas: lineCanvas, ctx: lineCtx };
 }
 
 // ============================================
@@ -30,8 +22,8 @@ function getActiveContextAndCanvas() {
 // ============================================
 
 export function floodFill(startX, startY, fillColor) {
-    // アクティブレイヤーに応じたcanvasとctxを選択
     const { canvas, ctx } = getActiveContextAndCanvas();
+    if (!canvas || !ctx) return;
 
     const w = canvas.width, h = canvas.height;
 
@@ -103,12 +95,10 @@ export function floodFill(startX, startY, fillColor) {
     ctx.putImageData(imgData, 0, 0);
 }
 
-// 透明で塗りつぶし（ペン入れレイヤー用）
+// 透明で塗りつぶし
 export function floodFillTransparent(startX, startY) {
-    // Only applies to line or fill layer technically, but original code used lineCanvas hardcoded for some reason?
-    // Checking logic: "ペン入れレイヤー用" comment suggests it was for line layer clean up.
-    // If active layer is fill, we should probably target fill canvas.
     const { canvas, ctx } = getActiveContextAndCanvas();
+    if (!canvas || !ctx) return;
 
     const w = canvas.width, h = canvas.height;
 
@@ -120,12 +110,11 @@ export function floodFillTransparent(startX, startY) {
     const idx = (startY * w + startX) * 4;
     const targetR = data[idx], targetG = data[idx + 1], targetB = data[idx + 2], targetA = data[idx + 3];
 
-    // 既に透明の場合は何もしない
     if (targetA === 0) return;
 
     const matchTarget = (i) => data[i] === targetR && data[i + 1] === targetG && data[i + 2] === targetB && data[i + 3] === targetA;
     const setPixel = (i) => {
-        data[i + 3] = 0;  // alpha = 0 (透明)
+        data[i + 3] = 0;
     };
 
     const stack = [[startX, startY]];
@@ -180,27 +169,17 @@ export function floodFillTransparent(startX, startY) {
 
 // 投げ縄で透明塗りつぶし（消しゴム用）
 export function fillPolygonTransparent(points) {
-    if (points.length < 3) {
-        // console.log('fillPolygonTransparent: Not enough points');
-        return;
-    }
+    if (points.length < 3) return;
 
-    // アクティブレイヤーを選択（ベタかペン入れ）
     const { canvas, ctx } = getActiveContextAndCanvas();
-
-    // console.log('fillPolygonTransparent: points=', points.length, 'layer=', state.activeLayer);
+    if (!canvas || !ctx) return;
 
     const bounds = getBounds(points, canvas.width, canvas.height);
-    // console.log('fillPolygonTransparent: bounds=', bounds);
 
-    if (bounds.width <= 0 || bounds.height <= 0) {
-        // console.log('fillPolygonTransparent: Invalid bounds, skipping');
-        return;
-    }
+    if (bounds.width <= 0 || bounds.height <= 0) return;
 
     const imgData = ctx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
     const data = imgData.data;
-    let pixelsErased = 0;
 
     for (let py = 0; py < bounds.height; py++) {
         for (let px = 0; px < bounds.width; px++) {
@@ -209,41 +188,27 @@ export function fillPolygonTransparent(points) {
 
             if (isPointInPolygon(canvasX, canvasY, points)) {
                 const i = (py * bounds.width + px) * 4;
-                // Set alpha to 0 (transparent)
                 data[i + 3] = 0;
-                pixelsErased++;
             }
         }
     }
 
-    // console.log('fillPolygonTransparent: Erased', pixelsErased, 'pixels');
     ctx.putImageData(imgData, bounds.minX, bounds.minY);
-    // console.log('fillPolygonTransparent: putImageData complete');
 }
 
-// Fill polygon with transparency, no anti-aliasing (pixel-by-pixel)
+// Fill polygon with color (alpha compositing)
 export function fillPolygonNoAA(points, r, g, b, alpha) {
-    if (points.length < 3) {
-        // console.log('fillPolygonNoAA: Not enough points');
-        return;
-    }
+    if (points.length < 3) return;
 
-    // アクティブレイヤーに応じたctxを選択
     const { canvas, ctx } = getActiveContextAndCanvas();
-
-    // console.log('fillPolygonNoAA: activeLayer=', state.activeLayer, 'points=', points.length, 'color=', r, g, b, alpha);
+    if (!canvas || !ctx) return;
 
     const bounds = getBounds(points, canvas.width, canvas.height);
-    // console.log('fillPolygonNoAA: bounds=', bounds);
 
-    if (bounds.width <= 0 || bounds.height <= 0) {
-        // console.log('fillPolygonNoAA: Invalid bounds, skipping');
-        return;
-    }
+    if (bounds.width <= 0 || bounds.height <= 0) return;
 
     const imgData = ctx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
     const data = imgData.data;
-    let pixelsFilled = 0;
 
     for (let py = 0; py < bounds.height; py++) {
         for (let px = 0; px < bounds.width; px++) {
@@ -253,25 +218,19 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
             if (isPointInPolygon(canvasX, canvasY, points)) {
                 const i = (py * bounds.width + px) * 4;
 
-                // Existing pixel data (normalized 0-1 for alpha)
                 const dr = data[i];
                 const dg = data[i + 1];
                 const db = data[i + 2];
                 const da = data[i + 3] / 255.0;
 
-                // Source color (normalized 0-1 for alpha)
-                // r, g, b are 0-255. alpha is 0.0-1.0
                 const sr = r;
                 const sg = g;
                 const sb = b;
                 const sa = alpha;
 
-                // Simple Alpha Compositing (Source Over)
-                // outA = srcA + dstA * (1 - srcA)
                 const outA = sa + da * (1.0 - sa);
 
                 if (outA > 0) {
-                    // outRGB = (srcRGB * srcA + dstRGB * dstA * (1 - srcA)) / outA
                     const outR = (sr * sa + dr * da * (1.0 - sa)) / outA;
                     const outG = (sg * sa + dg * da * (1.0 - sa)) / outA;
                     const outB = (sb * sa + db * da * (1.0 - sa)) / outA;
@@ -283,29 +242,25 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
                 } else {
                     data[i + 3] = 0;
                 }
-                pixelsFilled++;
             }
         }
     }
 
-    // console.log('fillPolygonNoAA: Filled', pixelsFilled, 'pixels');
     ctx.putImageData(imgData, bounds.minX, bounds.minY);
-    // console.log('fillPolygonNoAA: putImageData complete');
 }
 
 export function fillPolygon(points) {
     if (points.length < 3) return;
 
-    // ベタレイヤーの場合は100%黒固定
-    if (state.activeLayer === 'fill') {
-        fillPolygonNoAA(points, 0, 0, 0, 1.0);
-        return;
-    }
-
-    // roughレイヤーの場合（グレー固定）
-    if (state.activeLayer === 'rough') {
-        const ctx = roughCtx;
-        ctx.fillStyle = '#808080';  // グレー固定
+    // Use black for fill tool, semi-transparent grey with multiply for sketch tool
+    if (state.currentTool === 'sketch') {
+        // Semi-transparent grey fill with multiply blend for sketch mode
+        const ctx = getActiveLayerCtx();
+        if (!ctx) return;
+        ctx.save();
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = '#808080';
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y);
         for (let i = 1; i < points.length; i++) {
@@ -313,6 +268,10 @@ export function fillPolygon(points) {
         }
         ctx.closePath();
         ctx.fill();
+        ctx.restore();
+    } else {
+        // Black fill for fill tool
+        fillPolygonNoAA(points, 0, 0, 0, 1.0);
     }
 }
 
@@ -325,7 +284,6 @@ export function startLasso(x, y) {
     state.lassoPoints = [{ x, y }];
     lassoCanvas.style.display = 'block';
     lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
-    // console.log('startLasso at:', x, y, 'currentTool:', state.currentTool);
 }
 
 export function updateLasso(x, y) {

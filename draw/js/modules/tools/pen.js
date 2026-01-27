@@ -1,11 +1,6 @@
-
 import {
     state,
-    roughCtx,
-    fillCtx,
-    lineCtx,
-    line2Ctx,
-    line3Ctx
+    getActiveLayerCtx
 } from '../state.js';
 import { saveState } from '../history.js';
 
@@ -28,13 +23,12 @@ function getPixelatedBrush(size, color) {
     ctx.fillRect(0, 0, 1, 1);
     const cData = ctx.getImageData(0, 0, 1, 1).data;
     const r = cData[0], g = cData[1], b = cData[2], a = cData[3];
-    ctx.clearRect(0, 0, size, size); // Clear temp pixel
+    ctx.clearRect(0, 0, size, size);
 
     // Pixel-perfect circle drawing
     const imgData = ctx.createImageData(size, size);
     const data = imgData.data;
     const center = size / 2;
-    // Radius adjusted slightly
     const radiusSq = (size / 2) * (size / 2);
 
     for (let y = 0; y < size; y++) {
@@ -77,46 +71,17 @@ export function drawPenLine(x, y) {
     }
     const size = Math.max(1, Math.floor(brushSize));
 
-    // Get active context
-    let ctx;
-    let color = '#000000';
+    // Get active context dynamically
+    const ctx = getActiveLayerCtx();
+    if (!ctx) return;
 
-    if (state.isErasing) {
-        // Eraser logic
-        if (state.activeLayer === 'rough') {
-            ctx = roughCtx;
-        } else if (state.activeLayer === 'fill') {
-            ctx = fillCtx;
-        } else if (state.activeLayer === 'line') {
-            ctx = lineCtx;
-        } else if (state.activeLayer === 'line2') {
-            ctx = line2Ctx;
-        } else if (state.activeLayer === 'line3') {
-            ctx = line3Ctx;
-        } else {
-            ctx = lineCtx;
-        }
-    } else {
-        // Determine Color
+    // Determine Color
+    let color = '#000000';
+    if (!state.isErasing) {
         if (state.currentTool === 'sketch') {
             color = '#808080'; // Grey for sketch
         } else {
             color = '#000000'; // Fixed Black
-        }
-
-        // Standard Pen - draw to active layer
-        if (state.activeLayer === 'rough') {
-            ctx = roughCtx;
-        } else if (state.activeLayer === 'fill') {
-            ctx = fillCtx;
-        } else if (state.activeLayer === 'line') {
-            ctx = lineCtx;
-        } else if (state.activeLayer === 'line2') {
-            ctx = line2Ctx;
-        } else if (state.activeLayer === 'line3') {
-            ctx = line3Ctx;
-        } else {
-            ctx = lineCtx;
         }
     }
 

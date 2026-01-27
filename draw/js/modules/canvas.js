@@ -1,55 +1,41 @@
-
 import {
     state,
+    layers,
     canvasBg,
-    roughCanvas, roughCtx,
-    fillCanvas, fillCtx,
-    lineCanvas, lineCtx,
-    line2Canvas, line2Ctx,
-    line3Canvas, line3Ctx,
-    lassoCanvas, selectionCanvas,
-    eventCanvas
+    lassoCanvas,
+    selectionCanvas,
+    eventCanvas,
+    layerContainer,
+    createLayer,
+    getActiveLayer
 } from './state.js';
 
-// Initialize all canvases
+// ============================================
+// Canvas Initialization
+// ============================================
+
+/**
+ * Initialize all canvases - called on app start and resize
+ */
 export async function initCanvas() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-
-    // console.log('Initializing canvas:', w, 'x', h);
 
     // Initialize background
     canvasBg.style.width = w + 'px';
     canvasBg.style.height = h + 'px';
 
-    // Initialize Rough Layer
-    roughCanvas.width = w;
-    roughCanvas.height = h;
-    roughCtx.clearRect(0, 0, w, h);
+    // Resize all existing layers
+    for (const layer of layers) {
+        layer.canvas.width = w;
+        layer.canvas.height = h;
+        layer.ctx.clearRect(0, 0, w, h);
+    }
 
-    // Initialize Fill Layer (Transparent)
-    fillCanvas.width = w;
-    fillCanvas.height = h;
-    fillCtx.clearRect(0, 0, w, h);
-
-    // Initialize Line Layer (Transparent)
-    lineCanvas.width = w;
-    lineCanvas.height = h;
-    lineCtx.clearRect(0, 0, w, h);
-
-    // Initialize Line2 Layer (Transparent)
-    line2Canvas.width = w;
-    line2Canvas.height = h;
-    line2Ctx.clearRect(0, 0, w, h);
-
-    // Initialize Line3 Layer (Transparent)
-    line3Canvas.width = w;
-    line3Canvas.height = h;
-    line3Ctx.clearRect(0, 0, w, h);
-
-    // console.log('Canvas initialized - rough:', roughCanvas.width, 'x', roughCanvas.height);
-    // console.log('Canvas initialized - fill:', fillCanvas.width, 'x', fillCanvas.height);
-    // console.log('Canvas initialized - line:', lineCanvas.width, 'x', lineCanvas.height);
+    // Create initial layer if none exist
+    if (layers.length === 0) {
+        createLayer();
+    }
 
     // Initialize utility canvases
     lassoCanvas.width = w;
@@ -58,18 +44,21 @@ export async function initCanvas() {
     selectionCanvas.width = w;
     selectionCanvas.height = h;
 
-    // Initialize event canvas (transparent, for capturing pointer events)
     eventCanvas.width = w;
     eventCanvas.height = h;
 
     applyTransform();
 
-    // Initial state saved in history is handled by history.js or main.js logic
-    // Returning true to signal completion
     return true;
 }
 
-// Convert Hex to RGBA [r,g,b,a]
+// ============================================
+// Color Utilities
+// ============================================
+
+/**
+ * Convert Hex to RGBA [r,g,b,a]
+ */
 export function hexToRgba(hex, alpha = 255) {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
@@ -77,29 +66,41 @@ export function hexToRgba(hex, alpha = 255) {
     return [r, g, b, alpha];
 }
 
-// Update Background Color
+/**
+ * Update Background Color
+ */
 export function updateBackgroundColor(color) {
     state.canvasColor = color;
     canvasBg.style.backgroundColor = color;
 }
 
-// Apply zoom and pan transformations via CSS
+// ============================================
+// Transform (Zoom & Pan)
+// ============================================
+
+/**
+ * Apply zoom and pan transformations via CSS
+ */
 export function applyTransform() {
     const transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
 
     canvasBg.style.transform = transform;
-    roughCanvas.style.transform = transform;
-    fillCanvas.style.transform = transform;
-    lineCanvas.style.transform = transform;
-    line2Canvas.style.transform = transform;
-    line3Canvas.style.transform = transform;
-    // Note: lassoCanvas transform is handled separately (uses screen coordinates for lasso tools)
+
+    // Apply to all dynamic layers
+    for (const layer of layers) {
+        layer.canvas.style.transform = transform;
+    }
+
+    // Event canvas follows transform for coordinate mapping
     eventCanvas.style.transform = transform;
+    // Note: lassoCanvas uses screen coordinates, no transform
 
     const resetBtn = document.getElementById('resetZoomBtn');
-    if (Math.abs(state.scale - 1) > 0.01 || Math.abs(state.translateX) > 1 || Math.abs(state.translateY) > 1) {
-        resetBtn.classList.add('visible');
-    } else {
-        resetBtn.classList.remove('visible');
+    if (resetBtn) {
+        if (Math.abs(state.scale - 1) > 0.01 || Math.abs(state.translateX) > 1 || Math.abs(state.translateY) > 1) {
+            resetBtn.classList.add('visible');
+        } else {
+            resetBtn.classList.remove('visible');
+        }
     }
 }

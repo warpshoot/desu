@@ -1,89 +1,170 @@
-// DOM Elements - Canvas
+// ============================================
+// DOM Elements - Utility Canvases (always present)
+// ============================================
 export let canvasBg = null;
-export let roughCanvas = null;
-export let roughCtx = null;
-export let fillCanvas = null;
-export let fillCtx = null;
-export let lineCanvas = null;
-export let lineCtx = null;
-export let line2Canvas = null;
-export let line2Ctx = null;
-export let line3Canvas = null;
-export let line3Ctx = null;
 export let lassoCanvas = null;
 export let lassoCtx = null;
 export let selectionCanvas = null;
 export let eventCanvas = null;
+export let layerContainer = null;
+
+// ============================================
+// Dynamic Layer Management
+// ============================================
+// Each layer: { id: number, canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, visible: boolean, opacity: number }
+export const layers = [];
+export const MAX_LAYERS = 5;
+let nextLayerId = 1;
 
 export function initDOM() {
     canvasBg = document.getElementById('canvas-background');
-
-    roughCanvas = document.getElementById('canvas-rough');
-    roughCtx = roughCanvas.getContext('2d', { willReadFrequently: true });
-
-    fillCanvas = document.getElementById('canvas-fill');
-    fillCtx = fillCanvas.getContext('2d', { willReadFrequently: true });
-
-    lineCanvas = document.getElementById('canvas-line');
-    lineCtx = lineCanvas.getContext('2d', { willReadFrequently: true });
-
-    line2Canvas = document.getElementById('canvas-line-2');
-    line2Ctx = line2Canvas.getContext('2d', { willReadFrequently: true });
-
-    line3Canvas = document.getElementById('canvas-line-3');
-    line3Ctx = line3Canvas.getContext('2d', { willReadFrequently: true });
-
     lassoCanvas = document.getElementById('lasso-canvas');
     lassoCtx = lassoCanvas.getContext('2d');
-
     selectionCanvas = document.getElementById('selection-canvas');
-
     eventCanvas = document.getElementById('event-canvas');
+    layerContainer = document.getElementById('layer-container');
 }
 
+/**
+ * Create a new layer and add it to the DOM
+ * New layers are inserted above existing layers (higher z-index)
+ */
+export function createLayer() {
+    if (layers.length >= MAX_LAYERS) return null;
+
+    const id = nextLayerId++;
+    const canvas = document.createElement('canvas');
+    canvas.id = `layer-${id}`;
+    canvas.className = 'drawing-layer';
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Insert canvas into DOM (before lasso-canvas to keep proper z-order)
+    layerContainer.appendChild(canvas);
+    updateLayerZIndices();
+
+    const layer = {
+        id,
+        canvas,
+        ctx,
+        visible: true,
+        opacity: 1.0
+    };
+    layers.push(layer);
+
+    // Set as active layer
+    state.activeLayer = id;
+
+    return layer;
+}
+
+/**
+ * Delete a layer by ID and renumber remaining layers
+ */
+export function deleteLayer(id) {
+    const index = layers.findIndex(l => l.id === id);
+    if (index === -1) return false;
+    if (layers.length <= 1) return false; // Must have at least one layer
+
+    const layer = layers[index];
+    layer.canvas.remove();
+    layers.splice(index, 1);
+
+    // Renumber layers so they are always 1, 2, 3, ...
+    renumberLayers();
+    updateLayerZIndices();
+
+    // Set active layer to the one at same index or last
+    state.activeLayer = layers[Math.min(index, layers.length - 1)].id;
+
+    return true;
+}
+
+/**
+ * Renumber layers so IDs are always 1, 2, 3, ... (maintains keyboard shortcut mapping)
+ */
+function renumberLayers() {
+    layers.forEach((layer, index) => {
+        layer.id = index + 1;
+        layer.canvas.id = `layer-${layer.id}`;
+    });
+    nextLayerId = layers.length + 1;
+}
+
+/**
+ * Get layer by ID
+ */
+export function getLayer(id) {
+    return layers.find(l => l.id === id) || null;
+}
+
+/**
+ * Get active layer object
+ */
+export function getActiveLayer() {
+    return getLayer(state.activeLayer);
+}
+
+/**
+ * Get active layer's context
+ */
+export function getActiveLayerCtx() {
+    const layer = getActiveLayer();
+    return layer ? layer.ctx : null;
+}
+
+/**
+ * Get active layer's canvas
+ */
+export function getActiveLayerCanvas() {
+    const layer = getActiveLayer();
+    return layer ? layer.canvas : null;
+}
+
+/**
+ * Update z-indices so layer order is: layer1 (bottom) → layer2 → ... → layerN (top)
+ */
+function updateLayerZIndices() {
+    layers.forEach((layer, index) => {
+        layer.canvas.style.zIndex = 10 + index;
+    });
+}
+
+/**
+ * Clear a specific layer
+ */
+export function clearLayer(id) {
+    const layer = getLayer(id);
+    if (!layer) return;
+    layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+}
+
+// ============================================
 // State Object to manage application state
+// ============================================
 export const state = {
     // Color State
     inkColor: '#000000',
     canvasColor: '#ffffff',
 
-    // Tool settings
-    currentTool: 'pen',  // 'pen', 'fill', 'eraser'
-    activeLayer: 'rough',   // 'rough', 'fill', 'line', 'line2' or 'line3'
-    eraserMode: 'lasso',    // 'lasso' or 'pen'
-
-    // Layer visibility
-    roughVisible: true,
-    fillVisible: true,
-    lineVisible: true,
-    line2Visible: true,
-    line3Visible: true,
-
-    roughOpacity: 1.0,
-    fillOpacity: 1.0,
-    lineOpacity: 1.0,
-    line2Opacity: 1.0,
-    line3Opacity: 1.0,
+    // Tool settings (decoupled from layers)
+    currentTool: 'pen',      // 'pen', 'fill', 'sketch'
+    currentEraser: 'lasso',  // 'lasso', 'pen'
+    isEraserActive: false,   // true when eraser tool is selected
+    activeLayer: 1,          // ID of the currently active layer
 
     // Zoom & Pan
     scale: 1,
     translateX: 0,
     translateY: 0,
 
-    // History Stacks
+    // Global History (unified, no per-layer stacks)
     MAX_HISTORY: 15,
-    roughUndoStack: [],
-    roughRedoStack: [],
-    fillUndoStack: [],
-    fillRedoStack: [],
-    lineUndoStack: [],
-    lineRedoStack: [],
-    line2UndoStack: [],
-    line2RedoStack: [],
-    line3UndoStack: [],
-    line3RedoStack: [],
-    globalUndoStack: [],
-    globalRedoStack: [],
+    undoStack: [],   // Each entry: Map<layerId, ImageBitmap>
+    redoStack: [],
 
     // Pointer Management
     activePointers: new Map(),
@@ -94,8 +175,8 @@ export const state = {
     // Touch & Gesture
     touchStartTime: 0,
     touchStartPos: null,
-    drawingPointerId: null, // ID of the pointer responsible for drawing
-    totalDragDistance: 0,   // Total distance moved during the current gesture
+    drawingPointerId: null,
+    totalDragDistance: 0,
 
     // Pinch Zoom
     isPinching: false,

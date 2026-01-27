@@ -1,8 +1,7 @@
-
 import { initDOM } from './modules/state.js';
 import { initCanvas } from './modules/canvas.js';
 import { initUI } from './modules/ui.js';
-import { saveAllStates } from './modules/history.js';
+import { saveInitialState } from './modules/history.js';
 
 window.onerror = function (msg, url, line, col, error) {
     alert(`Error: ${msg}\nLine: ${line}:${col}\nURL: ${url}`);
@@ -15,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('App starting...');
         initDOM();
         await initCanvas();
-        await saveAllStates(true); // Initialize history
+        await saveInitialState();
         initUI();
         console.log('App initialized.');
     } catch (e) {
