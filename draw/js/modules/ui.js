@@ -977,7 +977,9 @@ async function handlePointerUp(e) {
         state.isPenDrawing = false;
         state.isLassoing = false;
         state.strokeMade = false;
-        state.maxFingers = 0;
+        // Note: Don't reset maxFingers here - it would break undo gesture
+        // if user taps 2 fingers immediately after pen drawing.
+        // maxFingers is already reset in handlePointerDown when first finger touches.
         updateDebugDisplay();
     }
 }
