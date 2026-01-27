@@ -709,12 +709,15 @@ async function handlePointerDown(e) {
 
         // Interrupt drawing if 2nd finger touches
         if (state.isPenDrawing || state.isLassoing || state.isErasing || state.drawingPending) {
-            // Track if actual drawing happened (not just pending saveState)
-            const actualDrawingStarted = state.isPenDrawing || state.isLassoing || state.isErasing;
+            // Check if 2nd finger came very quickly after 1st (likely a 2-finger tap intent)
+            const timeSinceFirstFinger = Date.now() - state.touchStartTime;
+            const isTwoFingerTapIntent = timeSinceFirstFinger < 150;
+
             cancelCurrentOperation();
-            // Only mark as interaction if actual drawing started
-            // If only drawingPending was true, user likely intended 2-finger tap for undo
-            if (actualDrawingStarted) {
+
+            // Only mark as interaction if NOT a quick 2-finger tap
+            // Quick 2-finger tap = user likely wants undo, not drawing interruption
+            if (!isTwoFingerTapIntent) {
                 state.didInteract = true;
             }
         }
