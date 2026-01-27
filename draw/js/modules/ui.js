@@ -35,11 +35,13 @@ import { getCanvasPoint } from './utils.js';
 // Debug Display
 // ============================================
 
+let lastUndoCheck = null;
+
 function updateDebugDisplay() {
     const debugDiv = document.getElementById('debug-display');
     if (!debugDiv) return;
 
-    debugDiv.innerHTML = `
+    let html = `
 undoStack: ${state.undoStack.length}<br>
 redoStack: ${state.redoStack.length}<br>
 strokeMade: ${state.strokeMade}<br>
@@ -48,6 +50,12 @@ maxFingers: ${state.maxFingers}<br>
 isPenDrawing: ${state.isPenDrawing}<br>
 pencilDetected: ${state.pencilDetected}
     `.trim();
+
+    if (lastUndoCheck) {
+        html += `<br><br>Last tap:<br>dur:${lastUndoCheck.duration}<br>maxF:${lastUndoCheck.maxFingers}<br>stroke:${lastUndoCheck.strokeMade}<br>inter:${lastUndoCheck.didInteract}<br>undo:${lastUndoCheck.undoCalled ? 'YES' : 'NO'}`;
+    }
+
+    debugDiv.innerHTML = html;
 }
 
 // ============================================
@@ -910,17 +918,30 @@ async function handlePointerUp(e) {
         // Check for gestures (Undo/Redo)
         // Trigger if: short tap, no significant movement/interaction
         console.log('[DEBUG] Undo check:', { duration, didInteract: state.didInteract, strokeMade: state.strokeMade, maxFingers: state.maxFingers, undoStackLength: state.undoStack.length });
+
+        let undoCalled = false;
         if (duration < 400 && !state.didInteract && !state.strokeMade) {
             // Note: maxFingers tracks maximum fingers seen during this touch session
             if (state.maxFingers === 2) {
                 console.log('[DEBUG] Calling undo()');
                 undo();
                 updateAllThumbnails();
+                undoCalled = true;
             } else if (state.maxFingers === 3) {
                 redo();
                 updateAllThumbnails();
             }
         }
+
+        // Record last undo check for debugging
+        lastUndoCheck = {
+            duration: duration,
+            maxFingers: state.maxFingers,
+            strokeMade: state.strokeMade,
+            didInteract: state.didInteract,
+            undoCalled: undoCalled
+        };
+        updateDebugDisplay();
 
         // Handle Flood Fill Tap
         if (state.currentTool === 'fill' && !state.isEraserActive && state.maxFingers === 1 && !state.didInteract && duration < 300) {
