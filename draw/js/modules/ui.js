@@ -929,6 +929,7 @@ async function handlePointerUp(e) {
         state.isErasing = false;
         state.isPenDrawing = false;
         state.isLassoing = false;
+        state.strokeMade = false;
         state.maxFingers = 0;
     }
 }
