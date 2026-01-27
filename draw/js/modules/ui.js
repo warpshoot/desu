@@ -495,11 +495,6 @@ function setupPointerEvents() {
     // Prevent context menu
     eventCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    // Touch events for pinch zoom
-    eventCanvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-    eventCanvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-    eventCanvas.addEventListener('touchend', handleTouchEnd, { passive: false });
-
     // Wheel for zoom
     eventCanvas.addEventListener('wheel', handleWheel, { passive: false });
 }
@@ -507,253 +502,314 @@ function setupPointerEvents() {
 async function handlePointerDown(e) {
     if (state.isSaveMode) return;
 
-    // Track active pointers
-    state.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // Prevent default to avoid native touch actions
+    e.preventDefault();
+
+    try {
+        eventCanvas.setPointerCapture(e.pointerId);
+    } catch (err) {
+        // Ignore if capture fails
+    }
+
+    // Track active pointers with detailed state
+    state.activePointers.set(e.pointerId, {
+        x: e.clientX,
+        y: e.clientY,
+        totalMove: 0
+    });
 
     // Detect pencil
     if (e.pointerType === 'pen') {
         state.pencilDetected = true;
     }
 
-    // Zoom with Ctrl + Space + Click (zoom in) or Ctrl + Space + Alt + Click (zoom out)
-    if (state.isSpacePressed && state.isCtrlPressed) {
-        const zoomFactor = state.isAltPressed ? 0.8 : 1.25;
-        const newScale = Math.max(0.1, Math.min(10, state.scale * zoomFactor));
+    // Reset interaction flags if this is the first pointer
+    if (state.activePointers.size === 1) {
+        state.touchStartTime = Date.now();
+        state.touchStartPos = { x: e.clientX, y: e.clientY };
+        state.maxFingers = 1;
+        state.isPinching = false;
+        state.wasPanning = false;
+        state.wasPinching = false;
+        state.didInteract = false;
+        state.totalDragDistance = 0;
+    }
+    state.maxFingers = Math.max(state.maxFingers, state.activePointers.size);
 
-        // Zoom centered on click position
-        const clickX = e.clientX;
-        const clickY = e.clientY;
-
-        // Calculate the point in canvas space before zoom
-        const canvasX = (clickX - state.translateX) / state.scale;
-        const canvasY = (clickY - state.translateY) / state.scale;
-
-        // Update scale
-        state.scale = newScale;
-
-        // Adjust translation so the click point stays under the cursor
-        state.translateX = clickX - canvasX * state.scale;
-        state.translateY = clickY - canvasY * state.scale;
-
-        applyTransform();
+    // Zoom with Ctrl + Space + Click
+    if (state.isSpacePressed && state.isCtrlPressed && state.activePointers.size === 1) {
+        handleZoomClick(e);
         return;
     }
 
-    // Pan with space or two fingers
-    if (state.isSpacePressed || state.activePointers.size > 1) {
+    // 2 Fingers = Pinch/Pan preparation
+    if (state.activePointers.size === 2) {
+        state.isPinching = false; // Will trigger on move
+        const pts = Array.from(state.activePointers.values());
+        state.lastPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        state.lastPinchCenter = {
+            x: (pts[0].x + pts[1].x) / 2,
+            y: (pts[0].y + pts[1].y) / 2
+        };
+        state.initialPinchDist = state.lastPinchDist;
+        state.initialPinchCenter = { ...state.lastPinchCenter };
+
+        // Interrupt drawing if 2nd finger touches
+        if (state.isPenDrawing || state.isLassoing || state.isErasing) {
+            cancelCurrentOperation();
+        }
+        return;
+    }
+
+    // Pan with space
+    if (state.activePointers.size === 1 && state.isSpacePressed) {
         state.isPanning = true;
         state.panStartX = e.clientX;
         state.panStartY = e.clientY;
         state.panStartTranslateX = state.translateX;
         state.panStartTranslateY = state.translateY;
+        eventCanvas.style.cursor = 'grabbing';
         return;
     }
 
-    // Record touch start info
-    state.touchStartTime = Date.now();
-    state.touchStartPos = { x: e.clientX, y: e.clientY };
-    state.totalDragDistance = 0;
-    state.drawingPointerId = e.pointerId;
-    state.strokeMade = false;
+    // 1 Finger = Drawing (if not space pressed)
+    const canDraw = e.pointerType === 'pen' || e.pointerType === 'mouse' || (e.pointerType === 'touch' && !state.pencilDetected);
 
-    const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
+    if (state.activePointers.size === 1 && canDraw) {
+        state.drawingPointerId = e.pointerId;
+        state.strokeMade = false;
 
-    // Determine action based on tool
-    if (state.isEraserActive) {
-        // Eraser mode
-        if (state.currentEraser === 'lasso') {
-            startLasso(e.clientX, e.clientY);
-        } else {
-            // Pen eraser
-            await saveState();
-            state.isErasing = true;
-            startPenDrawing(canvasPoint.x, canvasPoint.y);
-        }
-    } else {
-        // Drawing mode
-        if (state.currentTool === 'fill' || state.currentTool === 'sketch') {
-            // Lasso fill
-            startLasso(e.clientX, e.clientY);
-        } else {
-            // Pen drawing
-            await saveState();
-            startPenDrawing(canvasPoint.x, canvasPoint.y);
-        }
-    }
+        const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
-    state.strokeMade = true;
-}
-
-async function handlePointerMove(e) {
-    if (state.isSaveMode) return;
-
-    // Update pointer position
-    if (state.activePointers.has(e.pointerId)) {
-        state.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    }
-
-    // Calculate drag distance
-    if (state.touchStartPos) {
-        const dx = e.clientX - state.touchStartPos.x;
-        const dy = e.clientY - state.touchStartPos.y;
-        state.totalDragDistance += Math.sqrt(dx * dx + dy * dy);
-    }
-
-    // Pan
-    if (state.isPanning) {
-        state.translateX = state.panStartTranslateX + (e.clientX - state.panStartX);
-        state.translateY = state.panStartTranslateY + (e.clientY - state.panStartY);
-        applyTransform();
-        return;
-    }
-
-    // Only handle drawing pointer
-    if (e.pointerId !== state.drawingPointerId) return;
-
-    const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
-
-    if (state.isLassoing) {
-        updateLasso(e.clientX, e.clientY);
-    } else if (state.isPenDrawing) {
-        drawPenLine(canvasPoint.x, canvasPoint.y);
-    }
-}
-
-async function handlePointerUp(e) {
-    state.activePointers.delete(e.pointerId);
-
-    if (state.isPanning && state.activePointers.size === 0) {
-        state.isPanning = false;
-        return;
-    }
-
-    if (e.pointerId !== state.drawingPointerId) return;
-    state.drawingPointerId = null;
-
-    const touchDuration = Date.now() - state.touchStartTime;
-    const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
-
-    // Check for two-finger tap (undo) - only if no stroke made
-    if (state.maxFingers >= 2 && touchDuration < 300 && state.totalDragDistance < 20 && !state.strokeMade) {
-        undo();
-        state.maxFingers = 0;
-        return;
-    }
-
-    state.maxFingers = 0;
-
-    // Finish current operation
-    if (state.isLassoing) {
-        const points = finishLasso();
-        if (points && points.length >= 3) {
-            await saveState();
-
-            if (state.isEraserActive) {
-                fillPolygonTransparent(points);
+        if (state.isEraserActive) {
+            if (state.currentEraser === 'lasso') {
+                startLasso(e.clientX, e.clientY);
             } else {
-                fillPolygon(points);
+                await saveState();
+                state.isErasing = true;
+                startPenDrawing(canvasPoint.x, canvasPoint.y);
             }
-
-            await saveState();
+        } else {
+            if (state.currentTool === 'fill' || state.currentTool === 'sketch') {
+                startLasso(e.clientX, e.clientY);
+            } else {
+                await saveState();
+                startPenDrawing(canvasPoint.x, canvasPoint.y);
+            }
         }
-    } else if (state.isPenDrawing) {
-        await endPenDrawing();
+        state.strokeMade = true;
     }
-
-    // Handle tap for flood fill
-    if (state.currentTool === 'fill' && !state.isEraserActive && touchDuration < 200 && state.totalDragDistance < 10) {
-        await saveState();
-        const color = hexToRgba('#000000', 255);
-        floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), color);
-        await saveState();
-    }
-
-    state.isErasing = false;
 }
 
-function handlePointerCancel(e) {
-    state.activePointers.delete(e.pointerId);
+function handleZoomClick(e) {
+    const zoomFactor = state.isAltPressed ? 0.8 : 1.25;
+    const newScale = Math.max(0.1, Math.min(10, state.scale * zoomFactor));
+    const clickX = e.clientX;
+    const clickY = e.clientY;
+    const canvasX = (clickX - state.translateX) / state.scale;
+    const canvasY = (clickY - state.translateY) / state.scale;
+    state.scale = newScale;
+    state.translateX = clickX - canvasX * state.scale;
+    state.translateY = clickY - canvasY * state.scale;
+    applyTransform();
+    state.didInteract = true;
+}
 
+function cancelCurrentOperation() {
     if (state.isLassoing) {
+        finishLasso(); // Just finish, don't fill
         const layer = getActiveLayer();
         if (layer) restoreLayer(layer.id);
-        finishLasso();
     }
-
     if (state.isPenDrawing) {
         const layer = getActiveLayer();
         if (layer) restoreLayer(layer.id);
         state.isPenDrawing = false;
         state.lastPenPoint = null;
     }
-
     state.drawingPointerId = null;
-    state.isPanning = false;
     state.isErasing = false;
 }
 
-// Touch handlers for pinch zoom
-function handleTouchStart(e) {
-    state.maxFingers = Math.max(state.maxFingers, e.touches.length);
+async function handlePointerMove(e) {
+    if (state.isSaveMode) return;
+    if (!state.activePointers.has(e.pointerId)) return;
 
-    if (e.touches.length === 2) {
-        e.preventDefault();
-        state.isPinching = true;
+    e.preventDefault();
 
-        const touch1 = e.touches[0];
-        const touch2 = e.touches[1];
+    const pointer = state.activePointers.get(e.pointerId);
+    const dx = e.clientX - pointer.x;
+    const dy = e.clientY - pointer.y;
+    const moveDist = Math.hypot(dx, dy);
 
-        state.initialPinchDist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
-        state.initialPinchCenter = {
-            x: (touch1.clientX + touch2.clientX) / 2,
-            y: (touch1.clientY + touch2.clientY) / 2
+    pointer.totalMove = (pointer.totalMove || 0) + moveDist;
+    pointer.x = e.clientX;
+    pointer.y = e.clientY;
+    state.activePointers.set(e.pointerId, pointer);
+
+    // 2 Fingers = Pinch / Pan
+    if (state.activePointers.size === 2) {
+        const pts = Array.from(state.activePointers.values());
+        const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        const center = {
+            x: (pts[0].x + pts[1].x) / 2,
+            y: (pts[0].y + pts[1].y) / 2
         };
-        state.lastPinchDist = state.initialPinchDist;
-        state.lastPinchCenter = { ...state.initialPinchCenter };
+
+        // Threshold check
+        const distDelta = Math.abs(dist - state.initialPinchDist);
+        const centerDelta = Math.hypot(center.x - state.initialPinchCenter.x, center.y - state.initialPinchCenter.y);
+
+        if (distDelta > 10 || centerDelta > 10) {
+            state.isPinching = true;
+            state.wasPinching = true;
+            state.didInteract = true;
+        }
+
+        if (state.isPinching) {
+            const zoomFactor = dist / state.lastPinchDist;
+            const oldScale = state.scale;
+            state.scale = Math.min(Math.max(state.scale * zoomFactor, 0.1), 10);
+
+            // Zoom anchored
+            state.translateX = center.x - (center.x - state.translateX) * (state.scale / oldScale);
+            state.translateY = center.y - (center.y - state.translateY) * (state.scale / oldScale);
+
+            // Pan during pinch
+            state.translateX += center.x - state.lastPinchCenter.x;
+            state.translateY += center.y - state.lastPinchCenter.y;
+
+            applyTransform();
+        }
+
+        state.lastPinchDist = dist;
+        state.lastPinchCenter = center;
+        return;
     }
-}
 
-function handleTouchMove(e) {
-    if (state.isPinching && e.touches.length === 2) {
-        e.preventDefault();
-
-        const touch1 = e.touches[0];
-        const touch2 = e.touches[1];
-
-        const currentDist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
-        const currentCenter = {
-            x: (touch1.clientX + touch2.clientX) / 2,
-            y: (touch1.clientY + touch2.clientY) / 2
-        };
-
-        // Zoom
-        const scaleFactor = currentDist / state.lastPinchDist;
-        const newScale = Math.min(Math.max(state.scale * scaleFactor, 0.1), 10);
-
-        // Pan
-        const dx = currentCenter.x - state.lastPinchCenter.x;
-        const dy = currentCenter.y - state.lastPinchCenter.y;
-
-        // Adjust for zoom center
-        const zoomCenterX = currentCenter.x - state.translateX;
-        const zoomCenterY = currentCenter.y - state.translateY;
-
-        state.translateX += dx + zoomCenterX * (1 - scaleFactor);
-        state.translateY += dy + zoomCenterY * (1 - scaleFactor);
-        state.scale = newScale;
-
-        state.lastPinchDist = currentDist;
-        state.lastPinchCenter = currentCenter;
-
+    // Pan
+    if (state.isPanning && state.activePointers.size === 1) {
+        state.translateX = state.panStartTranslateX + (e.clientX - state.panStartX);
+        state.translateY = state.panStartTranslateY + (e.clientY - state.panStartY);
         applyTransform();
+        state.wasPanning = true;
+        state.didInteract = true;
+        return;
+    }
+
+    // Interaction threshold
+    if (pointer.totalMove > 5) {
+        state.didInteract = true;
+    }
+
+    // Drawing
+    if (e.pointerId === state.drawingPointerId) {
+        // Skip drawing if we just finished a pinch/pan or moved too little
+        if (state.wasPinching || state.wasPanning) return;
+
+        const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
+
+        if (state.isLassoing) {
+            updateLasso(e.clientX, e.clientY);
+        } else if (state.isPenDrawing) {
+            drawPenLine(canvasPoint.x, canvasPoint.y);
+        }
     }
 }
 
-function handleTouchEnd(e) {
-    if (e.touches.length < 2) {
+async function handlePointerUp(e) {
+    if (state.isSaveMode) return;
+    e.preventDefault();
+
+    if (state.isPanning) {
+        state.isPanning = false;
+        eventCanvas.style.cursor = '';
+    }
+
+    const pointer = state.activePointers.get(e.pointerId);
+    if (pointer && pointer.totalMove > 8) {
+        state.didInteract = true;
+    }
+
+    state.activePointers.delete(e.pointerId);
+
+    try {
+        eventCanvas.releasePointerCapture(e.pointerId);
+    } catch (err) { }
+
+    // Reset pinch checks
+    if (state.activePointers.size < 2) {
         state.isPinching = false;
     }
+
+    // If all fingers up
+    if (state.activePointers.size === 0) {
+        const duration = Date.now() - state.touchStartTime;
+
+        // Check for gestures (Undo/Redo)
+        // Trigger if: short tap, no significant movement/interaction
+        if (duration < 400 && !state.didInteract && !state.strokeMade) {
+            // Note: maxFingers tracks maximum fingers seen during this touch session
+            if (state.maxFingers === 2) {
+                undo();
+            } else if (state.maxFingers === 3) {
+                redo();
+            }
+        }
+
+        // Handle Flood Fill Tap
+        if (state.currentTool === 'fill' && !state.isEraserActive && state.maxFingers === 1 && !state.didInteract && duration < 300) {
+            const canvasPoint = getCanvasPoint(pointer.x, pointer.y);
+            await saveState();
+            const color = hexToRgba('#000000', 255);
+            floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), color);
+            await saveState();
+        }
+
+        // Finish Drawing Actions
+        if (e.pointerId === state.drawingPointerId) {
+            if (state.isLassoing) {
+                const points = finishLasso();
+                if (points && points.length >= 3 && !state.wasPanning && !state.wasPinching) {
+                    await saveState();
+                    if (state.isEraserActive) {
+                        fillPolygonTransparent(points);
+                    } else {
+                        fillPolygon(points);
+                    }
+                    await saveState();
+                }
+            } else if (state.isPenDrawing) {
+                await endPenDrawing();
+            }
+            state.drawingPointerId = null;
+        }
+
+        // Clean up
+        state.isErasing = false;
+        state.isPenDrawing = false;
+        state.isLassoing = false;
+        state.maxFingers = 0;
+    }
 }
+
+function handlePointerCancel(e) {
+    state.activePointers.delete(e.pointerId);
+    try {
+        eventCanvas.releasePointerCapture(e.pointerId);
+    } catch (err) { }
+
+    cancelCurrentOperation();
+
+    if (state.activePointers.size === 0) {
+        state.isPanning = false;
+        state.isPinching = false;
+        eventCanvas.style.cursor = '';
+    }
+}
+
+// Separate Touch Handlers are no longer needed as Pointer Events handle everything
+// handleTouchStart, handleTouchMove, handleTouchEnd were removed.
 
 function handleWheel(e) {
     e.preventDefault();
@@ -762,7 +818,6 @@ function handleWheel(e) {
     const delta = -e.deltaY * zoomSpeed;
     const newScale = Math.min(Math.max(state.scale * (1 + delta), 0.1), 10);
 
-    // Zoom centered on mouse position
     const rect = eventCanvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;

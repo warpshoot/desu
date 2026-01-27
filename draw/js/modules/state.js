@@ -177,6 +177,9 @@ export const state = {
     touchStartPos: null,
     drawingPointerId: null,
     totalDragDistance: 0,
+    didInteract: false,
+    wasPinching: false,
+    wasPanning: false,
 
     // Pinch Zoom
     isPinching: false,
