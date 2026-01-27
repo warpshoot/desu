@@ -751,6 +751,9 @@ function cancelCurrentOperation() {
     }
     state.drawingPointerId = null;
     state.isErasing = false;
+    state.isLassoing = false;
+    state.strokeMade = false;
+    state.didInteract = false;
 }
 
 async function handlePointerMove(e) {
