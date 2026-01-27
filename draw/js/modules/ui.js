@@ -943,9 +943,13 @@ async function handlePointerUp(e) {
                 undo();
                 updateAllThumbnails();
                 undoCalled = true;
+                // Reset maxFingers to prevent duplicate undo calls
+                // (can happen if event listeners fire multiple times)
+                state.maxFingers = 0;
             } else if (state.maxFingers === 3) {
                 redo();
                 updateAllThumbnails();
+                state.maxFingers = 0;
             }
         }
 
