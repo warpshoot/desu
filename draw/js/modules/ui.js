@@ -35,12 +35,19 @@ import { getCanvasPoint } from './utils.js';
 // Debug Display
 // ============================================
 
+// Set to true to show debug overlay (top-left corner)
+const DEBUG_MODE = false;
+
 let lastUndoCheck = null;
 let undoCallCount = 0;
 
 function updateDebugDisplay() {
+    if (!DEBUG_MODE) return;
+
     const debugDiv = document.getElementById('debug-display');
     if (!debugDiv) return;
+
+    debugDiv.style.display = 'block';
 
     let html = `
 undoStack: ${state.undoStack.length}<br>
