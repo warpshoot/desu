@@ -706,6 +706,8 @@ async function handlePointerDown(e) {
         // Interrupt drawing if 2nd finger touches
         if (state.isPenDrawing || state.isLassoing || state.isErasing || state.drawingPending) {
             cancelCurrentOperation();
+            // Mark as interaction to prevent undo gesture triggering
+            state.didInteract = true;
         }
         return;
     }
@@ -917,10 +919,10 @@ async function handlePointerUp(e) {
 
         // Check for gestures (Undo/Redo)
         // Trigger if: short tap, no significant movement/interaction
-        console.log('[DEBUG] Undo check:', { duration, didInteract: state.didInteract, strokeMade: state.strokeMade, maxFingers: state.maxFingers, undoStackLength: state.undoStack.length });
+        console.log('[DEBUG] Undo check:', { duration, didInteract: state.didInteract, strokeMade: state.strokeMade, maxFingers: state.maxFingers, wasPanning: state.wasPanning, wasPinching: state.wasPinching, undoStackLength: state.undoStack.length });
 
         let undoCalled = false;
-        if (duration < 400 && !state.didInteract && !state.strokeMade) {
+        if (duration < 400 && !state.didInteract && !state.strokeMade && !state.wasPanning && !state.wasPinching) {
             // Note: maxFingers tracks maximum fingers seen during this touch session
             if (state.maxFingers === 2) {
                 console.log('[DEBUG] Calling undo()');
