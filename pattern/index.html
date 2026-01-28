@@ -18,6 +18,11 @@
             user-select: none;
         }
 
+        /* Global Reset for Solid Design */
+        *:not(#credit-btn):not(#resetZoomBtn):not(.tool-tooltip) {
+            border-radius: 0 !important;
+        }
+
         html,
         body {
             width: 100%;
@@ -43,10 +48,10 @@
         #toolbar-left {
             position: fixed;
             left: 12px;
-            bottom: 120px;
+            bottom: max(12px, env(safe-area-inset-bottom));
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 4px;
             z-index: 100;
         }
 
@@ -65,8 +70,8 @@
             width: 48px;
             height: 48px;
             border-radius: 12px;
-            border: 2px solid #666;
-            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #999;
+            background: rgba(255, 255, 255, 0.7);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -74,6 +79,7 @@
             cursor: pointer;
             transition: transform 0.1s, background 0.1s;
             color: #333;
+            overflow: visible;
         }
 
         .tool-btn svg {
@@ -102,20 +108,37 @@
         }
 
         .tool-btn.active {
-            background: #333;
-            border-color: #fff;
-            color: #fff;
+            border: 1px solid #000;
+            background: #fff;
+            transform: translateX(-5px);
+        }
+
+        .tool-btn.active::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            right: 100%;
+            bottom: -1px;
+            width: 20px;
+            background: #000;
         }
 
         /* カラーピッカー用ボタン */
         .color-btn {
             width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            border: 2px solid #666;
+            height: 32px;
+            border: 1px solid #999;
+            background: rgba(255, 255, 255, 0.7);
             cursor: pointer;
             transition: transform 0.1s;
             position: relative;
+            margin-top: 0;
+        }
+
+        #triangleBtn,
+        #bgColorBtn {
+            margin-bottom: 8px;
+            /* Base 4px gap + 8px = 12px */
         }
 
         .color-btn:active {
@@ -137,7 +160,6 @@
         .color-btn .color-display {
             width: 100%;
             height: 100%;
-            border-radius: 10px;
             pointer-events: none;
             z-index: 1;
             position: relative;
@@ -174,6 +196,8 @@
             color: rgba(0, 0, 0, 0.8);
             border-color: rgba(0, 0, 0, 0.5);
         }
+
+        /* Indicator for color dots or similar if needed, but here we just use the group */
 
         /* クレジットモーダル */
         #credit-modal {
@@ -544,17 +568,17 @@
 
     <!-- 左下ツールバー -->
     <div id="toolbar-left">
-        <div class="tool-btn active" id="triangleBtn" data-tool="triangle" title="三角形 (1)">
-            <img src="icons/triangle.png" alt="三角形">
-            <div class="tool-tooltip">三角形 (1)</div>
+        <div class="tool-btn" id="rectBtn" data-tool="rect" title="矩形 (3)">
+            <img src="icons/rect.png" alt="矩形">
+            <div class="tool-tooltip">矩形 (3)</div>
         </div>
         <div class="tool-btn" id="arcBtn" data-tool="arc" title="円弧 (2)">
             <img src="icons/arc.png" alt="円弧">
             <div class="tool-tooltip">円弧 (2)</div>
         </div>
-        <div class="tool-btn" id="rectBtn" data-tool="rect" title="矩形 (3)">
-            <img src="icons/rect.png" alt="矩形">
-            <div class="tool-tooltip">矩形 (3)</div>
+        <div class="tool-btn active" id="triangleBtn" data-tool="triangle" title="三角形 (1)">
+            <img src="icons/triangle.png" alt="三角形">
+            <div class="tool-tooltip">三角形 (1)</div>
         </div>
         <div class="color-btn" id="fillColorBtn" title="塗りつぶし色 (X)">
             <div class="color-display" id="fillColorDisplay" style="background: #000000;"></div>
@@ -570,6 +594,13 @@
             <img id="symmetryIcon" src="icons/sym.png" alt="対称描画">
             <div class="tool-tooltip">対称描画 (S)</div>
         </div>
+        <div class="tool-btn active" id="gridBtn" title="グリッド線 (G)">
+            <svg viewBox="0 0 24 24">
+                <path d="M4 8 L20 8 M4 12 L20 12 M4 16 L20 16" />
+                <path d="M8 4 L8 20 M12 4 L12 20 M16 4 L16 20" />
+            </svg>
+            <div class="tool-tooltip">グリッド線 (G)</div>
+        </div>
     </div>
 
     <!-- 右上ツールバー -->
@@ -580,13 +611,6 @@
                 <path d="M4 20 L20 20" />
             </svg>
             <div class="tool-tooltip tool-tooltip-bottom">保存 (⌘S)</div>
-        </div>
-        <div class="tool-btn active" id="gridBtn" title="グリッド線">
-            <svg viewBox="0 0 24 24">
-                <path d="M4 8 L20 8 M4 12 L20 12 M4 16 L20 16" />
-                <path d="M8 4 L8 20 M12 4 L12 20 M16 4 L16 20" />
-            </svg>
-            <div class="tool-tooltip tool-tooltip-bottom">グリッド線</div>
         </div>
         <div class="tool-btn" id="clearBtn" title="クリア (Del)">
             <svg viewBox="0 0 24 24">
