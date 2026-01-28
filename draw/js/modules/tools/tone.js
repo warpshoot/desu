@@ -6,15 +6,15 @@ import { getBounds, isPointInPolygon } from '../utils.js';
 // ============================================
 export const TONE_PRESETS = [
     // Fine dots - Light tone (4 variations)
-    { id: 'coarse1', name: 'B1', type: 'fine', spacing: 10, dotSize: 1 },
-    { id: 'coarse2', name: 'B2', type: 'fine', spacing: 7, dotSize: 1 },
-    { id: 'coarse3', name: 'B3', type: 'fine', spacing: 5, dotSize: 1 },
-    { id: 'coarse4', name: 'B4', type: 'fine', spacing: 4, dotSize: 1 },
+    { id: 'coarse1', name: 'B1', type: 'fine', spacing: 20, dotSize: 1 },
+    { id: 'coarse2', name: 'B2', type: 'fine', spacing: 15, dotSize: 1 },
+    { id: 'coarse3', name: 'B3', type: 'fine', spacing: 10, dotSize: 1 },
+    { id: 'coarse4', name: 'B4', type: 'fine', spacing: 5, dotSize: 1 },
     // Fine dots - Medium tone (4 variations)
-    { id: 'fine1', name: 'C1', type: 'fine', spacing: 10, dotSize: 3 },
-    { id: 'fine2', name: 'C2', type: 'fine', spacing: 7, dotSize: 3 },
-    { id: 'fine3', name: 'C3', type: 'fine', spacing: 5, dotSize: 3 },
-    { id: 'fine4', name: 'C4', type: 'fine', spacing: 4, dotSize: 3 },
+    { id: 'fine1', name: 'C1', type: 'fine', spacing: 20, dotSize: 3 },
+    { id: 'fine2', name: 'C2', type: 'fine', spacing: 15, dotSize: 3 },
+    { id: 'fine3', name: 'C3', type: 'fine', spacing: 10, dotSize: 3 },
+    { id: 'fine4', name: 'C4', type: 'fine', spacing: 5, dotSize: 3 },
     // Diagonal lines (3 variations)
     { id: 'diag1', name: 'D1', type: 'diagonal', spacing: 12, angle: 45, width: 1 },
     { id: 'diag2', name: 'D2', type: 'diagonal', spacing: 8, angle: 45, width: 1 },
