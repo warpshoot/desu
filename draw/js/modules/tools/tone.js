@@ -469,7 +469,7 @@ function drawToneInRegion(ctx, minX, minY, maxX, maxY, preset) {
     const spacing = preset.spacing;
 
     if (preset.type === 'coarse' || preset.type === 'fine') {
-        const dotSize = preset.dotSize;
+        const dotSize = Math.round(preset.dotSize);
         const angle = Math.PI / 4;
         const cos45 = Math.cos(angle);
         const sin45 = Math.sin(angle);
@@ -507,11 +507,19 @@ function drawToneInRegion(ctx, minX, minY, maxX, maxY, preset) {
                 const x = gx * cos45 - gy * sin45;
                 const y = gx * sin45 + gy * cos45;
 
-                // Clip to region bounds here to avoid drawing millions of dots unnecessarily
-                if (x >= minX - dotSize && x < maxX + dotSize && y >= minY - dotSize && y < maxY + dotSize) {
-                    ctx.beginPath();
-                    ctx.arc(x, y, dotSize / 2, 0, Math.PI * 2);
-                    ctx.fill();
+                // Draw square dots pixel-by-pixel to avoid antialiasing
+                const centerX = Math.round(x);
+                const centerY = Math.round(y);
+                const halfSize = Math.floor(dotSize / 2);
+
+                for (let dy = -halfSize; dy <= halfSize; dy++) {
+                    for (let dx = -halfSize; dx <= halfSize; dx++) {
+                        const px = centerX + dx;
+                        const py = centerY + dy;
+                        if (px >= minX && px < maxX && py >= minY && py < maxY) {
+                            ctx.fillRect(px, py, 1, 1);
+                        }
+                    }
                 }
             }
         }
@@ -571,49 +579,19 @@ function drawToneInRegion(ctx, minX, minY, maxX, maxY, preset) {
             }
         }
     } else if (preset.type === 'diagonal') {
-        // Draw diagonal lines directly without rotation
-        // Line equation: x - y = k * spacing (for 45-degree lines)
-        // We want lines aligned to global origin (0, 0)
-
+        // Draw diagonal lines pixel-by-pixel to avoid antialiasing
         const spacing = preset.spacing;
-        const lineWidth = preset.width;
+        const lineWidth = Math.ceil(preset.width);
 
-        // Calculate range of line indices (k) that intersect the region
-        const minDiff = minX - maxY;
-        const maxDiff = maxX - minY;
-
-        const startK = Math.floor(minDiff / spacing);
-        const endK = Math.ceil(maxDiff / spacing);
-
-        ctx.lineWidth = lineWidth;
-        ctx.strokeStyle = '#000000';
-        ctx.lineCap = 'butt';
-
-        for (let k = startK; k <= endK; k++) {
-            const diff = k * spacing;
-            // Line: x - y = diff  =>  y = x - diff
-
-            // Find intersection points with region boundaries
-            // Left edge (x = minX): y = minX - diff
-            // Right edge (x = maxX): y = maxX - diff
-            // Top edge (y = minY): x = minY + diff
-            // Bottom edge (y = maxY): x = maxY + diff
-
-            const y1 = minX - diff;
-            const y2 = maxX - diff;
-
-            // Clip to region
-            const startY = Math.max(minY, y1);
-            const endY = Math.min(maxY, y2);
-
-            if (startY <= endY) {
-                const startX = startY + diff;
-                const endX = endY + diff;
-
-                ctx.beginPath();
-                ctx.moveTo(startX, startY);
-                ctx.lineTo(endX, endY);
-                ctx.stroke();
+        for (let y = minY; y < maxY; y++) {
+            for (let x = minX; x < maxX; x++) {
+                // Diagonal x - y
+                const diff = x - y;
+                const dist = ((diff % spacing) + spacing) % spacing;
+                const minDist = Math.min(dist, spacing - dist);
+                if (minDist < lineWidth) {
+                    ctx.fillRect(x, y, 1, 1);
+                }
             }
         }
     } else if (preset.type === 'grid') {
