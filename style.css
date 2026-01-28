@@ -59,32 +59,6 @@ body {
     width: 800px;
     height: auto;
     opacity: 0.15;
-    animation: swim 60s infinite linear;
-}
-
-@keyframes swim {
-    0% {
-        right: -100px;
-        top: 20%;
-    }
-
-    25% {
-        top: 40%;
-    }
-
-    50% {
-        top: 30%;
-        right: 50%;
-    }
-
-    75% {
-        top: 50%;
-    }
-
-    100% {
-        right: 110%;
-        top: 35%;
-    }
 }
 
 /* ===================================
