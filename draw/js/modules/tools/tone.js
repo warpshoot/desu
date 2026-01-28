@@ -9,7 +9,7 @@ export const TONE_PRESETS = [
     { id: 'coarse1', name: 'B1', type: 'fine', spacing: 12, dotSize: 1 },
     { id: 'coarse2', name: 'B2', type: 'fine', spacing: 9, dotSize: 1 },
     { id: 'coarse3', name: 'B3', type: 'fine', spacing: 6, dotSize: 1 },
-    { id: 'coarse4', name: 'B4', type: 'fine', spacing: 3, dotSize: 1 },
+    { id: 'coarse4', name: 'B4', type: 'fine', spacing: 4, dotSize: 1 },
     // Fine dots - Medium tone (4 variations)
     { id: 'fine1', name: 'C1', type: 'fine', spacing: 20, dotSize: 2 },
     { id: 'fine2', name: 'C2', type: 'fine', spacing: 15, dotSize: 2 },
