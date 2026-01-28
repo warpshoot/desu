@@ -48,6 +48,7 @@
                 <img src="icons/pen.png" class="tool-icon tool-pen active" alt="Pen">
                 <img src="icons/bet.png" class="tool-icon tool-fill" style="display:none;" alt="Fill">
                 <img src="icons/ata.png" class="tool-icon tool-sketch" style="display:none;" alt="Sketch">
+                <img src="icons/tone.png" class="tool-icon tool-tone" style="display:none;" alt="Tone">
                 <div class="tool-tooltip">描画ツール</div>
             </div>
 
@@ -83,7 +84,7 @@
                 <path d="M12 4 L12 16 M6 12 L12 18 L18 12" />
                 <path d="M4 20 L20 20" />
             </svg>
-            <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-2">保存 (⌘S)</div>
+            <div class="tool-tooltip tool-tooltip-bottom">保存 (⌘S)</div>
         </div>
 
         <div class="tool-btn" id="clearBtn">
@@ -91,7 +92,7 @@
                 <path
                     d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34" />
             </svg>
-            <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-3">全消去 (Del)</div>
+            <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-2">全消去 (Del)</div>
         </div>
     </div>
 
@@ -181,6 +182,9 @@
         <div class="menu-item" data-mode="sketch">
             <img src="icons/ata.png" alt="Sketch">
         </div>
+        <div class="menu-item" data-mode="tone">
+            <img src="icons/tone.png" alt="Tone">
+        </div>
     </div>
 
     <!-- 消しゴムツール選択メニュー (長押しポップオーバー) -->
@@ -196,6 +200,16 @@
                 <path
                     d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34" />
             </svg>
+        </div>
+    </div>
+
+    <!-- トーン選択メニュー (ツールバーの上に表示) -->
+    <div id="tone-menu" class="tone-menu hidden">
+        <div class="tone-menu-header">
+            <div id="tone-menu-pin" class="tone-menu-pin" title="メニューを固定"></div>
+        </div>
+        <div id="tone-items" class="tone-items">
+            <!-- JSで動的に生成 -->
         </div>
     </div>
 

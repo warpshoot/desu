@@ -21,7 +21,7 @@ import {
 } from './tools/pen.js';
 import {
     startLasso, updateLasso, finishLasso,
-    fillPolygon, fillPolygonTransparent, floodFill, floodFillTransparent
+    fillPolygon, fillPolygonTransparent, floodFill, floodFillTransparent, floodFillSketch
 } from './tools/fill.js';
 import { saveState, undo, redo, restoreLayer, resetHistory } from './history.js';
 import {
@@ -30,6 +30,14 @@ import {
 } from './save.js';
 import { applyTransform, updateBackgroundColor, hexToRgba } from './canvas.js';
 import { getCanvasPoint } from './utils.js';
+import {
+    TONE_PRESETS,
+    fillTone,
+    setTonePreset,
+    currentTonePresetId,
+    createTonePreview,
+    floodFillTone
+} from './tools/tone.js';
 
 // ============================================
 // Debug Display
@@ -81,6 +89,7 @@ export function initUI() {
     setupClearButtons();
     setupZoomControls();
     setupSaveUI();
+    setupToneMenu();
     setupCreditModal();
     setupOrientationHandler();
     setupKeyboardShortcuts();
@@ -208,7 +217,7 @@ function setupLayerPanel() {
 function setupToolPanel() {
     const drawBtn = document.getElementById('drawToolBtn');
     const eraserBtn = document.getElementById('eraserToolBtn');
-    const drawModes = ['pen', 'fill', 'sketch'];
+    const drawModes = ['pen', 'fill', 'sketch', 'tone'];
     // Eraser modes for state (mapping from menu items handled separately or matched here)
     const eraserToggleModes = ['lasso', 'pen'];
 
@@ -253,14 +262,21 @@ function setupToolPanel() {
                         const nextMode = toggleModes[(currentIndex + 1) % toggleModes.length];
                         state.currentTool = nextMode;
                         updateDrawToolIcon();
+
+                        // Explicitly update Tone menu visibility when toggling via button
+                        updateToneMenuVisibility();
                     }
                 } else {
                     // Activate
                     state.isEraserActive = false;
                     state.isErasing = false;
+
+                    // Explicitly update Tone menu visibility when switching from eraser
+                    updateToneMenuVisibility();
                 }
             }
             updateToolButtonStates();
+            updateBrushSizeVisibility(); // Important: Update visibility after toggle
             updateBrushSizeSlider();
         });
 
@@ -275,25 +291,15 @@ function setupToolPanel() {
     // Setup draw tool menu - selection behavior
     const drawMenu = document.getElementById('draw-tool-menu');
     drawMenu.querySelectorAll('.menu-item').forEach(item => {
-        item.addEventListener('click', () => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
             const mode = item.dataset.mode;
 
-            // If clicking same tool in menu, maybe just activating it is enough,
-            // or we can cycle? The original code cycled. 
-            // Let's keep original cycle behavior for menu clicks too, or just set it?
-            // Original code:
-            // if (state.currentTool === mode && !state.isEraserActive) cycle...
-            // Let's preserving consistent behavior.
-
-            if (state.currentTool === mode && !state.isEraserActive) {
-                const currentIndex = drawModes.indexOf(mode);
-                state.currentTool = drawModes[(currentIndex + 1) % drawModes.length];
-            } else {
-                state.currentTool = mode;
-            }
-
+            // Set tool directly, no cycling when clicking in menu
+            state.currentTool = mode;
             state.isEraserActive = false;
             state.isErasing = false;
+
             updateDrawToolIcon();
             updateToolButtonStates();
             hideAllMenus();
@@ -316,17 +322,9 @@ function setupToolPanel() {
                 updateLayerThumbnail(getActiveLayer());
                 flashLayer(state.activeLayer);
             } else if (eraserMenuModes.includes(mode)) {
-                // Toggle: if same eraser mode, cycle to next
+                // Set eraser type directly, no cycling when clicking in menu
                 const eraserType = mode === 'eraser_lasso' ? 'lasso' : 'pen';
-
-                if (state.currentEraser === eraserType && state.isEraserActive) {
-                    // Cycle between lasso and pen
-                    const currentIndex = eraserToggleModes.indexOf(eraserType);
-                    const nextMode = eraserToggleModes[(currentIndex + 1) % eraserToggleModes.length];
-                    state.currentEraser = nextMode;
-                } else {
-                    state.currentEraser = eraserType;
-                }
+                state.currentEraser = eraserType;
                 state.isEraserActive = true;
                 state.isErasing = true;
                 updateEraserToolIcon();
@@ -339,6 +337,9 @@ function setupToolPanel() {
 
     // Initial state
     updateToolButtonStates();
+
+    // Update tone menu visibility initially
+    updateToneMenuVisibility();
 }
 
 function updateDrawToolIcon() {
@@ -352,14 +353,20 @@ function updateDrawToolIcon() {
     switch (state.currentTool) {
         case 'fill': selector = '.tool-fill'; break;
         case 'sketch': selector = '.tool-sketch'; break;
+        case 'tone': selector = '.tool-tone'; break;
         default: selector = '.tool-pen'; break;
     }
 
+    console.log('[DEBUG] updateDrawToolIcon:', state.currentTool, selector);
+
     const activeIcon = btn.querySelector(selector);
     if (activeIcon) {
+        console.log('[DEBUG] Active Icon Src:', activeIcon.src);
         activeIcon.style.display = 'block';
         activeIcon.classList.add('active');
     }
+
+    updateToneMenuVisibility();
 }
 
 function updateEraserToolIcon() {
@@ -559,8 +566,10 @@ function updateActiveLayerIndicator() {
 function updateBrushSizeVisibility() {
     const container = document.getElementById('size-slider-container');
 
-    // Show slider always, but disable for lasso-based tools
-    const isPenMode = (state.currentTool === 'pen' || state.currentTool === 'sketch') && !state.isEraserActive;
+    // Show slider always, but disable for lasso-based tools (fill, tone, eraser-lasso)
+    // Show slider always, but disable for lasso-based tools (fill, tone, eraser-lasso, sketch)
+    // Only Pen tool needs slider.
+    const isPenMode = (state.currentTool === 'pen') && !state.isEraserActive;
     const isEraserPen = state.isEraserActive && state.currentEraser === 'pen';
 
     container.classList.toggle('disabled', !(isPenMode || isEraserPen));
@@ -790,9 +799,9 @@ async function handlePointerDown(e) {
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
         if (state.isEraserActive) {
-            if (state.currentEraser === 'lasso') {
+            if (state.currentEraser === 'lasso' && state.activePointers.size === 1) {
                 startLasso(e.clientX, e.clientY);
-            } else {
+            } else if (state.currentEraser === 'pen') {
                 state.drawingPending = true;
                 await saveState();
                 if (!state.drawingPending) {
@@ -804,9 +813,9 @@ async function handlePointerDown(e) {
                 startPenDrawing(canvasPoint.x, canvasPoint.y);
             }
         } else {
-            if (state.currentTool === 'fill' || state.currentTool === 'sketch') {
+            if ((state.currentTool === 'fill' || state.currentTool === 'sketch' || state.currentTool === 'tone') && state.activePointers.size === 1) {
                 startLasso(e.clientX, e.clientY);
-            } else {
+            } else if (state.currentTool === 'pen') {
                 state.drawingPending = true;
                 console.log('[DEBUG] Before saveState, undoStack.length:', state.undoStack.length);
                 await saveState();
@@ -1015,23 +1024,84 @@ async function handlePointerUp(e) {
         };
         updateDebugDisplay();
 
-        // Handle Flood Fill Tap
-        if (state.currentTool === 'fill' && !state.isEraserActive && state.maxFingers === 1 && !state.didInteract && duration < 300) {
-            const canvasPoint = getCanvasPoint(pointer.x, pointer.y);
-            await saveState();
-            const color = hexToRgba('#000000', 255);
-            floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), color);
-            updateLayerThumbnail(getActiveLayer());
+        // Handle Flood Fill Tap/Click
+        console.log('[DEBUG] Fill check:', {
+            duration,
+            didInteract: state.didInteract,
+            strokeMade: state.strokeMade,
+            wasPanning: state.wasPanning,
+            wasPinching: state.wasPinching,
+            maxFingers: state.maxFingers,
+            currentTool: state.currentTool,
+            isEraserActive: state.isEraserActive
+        });
+
+        if (duration < 300 && !state.didInteract && !state.strokeMade && !state.wasPanning && !state.wasPinching && state.maxFingers === 1) {
+            const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
+
+            // Fill tool tap
+            if (state.currentTool === 'fill' && !state.isEraserActive) {
+                console.log('[DEBUG] Triggering fill at', canvasPoint);
+                await saveState();
+                floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), hexToRgba(state.color));
+                updateLayerThumbnail(getActiveLayer());
+            } else if (state.currentTool === 'tone' && !state.isEraserActive) {
+                // Tone fill tap
+                console.log('[DEBUG] Triggering tone fill at', canvasPoint);
+                await saveState();
+                floodFillTone(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
+                updateLayerThumbnail(getActiveLayer());
+            } else if (state.isEraserActive && state.currentEraser === 'lasso') {
+                // Eraser does not have tap fill (could add flood erase?)
+            }
         }
 
         // Finish Drawing Actions
         if (e.pointerId === state.drawingPointerId) {
             if (state.isLassoing) {
                 const points = finishLasso();
-                if (points && points.length >= 3 && !state.wasPanning && !state.wasPinching) {
+
+                // Check if this was a click (minimal movement) rather than a drag
+                const wasClick = pointer && pointer.totalMove < 5;
+
+                console.log('[DEBUG] Lasso finished:', {
+                    pointsLength: points ? points.length : 0,
+                    wasClick,
+                    totalMove: pointer ? pointer.totalMove : 'N/A'
+                });
+
+                if (wasClick && duration < 300 && !state.wasPanning && !state.wasPinching) {
+                    // Click detected - trigger flood fill
+                    const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
+
+                    if (state.currentTool === 'fill' && !state.isEraserActive) {
+                        console.log('[DEBUG] Click triggering fill at', canvasPoint);
+                        await saveState();
+                        floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), [0, 0, 0, 255]);
+                        updateLayerThumbnail(getActiveLayer());
+                    } else if (state.currentTool === 'tone' && !state.isEraserActive) {
+                        console.log('[DEBUG] Click triggering tone fill at', canvasPoint);
+                        await saveState();
+                        floodFillTone(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
+                        updateLayerThumbnail(getActiveLayer());
+                    } else if (state.currentTool === 'sketch' && !state.isEraserActive) {
+                        console.log('[DEBUG] Click triggering sketch fill at', canvasPoint);
+                        await saveState();
+                        floodFillSketch(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
+                        updateLayerThumbnail(getActiveLayer());
+                    } else if (state.isEraserActive && state.currentEraser === 'lasso') {
+                        console.log('[DEBUG] Click triggering eraser fill at', canvasPoint);
+                        await saveState();
+                        floodFillTransparent(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
+                        updateLayerThumbnail(getActiveLayer());
+                    }
+                } else if (points && points.length >= 3 && !state.wasPanning && !state.wasPinching) {
+                    // Drag detected - normal polygon fill
                     await saveState();
                     if (state.isEraserActive) {
                         fillPolygonTransparent(points);
+                    } else if (state.currentTool === 'tone') {
+                        fillTone(points);
                     } else {
                         fillPolygon(points);
                     }
@@ -1137,6 +1207,7 @@ function setupClearButtons() {
         // Clear all layers
         for (const layer of layers) {
             layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+            updateLayerThumbnail(layer);
         }
 
         await saveState();
@@ -1156,6 +1227,87 @@ function setupZoomControls() {
         state.translateY = 0;
         applyTransform();
     });
+}
+
+// ============================================
+// Tone Menu
+// ============================================
+
+function setupToneMenu() {
+    const menu = document.getElementById('tone-menu');
+    const itemsContainer = document.getElementById('tone-items');
+    if (!menu || !itemsContainer) return;
+
+    itemsContainer.innerHTML = ''; // Clear items only
+
+    TONE_PRESETS.forEach(preset => {
+        const item = document.createElement('div');
+        item.className = 'tone-item';
+        if (preset.id === currentTonePresetId) {
+            item.classList.add('active');
+        }
+        // item.textContent = preset.name; // Removed text
+        item.dataset.id = preset.id;
+        item.title = `${preset.name} (${preset.type})`;
+
+        // Create preview
+        const preview = createTonePreview(preset, 40, 40); // Slightly smaller than container
+        item.appendChild(preview);
+
+        item.addEventListener('click', (e) => {
+            // Prevent event propagation so we don't trigger outside click logic immediately if it exists
+            e.stopPropagation();
+
+            setTonePreset(preset.id);
+
+            // Update active state
+            menu.querySelectorAll('.tone-item').forEach(el => el.classList.remove('active'));
+            item.classList.add('active');
+
+            // Only close if NOT pinned
+            if (!state.isToneMenuPinned) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        itemsContainer.appendChild(item);
+    });
+
+    // Setup pin behavior
+    const pinBtn = document.getElementById('tone-menu-pin');
+    if (pinBtn) {
+        pinBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            state.isToneMenuPinned = !state.isToneMenuPinned;
+            pinBtn.classList.toggle('active', state.isToneMenuPinned);
+        });
+        // Initial state
+        pinBtn.classList.toggle('active', state.isToneMenuPinned);
+    }
+
+    // Setup outside click listener to close menu (ONLY if not pinned)
+    const handleOutsideClickTone = (e) => {
+        if (!state.isToneMenuPinned && !menu.classList.contains('hidden') && !menu.contains(e.target)) {
+            // Check if we clicked the tool button - if so, let its own click handler handle it
+            const toolBtn = document.getElementById('drawToolBtn');
+            if (toolBtn && toolBtn.contains(e.target)) return;
+
+            menu.classList.add('hidden');
+        }
+    };
+
+    document.addEventListener('pointerdown', handleOutsideClickTone);
+}
+
+function updateToneMenuVisibility() {
+    const menu = document.getElementById('tone-menu');
+    if (!menu) return;
+
+    if (state.currentTool === 'tone' && !state.isEraserActive) {
+        menu.classList.remove('hidden');
+    } else {
+        menu.classList.add('hidden');
+    }
 }
 
 // ============================================

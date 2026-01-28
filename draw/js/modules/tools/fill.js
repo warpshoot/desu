@@ -249,6 +249,115 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
     ctx.putImageData(imgData, bounds.minX, bounds.minY);
 }
 
+// Sketch flood fill (semi-transparent grey with multiply blend)
+export function floodFillSketch(startX, startY) {
+    console.log('[DEBUG] floodFillSketch called with', startX, startY);
+    const { canvas, ctx } = getActiveContextAndCanvas();
+    if (!canvas || !ctx) {
+        console.log('[DEBUG] No context, returning');
+        return;
+    }
+
+    const w = canvas.width, h = canvas.height;
+    if (startX < 0 || startX >= w || startY < 0 || startY >= h) return;
+
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+
+    const idx = (startY * w + startX) * 4;
+    const targetR = data[idx];
+    const targetG = data[idx + 1];
+    const targetB = data[idx + 2];
+    const targetA = data[idx + 3];
+
+    const matchTarget = (i) => data[i] === targetR && data[i + 1] === targetG && data[i + 2] === targetB && data[i + 3] === targetA;
+
+    const mask = new Uint8Array(w * h);
+    const stack = [[startX, startY]];
+    let iterations = 0;
+    while (stack.length > 0 && iterations < w * h) {
+        iterations++;
+        let [x, y] = stack.pop();
+        let i = (y * w + x) * 4;
+
+        while (x >= 0 && matchTarget(i) && mask[y * w + x] === 0) {
+            x--;
+            i -= 4;
+        }
+        x++;
+        i += 4;
+
+        let spanAbove = false, spanBelow = false;
+        while (x < w && matchTarget(i) && mask[y * w + x] === 0) {
+            mask[y * w + x] = 255;
+            if (y > 0) {
+                const aboveIdx = ((y - 1) * w + x) * 4;
+                if (!spanAbove && matchTarget(aboveIdx) && mask[(y - 1) * w + x] === 0) {
+                    stack.push([x, y - 1]);
+                    spanAbove = true;
+                } else if (spanAbove && (!matchTarget(aboveIdx) || mask[(y - 1) * w + x] !== 0)) {
+                    spanAbove = false;
+                }
+            }
+            if (y < h - 1) {
+                const belowIdx = ((y + 1) * w + x) * 4;
+                if (!spanBelow && matchTarget(belowIdx) && mask[(y + 1) * w + x] === 0) {
+                    stack.push([x, y + 1]);
+                    spanBelow = true;
+                } else if (spanBelow && (!matchTarget(belowIdx) || mask[(y + 1) * w + x] !== 0)) {
+                    spanBelow = false;
+                }
+            }
+            x++;
+            i += 4;
+        }
+    }
+
+    console.log('[DEBUG] Flood fill complete, creating result');
+
+    // Create a temporary canvas for the final result
+    const resultCanvas = document.createElement('canvas');
+    resultCanvas.width = w;
+    resultCanvas.height = h;
+    const resultCtx = resultCanvas.getContext('2d');
+
+    // 1. Fill result with solid semi-transparent grey
+    resultCtx.fillStyle = '#808080';
+    resultCtx.globalAlpha = 0.5;
+    resultCtx.fillRect(0, 0, w, h);
+
+    // 2. Apply the mask using destination-in
+    const tempMaskCanvas = document.createElement('canvas');
+    tempMaskCanvas.width = w;
+    tempMaskCanvas.height = h;
+    const tempMaskCtx = tempMaskCanvas.getContext('2d');
+    const maskImgData = tempMaskCtx.createImageData(w, h);
+    const mData = maskImgData.data;
+
+    for (let i = 0; i < mask.length; i++) {
+        if (mask[i] === 255) {
+            const idx = i * 4;
+            mData[idx] = 0;
+            mData[idx + 1] = 0;
+            mData[idx + 2] = 0;
+            mData[idx + 3] = 255;
+        }
+    }
+    tempMaskCtx.putImageData(maskImgData, 0, 0);
+
+    resultCtx.globalAlpha = 1.0;
+    resultCtx.globalCompositeOperation = 'destination-in';
+    resultCtx.drawImage(tempMaskCanvas, 0, 0);
+
+    // 3. Composite to active layer using multiply
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(resultCanvas, 0, 0);
+    ctx.restore();
+
+    console.log('[DEBUG] floodFillSketch complete');
+}
+
 export function fillPolygon(points) {
     if (points.length < 3) return;
 
