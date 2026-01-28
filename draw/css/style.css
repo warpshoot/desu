@@ -100,7 +100,7 @@ body {
     bottom: max(12px, env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    /* gap: 12px; Removed to control spacing individually */
     z-index: 300;
 }
 
@@ -110,6 +110,8 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 6px;
+    margin-bottom: 12px;
+    /* Space to tool panel */
 }
 
 #layer-buttons {
@@ -123,6 +125,7 @@ body {
     height: 32px;
     border-radius: 4px;
     border: 1px solid #999;
+    /* Gray inactive border */
     background: rgba(255, 255, 255, 0.8);
     display: flex;
     align-items: center;
@@ -132,6 +135,8 @@ body {
     color: #333;
     cursor: pointer;
     transition: all 0.15s;
+    overflow: visible;
+    /* Extended indicator */
 }
 
 .layer-btn:active {
@@ -139,12 +144,27 @@ body {
 }
 
 .layer-btn.active {
-    border-left: 5px solid #666;
-    border-top: 1px solid #999;
-    border-right: 1px solid #999;
-    border-bottom: 1px solid #999;
+    border: 1px solid #000;
+    /* Unified active border */
     background: #fff;
     border-radius: 4px;
+    transform: translateX(-5px);
+    /* Move left */
+}
+
+.layer-btn.active::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    /* Align with border top */
+    right: 100%;
+    bottom: -1px;
+    /* Align with border bottom */
+    width: 20px;
+    /* Extend to screen edge (12px padding + extra) */
+    background: #000;
+    border-top-left-radius: 2px;
+    border-bottom-left-radius: 2px;
 }
 
 .layer-btn.hidden-layer {
@@ -164,12 +184,15 @@ body {
     height: 32px;
     border-radius: 8px;
     border: 2px dashed #999;
+    /* Gray inactive border */
+    /* Light blue */
     background: rgba(255, 255, 255, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 20px;
     color: #666;
+    /* Gray text */
     cursor: pointer;
     transition: all 0.15s;
 }
@@ -189,7 +212,10 @@ body {
 #tool-panel {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
+    /* Reduced gap between tools */
+    margin-bottom: 4px;
+    /* Small gap to slider */
 }
 
 /* ============================================
@@ -200,7 +226,8 @@ body {
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    border: 1px solid #666;
+    border: 1px solid #999;
+    /* Gray inactive border */
     background: rgba(255, 255, 255, 0.7);
     display: flex;
     align-items: center;
@@ -209,6 +236,8 @@ body {
     cursor: pointer;
     transition: transform 0.1s, background 0.1s, border-width 0.1s;
     color: #333;
+    overflow: visible;
+    /* Extended indicator */
 }
 
 .tool-btn svg {
@@ -226,6 +255,8 @@ body {
     height: 28px;
     object-fit: contain;
     pointer-events: none;
+    filter: brightness(0);
+    /* Force black icon */
 }
 
 
@@ -235,23 +266,40 @@ body {
 }
 
 .tool-btn.active {
-    border-left: 5px solid #666;
-    border-top: 1px solid #666;
-    border-right: 1px solid #666;
-    border-bottom: 1px solid #666;
+    border: 1px solid #000;
+    /* Keep border, remove thick left */
     background: #fff;
     border-radius: 4px;
+    transform: translateX(-5px);
+    /* Move left */
+}
+
+.tool-btn.active::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    right: 100%;
+    bottom: -1px;
+    width: 20px;
+    background: #000;
+    border-top-left-radius: 2px;
+    border-bottom-left-radius: 2px;
 }
 
 
 
 /* Eraser button blue accent */
 #eraserToolBtn {
-    border-color: #4a90e2;
+    border-color: #999;
+    /* Gray inactive border */
 }
 
 #eraserToolBtn.active {
-    border-color: #4a90e2;
+    border-color: #000;
+}
+
+#eraserToolBtn.active::before {
+    background: #000;
 }
 
 /* ============================================
@@ -395,13 +443,26 @@ body {
     right: 12px;
     display: flex;
     gap: 8px;
+    align-items: center;
+    /* Center align items vertically */
     z-index: 300;
 }
 
 /* Color Picker */
 #bgColorBtnWrapper {
-    padding: 2px;
-    border-radius: 50% !important;
+    width: 48px !important;
+    height: 32px !important;
+    padding: 0;
+    /* Remove padding for full bleed */
+    border-radius: 0 !important;
+    /* Solid rectangle */
+    border: 1px solid #000 !important;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
+    /* Add margin to separate from slider */
 }
 
 #bgColorBtn {
@@ -412,8 +473,8 @@ body {
     background: none;
     cursor: pointer;
     appearance: none;
-    -webkit-appearance: none;
-    border-radius: 50% !important;
+    border-radius: 0 !important;
+    /* Solid rectangle */
 }
 
 #bgColorBtn::-webkit-color-swatch-wrapper {
@@ -422,7 +483,8 @@ body {
 
 #bgColorBtn::-webkit-color-swatch {
     border: none;
-    border-radius: 8px;
+    border-radius: 0;
+    /* Square corners */
 }
 
 /* ============================================
@@ -432,8 +494,9 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    align-items: center;
     gap: 4px;
-    margin-top: 8px;
+    margin-top: 0;
     width: 48px;
     transition: opacity 0.2s;
 }
@@ -443,13 +506,26 @@ body {
     pointer-events: none;
 }
 
+#size-slider-container.disabled #brushSize {
+    background: #999;
+    /* Inactive track color */
+}
+
+#size-slider-container.disabled #brushSize::-webkit-slider-thumb {
+    background: #999;
+    /* Inactive thumb color */
+}
+
 #brushSize {
     -webkit-appearance: none;
     appearance: none;
     width: 120px;
-    height: 6px;
-    background: #888;
-    border-radius: 3px;
+    height: 3px;
+    /* Track width 3px */
+    background: #000;
+    /* Track color Black */
+    border-radius: 0;
+    /* No radius */
     transform: rotate(-90deg);
     transform-origin: center center;
     margin: 57px 0;
@@ -458,11 +534,17 @@ body {
 #brushSize::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 24px;
+    /* Rotated: CSS width = Visual Height (8px), CSS height = Visual Width (24px) */
+    width: 8px;
+    /* Visual Height */
     height: 24px;
-    background: #333;
-    border-radius: 50%;
-    border: 2px solid #fff;
+    /* Visual Width */
+    background: #000;
+    /* Thumb color Black */
+    border-radius: 0;
+    /* Rectangular */
+    border: none;
+    /* No border */
 }
 
 
@@ -471,10 +553,14 @@ body {
     font-size: 14px;
     font-weight: bold;
     color: #333;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 4px 8px;
-    border-radius: 6px;
-    min-width: 32px;
+    color: #333;
+    background: transparent;
+    /* Remove background */
+    padding: 0;
+    /* Remove padding */
+    border-radius: 0;
+    min-width: unset;
+    /* Allow fit content */
     text-align: center;
 }
 

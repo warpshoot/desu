@@ -143,6 +143,9 @@ function setupLayerPanel() {
     addBtn.addEventListener('click', async () => {
         const layer = createLayer();
         if (layer) {
+            // Apply current zoom/pan to the new layer immediately
+            applyTransform();
+
             await resetHistory();
             updateAllThumbnails();
             renderLayerButtons();
@@ -205,12 +208,15 @@ function setupLayerPanel() {
 function setupToolPanel() {
     const drawBtn = document.getElementById('drawToolBtn');
     const eraserBtn = document.getElementById('eraserToolBtn');
+    const drawModes = ['pen', 'fill', 'sketch'];
+    // Eraser modes for state (mapping from menu items handled separately or matched here)
+    const eraserToggleModes = ['lasso', 'pen'];
 
     // Tool button click/long-press
     let longPressTimer = null;
     let longPressTriggered = false;
 
-    function setupToolButton(btn, menuId, isEraser) {
+    function setupToolButton(btn, menuId, isEraser, toggleModes) {
         btn.addEventListener('pointerdown', (e) => {
             e.preventDefault();
             longPressTriggered = false;
@@ -224,13 +230,35 @@ function setupToolPanel() {
             clearTimeout(longPressTimer);
             if (longPressTriggered) return;
 
-            // Quick tap: activate/toggle
+            // Quick tap: activate or toggle
             if (isEraser) {
-                state.isEraserActive = true;
-                state.isErasing = true;
+                if (state.isEraserActive) {
+                    // Toggle
+                    const currentIndex = toggleModes.indexOf(state.currentEraser);
+                    if (currentIndex !== -1) {
+                        const nextMode = toggleModes[(currentIndex + 1) % toggleModes.length];
+                        state.currentEraser = nextMode;
+                        updateEraserToolIcon();
+                    }
+                } else {
+                    // Activate
+                    state.isEraserActive = true;
+                    state.isErasing = true;
+                }
             } else {
-                state.isEraserActive = false;
-                state.isErasing = false;
+                if (!state.isEraserActive) {
+                    // Toggle (only if draw tool is already active)
+                    const currentIndex = toggleModes.indexOf(state.currentTool);
+                    if (currentIndex !== -1) {
+                        const nextMode = toggleModes[(currentIndex + 1) % toggleModes.length];
+                        state.currentTool = nextMode;
+                        updateDrawToolIcon();
+                    }
+                } else {
+                    // Activate
+                    state.isEraserActive = false;
+                    state.isErasing = false;
+                }
             }
             updateToolButtonStates();
             updateBrushSizeSlider();
@@ -240,17 +268,23 @@ function setupToolPanel() {
         btn.addEventListener('pointercancel', () => clearTimeout(longPressTimer));
     }
 
-    setupToolButton(drawBtn, 'draw-tool-menu', false);
-    setupToolButton(eraserBtn, 'eraser-tool-menu', true);
+    setupToolButton(drawBtn, 'draw-tool-menu', false, drawModes);
+    // eraserToggleModes only includes lasso and pen, excluding 'layer_clear'
+    setupToolButton(eraserBtn, 'eraser-tool-menu', true, eraserToggleModes);
 
-    // Setup draw tool menu - toggle behavior
+    // Setup draw tool menu - selection behavior
     const drawMenu = document.getElementById('draw-tool-menu');
-    const drawModes = ['pen', 'fill', 'sketch'];
     drawMenu.querySelectorAll('.menu-item').forEach(item => {
         item.addEventListener('click', () => {
             const mode = item.dataset.mode;
 
-            // Toggle: if same tool, cycle to next
+            // If clicking same tool in menu, maybe just activating it is enough,
+            // or we can cycle? The original code cycled. 
+            // Let's keep original cycle behavior for menu clicks too, or just set it?
+            // Original code:
+            // if (state.currentTool === mode && !state.isEraserActive) cycle...
+            // Let's preserving consistent behavior.
+
             if (state.currentTool === mode && !state.isEraserActive) {
                 const currentIndex = drawModes.indexOf(mode);
                 state.currentTool = drawModes[(currentIndex + 1) % drawModes.length];
@@ -266,9 +300,11 @@ function setupToolPanel() {
         });
     });
 
-    // Setup eraser tool menu - toggle behavior (except layer_clear)
+    // Setup eraser tool menu
     const eraserMenu = document.getElementById('eraser-tool-menu');
-    const eraserModes = ['eraser_lasso', 'eraser_pen'];
+    // Menu item modes for eraser include 'layer_clear', 'eraser_lasso', 'eraser_pen'
+    const eraserMenuModes = ['eraser_lasso', 'eraser_pen'];
+
     eraserMenu.querySelectorAll('.menu-item').forEach(item => {
         item.addEventListener('click', async () => {
             const mode = item.dataset.mode;
@@ -279,13 +315,15 @@ function setupToolPanel() {
                 clearLayer(state.activeLayer);
                 updateLayerThumbnail(getActiveLayer());
                 flashLayer(state.activeLayer);
-            } else if (eraserModes.includes(mode)) {
+            } else if (eraserMenuModes.includes(mode)) {
                 // Toggle: if same eraser mode, cycle to next
                 const eraserType = mode === 'eraser_lasso' ? 'lasso' : 'pen';
+
                 if (state.currentEraser === eraserType && state.isEraserActive) {
-                    const currentIndex = eraserModes.indexOf(mode);
-                    const nextMode = eraserModes[(currentIndex + 1) % eraserModes.length];
-                    state.currentEraser = nextMode === 'eraser_lasso' ? 'lasso' : 'pen';
+                    // Cycle between lasso and pen
+                    const currentIndex = eraserToggleModes.indexOf(eraserType);
+                    const nextMode = eraserToggleModes[(currentIndex + 1) % eraserToggleModes.length];
+                    state.currentEraser = nextMode;
                 } else {
                     state.currentEraser = eraserType;
                 }

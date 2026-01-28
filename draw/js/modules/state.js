@@ -163,7 +163,7 @@ export const state = {
 
     // Tool settings (decoupled from layers)
     currentTool: 'pen',      // 'pen', 'fill', 'sketch'
-    currentEraser: 'lasso',  // 'lasso', 'pen'
+    currentEraser: 'pen',  // 'lasso', 'pen'
     isEraserActive: false,   // true when eraser tool is selected
     activeLayer: 1,          // ID of the currently active layer
 
