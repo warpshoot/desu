@@ -8,7 +8,7 @@
         const MAX_HISTORY = 50;
 
         // State
-        let mode = 'triangle';
+        let mode = 'rectangle';
         let fillColor = '#000000';
         let symmetryMode = 'none'; // 'none', 'x', 'y', 'xy'
         let bgColor = '#ffffff';
