@@ -11,10 +11,10 @@ export const TONE_PRESETS = [
     { id: 'coarse3', name: 'B3', type: 'fine', spacing: 6, dotSize: 1 },
     { id: 'coarse4', name: 'B4', type: 'fine', spacing: 3, dotSize: 1 },
     // Fine dots - Medium tone (4 variations)
-    { id: 'fine1', name: 'C1', type: 'fine', spacing: 12, dotSize: 2 },
-    { id: 'fine2', name: 'C2', type: 'fine', spacing: 9, dotSize: 2 },
-    { id: 'fine3', name: 'C3', type: 'fine', spacing: 6, dotSize: 2 },
-    { id: 'fine4', name: 'C4', type: 'fine', spacing: 3, dotSize: 2 },
+    { id: 'fine1', name: 'C1', type: 'fine', spacing: 20, dotSize: 2 },
+    { id: 'fine2', name: 'C2', type: 'fine', spacing: 15, dotSize: 2 },
+    { id: 'fine3', name: 'C3', type: 'fine', spacing: 10, dotSize: 2 },
+    { id: 'fine4', name: 'C4', type: 'fine', spacing: 5, dotSize: 2 },
     // Diagonal lines (3 variations)
     { id: 'diag1', name: 'D1', type: 'diagonal', spacing: 12, angle: 45, width: 1 },
     { id: 'diag2', name: 'D2', type: 'diagonal', spacing: 8, angle: 45, width: 1 },
