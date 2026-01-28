@@ -738,8 +738,14 @@
                 // duration < 400ms (fast tap)
                 // !didInteract (no significant movement/panning/zooming)
                 if (duration < 400 && !didInteract) {
-                    if (maxFingers === 2) undo();
-                    if (maxFingers === 3) redo();
+                    if (maxFingers === 2) {
+                        wasPinching = true;
+                        undo();
+                    }
+                    if (maxFingers === 3) {
+                        wasPinching = true;
+                        redo();
+                    }
                 }
 
                 // Reset state (but keep wasPanning/wasPinching for click handler)
