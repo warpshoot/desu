@@ -1,4 +1,4 @@
-import { STORAGE_KEY, DEFAULT_BPM, KNOB_PARAMS } from './constants.js';
+import { STORAGE_KEY, DEFAULT_BPM, KNOB_PARAMS, DEFAULT_ROLL_SUBDIVISION } from './constants.js';
 
 let saveTimeout = null;
 
@@ -36,7 +36,9 @@ export function createDefaultState() {
             grid[track][step] = {
                 active: false,
                 pitch: 0,
-                duration: 0.5
+                duration: 0.5,
+                rollMode: false,
+                rollSubdivision: DEFAULT_ROLL_SUBDIVISION
             };
         }
     }

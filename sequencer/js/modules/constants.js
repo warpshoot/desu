@@ -38,6 +38,8 @@ export const MAX_BPM = 180;
 // Cell parameter ranges
 export const PITCH_RANGE = { min: -12, max: 12, default: 0 };
 export const DURATION_RANGE = { min: 0.1, max: 1.0, default: 0.5 };
+export const ROLL_SUBDIVISIONS = [1, 2, 4, 8]; // Available roll speeds
+export const DEFAULT_ROLL_SUBDIVISION = 4;
 
 // Knob parameter ranges
 export const KNOB_PARAMS = {
@@ -57,3 +59,4 @@ export const SCALE_RANGE = { min: 0.7, max: 1.0 };
 // Touch gesture thresholds
 export const LONG_PRESS_DURATION = 500;
 export const DRAG_THRESHOLD = 5;
+export const TAP_THRESHOLD = 300; // Max time between taps for multi-tap detection

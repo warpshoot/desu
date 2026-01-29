@@ -62,6 +62,9 @@ class Sequencer {
                 if (cellData.active) {
                     cellElement.classList.add('active');
                 }
+                if (cellData.rollMode) {
+                    cellElement.classList.add('roll');
+                }
 
                 const cell = new Cell(
                     cellElement,
@@ -109,7 +112,9 @@ class Sequencer {
                     track,
                     cell.data.pitch,
                     cell.data.duration,
-                    time
+                    time,
+                    cell.data.rollMode,
+                    cell.data.rollSubdivision
                 );
             }
         }
