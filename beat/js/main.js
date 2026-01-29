@@ -3,7 +3,7 @@ import { AudioEngine } from './modules/audioEngine.js';
 import { Cell } from './modules/cell.js';
 import { Controls } from './modules/controls.js';
 import { TonePanel } from './modules/tonePanel.js';
-import { loadState, saveState } from './modules/storage.js';
+import { loadState, saveState, createDefaultState } from './modules/storage.js';
 
 class Sequencer {
     constructor() {
@@ -474,7 +474,7 @@ class Sequencer {
                 document.getElementById('clear-btn').addEventListener('click', () => {
                     if (confirm('Reset everything? (Patterns, Mute/Solo, Sounds)')) {
                         // 1. Reset Pattern
-                        this.state.grid = createDefaultGrid();
+                        this.state.grid = createDefaultState().grid;
 
                         // 2. Reset Mute/Solo
                         this.state.mutedTracks = new Array(ROWS).fill(false);

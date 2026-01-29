@@ -34,6 +34,7 @@ export class Cell {
         this.updateVisuals();
     }
 
+
     setupEvents() {
         // Mouse events
         this.element.addEventListener('mousedown', (e) => {
@@ -82,6 +83,7 @@ export class Cell {
         this.hasMoved = false;
         this.dragDirection = null;
         this.isDragging = true;
+
 
         // Start long press timer
         this.longPressTimer = setTimeout(() => {
@@ -216,12 +218,16 @@ export class Cell {
     }
 
     deactivate() {
+        if (!this.data.active) return;
         this.data.active = false;
         this.data.rollMode = false;
         this.data.pitch = PITCH_RANGE.default;
         this.data.duration = DURATION_RANGE.default;
         this.element.classList.remove('active', 'roll', 'playhead');
         this.updateVisuals();
+        if (this.onChange) {
+            this.onChange();
+        }
     }
 
     paintActivate() {
