@@ -62,15 +62,19 @@ export class Cell {
         // Touch events
         this.element.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) {
+                // Only prevent default for single-finger touches
+                // This allows two-finger scrolling
+                e.preventDefault();
                 this.onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
             }
-        }, { passive: true });
+        }, { passive: false });
 
         window.addEventListener('touchmove', (e) => {
             if (this.isDragging && e.touches.length === 1) {
+                e.preventDefault();
                 this.onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
             }
-        });
+        }, { passive: false });
 
         window.addEventListener('touchend', () => {
             this.onPointerUp();
