@@ -3,6 +3,7 @@ import {
     layers,
     lassoCanvas,
     lassoCtx,
+    selectionCanvas,
     eventCanvas,
     canvasBg,
     layerContainer,
@@ -1601,8 +1602,33 @@ function setupCreditModal() {
 function setupOrientationHandler() {
     // Handle orientation change
     window.addEventListener('orientationchange', () => {
-        setTimeout(() => {
-            location.reload();
+        setTimeout(async () => {
+            // Save all layer contents as ImageBitmaps
+            const layerBitmaps = await Promise.all(
+                layers.map(layer => createImageBitmap(layer.canvas))
+            );
+
+            // Resize all canvases
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+
+            lassoCanvas.width = w;
+            lassoCanvas.height = h;
+
+            selectionCanvas.width = w;
+            selectionCanvas.height = h;
+
+            // Restore each layer
+            for (let i = 0; i < layers.length; i++) {
+                const layer = layers[i];
+                layer.canvas.width = w;
+                layer.canvas.height = h;
+                layer.ctx.drawImage(layerBitmaps[i], 0, 0);
+                layerBitmaps[i].close();
+            }
+
+            // Reapply transform (zoom/pan)
+            applyTransform();
         }, 100);
     });
 
