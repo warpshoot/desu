@@ -67,14 +67,18 @@ body {
     display: grid;
     grid-template-columns: repeat(32, 1fr);
     grid-template-rows: repeat(4, 1fr);
-    gap: 4px;
+    gap: 2px;
     background: #000;
-    padding: 8px;
+    padding: 4px;
+    max-width: 90vw;
+    width: fit-content;
 }
 
 .cell {
-    width: 32px;
-    height: 32px;
+    width: 100%;
+    aspect-ratio: 1;
+    max-width: 32px;
+    max-height: 32px;
     background: #1a1a1a;
     border: 1px solid #333;
     cursor: pointer;
@@ -328,13 +332,14 @@ body {
     }
 
     #grid-container {
-        gap: 2px;
-        padding: 4px;
+        gap: 1px;
+        padding: 2px;
+        max-width: 95vw;
     }
 
     .cell {
-        width: 20px;
-        height: 20px;
+        max-width: 20px;
+        max-height: 20px;
     }
 
     #tone-panel {
@@ -370,12 +375,13 @@ body {
 /* Smaller mobile */
 @media (max-width: 480px) {
     .cell {
-        width: 16px;
-        height: 16px;
+        max-width: 12px;
+        max-height: 12px;
     }
 
     #grid-container {
         gap: 1px;
-        padding: 2px;
+        padding: 1px;
+        max-width: 98vw;
     }
 }
