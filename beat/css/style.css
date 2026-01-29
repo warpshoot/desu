@@ -167,7 +167,7 @@ h1 {
 }
 
 .track-icon {
-    width: 24px;
+    width: 28px;
     height: 72px;
     border: 1px solid #333;
     background: #1a1a1a;
@@ -179,8 +179,9 @@ h1 {
     justify-content: center;
     align-items: center;
     font-family: monospace;
-    font-size: 14px;
-    font-weight: bold;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
 }
 
 .track-ctrls {
@@ -296,7 +297,7 @@ h1 {
     background: none;
     /* No background */
     border-radius: 0;
-    touch-action: none;
+    /* touch-action removed - controlled by JavaScript to allow two-finger pan */
 }
 
 .loop-handle:active {
@@ -362,7 +363,7 @@ h1 {
     cursor: pointer;
     transition: all 0.1s ease;
     position: relative;
-    touch-action: none;
+    /* touch-action removed - controlled by JavaScript to allow two-finger pan */
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -521,7 +522,7 @@ h1 {
 
 .knob {
     cursor: pointer;
-    touch-action: none;
+    /* touch-action removed - controlled by JavaScript to allow two-finger pan */
 }
 
 .reset-btn {
@@ -766,9 +767,10 @@ h1 {
     }
 
     .track-icon {
-        width: 24px;
+        width: 32px;
         height: 80px;
-        font-size: 16px;
+        font-size: 20px;
+        font-weight: 900;
     }
 
     .track-ctrls {
@@ -889,9 +891,10 @@ h1 {
     }
 
     .track-icon {
-        width: 20px;
+        width: 28px;
         height: 70px;
-        font-size: 14px;
+        font-size: 18px;
+        font-weight: 900;
     }
 
     .track-ctrls button {
