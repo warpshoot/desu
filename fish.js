@@ -29,17 +29,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isFromRight) {
             // 右から左へ（デフォルトの向き: 左）
             arowana.style.left = `${screenWidth + 100}px`;
-            arowana.style.transform = 'scaleX(1)';
+            arowana.style.transform = 'scaleX(1) translateZ(0)';
         } else {
             // 左から右へ（反転）
             arowana.style.left = `-${fishWidth + 100}px`;
-            arowana.style.transform = 'scaleX(-1)';
+            arowana.style.transform = 'scaleX(-1) translateZ(0)';
         }
 
         // ブラウザのレンダリングを待ってからアニメーション開始
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 arowana.style.transition = `left ${duration}s linear, top ${duration}s ease-in-out`;
+
+                // 少し時間をおいてから書き換えないとtransitionが効かない場合があるため
+                // すでにRAFの中だが、プロパティの書き換えを確実にする
                 arowana.style.top = `${endTop}%`;
 
                 if (isFromRight) {
@@ -61,6 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // 初期化完了ログ（デバッグ用）
+    console.log('Fish animation initialized');
     // 初回の泳ぎを開始（少し待ってから）
     setTimeout(startSwim, 1000);
 });
