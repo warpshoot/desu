@@ -1,10 +1,11 @@
-import { TRACKS, DEFAULT_BPM } from './constants.js';
+import { TRACKS, DEFAULT_BPM, COLS, SWING_AMOUNT } from './constants.js';
 
 export class AudioEngine {
     constructor() {
         this.initialized = false;
         this.playing = false;
         this.currentStep = 0;
+        this.swingEnabled = false;
 
         // Audio chain components
         this.instruments = [];
@@ -98,10 +99,17 @@ export class AudioEngine {
     }
 
     onStep(time) {
-        if (this.onStepCallback) {
-            this.onStepCallback(this.currentStep, time);
+        // Apply swing: delay even steps
+        let adjustedTime = time;
+        if (this.swingEnabled && this.currentStep % 2 === 1) {
+            const stepDuration = Tone.Time('16n').toSeconds();
+            adjustedTime += stepDuration * SWING_AMOUNT;
         }
-        this.currentStep = (this.currentStep + 1) % 16;
+
+        if (this.onStepCallback) {
+            this.onStepCallback(this.currentStep, adjustedTime);
+        }
+        this.currentStep = (this.currentStep + 1) % COLS;
     }
 
     setStepCallback(callback) {
@@ -125,21 +133,41 @@ export class AudioEngine {
         Tone.Transport.bpm.value = bpm;
     }
 
-    triggerNote(track, pitch, duration, time) {
+    setSwing(enabled) {
+        this.swingEnabled = enabled;
+    }
+
+    triggerNote(track, pitch, duration, time, rollMode = false, rollSubdivision = 1, octaveShift = 0) {
         const instrument = this.instruments[track];
         const trackConfig = TRACKS[track];
 
-        if (trackConfig.type === 'membrane') {
-            // Kick: pitch affects frequency
-            const freq = Tone.Frequency(trackConfig.baseFreq).transpose(pitch);
-            instrument.triggerAttackRelease(freq, duration * 0.3, time);
-        } else if (trackConfig.type === 'noise' || trackConfig.type === 'metal') {
-            // Snare/Hi-hat: no pitch, just trigger
-            instrument.triggerAttackRelease(duration * 0.2, time);
-        } else if (trackConfig.type === 'fm') {
-            // Synth: polyphonic with pitch
-            const freq = Tone.Frequency(trackConfig.baseFreq).transpose(pitch);
-            instrument.triggerAttackRelease(freq, duration * 0.5, time);
+        // Calculate number of triggers
+        const triggers = rollMode ? rollSubdivision : 1;
+
+        // Calculate time between triggers (within one 16th note)
+        const stepDuration = Tone.Time('16n').toSeconds();
+        const triggerInterval = stepDuration / triggers;
+
+        // Shorten note duration for rolls to avoid overlap
+        const noteDuration = rollMode ? duration * 0.15 : duration;
+
+        for (let i = 0; i < triggers; i++) {
+            const triggerTime = time + (i * triggerInterval);
+
+            if (trackConfig.type === 'membrane') {
+                // Kick: pitch affects frequency
+                const totalPitch = pitch + (octaveShift * 12);
+                const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch);
+                instrument.triggerAttackRelease(freq, noteDuration * 0.3, triggerTime);
+            } else if (trackConfig.type === 'noise' || trackConfig.type === 'metal') {
+                // Snare/Hi-hat: no pitch, just trigger
+                instrument.triggerAttackRelease(noteDuration * 0.2, triggerTime);
+            } else if (trackConfig.type === 'fm') {
+                // Synth: polyphonic with pitch and octave shift
+                const totalPitch = pitch + (octaveShift * 12);
+                const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch);
+                instrument.triggerAttackRelease(freq, noteDuration * 0.5, triggerTime);
+            }
         }
     }
 

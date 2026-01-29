@@ -1,14 +1,17 @@
 export class Controls {
-    constructor(audioEngine, onBPMChange) {
+    constructor(audioEngine, onBPMChange, onSwingChange) {
         this.audioEngine = audioEngine;
         this.onBPMChange = onBPMChange;
+        this.onSwingChange = onSwingChange;
         this.isPlaying = false;
+        this.swingEnabled = false;
 
         this.playBtn = document.getElementById('play-btn');
         this.playIcon = this.playBtn.querySelector('.play-icon');
         this.stopIcon = this.playBtn.querySelector('.stop-icon');
         this.bpmSlider = document.getElementById('bpm-slider');
         this.bpmDisplay = document.getElementById('bpm-display');
+        this.swingBtn = document.getElementById('swing-btn');
 
         this.setupEvents();
     }
@@ -48,6 +51,11 @@ export class Controls {
                 this.hideBPMDisplay();
             }
         });
+
+        // Swing button
+        this.swingBtn.addEventListener('click', () => {
+            this.toggleSwing();
+        });
     }
 
     play() {
@@ -76,5 +84,28 @@ export class Controls {
     setBPM(bpm) {
         this.bpmSlider.value = bpm;
         this.audioEngine.setBPM(bpm);
+    }
+
+    toggleSwing() {
+        this.swingEnabled = !this.swingEnabled;
+        this.audioEngine.setSwing(this.swingEnabled);
+        if (this.swingEnabled) {
+            this.swingBtn.classList.add('active');
+        } else {
+            this.swingBtn.classList.remove('active');
+        }
+        if (this.onSwingChange) {
+            this.onSwingChange(this.swingEnabled);
+        }
+    }
+
+    setSwing(enabled) {
+        this.swingEnabled = enabled;
+        this.audioEngine.setSwing(enabled);
+        if (enabled) {
+            this.swingBtn.classList.add('active');
+        } else {
+            this.swingBtn.classList.remove('active');
+        }
     }
 }
