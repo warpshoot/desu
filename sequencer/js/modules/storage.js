@@ -1,4 +1,4 @@
-import { STORAGE_KEY, DEFAULT_BPM, KNOB_PARAMS, DEFAULT_ROLL_SUBDIVISION } from './constants.js';
+import { STORAGE_KEY, DEFAULT_BPM, KNOB_PARAMS, DEFAULT_ROLL_SUBDIVISION, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, COLS } from './constants.js';
 
 let saveTimeout = null;
 
@@ -32,7 +32,7 @@ export function createDefaultState() {
     const grid = [];
     for (let track = 0; track < 4; track++) {
         grid[track] = [];
-        for (let step = 0; step < 16; step++) {
+        for (let step = 0; step < COLS; step++) {
             grid[track][step] = {
                 active: false,
                 pitch: 0,
@@ -53,9 +53,13 @@ export function createDefaultState() {
         };
     }
 
+    const trackOctaves = [0, 0, 0, DEFAULT_OCTAVE]; // Last track (Synth) can shift octaves
+
     return {
         grid,
         bpm: DEFAULT_BPM,
-        trackParams
+        trackParams,
+        swingEnabled: DEFAULT_SWING_ENABLED,
+        trackOctaves
     };
 }

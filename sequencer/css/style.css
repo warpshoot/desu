@@ -65,7 +65,7 @@ body {
 /* Grid */
 #grid-container {
     display: grid;
-    grid-template-columns: repeat(16, 1fr);
+    grid-template-columns: repeat(32, 1fr);
     grid-template-rows: repeat(4, 1fr);
     gap: 4px;
     background: #000;
@@ -243,6 +243,20 @@ body {
 
 .control-btn svg {
     pointer-events: none;
+}
+
+.control-btn.active {
+    background: #fff;
+    color: #0a0a0a;
+    border-color: #fff;
+}
+
+#swing-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
 }
 
 #bpm-container {
