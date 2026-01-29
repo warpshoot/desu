@@ -167,7 +167,7 @@ h1 {
 }
 
 .track-icon {
-    width: 24px;
+    width: 28px;
     height: 72px;
     border: 1px solid #333;
     background: #1a1a1a;
@@ -179,8 +179,9 @@ h1 {
     justify-content: center;
     align-items: center;
     font-family: monospace;
-    font-size: 14px;
-    font-weight: bold;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
 }
 
 .track-ctrls {
@@ -296,7 +297,7 @@ h1 {
     background: none;
     /* No background */
     border-radius: 0;
-    touch-action: none;
+    /* touch-action removed - controlled by JavaScript to allow two-finger pan */
 }
 
 .loop-handle:active {
@@ -362,7 +363,7 @@ h1 {
     cursor: pointer;
     transition: all 0.1s ease;
     position: relative;
-    touch-action: none;
+    /* touch-action removed - controlled by JavaScript to allow two-finger pan */
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -521,7 +522,7 @@ h1 {
 
 .knob {
     cursor: pointer;
-    touch-action: none;
+    /* touch-action removed - controlled by JavaScript to allow two-finger pan */
 }
 
 .reset-btn {
@@ -757,38 +758,42 @@ h1 {
     }
 
     #track-icons {
-        flex-direction: row;
-        justify-content: center;
+        flex-direction: column;
+        gap: 2px;
     }
 
     .track-item {
-        flex-direction: column;
+        flex-direction: row;
+        gap: 2px;
     }
 
     .track-icon {
-        width: 20px;
-        height: 60px;
+        width: 32px;
+        height: 80px;
+        font-size: 20px;
+        font-weight: 900;
     }
 
     .track-ctrls {
-        flex-direction: row;
+        flex-direction: column;
         gap: 2px;
     }
 
     .track-ctrls button {
-        width: 30px;
-        height: 20px;
+        width: 32px;
+        height: 26px;
+        font-size: 11px;
     }
 
     #grid-container {
-        grid-template-columns: repeat(32, 20px);
-        grid-template-rows: repeat(5, 60px);
+        grid-template-columns: repeat(32, 24px);
+        grid-template-rows: repeat(5, 80px);
         gap: 2px;
     }
 
     .cell {
-        width: 20px;
-        height: 60px;
+        width: 24px;
+        height: 80px;
     }
 
     .pitch-indicator {
@@ -807,7 +812,7 @@ h1 {
     }
 
     .timeline-beat {
-        width: 86px; /* 4*20 + 3*2 */
+        width: 102px; /* 4*24 + 3*2 */
     }
 
     #tone-panel {
@@ -887,20 +892,27 @@ h1 {
     }
 
     .track-icon {
-        width: 16px;
-        height: 48px;
-        font-size: 12px;
+        width: 28px;
+        height: 70px;
+        font-size: 18px;
+        font-weight: 900;
+    }
+
+    .track-ctrls button {
+        width: 28px;
+        height: 23px;
+        font-size: 10px;
     }
 
     #grid-container {
-        grid-template-columns: repeat(32, 16px);
-        grid-template-rows: repeat(5, 48px);
+        grid-template-columns: repeat(32, 20px);
+        grid-template-rows: repeat(5, 70px);
         gap: 2px;
     }
 
     .cell {
-        width: 16px;
-        height: 48px;
+        width: 20px;
+        height: 70px;
     }
 
     .pitch-indicator {
@@ -908,7 +920,7 @@ h1 {
     }
 
     .timeline-beat {
-        width: 70px; /* 4*16 + 3*2 */
+        width: 86px; /* 4*20 + 3*2 */
     }
 
     .loop-handle {
