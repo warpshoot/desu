@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>DESU™ beat</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="../favicon.js"></script>
+</head>
+
+<body>
+    <!-- Header gradient -->
+    <div class="header-gradient"></div>
+
+    <!-- Hamburger Menu -->
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+
+    <!-- Navigation Menu -->
+    <nav class="nav-menu" id="navMenu">
+        <ul class="nav-list">
+            <li><a href="../episodes/">Episodes</a></li>
+            <li><a href="../characters/">Characters</a></li>
+            <li><a href="../tools/">Tools</a></li>
+        </ul>
+    </nav>
+
+    <!-- Logo -->
+    <a href="../" class="logo-link">
+        <img src="../desu_logo.png" alt="DESU™" class="site-logo">
+    </a>
+
+    <div id="sequencer-container">
+        <h1>DESU™ beat</h1>
+        <div id="sequencer-inner">
+            <div id="track-icons">
+                <div class="track-item" data-track="0">
+                    <div class="track-icon" title="Kick">K</div>
+                    <div class="track-ctrls">
+                        <button class="mute-btn" title="Mute">M</button>
+                        <button class="solo-btn" title="Solo">S</button>
+                    </div>
+                </div>
+                <div class="track-item" data-track="1">
+                    <div class="track-icon" title="Snare">S</div>
+                    <div class="track-ctrls">
+                        <button class="mute-btn" title="Mute">M</button>
+                        <button class="solo-btn" title="Solo">S</button>
+                    </div>
+                </div>
+                <div class="track-item" data-track="2">
+                    <div class="track-icon" title="Hi-hat">H</div>
+                    <div class="track-ctrls">
+                        <button class="mute-btn" title="Mute">M</button>
+                        <button class="solo-btn" title="Solo">S</button>
+                    </div>
+                </div>
+                <div class="track-item" data-track="3">
+                    <div class="track-icon" title="Bass">B</div>
+                    <div class="track-ctrls">
+                        <button class="mute-btn" title="Mute">M</button>
+                        <button class="solo-btn" title="Solo">S</button>
+                    </div>
+                </div>
+                <div class="track-item" data-track="4">
+                    <div class="track-icon" title="Synth">S</div>
+                    <div class="track-ctrls">
+                        <button class="mute-btn" title="Mute">M</button>
+                        <button class="solo-btn" title="Solo">S</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main grid -->
+            <div id="grid-wrapper">
+                <div id="timeline-container"></div>
+                <div id="loop-start-handle" class="loop-handle" title="Drag to set loop start">▶</div>
+                <div id="loop-end-handle" class="loop-handle" title="Drag to set loop end">◀</div>
+                <div id="grid-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tone panel (hidden by default) -->
+    <div id="tone-panel" class="hidden">
+        <div id="tone-panel-content">
+            <div class="knob-row">
+                <div class="knob-container">
+                    <canvas class="knob" data-param="cutoff" width="80" height="80"></canvas>
+                    <div class="knob-label">CUT</div>
+                </div>
+                <div class="knob-container">
+                    <canvas class="knob" data-param="resonance" width="80" height="80"></canvas>
+                    <div class="knob-label">RES</div>
+                </div>
+                <div class="knob-container">
+                    <canvas class="knob" data-param="vol" width="80" height="80"></canvas>
+                    <div class="knob-label">VOL</div>
+                </div>
+            </div>
+            <div class="knob-row">
+                <div class="knob-container">
+                    <canvas class="knob" data-param="modulation" width="80" height="80"></canvas>
+                    <div class="knob-label">MOD</div>
+                </div>
+                <div class="knob-container">
+                    <canvas class="knob" data-param="release" width="80" height="80"></canvas>
+                    <div class="knob-label">REL</div>
+                </div>
+            </div>
+            <button id="tone-reset-btn" class="reset-btn">RESET</button>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div id="controls">
+        <button id="play-pause-btn" class="control-btn" title="Play/Pause (Space)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" class="play-icon" />
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" class="pause-icon hidden" />
+            </svg>
+        </button>
+
+        <button id="stop-btn" class="control-btn" title="Stop">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12" />
+            </svg>
+        </button>
+
+        <button id="loop-btn" class="control-btn" title="Toggle Loop (L)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 2l4 4-4 4" />
+                <path d="M3 11v-1a4 4 0 014-4h14" />
+                <path d="M7 22l-4-4 4-4" />
+                <path d="M21 13v1a4 4 0 01-4 4H3" />
+            </svg>
+        </button>
+
+        <button id="swing-btn" class="control-btn">SWG</button>
+
+        <div id="bpm-ctrl">
+            <div id="bpm-drag-value">120</div>
+            <div id="bpm-buttons">
+                <button class="bpm-step-btn" id="bpm-dec">◀</button>
+                <button class="bpm-step-btn" id="bpm-inc">▶</button>
+            </div>
+        </div>
+
+        <div id="volume-ctrl">
+            <div class="ctrl-label">VOL</div>
+            <input type="range" id="volume-slider" min="-60" max="0" value="-12">
+        </div>
+
+        <button id="clear-btn" class="control-btn">CLR</button>
+    </div>
+
+    <!-- Roll Menu -->
+    <div id="roll-menu" class="hidden">
+        <div class="roll-option" data-roll="1">1</div>
+        <div class="roll-option" data-roll="2">2</div>
+        <div class="roll-option" data-roll="4">4</div>
+        <div class="roll-option" data-roll="8">8</div>
+    </div>
+
+    <!-- Note Indicator -->
+    <div id="note-indicator" class="hidden"></div>
+    </div>
+
+
+    <script src="../fish.js"></script>
+    <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>

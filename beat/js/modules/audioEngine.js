@@ -7,11 +7,22 @@ export class AudioEngine {
         this.currentStep = 0;
         this.swingEnabled = false;
 
+        this.loopStart = 0;
+        this.loopEnd = COLS - 1;
+        this.loopEnabled = true;
+
         // Audio chain components
         this.instruments = [];
         this.filters = [];
         this.gains = [];
         this.limiter = null;
+
+        // Mute/Solo state
+        this.mutedTracks = [false, false, false, false, false];
+        this.soloedTracks = [false, false, false, false, false];
+
+        // Volume state (default 0.7)
+        this.trackVolumes = [0.7, 0.7, 0.7, 0.7, 0.7];
 
         // Callbacks
         this.onStepCallback = null;
@@ -26,7 +37,7 @@ export class AudioEngine {
         this.limiter = new Tone.Limiter(-3).toDestination();
 
         // Create instruments and signal chain for each track
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < TRACKS.length; i++) {
             const track = TRACKS[i];
 
             // Create instrument
@@ -49,7 +60,7 @@ export class AudioEngine {
                 case 'metal':
                     instrument = new Tone.MetalSynth({
                         frequency: 200,
-                        envelope: { attack: 0.001, decay: 0.1, release: 0.01 },
+                        envelope: { attack: 0.001, decay: 0.1, release: 0.1 },
                         harmonicity: 5.1,
                         modulationIndex: 32,
                         resonance: 4000,
@@ -71,7 +82,7 @@ export class AudioEngine {
 
             // Create filter
             const filter = new Tone.Filter({
-                frequency: 2000,
+                frequency: (i === 1 || i === 2) ? 8000 : 2000,
                 type: 'lowpass',
                 rolloff: -24
             });
@@ -90,7 +101,6 @@ export class AudioEngine {
         }
 
         // Set up transport
-        Tone.Transport.bpm.value = DEFAULT_BPM;
         Tone.Transport.scheduleRepeat((time) => {
             this.onStep(time);
         }, '16n');
@@ -109,7 +119,34 @@ export class AudioEngine {
         if (this.onStepCallback) {
             this.onStepCallback(this.currentStep, adjustedTime);
         }
-        this.currentStep = (this.currentStep + 1) % COLS;
+
+        // Calculate next step
+        const nextStep = this.currentStep + 1;
+
+        if (this.loopEnabled) {
+            // Wrap within loop range
+            this.currentStep = (nextStep > this.loopEnd) ? this.loopStart : nextStep;
+        } else {
+            // Stop at end of range or COLS
+            if (nextStep > this.loopEnd || nextStep >= COLS) {
+                Tone.Transport.scheduleOnce(() => {
+                    this.stop();
+                }, "+16n");
+            } else {
+                this.currentStep = nextStep;
+            }
+        }
+    }
+
+    setLoopRange(start, end, enabled) {
+        this.loopStart = start;
+        this.loopEnd = end;
+        this.loopEnabled = enabled;
+
+        // If current step is outside new range, jump to start
+        if (this.currentStep < this.loopStart || this.currentStep > this.loopEnd) {
+            this.currentStep = this.loopStart;
+        }
     }
 
     setStepCallback(callback) {
@@ -118,8 +155,14 @@ export class AudioEngine {
 
     play() {
         if (!this.initialized) return;
-        Tone.Transport.start();
+        Tone.Transport.start("+0.1");
         this.playing = true;
+    }
+
+    pause() {
+        if (!this.initialized) return;
+        Tone.Transport.pause();
+        this.playing = false;
     }
 
     stop() {
@@ -131,6 +174,11 @@ export class AudioEngine {
 
     setBPM(bpm) {
         Tone.Transport.bpm.value = bpm;
+    }
+
+    setMasterVolume(db) {
+        if (!this.initialized) return;
+        Tone.Destination.volume.value = db;
     }
 
     setSwing(enabled) {
@@ -155,60 +203,70 @@ export class AudioEngine {
             const triggerTime = time + (i * triggerInterval);
 
             if (trackConfig.type === 'membrane') {
-                // Kick: pitch affects frequency
                 const totalPitch = pitch + (octaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch);
                 instrument.triggerAttackRelease(freq, noteDuration * 0.3, triggerTime);
-            } else if (trackConfig.type === 'noise' || trackConfig.type === 'metal') {
-                // Snare/Hi-hat: no pitch, just trigger
-                instrument.triggerAttackRelease(noteDuration * 0.2, triggerTime);
-            } else if (trackConfig.type === 'fm') {
-                // Synth: polyphonic with pitch and octave shift
+            } else if (trackConfig.type === 'noise') {
+                // Snare: trigger with duration and time
                 const totalPitch = pitch + (octaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch);
+                instrument.triggerAttackRelease(noteDuration * 0.2, triggerTime);
+            } else if (trackConfig.type === 'metal') {
+                // Hi-hat (MetalSynth): (frequency, duration, time)
+                const totalPitch = pitch + (octaveShift * 12);
+                const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch).toFrequency();
+                instrument.triggerAttackRelease(freq, noteDuration * 0.2, triggerTime);
+            } else if (trackConfig.type === 'fm') {
+                const totalPitch = pitch + (octaveShift * 12);
+                const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch).toFrequency();
                 instrument.triggerAttackRelease(freq, noteDuration * 0.5, triggerTime);
             }
         }
     }
 
     updateTrackParams(track, params) {
-        Tone.Transport.scheduleOnce(() => {
-            if (params.cutoff !== undefined) {
-                this.filters[track].frequency.value = params.cutoff;
+        // Apply immediately
+        if (params.cutoff !== undefined) {
+            // Filter frequency is likely a signal
+            this.filters[track].frequency.rampTo(params.cutoff, 0.1);
+        }
+        if (params.resonance !== undefined) {
+            this.filters[track].Q.rampTo(params.resonance, 0.1);
+        }
+        if (params.release !== undefined) {
+            const instrument = this.instruments[track];
+            if (instrument.envelope) {
+                instrument.envelope.release = params.release;
+            } else if (instrument.voice && instrument.voice.envelope) {
+                // For PolySynth
+                instrument.set({ envelope: { release: params.release } });
             }
-            if (params.resonance !== undefined) {
-                this.filters[track].Q.value = params.resonance;
-            }
-            if (params.release !== undefined) {
-                const instrument = this.instruments[track];
-                if (instrument.envelope) {
-                    instrument.envelope.release = params.release;
-                } else if (instrument.voice && instrument.voice.envelope) {
-                    // For PolySynth
-                    instrument.set({ envelope: { release: params.release } });
-                }
-            }
-            if (params.modulation !== undefined) {
-                const instrument = this.instruments[track];
-                const trackType = TRACKS[track].type;
+        }
+        if (params.modulation !== undefined) {
+            const instrument = this.instruments[track];
+            const trackType = TRACKS[track].type;
 
-                if (trackType === 'membrane') {
-                    // Kick: modulate pitch decay
-                    instrument.pitchDecay = 0.01 + (params.modulation / 100) * 0.1;
-                } else if (trackType === 'noise') {
-                    // Snare: modulate noise color (brown to white)
-                    const types = ['brown', 'pink', 'white'];
-                    const index = Math.floor((params.modulation / 100) * (types.length - 1));
-                    instrument.noise.type = types[index];
-                } else if (trackType === 'metal') {
-                    // Hi-hat: modulate harmonicity
-                    instrument.harmonicity = 3 + (params.modulation / 100) * 5;
-                } else if (trackType === 'fm') {
-                    // Synth: modulate FM depth
-                    instrument.set({ modulationIndex: (params.modulation / 100) * 20 });
-                }
+            if (trackType === 'membrane') {
+                // Kick: modulate pitch decay
+                instrument.pitchDecay = 0.01 + (params.modulation / 100) * 0.1;
+            } else if (trackType === 'noise') {
+                // Snare: modulate noise color (brown to white)
+                const types = ['brown', 'pink', 'white'];
+                const index = Math.floor((params.modulation / 100) * (types.length - 1));
+                instrument.noise.type = types[index];
+            } else if (trackType === 'metal') {
+                // Hi-hat: modulate harmonicity
+                if (instrument.harmonicity.rampTo) instrument.harmonicity.rampTo(3 + (params.modulation / 100) * 5, 0.1);
+                else instrument.harmonicity = 3 + (params.modulation / 100) * 5;
+            } else if (trackType === 'fm') {
+                // Synth: modulate FM depth
+                instrument.set({ modulationIndex: (params.modulation / 100) * 20 });
             }
-        }, Tone.now());
+        }
+        if (params.vol !== undefined) {
+            this.trackVolumes[track] = params.vol;
+            this.updateTrackGains();
+        }
     }
 
     dispose() {
@@ -217,5 +275,38 @@ export class AudioEngine {
         this.filters.forEach(f => f.dispose());
         this.gains.forEach(g => g.dispose());
         if (this.limiter) this.limiter.dispose();
+    }
+
+    updateTrackGains() {
+        const isAnySolo = this.soloedTracks.some(s => s);
+
+        for (let i = 0; i < this.gains.length; i++) {
+            const isMuted = this.mutedTracks[i];
+            const isSoloed = this.soloedTracks[i];
+            const baseVol = this.trackVolumes[i] !== undefined ? this.trackVolumes[i] : 0.7;
+
+            let targetGain = baseVol;
+
+            if (isAnySolo) {
+                targetGain = isSoloed ? baseVol : 0;
+            } else {
+                targetGain = isMuted ? 0 : baseVol;
+            }
+
+            // Apply smoothly
+            if (this.gains[i]) {
+                this.gains[i].gain.rampTo(targetGain, 0.05);
+            }
+        }
+    }
+
+    setTrackMute(track, muted) {
+        this.mutedTracks[track] = muted;
+        this.updateTrackGains();
+    }
+
+    setTrackSolo(track, soloed) {
+        this.soloedTracks[track] = soloed;
+        this.updateTrackGains();
     }
 }

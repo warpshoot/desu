@@ -1,4 +1,5 @@
 import { Knob } from './knob.js';
+import { KNOB_PARAMS } from './constants.js';
 
 export class TonePanel {
     constructor(element, audioEngine, onParamsChange) {
@@ -16,9 +17,34 @@ export class TonePanel {
         document.addEventListener('click', (e) => {
             if (this.isOpen() &&
                 !this.element.contains(e.target) &&
-                !e.target.classList.contains('track-icon')) {
+                !e.target.classList.contains('track-icon') &&
+                !e.target.classList.contains('knob-label')) { // Also ignore label clicks just in case
                 this.close();
             }
+        });
+
+        // Reset button
+        const resetBtn = this.element.querySelector('#tone-reset-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                if (confirm('Reset sound settings for this track?')) {
+                    this.resetParams();
+                }
+            });
+        }
+    }
+
+    resetParams() {
+        if (!this.currentTrack === null) return;
+
+        Object.keys(this.knobs).forEach(param => {
+            const defaultValue = KNOB_PARAMS[param].default;
+
+            // Update Knob UI
+            this.knobs[param].setValue(defaultValue);
+
+            // Trigger change logic
+            this.onKnobChange(param, defaultValue);
         });
     }
 
