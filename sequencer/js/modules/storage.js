@@ -19,7 +19,45 @@ export function loadState() {
     try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
-            return JSON.parse(saved);
+            const state = JSON.parse(saved);
+
+            // Migration: Expand grid from 16 to 32 steps if needed
+            if (state.grid && state.grid[0] && state.grid[0].length < COLS) {
+                for (let track = 0; track < 4; track++) {
+                    const currentLength = state.grid[track].length;
+                    for (let step = currentLength; step < COLS; step++) {
+                        state.grid[track][step] = {
+                            active: false,
+                            pitch: 0,
+                            duration: 0.5,
+                            rollMode: false,
+                            rollSubdivision: DEFAULT_ROLL_SUBDIVISION
+                        };
+                    }
+                }
+            }
+
+            // Migration: Add missing fields
+            if (!state.swingEnabled) {
+                state.swingEnabled = DEFAULT_SWING_ENABLED;
+            }
+            if (!state.trackOctaves) {
+                state.trackOctaves = [0, 0, 0, DEFAULT_OCTAVE];
+            }
+
+            // Migration: Add rollMode to existing cells if missing
+            if (state.grid) {
+                for (let track = 0; track < 4; track++) {
+                    for (let step = 0; step < COLS; step++) {
+                        if (state.grid[track][step].rollMode === undefined) {
+                            state.grid[track][step].rollMode = false;
+                            state.grid[track][step].rollSubdivision = DEFAULT_ROLL_SUBDIVISION;
+                        }
+                    }
+                }
+            }
+
+            return state;
         }
     } catch (e) {
         console.error('Failed to load state:', e);
