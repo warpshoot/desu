@@ -766,8 +766,9 @@ h1 {
     }
 
     .track-icon {
-        width: 20px;
-        height: 60px;
+        width: 24px;
+        height: 80px;
+        font-size: 16px;
     }
 
     .track-ctrls {
@@ -776,19 +777,20 @@ h1 {
     }
 
     .track-ctrls button {
-        width: 30px;
-        height: 20px;
+        width: 36px;
+        height: 24px;
+        font-size: 11px;
     }
 
     #grid-container {
-        grid-template-columns: repeat(32, 20px);
-        grid-template-rows: repeat(5, 60px);
+        grid-template-columns: repeat(32, 24px);
+        grid-template-rows: repeat(5, 80px);
         gap: 2px;
     }
 
     .cell {
-        width: 20px;
-        height: 60px;
+        width: 24px;
+        height: 80px;
     }
 
     .pitch-indicator {
@@ -807,7 +809,7 @@ h1 {
     }
 
     .timeline-beat {
-        width: 86px; /* 4*20 + 3*2 */
+        width: 102px; /* 4*24 + 3*2 */
     }
 
     #tone-panel {
@@ -887,20 +889,26 @@ h1 {
     }
 
     .track-icon {
-        width: 16px;
-        height: 48px;
-        font-size: 12px;
+        width: 20px;
+        height: 70px;
+        font-size: 14px;
+    }
+
+    .track-ctrls button {
+        width: 32px;
+        height: 22px;
+        font-size: 10px;
     }
 
     #grid-container {
-        grid-template-columns: repeat(32, 16px);
-        grid-template-rows: repeat(5, 48px);
+        grid-template-columns: repeat(32, 20px);
+        grid-template-rows: repeat(5, 70px);
         gap: 2px;
     }
 
     .cell {
-        width: 16px;
-        height: 48px;
+        width: 20px;
+        height: 70px;
     }
 
     .pitch-indicator {
@@ -908,7 +916,7 @@ h1 {
     }
 
     .timeline-beat {
-        width: 70px; /* 4*16 + 3*2 */
+        width: 86px; /* 4*20 + 3*2 */
     }
 
     .loop-handle {

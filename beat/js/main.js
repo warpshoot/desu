@@ -11,6 +11,7 @@ class Sequencer {
         this.audioEngine = new AudioEngine();
         this.cells = [];
         this.isPainting = false;
+        this.isTwoFingerTouch = false; // Track two-finger touches globally
 
         this.init();
     }
@@ -89,16 +90,38 @@ class Sequencer {
             this.onStep(step, time);
         });
 
+        // Global two-finger detection for pan scrolling
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length >= 2) {
+                this.isTwoFingerTouch = true;
+                // Cancel any ongoing painting
+                this.isPainting = false;
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                this.isTwoFingerTouch = false;
+            }
+            if (e.touches.length === 0) {
+                this.isPainting = false;
+            }
+        }, { passive: true });
+
         // Global mouseup/touchend to stop painting
         window.addEventListener('mouseup', () => {
-            this.isPainting = false;
-        });
-        window.addEventListener('touchend', () => {
             this.isPainting = false;
         });
 
         // Touch painting support
         window.addEventListener('touchmove', (e) => {
+            // Allow two-finger panning by not preventing default
+            if (e.touches.length >= 2) {
+                this.isTwoFingerTouch = true;
+                this.isPainting = false;
+                return; // Let browser handle two-finger scroll
+            }
+
             if (this.isPainting && e.touches.length === 1) {
                 e.preventDefault();
                 const touch = e.touches[0];
@@ -332,7 +355,8 @@ class Sequencer {
                     },
                     () => this.isPainting,
                     trackConfig.baseFreq,
-                    document.getElementById('note-indicator')
+                    document.getElementById('note-indicator'),
+                    () => this.isTwoFingerTouch
                 );
 
                 this.cells[track][step] = cell;

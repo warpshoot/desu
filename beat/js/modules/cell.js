@@ -1,7 +1,7 @@
 import { PITCH_RANGE, DURATION_RANGE, BRIGHTNESS_RANGE, SCALE_RANGE, LONG_PRESS_DURATION, DRAG_THRESHOLD, TAP_THRESHOLD, ROLL_SUBDIVISIONS } from './constants.js';
 
 export class Cell {
-    constructor(element, track, step, data, onChange, onLongPress, onPaintChange, getGlobalIsPainting, baseFreq, noteIndicator) {
+    constructor(element, track, step, data, onChange, onLongPress, onPaintChange, getGlobalIsPainting, baseFreq, noteIndicator, getIsTwoFingerTouch) {
         this.element = element;
         this.track = track;
         this.step = step;
@@ -12,6 +12,7 @@ export class Cell {
         this.getGlobalIsPainting = getGlobalIsPainting;
         this.baseFreq = baseFreq;
         this.noteIndicator = noteIndicator;
+        this.getIsTwoFingerTouch = getIsTwoFingerTouch || (() => false);
 
         // Visual pitch indicator
         this.pitchIndicator = document.createElement('div');
@@ -61,7 +62,12 @@ export class Cell {
 
         // Touch events
         this.element.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1) {
+            // Allow two-finger panning - don't handle touch at all
+            if (e.touches.length >= 2) {
+                return;
+            }
+
+            if (e.touches.length === 1 && !this.getIsTwoFingerTouch()) {
                 // Only prevent default for single-finger touches
                 // This allows two-finger scrolling
                 e.preventDefault();
@@ -70,6 +76,14 @@ export class Cell {
         }, { passive: false });
 
         window.addEventListener('touchmove', (e) => {
+            // Cancel drag if two-finger touch detected
+            if (e.touches.length >= 2 || this.getIsTwoFingerTouch()) {
+                if (this.isDragging) {
+                    this.onPointerUp();
+                }
+                return;
+            }
+
             if (this.isDragging && e.touches.length === 1) {
                 e.preventDefault();
                 this.onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
