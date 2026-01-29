@@ -1,9 +1,10 @@
-body {
+html, body {
     background: #fff;
     color: #333;
     margin: 0;
     padding: 0;
-    overflow: auto;
+    overflow: hidden;
+    overscroll-behavior: none;
     min-height: 100vh;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     -webkit-touch-callout: none;
@@ -124,6 +125,10 @@ body {
     padding: 100px 20px 60px;
     position: relative;
     background: #fff;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 h1 {
@@ -274,16 +279,16 @@ h1 {
 
 .loop-handle {
     position: absolute;
-    top: -21px;
-    /* Lifted 5px further from -16px */
-    width: 20px;
-    height: 20px;
+    top: -44px;
+    /* Adjusted for larger touch target */
+    width: 44px;
+    height: 44px;
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: grab;
     z-index: 500;
-    font-size: 16px;
+    font-size: 20px;
     color: #000;
     /* Pure black */
     user-select: none;
@@ -291,6 +296,7 @@ h1 {
     background: none;
     /* No background */
     border-radius: 0;
+    touch-action: none;
 }
 
 .loop-handle:active {
@@ -741,7 +747,13 @@ h1 {
     #sequencer-container {
         flex-direction: column;
         gap: 8px;
-        padding: 70px 10px 120px;
+        padding: 70px 10px 140px;
+    }
+
+    #sequencer-inner {
+        /* Allow horizontal scrolling for grid */
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     #track-icons {
@@ -749,21 +761,53 @@ h1 {
         justify-content: center;
     }
 
+    .track-item {
+        flex-direction: column;
+    }
+
     .track-icon {
-        width: 32px;
-        height: 32px;
+        width: 20px;
+        height: 60px;
+    }
+
+    .track-ctrls {
+        flex-direction: row;
+        gap: 2px;
+    }
+
+    .track-ctrls button {
+        width: 30px;
+        height: 20px;
     }
 
     #grid-container {
-        grid-template-columns: repeat(32, 16px);
-        grid-template-rows: repeat(4, 16px);
-        gap: 1px;
-        padding: 2px;
+        grid-template-columns: repeat(32, 20px);
+        grid-template-rows: repeat(5, 60px);
+        gap: 2px;
     }
 
     .cell {
-        width: 16px;
-        height: 16px;
+        width: 20px;
+        height: 60px;
+    }
+
+    .pitch-indicator {
+        height: 3px;
+    }
+
+    /* Beat spacing for mobile */
+    .cell[data-step="3"],
+    .cell[data-step="7"],
+    .cell[data-step="11"],
+    .cell[data-step="15"],
+    .cell[data-step="19"],
+    .cell[data-step="23"],
+    .cell[data-step="27"] {
+        margin-right: 6px;
+    }
+
+    .timeline-beat {
+        width: 86px; /* 4*20 + 3*2 */
     }
 
     #tone-panel {
@@ -782,31 +826,136 @@ h1 {
     }
 
     #controls {
-        flex-direction: column;
-        gap: 12px;
+        height: 120px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: auto auto;
+        gap: 8px;
+        padding: 12px;
+    }
+
+    #play-pause-btn {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    #stop-btn {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    #loop-btn {
+        grid-column: 3;
+        grid-row: 1;
+    }
+
+    #swing-btn {
+        grid-column: 4;
+        grid-row: 1;
+    }
+
+    #bpm-ctrl {
+        grid-column: 1 / 3;
+        grid-row: 2;
+    }
+
+    #volume-ctrl {
+        grid-column: 3 / 5;
+        grid-row: 2;
+    }
+
+    #clear-btn {
+        display: none; /* Hide on mobile to save space */
     }
 
     .control-btn {
-        width: 56px;
-        height: 56px;
-    }
-
-    #bpm-container {
-        width: 160px;
+        width: 100%;
+        height: 48px;
+        min-width: 48px;
     }
 }
 
 /* Smaller mobile */
 @media (max-width: 480px) {
+    #sequencer-container {
+        padding: 60px 5px 140px;
+    }
+
+    h1 {
+        font-size: 18px;
+        margin-bottom: 12px;
+    }
+
+    .track-icon {
+        width: 16px;
+        height: 48px;
+        font-size: 12px;
+    }
+
     #grid-container {
-        grid-template-columns: repeat(32, 10px);
-        grid-template-rows: repeat(4, 10px);
-        gap: 1px;
-        padding: 1px;
+        grid-template-columns: repeat(32, 16px);
+        grid-template-rows: repeat(5, 48px);
+        gap: 2px;
     }
 
     .cell {
-        width: 10px;
-        height: 10px;
+        width: 16px;
+        height: 48px;
+    }
+
+    .pitch-indicator {
+        height: 2px;
+    }
+
+    .timeline-beat {
+        width: 70px; /* 4*16 + 3*2 */
+    }
+
+    .loop-handle {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+        top: -36px;
+    }
+
+    #controls {
+        height: 120px;
+        gap: 6px;
+        padding: 8px;
+    }
+
+    .control-btn {
+        height: 44px;
+    }
+}
+
+/* Landscape mode optimization */
+@media (max-height: 500px) and (orientation: landscape) {
+    #sequencer-container {
+        padding: 40px 10px 100px;
+        justify-content: flex-start;
+    }
+
+    h1 {
+        font-size: 18px;
+        margin-bottom: 8px;
+    }
+
+    #controls {
+        height: 80px;
+        gap: 6px;
+        padding: 8px;
+    }
+
+    .control-btn {
+        height: 36px;
+    }
+
+    #bpm-ctrl {
+        gap: 2px;
+    }
+
+    #volume-ctrl {
+        width: 100px;
     }
 }

@@ -25,16 +25,17 @@ export class Knob {
 
         // Touch events
         this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
             if (e.touches.length === 1) {
+                e.preventDefault();
                 this.onDragStart(e.touches[0].clientY);
             }
-        });
+        }, { passive: false });
         window.addEventListener('touchmove', (e) => {
             if (this.isDragging && e.touches.length === 1) {
+                e.preventDefault();
                 this.onDragMove(e.touches[0].clientY);
             }
-        });
+        }, { passive: false });
         window.addEventListener('touchend', () => this.onDragEnd());
     }
 

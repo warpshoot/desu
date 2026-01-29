@@ -124,6 +124,13 @@ export class Controls {
         let startBpm = 0;
 
         const onMove = (e) => {
+            // Only handle single-finger touches for BPM adjustment
+            if (e.touches && e.touches.length !== 1) return;
+
+            if (e.touches && e.touches.length === 1) {
+                e.preventDefault();
+            }
+
             const currentY = e.touches ? e.touches[0].clientY : e.clientY;
             const currentX = e.touches ? e.touches[0].clientX : e.clientX;
 
@@ -159,11 +166,14 @@ export class Controls {
         });
 
         this.bpmDragValue.addEventListener('touchstart', (e) => {
-            startY = e.touches[0].clientY;
-            startX = e.touches[0].clientX;
-            startBpm = parseInt(this.bpmDragValue.textContent);
-            window.addEventListener('touchmove', onMove, { passive: false });
-            window.addEventListener('touchend', onEnd);
+            if (e.touches.length === 1) {
+                e.preventDefault();
+                startY = e.touches[0].clientY;
+                startX = e.touches[0].clientX;
+                startBpm = parseInt(this.bpmDragValue.textContent);
+                window.addEventListener('touchmove', onMove, { passive: false });
+                window.addEventListener('touchend', onEnd);
+            }
         }, { passive: false });
     }
 

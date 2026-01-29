@@ -100,6 +100,7 @@ class Sequencer {
         // Touch painting support
         window.addEventListener('touchmove', (e) => {
             if (this.isPainting && e.touches.length === 1) {
+                e.preventDefault();
                 const touch = e.touches[0];
                 const element = document.elementFromPoint(touch.clientX, touch.clientY);
                 if (element && element.classList.contains('cell')) {
@@ -176,6 +177,13 @@ class Sequencer {
 
         const setupHandleDrag = (handle, isStart) => {
             const onMove = (e) => {
+                // Only handle single-finger touches for loop handles
+                if (e.touches && e.touches.length !== 1) return;
+
+                if (e.touches && e.touches.length === 1) {
+                    e.preventDefault();
+                }
+
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
@@ -219,9 +227,11 @@ class Sequencer {
             });
 
             handle.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                window.addEventListener('touchmove', onMove, { passive: false });
-                window.addEventListener('touchend', onEnd);
+                if (e.touches.length === 1) {
+                    e.preventDefault();
+                    window.addEventListener('touchmove', onMove, { passive: false });
+                    window.addEventListener('touchend', onEnd);
+                }
             }, { passive: false });
         };
 
