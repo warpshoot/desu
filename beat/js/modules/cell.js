@@ -102,6 +102,7 @@ export class Cell {
         this.hasMoved = false;
         this.dragDirection = null;
         this.isDragging = true;
+        this.isPaintDrag = false;
 
 
         // Start long press timer
@@ -136,6 +137,7 @@ export class Cell {
                 // Empty Cell Logic
                 if (isHorizontal) {
                     // Horizontal Drag -> Continuous Paint
+                    this.isPaintDrag = true; // Flag to prevent duration adjustment
                     // Trigger global paint mode with track ID
                     if (this.onPaintChange) this.onPaintChange(true, this.track);
                     this.paintActivate();
@@ -144,12 +146,13 @@ export class Cell {
                     // Vertical Drag -> One-shot Activate & Pitch Adjust
                     // Activate immediately but DO NOT trigger global continuous paint
                     this.data.active = true;
+                    this.element.classList.add('active'); // Add active class to show color
                     // Reset to default/current duration
                     this.data.pitch = 0; // Reset pitch to center
                     this.startValue = 0; // Start adjusting from 0
                     this.triggerPulse();
                     this.updateVisuals();
-                    if (this.onChange) this.onChange(this.track, this.step, this.data, true);
+                    if (this.onChange) this.onChange(this.track, this.step, this.data, false);
                 }
             } else {
                 // Active Cell Logic (Existing)
@@ -196,6 +199,9 @@ export class Cell {
         }
         // Handle horizontal drag (Duration)
         else if (this.dragDirection === 'horizontal') {
+            // Only adjust duration if we are NOT in paint drag mode
+            if (this.isPaintDrag) return;
+
             const range = DURATION_RANGE.max - DURATION_RANGE.min;
             const sensitivity = range / 200;
             let newValue = this.startValue + (deltaX * sensitivity);
@@ -220,6 +226,11 @@ export class Cell {
             // Handle tap (no movement and no long press)
             if (!this.hasMoved && !this.isLongPress) {
                 this.handleTap();
+            } else if (this.hasMoved && !this.isPaintDrag) {
+                // Drag finished (adjustment complete) -> Trigger Sound
+                if (this.onChange) {
+                    this.onChange(this.track, this.step, this.data, true);
+                }
             }
         }
 

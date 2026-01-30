@@ -276,6 +276,13 @@ export class Controls {
         if (this.onStop) this.onStop();
     }
 
+    resetUI() {
+        this.isPlaying = false;
+        if (this.playIcon) this.playIcon.classList.remove('hidden');
+        if (this.pauseIcon) this.pauseIcon.classList.add('hidden');
+        if (this.playPauseBtn) this.playPauseBtn.classList.remove('active');
+    }
+
     setBPM(bpm) {
         bpm = Math.max(60, Math.min(180, bpm));
         this.bpmDragValue.textContent = bpm;

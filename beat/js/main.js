@@ -96,6 +96,12 @@ class Sequencer {
             this.onStep(step, time);
         });
 
+        this.audioEngine.setStopCallback(() => {
+            if (this.controls) {
+                this.controls.resetUI();
+            }
+        });
+
         // Global two-finger detection for pan scrolling
         window.addEventListener('touchstart', (e) => {
             if (e.touches.length >= 2) {

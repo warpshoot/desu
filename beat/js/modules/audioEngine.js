@@ -170,6 +170,13 @@ export class AudioEngine {
         Tone.Transport.stop();
         this.currentStep = 0;
         this.playing = false;
+        if (this.onStopCallback) {
+            this.onStopCallback();
+        }
+    }
+
+    setStopCallback(callback) {
+        this.onStopCallback = callback;
     }
 
     setBPM(bpm) {
