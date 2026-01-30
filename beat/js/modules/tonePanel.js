@@ -1,5 +1,5 @@
 import { Knob } from './knob.js';
-import { KNOB_PARAMS } from './constants.js';
+import { KNOB_PARAMS, TRACK_PRESETS, TRACKS } from './constants.js';
 
 export class TonePanel {
     constructor(element, audioEngine, onParamsChange) {
@@ -10,6 +10,39 @@ export class TonePanel {
         this.knobs = {};
 
         this.setupEvents();
+        this.setupPresetSelector();
+    }
+
+    setupPresetSelector() {
+        this.presetSelect = this.element.querySelector('#tone-preset-select');
+        if (this.presetSelect) {
+            this.presetSelect.addEventListener('change', (e) => {
+                const presetName = e.target.value;
+                if (presetName && this.currentTrack !== null) {
+                    this.applyPreset(presetName);
+                }
+            });
+        }
+    }
+
+    applyPreset(name) {
+        if (this.currentTrack === null) return;
+        const presets = TRACK_PRESETS[this.currentTrack];
+        if (!presets || !presets[name]) return;
+
+        const presetParams = presets[name];
+
+        Object.keys(presetParams).forEach(param => {
+            // Update Knob UI if it exists
+            if (this.knobs[param]) {
+                this.knobs[param].setValue(presetParams[param]);
+            }
+            // Trigger change
+            this.onKnobChange(param, presetParams[param]);
+        });
+
+        // Blur selector to prevent keyboard interference
+        if (this.presetSelect) this.presetSelect.blur();
     }
 
     setupEvents() {
@@ -35,10 +68,15 @@ export class TonePanel {
     }
 
     resetParams() {
-        if (!this.currentTrack === null) return;
+        if (this.currentTrack === null) return;
+
+        const defaults = TRACKS[this.currentTrack].defaultParams || {};
 
         Object.keys(this.knobs).forEach(param => {
-            const defaultValue = KNOB_PARAMS[param].default;
+            let defaultValue = defaults[param];
+            if (defaultValue === undefined) {
+                defaultValue = KNOB_PARAMS[param].default;
+            }
 
             // Update Knob UI
             this.knobs[param].setValue(defaultValue);
@@ -46,6 +84,11 @@ export class TonePanel {
             // Trigger change logic
             this.onKnobChange(param, defaultValue);
         });
+
+        // Also reset preset selector to default state
+        if (this.presetSelect) {
+            this.presetSelect.value = "";
+        }
     }
 
     open(track, params) {
@@ -73,12 +116,40 @@ export class TonePanel {
 
         // Mark track icon as active
         document.querySelectorAll('.track-icon').forEach(icon => {
-            icon.classList.remove('active');
+            if (icon) icon.classList.remove('active');
         });
+
+        if (track === undefined || track === null) return;
+
         const activeItem = document.querySelector(`.track-item[data-track="${track}"]`);
         if (activeItem) {
             const activeIcon = activeItem.querySelector('.track-icon');
             if (activeIcon) activeIcon.classList.add('active');
+        }
+        if (activeItem) {
+            const activeIcon = activeItem.querySelector('.track-icon');
+            if (activeIcon) activeIcon.classList.add('active');
+        }
+
+        this.updatePresetSelector(track);
+    }
+
+    updatePresetSelector(track) {
+        if (!this.presetSelect) return;
+
+        this.presetSelect.innerHTML = '<option value="">Select Preset...</option>';
+
+        const presets = TRACK_PRESETS[track];
+        if (presets) {
+            Object.keys(presets).forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                this.presetSelect.appendChild(option);
+            });
+            this.presetSelect.disabled = false;
+        } else {
+            this.presetSelect.disabled = true;
         }
     }
 

@@ -81,7 +81,16 @@
     <!-- Tone panel (hidden by default) -->
     <div id="tone-panel" class="hidden">
         <div id="tone-panel-content">
+            <div id="preset-selector-container">
+                <select id="tone-preset-select">
+                    <option value="">Select Preset...</option>
+                </select>
+            </div>
             <div class="knob-row">
+                <div class="knob-container">
+                    <canvas class="knob" data-param="tune" width="80" height="80"></canvas>
+                    <div class="knob-label">TUNE</div>
+                </div>
                 <div class="knob-container">
                     <canvas class="knob" data-param="cutoff" width="80" height="80"></canvas>
                     <div class="knob-label">CUT</div>
@@ -89,10 +98,6 @@
                 <div class="knob-container">
                     <canvas class="knob" data-param="resonance" width="80" height="80"></canvas>
                     <div class="knob-label">RES</div>
-                </div>
-                <div class="knob-container">
-                    <canvas class="knob" data-param="vol" width="80" height="80"></canvas>
-                    <div class="knob-label">VOL</div>
                 </div>
             </div>
             <div class="knob-row">
@@ -103,6 +108,10 @@
                 <div class="knob-container">
                     <canvas class="knob" data-param="release" width="80" height="80"></canvas>
                     <div class="knob-label">REL</div>
+                </div>
+                <div class="knob-container">
+                    <canvas class="knob" data-param="vol" width="80" height="80"></canvas>
+                    <div class="knob-label">VOL</div>
                 </div>
             </div>
             <button id="tone-reset-btn" class="reset-btn">RESET</button>

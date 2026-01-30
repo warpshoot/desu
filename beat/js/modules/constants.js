@@ -4,31 +4,36 @@ export const TRACKS = [
         name: 'Kick',
         color: '#ff4444',
         type: 'membrane',
-        baseFreq: 'C1'
+        baseFreq: 'C1',
+        defaultParams: { tune: 0, cutoff: 4000, resonance: 1, modulation: 50, release: 0.5, vol: 0.7 }
     },
     {
         name: 'Snare',
         color: '#44aaff',
         type: 'noise',
-        baseFreq: 'C4'
+        baseFreq: 'C4',
+        defaultParams: { tune: 0, cutoff: 4000, resonance: 1, modulation: 50, release: 0.5, vol: 0.7 }
     },
     {
         name: 'Hi-hat',
         color: '#44ff88',
         type: 'metal',
-        baseFreq: 800
+        baseFreq: 800,
+        defaultParams: { tune: 0, cutoff: 10000, resonance: 1, modulation: 50, release: 0.05, vol: 0.6 } // New default (was Closed)
     },
     {
         name: 'Bass',
         color: '#bb66ff',
         type: 'fm',
-        baseFreq: 'C2'
+        baseFreq: 'C2',
+        defaultParams: { tune: 0, cutoff: 4000, resonance: 1, modulation: 50, release: 0.5, vol: 1.1 } // Volume boosted
     },
     {
         name: 'Lead',
         color: '#ffff44',
         type: 'fm',
-        baseFreq: 'C4'
+        baseFreq: 'C4',
+        defaultParams: { tune: 0, cutoff: 4000, resonance: 1, modulation: 50, release: 0.5, vol: 0.7 }
     }
 ];
 
@@ -49,6 +54,7 @@ export const DEFAULT_ROLL_SUBDIVISION = 4;
 
 // Knob parameter ranges
 export const KNOB_PARAMS = {
+    tune: { min: -24, max: 24, default: 0, scale: 'linear' }, // New TUNE parameter
     cutoff: { min: 100, max: 16000, default: 4000, scale: 'log' },
     resonance: { min: 0.5, max: 15, default: 1, scale: 'linear' },
     modulation: { min: 0, max: 100, default: 50, scale: 'linear' },
@@ -89,51 +95,35 @@ export const SCALES = {
 
 export const DEFAULT_SCALE = 'Chromatic';
 
-// Kit Definitions
-export const KITS = {
-    'Default': {
-        name: 'Default',
-        tracks: [
-            { baseFreq: 'C1', type: 'membrane' }, // Kick
-            { baseFreq: 'C4', type: 'noise' },    // Snare
-            { baseFreq: 800, type: 'metal' },     // Hi-hat
-            { baseFreq: 'C2', type: 'fm' },       // Bass
-            { baseFreq: 'C4', type: 'fm' }        // Lead
-        ],
-        params: {
-            // Optional global overrides or specific track params could go here
-        }
+export const TRACK_PRESETS = {
+    0: { // Kick (Membrane)
+        'Chiptune': { tune: -12, cutoff: 2000, resonance: 0.5, modulation: 0, release: 0.1, vol: 0.8 },
+        'Deep': { tune: -12, cutoff: 500, resonance: 0.5, modulation: 20, release: 0.8, vol: 0.8 },
+        'Punchy': { tune: 5, cutoff: 2000, resonance: 5, modulation: 80, release: 0.2, vol: 0.7 },
+        'Soft': { tune: -5, cutoff: 800, resonance: 0.5, modulation: 0, release: 0.6, vol: 0.6 }
     },
-    'Deep': {
-        name: 'Deep',
-        tracks: [
-            { baseFreq: 'A0', type: 'membrane' }, // Lower Kick
-            { baseFreq: 'G3', type: 'noise' },    // Lower Snare
-            { baseFreq: 400, type: 'metal' },     // Darker Hats
-            { baseFreq: 'A1', type: 'fm' },       // Deep Bass
-            { baseFreq: 'A3', type: 'fm' }        // Warmer Lead
-        ]
+    1: { // Snare (Noise)
+        'Chiptune': { tune: 0, cutoff: 16000, resonance: 1, modulation: 100, release: 0.1, vol: 0.7 },
+        'Tight': { tune: 0, cutoff: 8000, resonance: 10, modulation: 80, release: 0.1, vol: 0.7 },
+        'Lo-Fi': { tune: 0, cutoff: 1200, resonance: 2, modulation: 10, release: 0.6, vol: 0.75 },
+        'Clap-ish': { tune: 0, cutoff: 3000, resonance: 5, modulation: 90, release: 0.3, vol: 0.7 }
     },
-    'Chip': {
-        name: 'Chip',
-        tracks: [
-            { baseFreq: 'C2', type: 'membrane' }, // Clicky Kick
-            { baseFreq: 'C5', type: 'noise' },    // High Snare
-            { baseFreq: 2000, type: 'metal' },    // Ticky Hats
-            { baseFreq: 'C3', type: 'fm' },       // Lo-fi Bass
-            { baseFreq: 'C5', type: 'fm' }        // 8-bit Lead
-        ]
+    2: { // Hi-hat (Metal)
+        'Chiptune': { tune: 24, cutoff: 16000, resonance: 1, modulation: 0, release: 0.05, vol: 0.6 },
+        'Closed': { tune: 0, cutoff: 10000, resonance: 1, modulation: 50, release: 0.05, vol: 0.6 },
+        'Open': { tune: -5, cutoff: 6000, resonance: 5, modulation: 30, release: 0.8, vol: 0.7 },
+        'Digital': { tune: 12, cutoff: 12000, resonance: 10, modulation: 90, release: 0.2, vol: 0.6 }
     },
-    'Analog': {
-        name: 'Analog',
-        tracks: [
-            { baseFreq: 'D1', type: 'membrane' },
-            { baseFreq: 'D4', type: 'noise' },
-            { baseFreq: 600, type: 'metal' },
-            { baseFreq: 'D2', type: 'fm' },
-            { baseFreq: 'D4', type: 'fm' }
-        ]
+    3: { // Bass (FM)
+        'Chiptune': { tune: 0, cutoff: 16000, resonance: 1, modulation: 0, release: 0.1, vol: 0.7 },
+        'Sub': { tune: -12, cutoff: 400, resonance: 0.5, modulation: 0, release: 0.8, vol: 0.8 },
+        'Acid': { tune: 0, cutoff: 2000, resonance: 12, modulation: 70, release: 0.3, vol: 0.7 },
+        'Pluck': { tune: 12, cutoff: 3000, resonance: 2, modulation: 60, release: 0.2, vol: 0.7 }
+    },
+    4: { // Lead (FM)
+        'Chiptune': { tune: 0, cutoff: 16000, resonance: 1, modulation: 0, release: 0.1, vol: 0.7 },
+        'Chime': { tune: 24, cutoff: 8000, resonance: 5, modulation: 30, release: 1.0, vol: 0.6 },
+        'Retro': { tune: -5, cutoff: 1500, resonance: 2, modulation: 10, release: 0.4, vol: 0.7 },
+        'Noisy': { tune: 0, cutoff: 5000, resonance: 8, modulation: 100, release: 0.3, vol: 0.7 }
     }
 };
-
-export const DEFAULT_KIT = 'Default';

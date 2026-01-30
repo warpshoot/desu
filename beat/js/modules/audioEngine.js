@@ -27,8 +27,11 @@ export class AudioEngine {
         // Callbacks
         this.onStepCallback = null;
 
-        // Active configuration (clone of TRACKS to support kits)
-        this.activeTrackConfigs = JSON.parse(JSON.stringify(TRACKS));
+        // Active configuration (clone of TRACKS to support tuning)
+        this.activeTrackConfigs = JSON.parse(JSON.stringify(TRACKS)).map(track => ({
+            ...track,
+            originalBaseFreq: track.baseFreq // Store original frequency reference
+        }));
     }
 
     async init() {
@@ -276,6 +279,24 @@ export class AudioEngine {
                 instrument.set({ modulationIndex: (params.modulation / 100) * 20 });
             }
         }
+        if (params.tune !== undefined) {
+            const trackConfig = this.activeTrackConfigs[track];
+            // Update baseFreq based on originalBaseFreq and tune (semitones)
+            const originalFreq = trackConfig.originalBaseFreq;
+
+            if (trackConfig.type === 'membrane' || trackConfig.type === 'fm') {
+                // Convert to Frequency to handle note names (e.g. "C1") + transposition
+                const newFreq = Tone.Frequency(originalFreq).transpose(params.tune).toFrequency();
+                trackConfig.baseFreq = newFreq;
+            } else if (trackConfig.type === 'metal') {
+                // MetalSynth baseFreq is usually a number (e.g. 200)
+                // If it's a number, we can't use transpose() directly on it easily without converting to Frequency?
+                // Tone.Frequency(800) works.
+                const newFreq = Tone.Frequency(originalFreq).transpose(params.tune).toFrequency();
+                trackConfig.baseFreq = newFreq;
+            }
+            // Noise (Snare) doesn't really pitch this way, ignoring for now or could modulate filter if added
+        }
         if (params.vol !== undefined) {
             this.trackVolumes[track] = params.vol;
             this.updateTrackGains();
@@ -311,6 +332,11 @@ export class AudioEngine {
                 this.gains[i].gain.rampTo(targetGain, 0.05);
             }
         }
+    }
+
+    setTrackMute(track, muted) {
+        this.mutedTracks[track] = muted;
+        this.updateTrackGains();
     }
 
     setTrackSolo(track, soloed) {

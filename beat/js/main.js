@@ -1,4 +1,4 @@
-import { ROWS, COLS, OCTAVE_RANGE, TAP_THRESHOLD, PITCH_RANGE, DURATION_RANGE, DEFAULT_ROLL_SUBDIVISION, TRACKS, KNOB_PARAMS, DEFAULT_BPM, DEFAULT_SCALE, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, KITS, DEFAULT_KIT } from './modules/constants.js';
+import { ROWS, COLS, OCTAVE_RANGE, TAP_THRESHOLD, PITCH_RANGE, DURATION_RANGE, DEFAULT_ROLL_SUBDIVISION, TRACKS, KNOB_PARAMS, DEFAULT_BPM, DEFAULT_SCALE, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE } from './modules/constants.js';
 import { AudioEngine } from './modules/audioEngine.js';
 import { Cell } from './modules/cell.js';
 import { Controls } from './modules/controls.js';
@@ -8,7 +8,7 @@ import { loadState, saveState, createDefaultState } from './modules/storage.js';
 class Sequencer {
     constructor() {
         this.state = loadState();
-        if (!this.state.kit) this.state.kit = DEFAULT_KIT; // Ensure kit exists in state
+        this.state = loadState();
 
         this.audioEngine = new AudioEngine();
         this.cells = [];
@@ -20,11 +20,6 @@ class Sequencer {
     }
 
     init() {
-        // Load initial kit
-        if (this.state.kit && KITS[this.state.kit]) {
-            this.audioEngine.loadKit(KITS[this.state.kit]);
-        }
-
         this.createGrid();
 
         this.controls = new Controls(
@@ -57,22 +52,8 @@ class Sequencer {
                 this.state.scale = scaleName;
                 saveState(this.state);
             },
-            (kitName) => { // onKitChange
-                this.state.kit = kitName;
-                if (KITS[kitName]) {
-                    this.audioEngine.loadKit(KITS[kitName]);
-
-                    // Update Cell baseFreqs so Pitch Indicator is correct
-                    const newTrackConfigs = this.audioEngine.activeTrackConfigs;
-                    this.cells.forEach(trackCells => {
-                        trackCells.forEach(cell => {
-                            // Cell stores its own baseFreq, so update it
-                            if (cell && newTrackConfigs[cell.track]) {
-                                cell.baseFreq = newTrackConfigs[cell.track].baseFreq;
-                            }
-                        });
-                    });
-                }
+            (scaleName) => { // onScaleChange
+                this.state.scale = scaleName;
                 saveState(this.state);
             }
         );
@@ -85,7 +66,7 @@ class Sequencer {
         this.controls.setSwing(this.state.swingEnabled || false);
         this.controls.setVolume(this.state.masterVolume || -12);
         this.controls.setScale(this.state.scale || 'Chromatic');
-        this.controls.setKit(this.state.kit || DEFAULT_KIT);
+        this.controls.setScale(this.state.scale || 'Chromatic');
 
         const tonePanelEl = document.getElementById('tone-panel');
         if (tonePanelEl) {
