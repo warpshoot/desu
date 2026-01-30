@@ -1,4 +1,5 @@
-html, body {
+html,
+body {
     background: #fff;
     color: #333;
     margin: 0;
@@ -12,132 +13,111 @@ html, body {
     user-select: none;
 }
 
-/* Hamburger Menu */
-.hamburger {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    width: 30px;
-    height: 30px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    z-index: 1001;
+/* Credit Button */
+#credit-btn {
     position: fixed;
-    top: 20px;
-    left: 20px;
+    top: max(12px, env(safe-area-inset-top));
+    left: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.1);
+    color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.2s;
 }
 
-.hamburger span {
-    width: 30px;
-    height: 3px;
-    background: #333;
-    transition: all 0.3s linear;
-    position: relative;
-    transform-origin: 1px;
+#credit-btn:hover {
+    background: rgba(0, 0, 0, 0.2);
+    color: rgba(0, 0, 0, 0.8);
+    border-color: rgba(0, 0, 0, 0.5);
 }
 
-.hamburger.active span:nth-child(1) {
-    transform: rotate(45deg);
-}
-
-.hamburger.active span:nth-child(2) {
-    opacity: 0;
-    transform: translateX(20px);
-}
-
-.hamburger.active span:nth-child(3) {
-    transform: rotate(-45deg);
-}
-
-/* Navigation Menu */
-.nav-menu {
+/* Credit Modal */
+#credit-modal {
+    display: none;
     position: fixed;
     top: 0;
-    left: -300px;
-    width: 250px;
-    height: 100vh;
-    background: #fff;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-    transition: left 0.3s ease;
-    z-index: 1000;
-    padding-top: 80px;
-}
-
-.nav-menu.active {
     left: 0;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
 }
 
-.nav-list {
-    list-style: none;
-    padding: 0;
+#credit-modal.visible {
+    display: flex;
 }
 
-.nav-list li {
-    border-bottom: 1px solid #eee;
+#credit-content {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 32px;
+    border-radius: 0;
+    text-align: center;
+    width: 400px;
+    max-width: calc(100vw - 40px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-.nav-list a {
+#credit-content h2 {
+    font-size: 24px;
+    margin-bottom: 16px;
+    font-weight: bold;
+    color: #333;
+}
+
+#credit-logo {
+    margin: 16px auto;
+    cursor: pointer;
     display: block;
-    padding: 20px 30px;
+}
+
+#credit-logo img {
+    max-width: 100%;
+    height: auto;
+}
+
+#credit-author {
+    font-size: 16px;
+    margin-top: 16px;
+    color: #333;
+}
+
+#credit-author a {
     color: #333;
     text-decoration: none;
-    font-size: 18px;
-    transition: background 0.2s;
+    font-weight: bold;
 }
 
-.nav-list a:hover {
-    background: #f5f5f5;
-}
-
-/* Logo */
-.site-logo {
-    position: fixed;
-    top: 15px;
-    right: 20px;
-    height: 40px;
-    z-index: 100;
-}
-
-/* Header gradient overlay */
-.header-gradient {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 60px;
-    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 100%);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    pointer-events: none;
-    z-index: 50;
+#credit-author a:hover {
+    text-decoration: underline;
 }
 
 #sequencer-container {
     flex: 1;
     display: flex;
     flex-direction: column;
-    /* Stack h1 and grid */
-    justify-content: center;
+    /* Top aligned */
+    justify-content: flex-start;
     align-items: center;
     gap: 12px;
-    padding: 100px 20px 60px;
+    padding: 60px 20px 40px;
     position: relative;
     background: #fff;
     height: 100vh;
     overflow-y: auto;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-}
-
-h1 {
-    font-size: 24px;
-    font-weight: 800;
-    margin: 0 0 20px 0;
-    color: #000;
-    letter-spacing: 0.05em;
-    text-align: center;
 }
 
 #sequencer-inner {
@@ -812,7 +792,8 @@ h1 {
     }
 
     .timeline-beat {
-        width: 102px; /* 4*24 + 3*2 */
+        width: 102px;
+        /* 4*24 + 3*2 */
     }
 
     #tone-panel {
@@ -870,7 +851,8 @@ h1 {
     }
 
     #clear-btn {
-        display: none; /* Hide on mobile to save space */
+        display: none;
+        /* Hide on mobile to save space */
     }
 
     .control-btn {
@@ -920,7 +902,8 @@ h1 {
     }
 
     .timeline-beat {
-        width: 86px; /* 4*20 + 3*2 */
+        width: 86px;
+        /* 4*20 + 3*2 */
     }
 
     .loop-handle {

@@ -25,7 +25,7 @@ export const TRACKS = [
         baseFreq: 'C2'
     },
     {
-        name: 'Synth',
+        name: 'Lead',
         color: '#ffff44',
         type: 'fm',
         baseFreq: 'C4'
@@ -76,3 +76,15 @@ export const DEFAULT_SWING_ENABLED = false;
 // Octave settings
 export const OCTAVE_RANGE = [-2, -1, 0, 1, 2]; // Available octave shifts
 export const DEFAULT_OCTAVE = 0;
+
+// Scale definitions (intervals relative to root C)
+export const SCALES = {
+    'Chromatic': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    'Major': [0, 2, 4, 5, 7, 9, 11],
+    'Minor': [0, 2, 3, 5, 7, 8, 10],
+    'Pentatonic Major': [0, 2, 4, 7, 9],
+    'Pentatonic Minor': [0, 3, 5, 7, 10],
+    'Ryukyu': [0, 4, 5, 7, 11] // 琉球音階 (C E F G B)
+};
+
+export const DEFAULT_SCALE = 'Chromatic';

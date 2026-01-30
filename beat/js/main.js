@@ -1,4 +1,4 @@
-import { ROWS, COLS, OCTAVE_RANGE, TAP_THRESHOLD, PITCH_RANGE, DURATION_RANGE, DEFAULT_ROLL_SUBDIVISION, TRACKS, KNOB_PARAMS } from './modules/constants.js';
+import { ROWS, COLS, OCTAVE_RANGE, TAP_THRESHOLD, PITCH_RANGE, DURATION_RANGE, DEFAULT_ROLL_SUBDIVISION, TRACKS, KNOB_PARAMS, DEFAULT_BPM, DEFAULT_SCALE, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE } from './modules/constants.js';
 import { AudioEngine } from './modules/audioEngine.js';
 import { Cell } from './modules/cell.js';
 import { Controls } from './modules/controls.js';
@@ -11,6 +11,7 @@ class Sequencer {
         this.audioEngine = new AudioEngine();
         this.cells = [];
         this.isPainting = false;
+        this.paintingTrack = null;
         this.isTwoFingerTouch = false; // Track two-finger touches globally
 
         this.init();
@@ -44,6 +45,10 @@ class Sequencer {
                 this.controls.setLoop(this.state.loopEnabled);
                 this.updateTimelineVisuals();
                 saveState(this.state);
+            },
+            (scaleName) => { // onScaleChange
+                this.state.scale = scaleName;
+                saveState(this.state);
             }
         );
         this.controls.onVolumeChange = (vol) => {
@@ -54,6 +59,7 @@ class Sequencer {
         this.controls.setBPM(this.state.bpm);
         this.controls.setSwing(this.state.swingEnabled || false);
         this.controls.setVolume(this.state.masterVolume || -12);
+        this.controls.setScale(this.state.scale || 'Chromatic');
 
         const tonePanelEl = document.getElementById('tone-panel');
         if (tonePanelEl) {
@@ -129,34 +135,41 @@ class Sequencer {
                 if (element && element.classList.contains('cell')) {
                     const track = parseInt(element.dataset.track);
                     const step = parseInt(element.dataset.step);
+
+                    // Track locking check
                     if (!isNaN(track) && !isNaN(step)) {
-                        this.cells[track][step].paintActivate();
+                        if (this.paintingTrack === null || this.paintingTrack === track) {
+                            this.cells[track][step].paintActivate();
+                        }
                     }
                 }
             }
         }, { passive: false });
 
-        this.initNavigation();
+        this.initCreditModal();
     }
 
-    initNavigation() {
-        // Hamburger menu
-        const hamburger = document.getElementById('hamburger');
-        const navMenu = document.getElementById('navMenu');
+    initCreditModal() {
+        const creditBtn = document.getElementById('credit-btn');
+        const creditModal = document.getElementById('credit-modal');
+        const creditContent = document.getElementById('credit-content');
 
-        if (hamburger && navMenu) {
-            hamburger.addEventListener('click', () => {
-                hamburger.classList.toggle('active');
-                navMenu.classList.toggle('active');
+        if (creditBtn && creditModal) {
+            creditBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                creditModal.classList.add('visible');
             });
 
-            // Close menu when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!hamburger.contains(e.target) && !navMenu.contains(e.target)) {
-                    hamburger.classList.remove('active');
-                    navMenu.classList.remove('active');
-                }
+            creditModal.addEventListener('click', () => {
+                creditModal.classList.remove('visible');
             });
+
+            if (creditContent) {
+                creditContent.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+            }
         }
     }
 
@@ -340,23 +353,43 @@ class Sequencer {
                     track,
                     step,
                     cellData,
-                    () => {
+                    async (t, s, d, shouldPlay) => {
                         saveState(this.state);
+                        if (shouldPlay) {
+                            if (!this.audioEngine.initialized) {
+                                await this.audioEngine.init();
+                                this.audioEngine.setBPM(this.state.bpm);
+                                this.audioEngine.setMasterVolume(this.state.masterVolume);
+                            }
+                            const cellInstance = this.cells[t][s];
+                            this.audioEngine.triggerNote(
+                                t,
+                                cellInstance.getEffectivePitch(),
+                                d.duration,
+                                Tone.now() + 0.05,
+                                d.rollMode,
+                                d.rollSubdivision,
+                                this.state.trackOctaves[t]
+                            );
+                        }
                     },
                     (c, x, y) => {
                         this.showRollMenu(c, x, y);
                     },
-                    (isStart) => {
+                    (isStart, trackId) => {
                         if (isStart) {
                             this.isPainting = true;
+                            this.paintingTrack = trackId;
                         } else {
                             this.isPainting = false;
+                            this.paintingTrack = null;
                         }
                     },
                     () => this.isPainting,
                     trackConfig.baseFreq,
                     document.getElementById('note-indicator'),
-                    () => this.isTwoFingerTouch
+                    () => this.isTwoFingerTouch,
+                    () => this.state.scale || 'Chromatic'
                 );
 
                 this.cells[track][step] = cell;
@@ -404,19 +437,70 @@ class Sequencer {
 
 
     clearGrid() {
-        for (let track = 0; track < ROWS; track++) {
-            for (let step = 0; step < COLS; step++) {
-                this.cells[track][step].deactivate();
-            }
+        // 1. Reset Pattern
+        this.state.grid = createDefaultState().grid;
+
+        // 2. Reset Mute/Solo
+        this.state.mutedTracks = new Array(ROWS).fill(false);
+        this.state.soloedTracks = new Array(ROWS).fill(false);
+
+        // Update UI buttons
+        document.querySelectorAll('.mute-btn, .solo-btn').forEach(btn => btn.classList.remove('active'));
+
+        // Update AudioEngine states
+        for (let i = 0; i < ROWS; i++) {
+            this.audioEngine.setTrackMute(i, false);
+            this.audioEngine.setTrackSolo(i, false);
         }
 
-        // Reset BPM as well
+        // 3. Reset Sound Parameters
+        this.state.trackParams = [];
+        for (let i = 0; i < ROWS; i++) {
+            const params = {
+                cutoff: KNOB_PARAMS.cutoff.default,
+                resonance: KNOB_PARAMS.resonance.default,
+                modulation: KNOB_PARAMS.modulation.default,
+                release: KNOB_PARAMS.release.default,
+                vol: KNOB_PARAMS.vol.default
+            };
+            this.state.trackParams.push(params);
+            // Apply to Audio Engine
+            this.audioEngine.updateTrackParams(i, params);
+        }
+
+        // 4. Reset BPM, Scale, Swing, Volume, Octaves
         this.state.bpm = DEFAULT_BPM;
         this.controls.setBPM(DEFAULT_BPM);
 
-        // Reset the state's grid to reflect the cleared cells
-        this.state.grid = this.cells.map(row => row.map(cell => ({ ...cell.data })));
+        this.state.scale = DEFAULT_SCALE;
+        this.controls.setScale(DEFAULT_SCALE);
+
+        this.state.swingEnabled = DEFAULT_SWING_ENABLED;
+        this.controls.setSwing(DEFAULT_SWING_ENABLED);
+
+        this.state.masterVolume = -12;
+        this.controls.setVolume(-12);
+
+        this.state.loopEnabled = true;
+        this.state.loopStart = 0;
+        this.state.loopEnd = COLS - 1;
+        this.controls.setLoop(true);
+        this.audioEngine.setLoopRange(0, COLS - 1, true);
+        this.updateTimelineVisuals();
+
+        this.state.trackOctaves = new Array(ROWS).fill(DEFAULT_OCTAVE);
+
+        // 5. Rebuild Grid UI
+        const gridContainer = document.getElementById('grid-container');
+        if (gridContainer) gridContainer.innerHTML = ''; // Clear existing
+        this.createGrid();
+
         saveState(this.state);
+
+        // Close tone panel if open
+        if (this.tonePanel && this.tonePanel.isOpen()) {
+            this.tonePanel.close();
+        }
     }
 
     clearPlayheads() {
@@ -468,7 +552,7 @@ class Sequencer {
                 // Trigger audio
                 this.audioEngine.triggerNote(
                     track,
-                    cell.data.pitch,
+                    cell.getEffectivePitch(),
                     cell.data.duration,
                     time,
                     cell.data.rollMode,
@@ -505,49 +589,6 @@ class Sequencer {
                 }
 
                 // Listeners
-                document.getElementById('clear-btn').addEventListener('click', () => {
-                    if (confirm('Reset everything? (Patterns, Mute/Solo, Sounds)')) {
-                        // 1. Reset Pattern
-                        this.state.grid = createDefaultState().grid;
-
-                        // 2. Reset Mute/Solo
-                        this.state.mutedTracks = new Array(ROWS).fill(false);
-                        this.state.soloedTracks = new Array(ROWS).fill(false);
-
-                        // Update UI buttons
-                        document.querySelectorAll('.mute-btn, .solo-btn').forEach(btn => btn.classList.remove('active'));
-
-                        // Update AudioEngine states
-                        for (let i = 0; i < ROWS; i++) {
-                            this.audioEngine.setTrackMute(i, false);
-                            this.audioEngine.setTrackSolo(i, false);
-                        }
-
-                        // 3. Reset Sound Parameters
-                        this.state.trackParams = [];
-                        for (let i = 0; i < ROWS; i++) {
-                            const params = {
-                                cutoff: KNOB_PARAMS.cutoff.default,
-                                resonance: KNOB_PARAMS.resonance.default,
-                                modulation: KNOB_PARAMS.modulation.default,
-                                release: KNOB_PARAMS.release.default,
-                                vol: KNOB_PARAMS.vol.default
-                            };
-                            this.state.trackParams.push(params);
-                            // Apply to Audio Engine
-                            this.audioEngine.updateTrackParams(i, params);
-                        }
-
-                        // 4. Force UI Refresh
-                        this.renderGrid();
-                        saveState(this.state);
-
-                        // Close tone panel if open to reflect changes when reopened
-                        if (this.tonePanel && this.tonePanel.isOpen()) {
-                            this.tonePanel.close();
-                        }
-                    }
-                });
                 newMuteBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     e.preventDefault();

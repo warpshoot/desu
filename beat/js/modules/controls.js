@@ -1,5 +1,7 @@
+import { SCALES } from './constants.js';
+
 export class Controls {
-    constructor(audioEngine, onBPMChange, onSwingChange, onClear, onPlay, onStop, onLoopToggle) {
+    constructor(audioEngine, onBPMChange, onSwingChange, onClear, onPlay, onStop, onLoopToggle, onScaleChange) {
         this.audioEngine = audioEngine;
         this.onBPMChange = onBPMChange;
         this.onSwingChange = onSwingChange;
@@ -7,6 +9,7 @@ export class Controls {
         this.onPlay = onPlay;
         this.onStop = onStop;
         this.onLoopToggle = onLoopToggle;
+        this.onScaleChange = onScaleChange;
         this.isPlaying = false;
         this.swingEnabled = false;
 
@@ -27,8 +30,69 @@ export class Controls {
     init() {
         this.setupEvents();
         this.setupBPMDrag();
+        this.setupScaleCtrl();
     }
 
+    setupScaleCtrl() {
+        // Create UI elements dynamically
+        const controlsEl = document.getElementById('controls');
+        if (!controlsEl) return;
+
+        const container = document.createElement('div');
+        container.id = 'scale-ctrl';
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+        container.style.alignItems = 'center';
+        container.style.margin = '0 10px';
+
+        const label = document.createElement('div');
+        label.className = 'ctrl-label';
+        label.textContent = 'SCALE';
+        label.style.fontSize = '10px';
+        label.style.marginBottom = '2px';
+        label.style.color = '#aaa';
+
+        this.scaleSelect = document.createElement('select');
+        this.scaleSelect.style.background = '#333';
+        this.scaleSelect.style.color = '#fff';
+        this.scaleSelect.style.border = '1px solid #555';
+        this.scaleSelect.style.borderRadius = '4px';
+        this.scaleSelect.style.padding = '2px 4px';
+        this.scaleSelect.style.fontSize = '11px';
+        this.scaleSelect.style.width = '80px';
+        this.scaleSelect.style.outline = 'none';
+
+        // Populate options
+        Object.keys(SCALES).forEach(scaleName => {
+            const option = document.createElement('option');
+            option.value = scaleName;
+            option.textContent = scaleName;
+            this.scaleSelect.appendChild(option);
+        });
+
+        this.scaleSelect.addEventListener('change', (e) => {
+            if (this.onScaleChange) {
+                this.onScaleChange(e.target.value);
+            }
+        });
+
+        container.appendChild(label);
+        container.appendChild(this.scaleSelect);
+
+        // Insert before volume control or at specific position
+        const volCtrl = document.getElementById('volume-ctrl');
+        if (volCtrl) {
+            controlsEl.insertBefore(container, volCtrl);
+        } else {
+            controlsEl.appendChild(container);
+        }
+    }
+
+    setScale(scaleName) {
+        if (this.scaleSelect && SCALES[scaleName]) {
+            this.scaleSelect.value = scaleName;
+        }
+    }
     setupEvents() {
         // Play/Pause button
         if (this.playPauseBtn) {

@@ -12,32 +12,23 @@
 </head>
 
 <body>
-    <!-- Header gradient -->
-    <div class="header-gradient"></div>
+    <!-- Credit Button -->
+    <div id="credit-btn">?</div>
 
-    <!-- Hamburger Menu -->
-    <button class="hamburger" id="hamburger" aria-label="Menu">
-        <span></span>
-        <span></span>
-        <span></span>
-    </button>
-
-    <!-- Navigation Menu -->
-    <nav class="nav-menu" id="navMenu">
-        <ul class="nav-list">
-            <li><a href="../episodes/">Episodes</a></li>
-            <li><a href="../characters/">Characters</a></li>
-            <li><a href="../tools/">Tools</a></li>
-        </ul>
-    </nav>
-
-    <!-- Logo -->
-    <a href="../" class="logo-link">
-        <img src="../desu_logo.png" alt="DESU™" class="site-logo">
-    </a>
+    <!-- Credit Modal -->
+    <div id="credit-modal">
+        <div id="credit-content">
+            <h2>DESU™ beat</h2>
+            <a href="https://warpshoot.github.io/desu/" target="_blank" id="credit-logo">
+                <img src="../images/logo.gif" alt="DESU™ Logo">
+            </a>
+            <div id="credit-author">
+                by <a href="https://warpshoot.github.io/" target="_blank">wpy</a>
+            </div>
+        </div>
+    </div>
 
     <div id="sequencer-container">
-        <h1>DESU™ beat</h1>
         <div id="sequencer-inner">
             <div id="track-icons">
                 <div class="track-item" data-track="0">
@@ -69,7 +60,7 @@
                     </div>
                 </div>
                 <div class="track-item" data-track="4">
-                    <div class="track-icon" title="Synth">S</div>
+                    <div class="track-icon" title="Lead">L</div>
                     <div class="track-ctrls">
                         <button class="mute-btn" title="Mute">M</button>
                         <button class="solo-btn" title="Solo">S</button>

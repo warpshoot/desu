@@ -1,4 +1,4 @@
-import { STORAGE_KEY, DEFAULT_BPM, KNOB_PARAMS, DEFAULT_ROLL_SUBDIVISION, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, COLS, ROWS } from './constants.js';
+import { STORAGE_KEY, DEFAULT_BPM, KNOB_PARAMS, DEFAULT_ROLL_SUBDIVISION, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, COLS, ROWS, DEFAULT_SCALE } from './constants.js';
 
 let saveTimeout = null;
 
@@ -118,6 +118,10 @@ export function loadState() {
             if (!state.mutedTracks) state.mutedTracks = new Array(ROWS).fill(false);
             if (!state.soloedTracks) state.soloedTracks = new Array(ROWS).fill(false);
 
+            if (!state.scale) {
+                state.scale = DEFAULT_SCALE;
+            }
+
             return state;
         }
     } catch (e) {
@@ -172,6 +176,7 @@ export function createDefaultState() {
         loopEnd: COLS - 1,
         loopEnabled: true,
         mutedTracks,
-        soloedTracks
+        soloedTracks,
+        scale: DEFAULT_SCALE
     };
 }

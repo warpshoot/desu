@@ -1,7 +1,7 @@
-import { PITCH_RANGE, DURATION_RANGE, BRIGHTNESS_RANGE, SCALE_RANGE, LONG_PRESS_DURATION, DRAG_THRESHOLD, TAP_THRESHOLD, ROLL_SUBDIVISIONS } from './constants.js';
+import { PITCH_RANGE, DURATION_RANGE, BRIGHTNESS_RANGE, SCALE_RANGE, LONG_PRESS_DURATION, DRAG_THRESHOLD, TAP_THRESHOLD, ROLL_SUBDIVISIONS, SCALES } from './constants.js';
 
 export class Cell {
-    constructor(element, track, step, data, onChange, onLongPress, onPaintChange, getGlobalIsPainting, baseFreq, noteIndicator, getIsTwoFingerTouch) {
+    constructor(element, track, step, data, onChange, onLongPress, onPaintChange, getGlobalIsPainting, baseFreq, noteIndicator, getIsTwoFingerTouch, getScale) {
         this.element = element;
         this.track = track;
         this.step = step;
@@ -12,6 +12,7 @@ export class Cell {
         this.getGlobalIsPainting = getGlobalIsPainting;
         this.baseFreq = baseFreq;
         this.noteIndicator = noteIndicator;
+        this.getScale = getScale;
         this.getIsTwoFingerTouch = getIsTwoFingerTouch || (() => false);
 
         // Visual pitch indicator
@@ -127,13 +128,31 @@ export class Cell {
             this.hasMoved = true;
             clearTimeout(this.longPressTimer);
 
+            // Determine gesture
+            const isHorizontal = absDeltaX > absDeltaY;
+            this.dragDirection = isHorizontal ? 'horizontal' : 'vertical';
+
             if (!this.data.active) {
-                // OFF cell: Start painting
-                if (this.onPaintChange) this.onPaintChange(true);
-                this.paintActivate();
+                // Empty Cell Logic
+                if (isHorizontal) {
+                    // Horizontal Drag -> Continuous Paint
+                    // Trigger global paint mode with track ID
+                    if (this.onPaintChange) this.onPaintChange(true, this.track);
+                    this.paintActivate();
+                    // We don't adjust duration on initial paint drag, just activate
+                } else {
+                    // Vertical Drag -> One-shot Activate & Pitch Adjust
+                    // Activate immediately but DO NOT trigger global continuous paint
+                    this.data.active = true;
+                    // Reset to default/current duration
+                    this.data.pitch = 0; // Reset pitch to center
+                    this.startValue = 0; // Start adjusting from 0
+                    this.triggerPulse();
+                    this.updateVisuals();
+                    if (this.onChange) this.onChange(this.track, this.step, this.data, true);
+                }
             } else {
-                // ON cell: Enter adjust mode
-                this.dragDirection = absDeltaX > absDeltaY ? 'horizontal' : 'vertical';
+                // Active Cell Logic (Existing)
                 if (this.dragDirection === 'vertical') {
                     this.startValue = this.data.pitch;
                 } else {
@@ -154,17 +173,20 @@ export class Cell {
             const sensitivity = range / 200;
             let newValue = this.startValue - (deltaY * sensitivity);
             newValue = Math.max(PITCH_RANGE.min, Math.min(PITCH_RANGE.max, newValue));
+
             this.data.pitch = newValue;
 
             // Update note feedback
             if (this.noteIndicator && this.data.active) {
-                const totalPitch = Math.round(this.data.pitch);
+                // Use effective pitch for display
+                const effectivePitch = this.getEffectivePitch ? this.getEffectivePitch() : newValue;
+                const totalPitch = Math.round(effectivePitch);
                 let noteName;
                 try {
                     // Hi-hat and Snare can show freq or note
                     noteName = Tone.Frequency(this.baseFreq).transpose(totalPitch).toNote();
                 } catch (e) {
-                    noteName = Math.round(this.data.pitch);
+                    noteName = Math.round(effectivePitch);
                 }
                 this.noteIndicator.textContent = noteName;
                 this.noteIndicator.style.left = `${x}px`;
@@ -183,7 +205,7 @@ export class Cell {
 
         this.updateVisuals();
         if (this.onChange) {
-            this.onChange();
+            this.onChange(this.track, this.step, this.data, false);
         }
     }
 
@@ -231,7 +253,7 @@ export class Cell {
             this.updateVisuals();
         }
         if (this.onChange) {
-            this.onChange();
+            this.onChange(this.track, this.step, this.data, this.data.active);
         }
     }
 
@@ -244,7 +266,7 @@ export class Cell {
         this.element.classList.remove('active', 'roll', 'playhead');
         this.updateVisuals();
         if (this.onChange) {
-            this.onChange();
+            this.onChange(this.track, this.step, this.data, false);
         }
     }
 
@@ -254,7 +276,7 @@ export class Cell {
             this.element.classList.add('active');
             this.updateVisuals();
             if (this.onChange) {
-                this.onChange();
+                this.onChange(this.track, this.step, this.data, true);
             }
         }
     }
@@ -276,14 +298,14 @@ export class Cell {
 
         this.updateVisuals();
         if (this.onChange) {
-            this.onChange();
+            this.onChange(this.track, this.step, this.data, false);
         }
     }
 
     resetToDefault() {
         this.deactivate();
         if (this.onChange) {
-            this.onChange();
+            this.onChange(this.track, this.step, this.data, false);
         }
     }
 
@@ -342,5 +364,43 @@ export class Cell {
         this.element.classList.remove('playing');
         void this.element.offsetWidth; // Force reflow
         this.element.classList.add('playing');
+    }
+
+    getEffectivePitch() {
+        if (this.getScale) {
+            const scaleName = this.getScale();
+            return this.snapToScale(this.data.pitch, scaleName);
+        }
+        return this.data.pitch;
+    }
+
+    snapToScale(pitch, scaleName) {
+        if (!SCALES[scaleName] || scaleName === 'Chromatic') return pitch;
+
+        const scale = SCALES[scaleName];
+        const roundedPitch = Math.round(pitch);
+
+        // Find closest scale note
+        let minDiff = Infinity;
+        let closestPitch = roundedPitch;
+
+        // Search range around the rounded pitch to find nearest valid note
+        for (let i = -12; i <= 12; i++) {
+            const checkPitch = roundedPitch + i;
+            if (checkPitch < PITCH_RANGE.min || checkPitch > PITCH_RANGE.max) continue;
+
+            // Normalized note in 0-11
+            const note = ((checkPitch % 12) + 12) % 12;
+
+            if (scale.includes(note)) {
+                const diff = Math.abs(pitch - checkPitch);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestPitch = checkPitch;
+                }
+            }
+        }
+
+        return closestPitch;
     }
 }

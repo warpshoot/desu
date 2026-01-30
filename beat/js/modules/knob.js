@@ -19,7 +19,11 @@ export class Knob {
 
     setupEvents() {
         // Mouse events
-        this.canvas.addEventListener('mousedown', (e) => this.onDragStart(e.clientY));
+        this.canvas.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.onDragStart(e.clientY);
+        });
         window.addEventListener('mousemove', (e) => this.onDragMove(e.clientY));
         window.addEventListener('mouseup', () => this.onDragEnd());
 

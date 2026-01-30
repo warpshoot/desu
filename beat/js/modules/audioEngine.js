@@ -186,6 +186,7 @@ export class AudioEngine {
     }
 
     triggerNote(track, pitch, duration, time, rollMode = false, rollSubdivision = 1, octaveShift = 0) {
+        if (!this.initialized || !this.instruments[track]) return;
         const instrument = this.instruments[track];
         const trackConfig = TRACKS[track];
 
@@ -225,6 +226,8 @@ export class AudioEngine {
     }
 
     updateTrackParams(track, params) {
+        if (!this.initialized || !this.filters[track]) return;
+
         // Apply immediately
         if (params.cutoff !== undefined) {
             // Filter frequency is likely a signal
