@@ -88,3 +88,52 @@ export const SCALES = {
 };
 
 export const DEFAULT_SCALE = 'Chromatic';
+
+// Kit Definitions
+export const KITS = {
+    'Default': {
+        name: 'Default',
+        tracks: [
+            { baseFreq: 'C1', type: 'membrane' }, // Kick
+            { baseFreq: 'C4', type: 'noise' },    // Snare
+            { baseFreq: 800, type: 'metal' },     // Hi-hat
+            { baseFreq: 'C2', type: 'fm' },       // Bass
+            { baseFreq: 'C4', type: 'fm' }        // Lead
+        ],
+        params: {
+            // Optional global overrides or specific track params could go here
+        }
+    },
+    'Deep': {
+        name: 'Deep',
+        tracks: [
+            { baseFreq: 'A0', type: 'membrane' }, // Lower Kick
+            { baseFreq: 'G3', type: 'noise' },    // Lower Snare
+            { baseFreq: 400, type: 'metal' },     // Darker Hats
+            { baseFreq: 'A1', type: 'fm' },       // Deep Bass
+            { baseFreq: 'A3', type: 'fm' }        // Warmer Lead
+        ]
+    },
+    'Chip': {
+        name: 'Chip',
+        tracks: [
+            { baseFreq: 'C2', type: 'membrane' }, // Clicky Kick
+            { baseFreq: 'C5', type: 'noise' },    // High Snare
+            { baseFreq: 2000, type: 'metal' },    // Ticky Hats
+            { baseFreq: 'C3', type: 'fm' },       // Lo-fi Bass
+            { baseFreq: 'C5', type: 'fm' }        // 8-bit Lead
+        ]
+    },
+    'Analog': {
+        name: 'Analog',
+        tracks: [
+            { baseFreq: 'D1', type: 'membrane' },
+            { baseFreq: 'D4', type: 'noise' },
+            { baseFreq: 600, type: 'metal' },
+            { baseFreq: 'D2', type: 'fm' },
+            { baseFreq: 'D4', type: 'fm' }
+        ]
+    }
+};
+
+export const DEFAULT_KIT = 'Default';

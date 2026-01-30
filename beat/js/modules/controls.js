@@ -1,7 +1,7 @@
-import { SCALES } from './constants.js';
+import { SCALES, KITS } from './constants.js';
 
 export class Controls {
-    constructor(audioEngine, onBPMChange, onSwingChange, onClear, onPlay, onStop, onLoopToggle, onScaleChange) {
+    constructor(audioEngine, onBPMChange, onSwingChange, onClear, onPlay, onStop, onLoopToggle, onScaleChange, onKitChange) {
         this.audioEngine = audioEngine;
         this.onBPMChange = onBPMChange;
         this.onSwingChange = onSwingChange;
@@ -10,6 +10,7 @@ export class Controls {
         this.onStop = onStop;
         this.onLoopToggle = onLoopToggle;
         this.onScaleChange = onScaleChange;
+        this.onKitChange = onKitChange;
         this.isPlaying = false;
         this.swingEnabled = false;
 
@@ -31,6 +32,62 @@ export class Controls {
         this.setupEvents();
         this.setupBPMDrag();
         this.setupScaleCtrl();
+        this.setupKitCtrl();
+    }
+
+    setupKitCtrl() {
+        // Create UI elements dynamically
+        const controlsEl = document.getElementById('controls');
+        if (!controlsEl) return;
+
+        const container = document.createElement('div');
+        container.id = 'kit-ctrl';
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+        container.style.alignItems = 'center';
+        container.style.margin = '0 10px';
+
+        const label = document.createElement('div');
+        label.className = 'ctrl-label';
+        label.textContent = 'KIT';
+        label.style.fontSize = '10px';
+        label.style.marginBottom = '2px';
+        label.style.color = '#aaa';
+
+        this.kitSelect = document.createElement('select');
+        this.kitSelect.style.background = '#333';
+        this.kitSelect.style.color = '#fff';
+        this.kitSelect.style.border = '1px solid #555';
+        this.kitSelect.style.borderRadius = '4px';
+        this.kitSelect.style.padding = '2px 4px';
+        this.kitSelect.style.fontSize = '11px';
+        this.kitSelect.style.width = '80px';
+        this.kitSelect.style.outline = 'none';
+
+        // Populate options
+        Object.keys(KITS).forEach(kitName => {
+            const option = document.createElement('option');
+            option.value = kitName;
+            option.textContent = kitName;
+            this.kitSelect.appendChild(option);
+        });
+
+        this.kitSelect.addEventListener('change', (e) => {
+            if (this.onKitChange) {
+                this.onKitChange(e.target.value);
+            }
+        });
+
+        container.appendChild(label);
+        container.appendChild(this.kitSelect);
+
+        // Insert before scale control or at specific position
+        const scaleCtrl = document.getElementById('scale-ctrl');
+        if (scaleCtrl) {
+            controlsEl.insertBefore(container, scaleCtrl);
+        } else {
+            controlsEl.appendChild(container);
+        }
     }
 
     setupScaleCtrl() {
@@ -85,6 +142,12 @@ export class Controls {
             controlsEl.insertBefore(container, volCtrl);
         } else {
             controlsEl.appendChild(container);
+        }
+    }
+
+    setKit(kitName) {
+        if (this.kitSelect && KITS[kitName]) {
+            this.kitSelect.value = kitName;
         }
     }
 

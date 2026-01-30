@@ -75,7 +75,11 @@ export class TonePanel {
         document.querySelectorAll('.track-icon').forEach(icon => {
             icon.classList.remove('active');
         });
-        document.querySelector(`.track-icon[data-track="${track}"]`).classList.add('active');
+        const activeItem = document.querySelector(`.track-item[data-track="${track}"]`);
+        if (activeItem) {
+            const activeIcon = activeItem.querySelector('.track-icon');
+            if (activeIcon) activeIcon.classList.add('active');
+        }
     }
 
     close() {

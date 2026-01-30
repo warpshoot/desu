@@ -26,6 +26,9 @@ export class AudioEngine {
 
         // Callbacks
         this.onStepCallback = null;
+
+        // Active configuration (clone of TRACKS to support kits)
+        this.activeTrackConfigs = JSON.parse(JSON.stringify(TRACKS));
     }
 
     async init() {
@@ -195,7 +198,7 @@ export class AudioEngine {
     triggerNote(track, pitch, duration, time, rollMode = false, rollSubdivision = 1, octaveShift = 0) {
         if (!this.initialized || !this.instruments[track]) return;
         const instrument = this.instruments[track];
-        const trackConfig = TRACKS[track];
+        const trackConfig = this.activeTrackConfigs[track];
 
         // Calculate number of triggers
         const triggers = rollMode ? rollSubdivision : 1;
@@ -310,13 +313,23 @@ export class AudioEngine {
         }
     }
 
-    setTrackMute(track, muted) {
-        this.mutedTracks[track] = muted;
-        this.updateTrackGains();
-    }
-
     setTrackSolo(track, soloed) {
         this.soloedTracks[track] = soloed;
         this.updateTrackGains();
+    }
+
+    loadKit(kitData) {
+        if (!kitData || !kitData.tracks) return;
+
+        // Update active configuration
+        for (let i = 0; i < this.activeTrackConfigs.length; i++) {
+            if (kitData.tracks[i]) {
+                // Update baseFreq
+                if (kitData.tracks[i].baseFreq) {
+                    this.activeTrackConfigs[i].baseFreq = kitData.tracks[i].baseFreq;
+                }
+                // We could also update 'type' by re-creating instruments, but for 'Parameter Kits' we just update params
+            }
+        }
     }
 }
