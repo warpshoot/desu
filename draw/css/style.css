@@ -1099,3 +1099,85 @@ body.help-mode #tool-panel {
     border: 2px solid #000;
     background: #fff;
 }
+
+/* ============================================
+   Confirm Modal
+   ============================================ */
+#confirm-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+#confirm-modal.hidden {
+    display: none;
+}
+
+#confirm-content {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 24px;
+    border-radius: 12px;
+    width: 320px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+#confirm-message {
+    font-size: 15px;
+    color: #333;
+    margin-bottom: 20px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.confirm-checkbox-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 24px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.confirm-checkbox-label input {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.confirm-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.confirm-buttons button {
+    padding: 10px 24px;
+    border: 1px solid #333;
+    background: #fff;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    min-width: 100px;
+    transition: transform 0.1s;
+}
+
+.confirm-buttons button.primary {
+    background: #333;
+    color: #fff;
+}
+
+.confirm-buttons button:active {
+    transform: scale(0.96);
+}

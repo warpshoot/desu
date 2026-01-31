@@ -49,6 +49,61 @@ const DEBUG_MODE = false;
 
 let lastUndoCheck = null;
 let undoCallCount = 0;
+const suppressedWarnings = {
+    layerAdd: false,
+    layerDelete: false
+};
+
+function showConfirmModal(message, warningKey, onConfirm) {
+    if (suppressedWarnings[warningKey]) {
+        onConfirm();
+        return;
+    }
+
+    const modal = document.getElementById('confirm-modal');
+    const msgEl = document.getElementById('confirm-message');
+    const checkEl = document.getElementById('confirm-suppress-check');
+    const cancelBtn = document.getElementById('confirm-cancel-btn');
+    const okBtn = document.getElementById('confirm-ok-btn');
+
+    if (!modal || !msgEl || !checkEl || !cancelBtn || !okBtn) {
+        console.error('Confirm modal elements missing');
+        // Fallback if elements invalid
+        if (window.confirm(message)) {
+            onConfirm();
+        }
+        return;
+    }
+
+    msgEl.textContent = message;
+    checkEl.checked = false;
+
+    // Remove old listeners (cloning is easiest way to clear generic listeners without named reference)
+    // But we can just use `onclick` for simplicity or named references if we prefer.
+    // Cloning buttons is safer to avoid stacking listeners if we don't track them.
+    const newCancel = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+    const newOk = okBtn.cloneNode(true);
+    okBtn.parentNode.replaceChild(newOk, okBtn);
+
+    const cleanup = () => {
+        modal.classList.add('hidden');
+    };
+
+    newCancel.addEventListener('click', () => {
+        cleanup();
+    });
+
+    newOk.addEventListener('click', () => {
+        if (checkEl.checked) {
+            suppressedWarnings[warningKey] = true;
+        }
+        cleanup();
+        onConfirm();
+    });
+
+    modal.classList.remove('hidden');
+}
 
 function updateDebugDisplay() {
     if (!DEBUG_MODE) return;
@@ -151,16 +206,22 @@ function setupLayerPanel() {
 
     // Add layer button
     addBtn.addEventListener('click', async () => {
-        const layer = createLayer();
-        if (layer) {
-            // Apply current zoom/pan to the new layer immediately
-            applyTransform();
+        showConfirmModal(
+            "この操作によりアンドゥ履歴が失われます。\n続けますか？",
+            'layerAdd',
+            async () => {
+                const layer = createLayer();
+                if (layer) {
+                    // Apply current zoom/pan to the new layer immediately
+                    applyTransform();
 
-            await resetHistory();
-            updateAllThumbnails();
-            renderLayerButtons();
-            updateActiveLayerIndicator();
-        }
+                    await resetHistory();
+                    updateAllThumbnails();
+                    renderLayerButtons();
+                    updateActiveLayerIndicator();
+                }
+            }
+        );
     });
 
     // Layer button click/long-press handlers
@@ -218,7 +279,7 @@ function setupLayerPanel() {
 function setupToolPanel() {
     const drawBtn = document.getElementById('drawToolBtn');
     const eraserBtn = document.getElementById('eraserToolBtn');
-    const drawModes = ['pen', 'fill', 'sketch', 'tone'];
+    const drawModes = ['pen', 'fill', 'tone', 'sketch'];
     // Eraser modes for state (mapping from menu items handled separately or matched here)
     const eraserToggleModes = ['lasso', 'pen'];
 
@@ -241,6 +302,8 @@ function setupToolPanel() {
             if (longPressTriggered) return;
 
             // Quick tap: activate or toggle
+            hideAllMenus(); // Always close any open menus when clicking a tool button
+
             if (isEraser) {
                 if (state.isEraserActive) {
                     // Toggle
@@ -527,12 +590,18 @@ function setupLayerMenuActions(menu, layerId) {
     newDeleteBtn.addEventListener('click', async () => {
         if (layers.length <= 1) return; // Can't delete last layer
 
-        if (deleteLayer(layerId)) {
-            await resetHistory();
-            window.renderLayerButtons();
-            updateActiveLayerIndicator();
-            hideAllMenus();
-        }
+        showConfirmModal(
+            "この操作によりアンドゥ履歴が失われます。\n続けますか？",
+            'layerDelete',
+            async () => {
+                if (deleteLayer(layerId)) {
+                    await resetHistory();
+                    window.renderLayerButtons();
+                    updateActiveLayerIndicator();
+                    hideAllMenus();
+                }
+            }
+        );
     });
 
     // Disable delete if only one layer

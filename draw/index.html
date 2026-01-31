@@ -172,6 +172,21 @@
         </div>
     </div>
 
+    <!-- 汎用確認モーダル -->
+    <div id="confirm-modal" class="hidden">
+        <div id="confirm-content">
+            <p id="confirm-message">メッセージ</p>
+            <label class="confirm-checkbox-label">
+                <input type="checkbox" id="confirm-suppress-check">
+                次回以降表示しない
+            </label>
+            <div class="confirm-buttons">
+                <button id="confirm-cancel-btn">キャンセル</button>
+                <button id="confirm-ok-btn" class="primary">OK</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 描画ツール選択メニュー (長押しポップオーバー) -->
     <div id="draw-tool-menu" class="tool-menu hidden">
         <div class="menu-item" data-mode="pen">
@@ -180,11 +195,11 @@
         <div class="menu-item" data-mode="fill">
             <img src="icons/bet.png" alt="Fill">
         </div>
-        <div class="menu-item" data-mode="sketch">
-            <img src="icons/ata.png" alt="Sketch">
-        </div>
         <div class="menu-item" data-mode="tone">
             <img src="icons/tone.png" alt="Tone">
+        </div>
+        <div class="menu-item" data-mode="sketch">
+            <img src="icons/ata.png" alt="Sketch">
         </div>
     </div>
 
