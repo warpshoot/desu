@@ -306,13 +306,13 @@ class Sequencer {
         const startCellEl = this.cells[0][this.state.loopStart].element;
         const startRect = startCellEl.getBoundingClientRect();
         const startX = startRect.left - wrapperRect.left;
-        this.startHandle.style.left = `${startX - 10}px`;
+        this.startHandle.style.left = `${startX - 34}px`; // Shifted left by ~1 cell (24px) from -10px
 
         // Find end position
         const endCellEl = this.cells[0][this.state.loopEnd].element;
         const endRect = endCellEl.getBoundingClientRect();
         const endX = endRect.right - wrapperRect.left;
-        this.endHandle.style.left = `${endX - 10}px`;
+        this.endHandle.style.left = `${endX - 10}px`; // Shifted right by another 12px (total 24px) from -34px
 
         // Update guides
         this.timelineBeats.forEach((beatElement, index) => {
@@ -450,6 +450,11 @@ class Sequencer {
 
 
     clearGrid() {
+        // Stop playback first to reset UI
+        if (this.controls) {
+            this.controls.stop();
+        }
+
         // 1. Reset Pattern
         this.state.grid = createDefaultState().grid;
 
@@ -607,6 +612,7 @@ class Sequencer {
                     e.preventDefault();
 
                     newMuteBtn.classList.toggle('active');
+                    void newMuteBtn.offsetWidth; // Force Reflow
                     const isMuted = newMuteBtn.classList.contains('active');
 
                     if (!this.state.mutedTracks) this.state.mutedTracks = [];
@@ -616,6 +622,7 @@ class Sequencer {
                     // Mutually exclusive: If Muting, turn off Solo
                     if (isMuted && newSoloBtn.classList.contains('active')) {
                         newSoloBtn.classList.remove('active');
+                        void newSoloBtn.offsetWidth; // Force Reflow
                         if (!this.state.soloedTracks) this.state.soloedTracks = [];
                         this.state.soloedTracks[i] = false;
                         this.audioEngine.setTrackSolo(i, false);

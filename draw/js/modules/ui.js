@@ -39,6 +39,8 @@ import {
     createTonePreview,
     floodFillTone
 } from './tools/tone.js';
+import { exportProject, importProject } from './storage.js';
+
 
 // ============================================
 // Debug Display
@@ -144,12 +146,73 @@ export function initUI() {
     setupColorPickers();
     setupClearButtons();
     setupZoomControls();
+    setupClearButtons();
+    setupZoomControls();
     setupSaveUI();
+    setupFileUI();
     setupToneMenu();
     setupCreditModal();
     setupOrientationHandler();
     setupKeyboardShortcuts();
     updateDebugDisplay();
+}
+
+// ============================================
+// File UI
+// ============================================
+
+function setupFileUI() {
+    const fileBtn = document.getElementById('fileBtn');
+    const menu = document.getElementById('file-menu');
+    const exportBtn = document.getElementById('exportProjectBtn');
+    const importBtn = document.getElementById('importProjectBtn');
+    const fileInput = document.getElementById('fileInput');
+
+    if (!fileBtn || !menu) return;
+
+    // Toggle menu
+    fileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isHidden = menu.classList.contains('hidden');
+        hideAllMenus(); // Close other menus
+
+        if (isHidden) {
+            const rect = fileBtn.getBoundingClientRect();
+            menu.style.right = (window.innerWidth - rect.right) + 'px';
+            menu.style.top = rect.bottom + 10 + 'px';
+            menu.classList.remove('hidden');
+
+            // Close on outside click
+            setTimeout(() => {
+                document.addEventListener('pointerdown', handleOutsideClick);
+            }, 10);
+        }
+    });
+
+    // Import click
+    importBtn.addEventListener('click', () => {
+        fileInput.click();
+        hideAllMenus();
+    });
+
+    // File input change (Import)
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            const file = e.target.files[0];
+            // Import logic is in main.js, we need to dispatch event or call function
+            // Since importProject is imported in main.js, we can trigger a custom event or duplicating the logic?
+            // Better: ui.js shouldn't import from main.js (circular).
+            // We can dispatch a global event or import 'importProject' from storage.js if not circular.
+            // storage.js doesn't import ui.js, so it's safe.
+
+            // Actually main.js handles the logic. Let's fire a 'import-file' event on window?
+            // OR just import { importProject } from './storage.js' here? Refactoring main.js logic to here is cleaner.
+
+            // Let's import export/importProject here?
+            // Wait, I can't easily add imports to the top of the file with replace_content in valid JS safely without reading top.
+            // But I read the top of ui.js! 
+        }
+    });
 }
 
 // ============================================

@@ -5,35 +5,35 @@ export const TRACKS = [
         color: '#ff4444',
         type: 'membrane',
         baseFreq: 'C1',
-        defaultParams: { tune: 0, cutoff: 4000, resonance: 1, modulation: 50, release: 0.5, vol: 0.7 }
+        defaultParams: { tune: -12, cutoff: 1000, resonance: 1, modulation: 80, release: 0.8, vol: 1.0 } // Strong & Thick
     },
     {
         name: 'Snare',
         color: '#44aaff',
         type: 'noise',
         baseFreq: 'C4',
-        defaultParams: { tune: 0, cutoff: 4000, resonance: 1, modulation: 50, release: 0.5, vol: 0.7 }
+        defaultParams: { tune: 0, cutoff: 8000, resonance: 1, modulation: 50, release: 0.2, vol: 0.7 } // Standard
     },
     {
         name: 'Hi-hat',
         color: '#44ff88',
         type: 'metal',
         baseFreq: 800,
-        defaultParams: { tune: 0, cutoff: 10000, resonance: 1, modulation: 50, release: 0.05, vol: 0.6 } // New default (was Closed)
+        defaultParams: { tune: 0, cutoff: 10000, resonance: 1, modulation: 50, release: 0.05, vol: 0.6 } // Closed
     },
     {
         name: 'Bass',
         color: '#bb66ff',
         type: 'fm',
         baseFreq: 'C2',
-        defaultParams: { tune: 0, cutoff: 4000, resonance: 1, modulation: 50, release: 0.5, vol: 1.1 } // Volume boosted
+        defaultParams: { tune: -12, cutoff: 3000, resonance: 1, modulation: 60, release: 0.6, vol: 1.5 } // Thick FM Bass
     },
     {
         name: 'Lead',
         color: '#ffff44',
         type: 'fm',
         baseFreq: 'C4',
-        defaultParams: { tune: 0, cutoff: 4000, resonance: 1, modulation: 50, release: 0.5, vol: 0.7 }
+        defaultParams: { tune: 0, cutoff: 4000, resonance: 1, modulation: 50, release: 0.5, vol: 0.7 } // Soft Lead
     }
 ];
 
@@ -59,7 +59,7 @@ export const KNOB_PARAMS = {
     resonance: { min: 0.5, max: 15, default: 1, scale: 'linear' },
     modulation: { min: 0, max: 100, default: 50, scale: 'linear' },
     release: { min: 0.01, max: 2.0, default: 0.5, scale: 'linear' },
-    vol: { min: 0, max: 1.2, default: 0.7, scale: 'linear' }
+    vol: { min: 0, max: 2.0, default: 0.7, scale: 'linear' }
 };
 
 // Storage key
@@ -97,33 +97,33 @@ export const DEFAULT_SCALE = 'Chromatic';
 
 export const TRACK_PRESETS = {
     0: { // Kick (Membrane)
-        'Chiptune': { tune: -12, cutoff: 2000, resonance: 0.5, modulation: 0, release: 0.1, vol: 0.8 },
-        'Deep': { tune: -12, cutoff: 500, resonance: 0.5, modulation: 20, release: 0.8, vol: 0.8 },
-        'Punchy': { tune: 5, cutoff: 2000, resonance: 5, modulation: 80, release: 0.2, vol: 0.7 },
-        'Soft': { tune: -5, cutoff: 800, resonance: 0.5, modulation: 0, release: 0.6, vol: 0.6 }
+        '1': { tune: -12, cutoff: 1000, resonance: 1, modulation: 80, release: 0.8, vol: 1.0 }, // Thick & Strong
+        '2': { tune: -24, cutoff: 400, resonance: 0.5, modulation: 30, release: 1.0, vol: 1.0 }, // Sub/Deep
+        '3': { tune: 0, cutoff: 3000, resonance: 8, modulation: 90, release: 0.2, vol: 0.8 }, // Punchy/Clicky
+        '4': { tune: -5, cutoff: 800, resonance: 0.5, modulation: 10, release: 0.4, vol: 0.7 } // Soft/Jazz
     },
     1: { // Snare (Noise)
-        'Chiptune': { tune: 0, cutoff: 16000, resonance: 1, modulation: 100, release: 0.1, vol: 0.7 },
-        'Tight': { tune: 0, cutoff: 8000, resonance: 10, modulation: 80, release: 0.1, vol: 0.7 },
-        'Lo-Fi': { tune: 0, cutoff: 1200, resonance: 2, modulation: 10, release: 0.6, vol: 0.75 },
-        'Clap-ish': { tune: 0, cutoff: 3000, resonance: 5, modulation: 90, release: 0.3, vol: 0.7 }
+        '1': { tune: 0, cutoff: 8000, resonance: 1, modulation: 50, release: 0.2, vol: 0.7 }, // Standard
+        '2': { tune: 12, cutoff: 12000, resonance: 10, modulation: 80, release: 0.1, vol: 0.6 }, // Tight
+        '3': { tune: -12, cutoff: 2000, resonance: 2, modulation: 10, release: 0.5, vol: 0.8 }, // Lo-Fi
+        '4': { tune: 0, cutoff: 4000, resonance: 4, modulation: 90, release: 0.3, vol: 0.7 } // Clap-ish
     },
     2: { // Hi-hat (Metal)
-        'Chiptune': { tune: 24, cutoff: 16000, resonance: 1, modulation: 0, release: 0.05, vol: 0.6 },
-        'Closed': { tune: 0, cutoff: 10000, resonance: 1, modulation: 50, release: 0.05, vol: 0.6 },
-        'Open': { tune: -5, cutoff: 6000, resonance: 5, modulation: 30, release: 0.8, vol: 0.7 },
-        'Digital': { tune: 12, cutoff: 12000, resonance: 10, modulation: 90, release: 0.2, vol: 0.6 }
+        '1': { tune: 0, cutoff: 10000, resonance: 1, modulation: 50, release: 0.05, vol: 0.6 }, // Closed
+        '2': { tune: 0, cutoff: 8000, resonance: 2, modulation: 40, release: 0.4, vol: 0.6 }, // Open
+        '3': { tune: 24, cutoff: 14000, resonance: 5, modulation: 0, release: 0.05, vol: 0.5 }, // Chip
+        '4': { tune: -12, cutoff: 4000, resonance: 1, modulation: 80, release: 0.1, vol: 0.6 } // Shaker
     },
-    3: { // Bass (FM)
-        'Chiptune': { tune: 0, cutoff: 16000, resonance: 1, modulation: 0, release: 0.1, vol: 0.7 },
-        'Sub': { tune: -12, cutoff: 400, resonance: 0.5, modulation: 0, release: 0.8, vol: 0.8 },
-        'Acid': { tune: 0, cutoff: 2000, resonance: 12, modulation: 70, release: 0.3, vol: 0.7 },
-        'Pluck': { tune: 12, cutoff: 3000, resonance: 2, modulation: 60, release: 0.2, vol: 0.7 }
+    3: { // Bass (FM - Triangle)
+        '1': { tune: -12, cutoff: 3000, resonance: 1, modulation: 60, release: 0.6, vol: 1.5 }, // Thick (Boosted)
+        '2': { tune: -12, cutoff: 400, resonance: 0.5, modulation: 0, release: 1.0, vol: 1.8 }, // Sub (Audible)
+        '3': { tune: 0, cutoff: 2000, resonance: 10, modulation: 80, release: 0.3, vol: 1.4 }, // Acid
+        '4': { tune: 12, cutoff: 4000, resonance: 2, modulation: 60, release: 0.2, vol: 1.2 } // Pluck
     },
     4: { // Lead (FM)
-        'Chiptune': { tune: 0, cutoff: 16000, resonance: 1, modulation: 0, release: 0.1, vol: 0.7 },
-        'Chime': { tune: 24, cutoff: 8000, resonance: 5, modulation: 30, release: 1.0, vol: 0.6 },
-        'Retro': { tune: -5, cutoff: 1500, resonance: 2, modulation: 10, release: 0.4, vol: 0.7 },
-        'Noisy': { tune: 0, cutoff: 5000, resonance: 8, modulation: 100, release: 0.3, vol: 0.7 }
+        '1': { tune: 0, cutoff: 4000, resonance: 1, modulation: 50, release: 0.5, vol: 0.7 }, // Soft
+        '2': { tune: 24, cutoff: 8000, resonance: 4, modulation: 20, release: 1.2, vol: 0.7 }, // Chime
+        '3': { tune: -12, cutoff: 2000, resonance: 5, modulation: 90, release: 0.4, vol: 0.8 }, // Retro
+        '4': { tune: 12, cutoff: 12000, resonance: 2, modulation: 100, release: 0.1, vol: 0.6 } // Chip/Square
     }
 };

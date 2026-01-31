@@ -4,6 +4,7 @@ import {
     getLayer,
     getActiveLayer
 } from './state.js';
+import { saveLocalState } from './storage.js';
 
 // ============================================
 // Global History System (Unified)
@@ -23,7 +24,8 @@ export async function saveState() {
     }
 
     state.undoStack.push(snapshot);
-    console.log('[DEBUG] saveState() called, undoStack.length now:', state.undoStack.length);
+    // console.log('[DEBUG] saveState() called, undoStack.length now:', state.undoStack.length);
+    saveLocalState();
 
     // Limit history size
     if (state.undoStack.length > state.MAX_HISTORY) {
@@ -70,8 +72,9 @@ export function undo() {
     const current = state.undoStack.pop();
     state.redoStack.push(current);
 
-    console.log('[DEBUG] Restoring current snapshot, undoStack.length after pop:', state.undoStack.length);
+    // console.log('[DEBUG] Restoring current snapshot, undoStack.length after pop:', state.undoStack.length);
     restoreSnapshot(current);
+    saveLocalState();
 }
 
 /**
@@ -84,6 +87,7 @@ export function redo() {
     state.undoStack.push(next);
 
     restoreSnapshot(next);
+    saveLocalState();
 }
 
 /**

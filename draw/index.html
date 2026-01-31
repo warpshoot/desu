@@ -80,6 +80,11 @@
     <div id="toolbar-right">
 
 
+        <div class="tool-btn" id="fileBtn">
+            <img src="icons/file.svg" alt="File" style="width: 24px; height: 24px;">
+            <div class="tool-tooltip tool-tooltip-bottom">ファイル管理</div>
+        </div>
+
         <div class="tool-btn" id="saveBtn">
             <svg viewBox="0 0 24 24">
                 <path d="M12 4 L12 16 M6 12 L12 18 L18 12" />
@@ -103,6 +108,18 @@
             <circle cx="12" cy="12" r="8" />
             <path d="M12 7 L12 17 M7 12 L17 12" />
         </svg>
+    </div>
+
+    <!-- ファイル管理メニュー -->
+    <div id="file-menu" class="tool-menu hidden">
+        <div class="menu-item" id="exportProjectBtn">
+            <span>プロジェクト保存 (.desu)</span>
+        </div>
+        <div class="menu-item" id="importProjectBtn">
+            <span>プロジェクト読み込み</span>
+            <!-- Hidden file input -->
+            <input type="file" id="fileInput" accept=".desu,.json" style="display:none;">
+        </div>
     </div>
 
     <!-- 保存UI -->

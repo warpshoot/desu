@@ -11,6 +11,58 @@ body {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+body.playing {
+    background: #000 !important;
+    color: #fff !important;
+}
+
+body.playing #sequencer-container {
+    background: #000 !important;
+}
+
+/* ... (skipping unchanged properties) ... */
+
+.loop-handle {
+    position: absolute;
+    top: -44px;
+    /* Adjusted for larger touch target */
+    width: 44px;
+    height: 44px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: grab;
+    z-index: 500;
+    font-size: 20px;
+    color: #000;
+    /* Pure black */
+    user-select: none;
+    transition: transform 0.1s ease;
+    background: none;
+    /* No background */
+    border-radius: 0;
+    /* touch-action removed - controlled by JavaScript to allow two-finger pan */
+}
+
+body.playing .loop-handle {
+    color: #fff;
+}
+
+/* ... (skipping unchanged properties) ... */
+
+.control-btn.active#play-pause-btn {
+    background: #fff;
+    color: #0a0a0a;
+    border-color: #fff;
+}
+
+body.playing .control-btn.active#play-pause-btn {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
 }
 
 /* Credit Button */
@@ -38,6 +90,24 @@ body {
     background: rgba(0, 0, 0, 0.2);
     color: rgba(0, 0, 0, 0.8);
     border-color: rgba(0, 0, 0, 0.5);
+}
+
+body.playing #credit-btn {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+}
+
+body.playing #credit-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+#credit-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
 /* Credit Modal */
@@ -271,13 +341,17 @@ body {
     z-index: 500;
     font-size: 20px;
     color: #000;
-    /* Pure black */
+    /* Black for light bg (default) */
     user-select: none;
     transition: transform 0.1s ease;
     background: none;
     /* No background */
     border-radius: 0;
     /* touch-action removed - controlled by JavaScript to allow two-finger pan */
+}
+
+body.playing .loop-handle {
+    color: #fff;
 }
 
 .loop-handle:active {
@@ -546,6 +620,12 @@ body {
     z-index: 1000;
 }
 
+.control-group {
+    display: flex;
+    gap: 8px;
+    /* Tighter spacing for buttons */
+}
+
 .control-btn {
     width: 64px;
     height: 64px;
@@ -558,6 +638,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* Animation Placeholder specific */
+#visualizer-display {
+    cursor: default;
+    /* Not clickable yet */
+    position: relative;
+    overflow: hidden;
 }
 
 .control-btn:hover {

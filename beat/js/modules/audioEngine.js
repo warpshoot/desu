@@ -74,12 +74,14 @@ export class AudioEngine {
                     });
                     break;
                 case 'fm':
+                    // Check if it's Bass (Track 3) - tough condition, but we know Bass is index 3
+                    const isBass = (i === 3);
                     instrument = new Tone.PolySynth(Tone.FMSynth, {
-                        harmonicity: 3,
-                        modulationIndex: 10,
+                        harmonicity: isBass ? 1 : 3, // Bass: Lock to fundamental
+                        modulationIndex: isBass ? 20 : 10,
                         detune: 0,
-                        oscillator: { type: 'sine' },
-                        envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 },
+                        oscillator: { type: isBass ? 'triangle' : 'sine' }, // Bass: Triangle for bite
+                        envelope: { attack: 0.01, decay: 0.2, sustain: isBass ? 0.8 : 0.2, release: 0.5 }, // Bass: High sustain
                         modulation: { type: 'square' },
                         modulationEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 }
                     });

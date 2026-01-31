@@ -259,6 +259,7 @@ export class Controls {
         if (this.playIcon) this.playIcon.classList.add('hidden');
         if (this.pauseIcon) this.pauseIcon.classList.remove('hidden');
         if (this.playPauseBtn) this.playPauseBtn.classList.add('active');
+        document.body.classList.add('playing'); // Enable dark mode
         if (this.onPlay) this.onPlay();
     }
 
@@ -268,6 +269,7 @@ export class Controls {
         if (this.playIcon) this.playIcon.classList.remove('hidden');
         if (this.pauseIcon) this.pauseIcon.classList.add('hidden');
         if (this.playPauseBtn) this.playPauseBtn.classList.remove('active');
+        document.body.classList.remove('playing'); // Disable dark mode
         // No onStop call here as it's just pause
     }
 
@@ -277,6 +279,7 @@ export class Controls {
         if (this.playIcon) this.playIcon.classList.remove('hidden');
         if (this.pauseIcon) this.pauseIcon.classList.add('hidden');
         if (this.playPauseBtn) this.playPauseBtn.classList.remove('active');
+        document.body.classList.remove('playing');
         if (this.onStop) this.onStop();
     }
 
@@ -285,6 +288,7 @@ export class Controls {
         if (this.playIcon) this.playIcon.classList.remove('hidden');
         if (this.pauseIcon) this.pauseIcon.classList.add('hidden');
         if (this.playPauseBtn) this.playPauseBtn.classList.remove('active');
+        document.body.classList.remove('playing');
     }
 
     setBPM(bpm) {
