@@ -164,9 +164,12 @@ export function initUI() {
 function setupFileUI() {
     const fileBtn = document.getElementById('fileBtn');
     const menu = document.getElementById('file-menu');
+    const newBtn = document.getElementById('newProjectBtn');
     const exportBtn = document.getElementById('exportProjectBtn');
     const importBtn = document.getElementById('importProjectBtn');
     const fileInput = document.getElementById('fileInput');
+
+    console.log('[DEBUG] setupFileUI', { fileBtn, menu, newBtn, exportBtn, importBtn, fileInput });
 
     if (!fileBtn || !menu) return;
 
@@ -189,30 +192,88 @@ function setupFileUI() {
         }
     });
 
+    // NEW click
+    if (newBtn) {
+        newBtn.addEventListener('click', async () => {
+            hideAllMenus();
+            if (confirm('新規プロジェクトを作成しますか？\n（現在の作業内容は破棄されます）')) {
+                // Reset Logic
+                // 1. Delete all layers except one
+                while (layers.length > 1) {
+                    deleteLayer(layers[layers.length - 1].id);
+                }
+                // 2. Clear the last remaining layer
+                if (layers.length > 0) {
+                    clearLayer(layers[0].id);
+                }
+
+                // 3. Reset history
+                await resetHistory();
+
+                // 4. Update UI
+                if (window.renderLayerButtons) window.renderLayerButtons();
+                // Update thumbnail for the cleared layer
+                if (layers[0]) updateLayerThumbnail(layers[0]);
+
+
+            }
+        });
+    }
+
     // Import click
     importBtn.addEventListener('click', () => {
         fileInput.click();
         hideAllMenus();
     });
 
+    // Export click
+    if (exportBtn) {
+        exportBtn.addEventListener('click', async () => {
+            console.log('[DEBUG] exportBtn clicked');
+            hideAllMenus();
+            try {
+                const success = await exportProject();
+                console.log('[DEBUG] exportProject result:', success);
+
+            } catch (e) {
+                console.error('[DEBUG] exportProject error:', e);
+            }
+        });
+    }
+
     // File input change (Import)
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            const file = e.target.files[0];
-            // Import logic is in main.js, we need to dispatch event or call function
-            // Since importProject is imported in main.js, we can trigger a custom event or duplicating the logic?
-            // Better: ui.js shouldn't import from main.js (circular).
-            // We can dispatch a global event or import 'importProject' from storage.js if not circular.
-            // storage.js doesn't import ui.js, so it's safe.
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                if (confirm('プロジェクトを読み込みますか？\n（現在の作業内容は上書きされます）')) {
+                    importProject(file).then(async (success) => {
+                        if (success) {
+                            // UI Refresh Logic
+                            // 1. Render layer buttons (list)
+                            if (window.renderLayerButtons) window.renderLayerButtons();
 
-            // Actually main.js handles the logic. Let's fire a 'import-file' event on window?
-            // OR just import { importProject } from './storage.js' here? Refactoring main.js logic to here is cleaner.
+                            // 2. Update thumbnails for all loaded layers
+                            for (const layer of layers) {
+                                updateLayerThumbnail(layer);
+                            }
 
-            // Let's import export/importProject here?
-            // Wait, I can't easily add imports to the top of the file with replace_content in valid JS safely without reading top.
-            // But I read the top of ui.js! 
-        }
-    });
+                            // 3. Reset History
+                            await resetHistory();
+
+
+                        } else {
+                            alert('読み込みに失敗しました');
+                        }
+                        // Reset input
+                        fileInput.value = '';
+                    });
+                } else {
+                    fileInput.value = '';
+                }
+            }
+        });
+    }
 }
 
 // ============================================

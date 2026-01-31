@@ -561,6 +561,44 @@
         #toast.visible {
             opacity: 1;
         }
+
+        /* Tool Menu (File Menu) */
+        .tool-menu {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #999;
+            border-radius: 8px;
+            padding: 8px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 200;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            font-size: 14px;
+            min-width: 160px;
+        }
+
+        .tool-menu.hidden {
+            display: none !important;
+        }
+
+        .menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: background 0.1s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #333;
+        }
+
+        .menu-item:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .menu-item:active {
+            background: rgba(0, 0, 0, 0.2);
+        }
     </style>
 </head>
 
@@ -606,19 +644,44 @@
 
     <!-- 右上ツールバー -->
     <div id="toolbar-right">
+        <!-- ファイル管理ボタン -->
+        <div class="tool-btn" id="fileBtn" title="ファイル管理">
+            <img src="icons/file.svg" alt="ファイル">
+            <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-2">ファイル管理</div>
+        </div>
+
         <div class="tool-btn" id="saveBtn" title="保存 (⌘S)">
             <svg viewBox="0 0 24 24">
-                <path d="M12 4 L12 16 M6 12 L12 18 L18 12" />
-                <path d="M4 20 L20 20" />
+                <path d="M12 4 L12 16 M6 12 L12 18 L18 12" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M4 20 L20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
             </svg>
             <div class="tool-tooltip tool-tooltip-bottom">保存 (⌘S)</div>
         </div>
+
         <div class="tool-btn" id="clearBtn" title="クリア (Del)">
             <svg viewBox="0 0 24 24">
                 <path
-                    d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34" />
+                    d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            <div class="tool-tooltip tool-tooltip-bottom">クリア (Del)</div>
+            <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-2">クリア (Del)</div>
+        </div>
+    </div>
+
+    <!-- ファイル管理メニュー -->
+    <div id="file-menu" class="tool-menu hidden">
+        <div class="menu-item" id="newProjectBtn">
+            <span>NEW</span>
+        </div>
+        <div class="menu-item" id="saveProjectBtnMenu">
+            <span>SAVE (.json)</span>
+        </div>
+        <div class="menu-item" id="loadProjectBtn">
+            <span>LOAD</span>
+            <!-- Hidden file input -->
+            <input type="file" id="fileInput" accept=".json" style="display:none;">
         </div>
     </div>
 
@@ -651,7 +714,7 @@
         </label>
 
         <div>
-            <button class="save-btn" id="saveProjectBtn">プロジェクト保存 (JSON)</button>
+
             <button class="save-btn" id="saveAllBtn">全体を保存 (PNG)</button>
             <button class="save-btn primary" id="confirmSelectionBtn" style="display:none;">確定</button>
             <button class="save-btn" id="copySelectionBtn" style="display:none;">コピー</button>

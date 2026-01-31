@@ -1597,7 +1597,7 @@ function importProject(file) {
                 grid = loadedGrid;
                 render();
                 saveToStorage(); // Update local storage
-                showToast('Project loaded');
+                // showToast('Project loaded');
             } else {
                 showToast('Invalid grid data');
             }
@@ -1609,7 +1609,7 @@ function importProject(file) {
     reader.readAsText(file);
 }
 
-document.getElementById('saveProjectBtn').addEventListener('click', exportProject);
+
 
 // Drag & Drop Import
 window.addEventListener('dragover', (e) => {
@@ -1672,5 +1672,116 @@ if (!loadFromStorage()) {
 }
 resizeCanvas();
 fitCanvasToScreen(); // Fit to screen on initial load
+setupFileUI();
 saveState(); // Initial state
 updateSelectionCanvas();
+
+
+// ============================================
+// File UI with NEW, SAVE, LOAD
+// ============================================
+
+function setupFileUI() {
+    const fileBtn = document.getElementById('fileBtn');
+    const menu = document.getElementById('file-menu');
+    const newBtn = document.getElementById('newProjectBtn');
+    const exportBtnMenu = document.getElementById('saveProjectBtnMenu');
+    const importBtn = document.getElementById('loadProjectBtn');
+    const fileInput = document.getElementById('fileInput');
+
+    console.log('[DEBUG] setupFileUI (Pattern)', { fileBtn, menu, newBtn, exportBtnMenu, importBtn, fileInput });
+
+    if (!fileBtn || !menu) return;
+
+    // Toggle menu
+    fileBtn.addEventListener('click', (e) => {
+        console.log('[DEBUG] fileBtn clicked');
+        e.stopPropagation();
+        const isHidden = menu.classList.contains('hidden');
+
+        if (isHidden) {
+            const rect = fileBtn.getBoundingClientRect();
+            // Pattern App: Toolbar is on the RIGHT.
+            // We need to position the menu to the LEFT of the button.
+            menu.style.position = 'fixed'; // Ensure fixed positioning
+            menu.style.top = rect.top + 'px';
+            menu.style.right = (window.innerWidth - rect.left + 5) + 'px'; // Positioned to the left of the button
+            menu.style.left = 'auto'; // Clear left
+            menu.style.bottom = 'auto';
+
+            menu.classList.remove('hidden');
+
+            // Close on outside click
+            setTimeout(() => {
+                const closeMenu = (ev) => {
+                    if (!menu.contains(ev.target) && ev.target !== fileBtn) {
+                        menu.classList.add('hidden');
+                        document.removeEventListener('pointerdown', closeMenu);
+                    }
+                };
+                document.addEventListener('pointerdown', closeMenu);
+            }, 10);
+        } else {
+            menu.classList.add('hidden');
+        }
+    });
+
+    // NEW click
+    if (newBtn) {
+        newBtn.addEventListener('click', () => {
+            menu.classList.add('hidden');
+            if (confirm('新規プロジェクトを作成しますか？\n（現在の作業内容は破棄されます）')) {
+                resetGrid();
+                history = [];
+                historyIndex = -1;
+                saveState(); // Save initial empty state to history
+                saveToStorage(); // Clear storage
+            }
+        });
+    }
+
+    // SAVE click
+    if (exportBtnMenu) {
+        exportBtnMenu.addEventListener('click', () => {
+            menu.classList.add('hidden');
+            exportProject();
+        });
+    }
+
+    // LOAD click
+    if (importBtn) {
+        importBtn.addEventListener('click', () => {
+            fileInput.click();
+            menu.classList.add('hidden');
+        });
+    }
+
+    // File input change
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                if (confirm('プロジェクトを読み込みますか？\n（現在の作業内容は上書きされます）')) {
+                    importProject(file);
+                    fileInput.value = '';
+                } else {
+                    fileInput.value = '';
+                }
+            }
+        });
+    }
+}
+
+function resetGrid() {
+    for (let row = 0; row < GRID_SIZE; row++) {
+        for (let col = 0; col < GRID_SIZE; col++) {
+            grid[row][col] = {
+                type: null,
+                color: null,
+                corner: null,
+                inverted: false
+            };
+        }
+    }
+    render();
+}
