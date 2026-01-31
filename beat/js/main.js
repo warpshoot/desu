@@ -176,8 +176,12 @@ class Sequencer {
         fileBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const rect = fileBtn.getBoundingClientRect();
-            fileMenu.style.top = (rect.bottom + 5) + 'px';
-            fileMenu.style.left = (rect.left - 50) + 'px'; // Adjust position
+            // Position menu above the button (since it's at the bottom)
+            fileMenu.style.position = 'fixed';
+            fileMenu.style.bottom = (window.innerHeight - rect.top + 5) + 'px'; // Above button
+            fileMenu.style.left = (rect.left - 20) + 'px';
+            fileMenu.style.top = 'auto'; // Clear top
+
             fileMenu.classList.toggle('hidden');
         });
 
