@@ -3,11 +3,10 @@ import { AudioEngine } from './modules/audioEngine.js';
 import { Cell } from './modules/cell.js';
 import { Controls } from './modules/controls.js';
 import { TonePanel } from './modules/tonePanel.js';
-import { loadState, saveState, createDefaultState } from './modules/storage.js';
+import { loadState, saveState, createDefaultState, exportProject, importProject } from './modules/storage.js';
 
 class Sequencer {
     constructor() {
-        this.state = loadState();
         this.state = loadState();
 
         this.audioEngine = new AudioEngine();
@@ -160,6 +159,113 @@ class Sequencer {
         }, { passive: false });
 
         this.initCreditModal();
+        this.setupFileUI();
+    }
+
+    setupFileUI() {
+        const fileBtn = document.getElementById('file-btn');
+        const fileMenu = document.getElementById('file-menu');
+        const newBtn = document.getElementById('new-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const loadBtn = document.getElementById('load-btn');
+        const fileInput = document.getElementById('file-input');
+
+        if (!fileBtn || !fileMenu) return;
+
+        // Toggle menu
+        fileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rect = fileBtn.getBoundingClientRect();
+            fileMenu.style.top = (rect.bottom + 5) + 'px';
+            fileMenu.style.left = (rect.left - 50) + 'px'; // Adjust position
+            fileMenu.classList.toggle('hidden');
+        });
+
+        // Close menu on outside click
+        document.addEventListener('click', (e) => {
+            if (!fileMenu.contains(e.target) && !fileBtn.contains(e.target)) {
+                fileMenu.classList.add('hidden');
+            }
+        });
+
+        // NEW Project
+        newBtn.addEventListener('click', () => {
+            if (confirm('Create new project? Current progress will be lost.')) {
+                this.clearGrid();
+                fileMenu.classList.add('hidden');
+            }
+        });
+
+        // SAVE Project
+        saveBtn.addEventListener('click', () => {
+            exportProject(this.state);
+            fileMenu.classList.add('hidden');
+        });
+
+        // LOAD Project
+        loadBtn.addEventListener('click', () => {
+            fileInput.click();
+            fileMenu.classList.add('hidden');
+        });
+
+        // File Input Change
+        fileInput.addEventListener('change', async (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                try {
+                    const newState = await importProject(file);
+                    this.state = newState;
+
+                    // Stop audio engine before full reset
+                    this.audioEngine.stop();
+
+                    // Re-apply state to all components
+                    this.restoreState();
+
+                    // Reset input
+                    fileInput.value = '';
+                } catch (err) {
+                    alert('Failed to load project.');
+                }
+            }
+        });
+    }
+
+    restoreState() {
+        // 1. Controls
+        this.controls.setBPM(this.state.bpm);
+        this.controls.setSwing(this.state.swingEnabled);
+        this.controls.setVolume(this.state.masterVolume);
+        this.controls.setScale(this.state.scale);
+        this.controls.setLoop(this.state.loopEnabled);
+
+        // 2. Audio Engine Global Params
+        this.audioEngine.setBPM(this.state.bpm);
+        this.audioEngine.setMasterVolume(this.state.masterVolume);
+
+        // 3. Audio Engine Track Params
+        for (let i = 0; i < ROWS; i++) {
+            // Params
+            const params = this.state.trackParams[i];
+            this.audioEngine.updateTrackParams(i, params);
+
+            // Mute/Solo
+            this.audioEngine.setTrackMute(i, this.state.mutedTracks ? this.state.mutedTracks[i] : false);
+            this.audioEngine.setTrackSolo(i, this.state.soloedTracks ? this.state.soloedTracks[i] : false);
+        }
+
+        this.audioEngine.setLoopRange(this.state.loopStart, this.state.loopEnd, this.state.loopEnabled);
+
+        // 4. Update UI Grid
+        const gridContainer = document.getElementById('grid-container');
+        if (gridContainer) gridContainer.innerHTML = '';
+        this.createGrid();
+
+        // 5. Update Timeline
+        this.updateTimelineVisuals();
+
+        // 6. Update Track Controls UI (Mute/Solo buttons)
+        this.setupTrackControls();
     }
 
     initCreditModal() {

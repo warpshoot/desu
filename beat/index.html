@@ -9,6 +9,32 @@
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="css/style.css">
     <script src="../favicon.js"></script>
+    <style>
+        #file-menu {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 5px 0;
+            z-index: 1000;
+            min-width: 100px;
+        }
+
+        #file-menu.hidden {
+            display: none;
+        }
+
+        #file-menu .menu-item {
+            padding: 8px 16px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        #file-menu .menu-item:hover {
+            background: #444;
+        }
+    </style>
 </head>
 
 <body>
@@ -144,6 +170,19 @@
             </button>
 
             <button id="swing-btn" class="control-btn">SWG</button>
+
+            <!-- File Button -->
+            <button id="file-btn" class="control-btn" title="File Management">
+                <img src="icons/file.svg" alt="File" style="width: 20px; height: 20px;">
+            </button>
+        </div>
+
+        <!-- File Menu -->
+        <div id="file-menu" class="hidden">
+            <div class="menu-item" id="new-btn">NEW</div>
+            <div class="menu-item" id="save-btn">SAVE</div>
+            <div class="menu-item" id="load-btn">LOAD</div>
+            <input type="file" id="file-input" accept=".json" style="display:none;">
         </div>
 
         <!-- Animation Placeholder -->

@@ -180,3 +180,41 @@ export function createDefaultState() {
         scale: DEFAULT_SCALE
     };
 }
+
+// Export state as JSON file
+export function exportProject(state) {
+    const data = JSON.stringify(state, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `beat_project_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// Import state from JSON file
+export function importProject(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const state = JSON.parse(e.target.result);
+                // Basic validation
+                if (!state.grid || !state.trackParams) {
+                    throw new Error('Invalid project file');
+                }
+
+                // Save to storage immediately
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                resolve(state);
+            } catch (err) {
+                console.error('Import failed:', err);
+                reject(err);
+            }
+        };
+        reader.readAsText(file);
+    });
+}
