@@ -655,6 +655,7 @@ body.playing .loop-handle {
     background-position: 0 0;
     background-repeat: no-repeat;
     image-rendering: pixelated;
+    transition: none; /* Instant frame switching, no smooth transition */
 }
 
 #visualizer-display.playing {
