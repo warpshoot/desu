@@ -40,6 +40,9 @@ class Sequencer {
             },
             () => {
                 // onPlay
+                if (this.dancer) {
+                    this.dancer.classList.add('playing');
+                }
             },
             () => {
                 this.clearPlayheads();
@@ -800,6 +803,9 @@ class Sequencer {
         // Reset to first frame
         this.danceFrame = 0;
         this.dancer.style.backgroundPosition = '0px 0px';
+
+        // Remove playing class to hide animation
+        this.dancer.classList.remove('playing');
     }
 }
 

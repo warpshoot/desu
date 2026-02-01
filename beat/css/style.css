@@ -646,17 +646,21 @@ body.playing .loop-handle {
     /* Not clickable yet */
     position: relative;
     overflow: hidden;
-    background-image: url('../assets/danceA.png');
+    width: 48px;
+    height: 48px;
+    border-radius: 50%; /* Circle shape */
+    background-color: #000; /* Black when stopped */
+    background-image: none; /* No image when stopped */
     background-size: 384px 48px; /* 8 frames × 48px */
     background-position: 0 0;
     background-repeat: no-repeat;
     image-rendering: pixelated;
-    width: 48px;
-    height: 48px;
 }
 
 #visualizer-display.playing {
-    /* Animation active state - controlled by JS */
+    /* Show animation only during playback */
+    background-image: url('../assets/danceA.png');
+    filter: invert(1); /* Invert colors (black/white swap) */
 }
 
 .control-btn:hover {
