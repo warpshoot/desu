@@ -705,8 +705,8 @@ class Sequencer {
             }
         }
 
-        // Update dance animation every 2 steps (8th note)
-        if (step % 2 === 0) {
+        // Update dance animation every 4 steps (quarter note / 1 beat)
+        if (step % 4 === 0) {
             this.updateDanceFrame();
         }
     }
