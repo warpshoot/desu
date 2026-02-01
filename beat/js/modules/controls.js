@@ -12,12 +12,14 @@ export class Controls {
         this.onScaleChange = onScaleChange;
         this.isPlaying = false;
         this.swingEnabled = false;
+        this.isRecordingArmed = false;
 
         this.playPauseBtn = document.getElementById('play-pause-btn');
         this.stopBtn = document.getElementById('stop-btn');
         this.clearBtn = document.getElementById('clear-btn');
         this.loopBtn = document.getElementById('loop-btn');
         this.swingBtn = document.getElementById('swing-btn');
+        this.recBtn = document.getElementById('rec-btn');
 
         this.bpmDragValue = document.getElementById('bpm-drag-value');
         this.bpmDecBtn = document.getElementById('bpm-dec');
@@ -110,7 +112,7 @@ export class Controls {
                     this.audioEngine.setBPM(parseInt(this.bpmDragValue.textContent));
                     this.audioEngine.setMasterVolume(parseFloat(this.volumeSlider.value));
                 }
-                this.togglePlay();
+                await this.togglePlay();
             });
         }
 
@@ -118,6 +120,13 @@ export class Controls {
         if (this.stopBtn) {
             this.stopBtn.addEventListener('click', () => {
                 this.stop();
+            });
+        }
+
+        // Record button
+        if (this.recBtn) {
+            this.recBtn.addEventListener('click', () => {
+                this.toggleRecordArm();
             });
         }
 
@@ -245,41 +254,72 @@ export class Controls {
         }, { passive: false });
     }
 
-    togglePlay() {
+    async togglePlay() {
         if (this.isPlaying) {
-            this.pause();
+            await this.pause();
         } else {
-            this.play();
+            await this.play();
         }
     }
 
-    play() {
+    async play() {
         this.audioEngine.play();
         this.isPlaying = true;
         if (this.playIcon) this.playIcon.classList.add('hidden');
         if (this.pauseIcon) this.pauseIcon.classList.remove('hidden');
         if (this.playPauseBtn) this.playPauseBtn.classList.add('active');
         document.body.classList.add('playing'); // Enable dark mode
+
+        // Start recording if armed
+        if (this.isRecordingArmed) {
+            await this.audioEngine.startRecording();
+            if (this.recBtn) {
+                this.recBtn.classList.remove('armed');
+                this.recBtn.classList.add('recording');
+            }
+        }
+
         if (this.onPlay) this.onPlay();
     }
 
-    pause() {
+    async pause() {
         this.audioEngine.pause();
         this.isPlaying = false;
         if (this.playIcon) this.playIcon.classList.remove('hidden');
         if (this.pauseIcon) this.pauseIcon.classList.add('hidden');
         if (this.playPauseBtn) this.playPauseBtn.classList.remove('active');
+
+        // Stop recording on pause
+        if (this.audioEngine.isRecording) {
+            await this.audioEngine.stopRecording();
+            this.isRecordingArmed = false;
+            if (this.recBtn) {
+                this.recBtn.classList.remove('recording');
+                this.recBtn.classList.remove('armed');
+            }
+        }
         document.body.classList.remove('playing'); // Disable dark mode
         // No onStop call here as it's just pause
     }
 
-    stop() {
+    async stop() {
         this.audioEngine.stop();
         this.isPlaying = false;
         if (this.playIcon) this.playIcon.classList.remove('hidden');
         if (this.pauseIcon) this.pauseIcon.classList.add('hidden');
         if (this.playPauseBtn) this.playPauseBtn.classList.remove('active');
         document.body.classList.remove('playing');
+
+        // Stop recording if active
+        if (this.audioEngine.isRecording) {
+            await this.audioEngine.stopRecording();
+            this.isRecordingArmed = false;
+            if (this.recBtn) {
+                this.recBtn.classList.remove('recording');
+                this.recBtn.classList.remove('armed');
+            }
+        }
+
         if (this.onStop) this.onStop();
     }
 
@@ -325,6 +365,20 @@ export class Controls {
             this.swingBtn.classList.add('active');
         } else {
             this.swingBtn.classList.remove('active');
+        }
+    }
+
+    toggleRecordArm() {
+        // Can't arm while playing
+        if (this.isPlaying) return;
+
+        this.isRecordingArmed = !this.isRecordingArmed;
+        if (this.recBtn) {
+            if (this.isRecordingArmed) {
+                this.recBtn.classList.add('armed');
+            } else {
+                this.recBtn.classList.remove('armed');
+            }
         }
     }
 }

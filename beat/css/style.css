@@ -690,6 +690,25 @@ body.playing .loop-handle {
     border-color: #fff;
 }
 
+/* Recording button states */
+#rec-btn.armed {
+    color: #fff;
+    background: #c00;
+    border-color: #c00;
+}
+
+#rec-btn.recording {
+    color: #fff;
+    background: #c00;
+    border-color: #c00;
+    animation: recordingPulse 1s ease-in-out infinite;
+}
+
+@keyframes recordingPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
 #bpm-ctrl {
     display: flex;
     flex-direction: column;
