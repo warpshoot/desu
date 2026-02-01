@@ -109,7 +109,20 @@ class Sequencer {
             this.onStep(step, time);
         });
 
-        this.audioEngine.setStopCallback(() => {
+        this.audioEngine.setStopCallback(async () => {
+            // Stop recording if active
+            if (this.audioEngine.isRecording) {
+                await this.audioEngine.stopRecording();
+                // Update recording UI state
+                if (this.controls) {
+                    this.controls.isRecordingArmed = false;
+                    if (this.controls.recBtn) {
+                        this.controls.recBtn.classList.remove('recording');
+                        this.controls.recBtn.classList.remove('armed');
+                    }
+                }
+            }
+
             if (this.controls) {
                 this.controls.resetUI();
             }

@@ -384,15 +384,26 @@ export class AudioEngine {
         this.isRecording = false;
         const recording = await this.recorder.stop();
 
+        // Detect actual file format from MIME type
+        const mimeType = recording.type;
+        let extension = 'webm'; // default
+        if (mimeType.includes('mp4')) {
+            extension = 'mp4';
+        } else if (mimeType.includes('webm')) {
+            extension = 'webm';
+        } else if (mimeType.includes('ogg')) {
+            extension = 'ogg';
+        }
+
         // Download the recording
         const url = URL.createObjectURL(recording);
         const anchor = document.createElement('a');
-        anchor.download = `beat-${Date.now()}.webm`;
+        anchor.download = `beat-${Date.now()}.${extension}`;
         anchor.href = url;
         anchor.click();
 
         // Clean up
         URL.revokeObjectURL(url);
-        console.log('Recording stopped and downloaded');
+        console.log(`Recording stopped and downloaded as ${extension}`);
     }
 }
