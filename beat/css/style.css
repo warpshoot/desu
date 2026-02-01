@@ -646,6 +646,17 @@ body.playing .loop-handle {
     /* Not clickable yet */
     position: relative;
     overflow: hidden;
+    background-image: url('../assets/danceA.png');
+    background-size: 384px 48px; /* 8 frames × 48px */
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    width: 48px;
+    height: 48px;
+}
+
+#visualizer-display.playing {
+    /* Animation active state - controlled by JS */
 }
 
 .control-btn:hover {
