@@ -705,10 +705,8 @@ class Sequencer {
             }
         }
 
-        // Update dance animation every 4 steps (quarter note / 1 beat)
-        if (step % 4 === 0) {
-            this.updateDanceFrame();
-        }
+        // Update dance animation every step (16th note - fastest)
+        this.updateDanceFrame();
     }
 
     setupTrackControls() {
