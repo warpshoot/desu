@@ -47,10 +47,8 @@ export class AudioEngine {
         // Create master limiter
         this.limiter = new Tone.Limiter(-3).toDestination();
 
-        // Create recorder (WAV format for DAW compatibility)
-        this.recorder = new Tone.Recorder({
-            mimeType: 'audio/wav'
-        });
+        // Create recorder (default format - browser dependent)
+        this.recorder = new Tone.Recorder();
         this.limiter.connect(this.recorder);
 
         // Create instruments and signal chain for each track
@@ -389,12 +387,12 @@ export class AudioEngine {
         // Download the recording
         const url = URL.createObjectURL(recording);
         const anchor = document.createElement('a');
-        anchor.download = `beat-${Date.now()}.wav`;
+        anchor.download = `beat-${Date.now()}.webm`;
         anchor.href = url;
         anchor.click();
 
         // Clean up
         URL.revokeObjectURL(url);
-        console.log('Recording stopped and downloaded as WAV');
+        console.log('Recording stopped and downloaded');
     }
 }
