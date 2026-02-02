@@ -93,6 +93,12 @@ export function applyTransform() {
 
     // Event canvas follows transform for coordinate mapping
     eventCanvas.style.transform = transform;
+
+    // Apply to flash overlay if it exists
+    const flashOverlay = document.getElementById('flash-overlay');
+    if (flashOverlay) {
+        flashOverlay.style.transform = transform;
+    }
     // Note: lassoCanvas uses screen coordinates, no transform
 
     const resetBtn = document.getElementById('resetZoomBtn');

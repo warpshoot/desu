@@ -60,32 +60,53 @@ export async function saveInitialState() {
 }
 
 /**
+ * Helper: Create a snapshot of current layers
+ */
+async function createSnapshot() {
+    const snapshot = new Map();
+    for (const layer of layers) {
+        const bitmap = await createImageBitmap(layer.canvas);
+        snapshot.set(layer.id, bitmap);
+    }
+    return snapshot;
+}
+
+/**
  * Undo last action
  */
-export function undo() {
+export async function undo() {
     console.log('[DEBUG] undo() called, undoStack.length:', state.undoStack.length);
-    if (state.undoStack.length <= 1) {
-        console.log('[DEBUG] undo() aborted, undoStack.length <= 1');
-        return; // Keep at least initial state
+    if (state.undoStack.length === 0) {
+        console.log('[DEBUG] undo() aborted, undoStack.length is 0');
+        return;
     }
 
-    const current = state.undoStack.pop();
-    state.redoStack.push(current);
+    // 1. Snapshot current state and push to redo stack
+    const currentFn = await createSnapshot();
+    state.redoStack.push(currentFn);
 
-    // console.log('[DEBUG] Restoring current snapshot, undoStack.length after pop:', state.undoStack.length);
-    restoreSnapshot(current);
+    // 2. Pop previous state
+    const prev = state.undoStack.pop();
+
+    // 3. Restore
+    restoreSnapshot(prev);
     saveLocalState();
 }
 
 /**
  * Redo last undone action
  */
-export function redo() {
+export async function redo() {
     if (state.redoStack.length === 0) return;
 
-    const next = state.redoStack.pop();
-    state.undoStack.push(next);
+    // 1. Snapshot current state and push to undo stack
+    const currentFn = await createSnapshot();
+    state.undoStack.push(currentFn);
 
+    // 2. Pop next state
+    const next = state.redoStack.pop();
+
+    // 3. Restore
     restoreSnapshot(next);
     saveLocalState();
 }

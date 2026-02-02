@@ -903,16 +903,65 @@ function flashLayer(layerId) {
     const layer = getLayer(layerId);
     if (!layer) return;
 
-    const canvas = layer.canvas;
+    // Create or get flash overlay
+    let flashCanvas = document.getElementById('flash-overlay');
+    if (!flashCanvas) {
+        flashCanvas = document.createElement('canvas');
+        flashCanvas.id = 'flash-overlay';
+        flashCanvas.style.position = 'absolute';
+        flashCanvas.style.top = '0';
+        flashCanvas.style.left = '0';
+        flashCanvas.style.pointerEvents = 'none';
+        flashCanvas.style.zIndex = '50'; // Above layers
+        flashCanvas.style.transition = 'opacity 0.2s';
 
-    // Blue flash effect using CSS filter
-    canvas.style.transition = 'filter 0.1s';
-    canvas.style.filter = 'drop-shadow(0 0 6px #00aaff) brightness(1.2)';
+        // Append to layer container to ensure correct stacking context if needed,
+        // or just to body/layer-container. MUST be sibling to layers to share transform context?
+        // No, layers are children of body (via initCanvas appending them? No, state.js says...)
+        // Let's check state.js for where layers are attached.
+        const layerContainer = document.getElementById('layer-container');
+        if (layerContainer) {
+            layerContainer.appendChild(flashCanvas);
+        } else {
+            document.body.appendChild(flashCanvas);
+        }
+    }
 
+    // Match transform immediately (though applied via class usually or style)
+    // We need to ensure it has the current transform state.
+    // Since we appended it to layer-container, and layer-container... wait.
+    // layers are appended to layerContainer?
+    // checking UI.js initLayer... actually 'createLayer' in state.js handles appending.
+
+    // In canvas.js we saw:
+    // for (const layer of layers) { layer.canvas.style.transform = transform; }
+    // So layers are transformed INDIVIDUALLY.
+    // So flashCanvas MUST be transformed individually too.
+
+    flashCanvas.style.transform = layer.canvas.style.transform;
+    flashCanvas.width = layer.canvas.width;
+    flashCanvas.height = layer.canvas.height;
+
+    const ctx = flashCanvas.getContext('2d');
+    ctx.clearRect(0, 0, flashCanvas.width, flashCanvas.height);
+
+    // Draw layer content at 100% opacity
+    ctx.globalAlpha = 1.0;
+    ctx.drawImage(layer.canvas, 0, 0);
+
+    // Apply Flash Style
+    // We want the FLASH to be visible.
+    // If we just show the content, it looks like the layer turned opaque.
+    // We want to apply the glow.
+    flashCanvas.style.filter = 'drop-shadow(0 0 6px #00aaff) brightness(1.2)';
+    flashCanvas.style.opacity = '1';
+
+    // Remove after delay
     setTimeout(() => {
-        canvas.style.filter = 'none';
+        flashCanvas.style.opacity = '0';
         setTimeout(() => {
-            canvas.style.transition = '';
+            // Optional: clear canvas to save memory/rendering?
+            ctx.clearRect(0, 0, flashCanvas.width, flashCanvas.height);
         }, 200);
     }, 200);
 }
@@ -1232,11 +1281,11 @@ async function handlePointerUp(e) {
             if (state.maxFingers === 2) {
                 console.log('[DEBUG] Calling undo()');
                 undoCallCount++;
-                undo();
+                await undo();
                 updateAllThumbnails();
                 undoCalled = true;
             } else if (state.maxFingers === 3) {
-                redo();
+                await redo();
                 updateAllThumbnails();
             }
         }
@@ -1875,7 +1924,7 @@ function setupOrientationHandler() {
 // ============================================
 
 function setupKeyboardShortcuts() {
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener('keydown', async (e) => {
         // Modifier key tracking
         if (e.code === 'Space') {
             e.preventDefault();
@@ -1885,17 +1934,24 @@ function setupKeyboardShortcuts() {
         if (e.ctrlKey || e.metaKey) state.isCtrlPressed = true;
         if (e.altKey) state.isAltPressed = true;
 
+
+
+        // Redo: Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y
         // Undo: Ctrl/Cmd + Z
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
             e.preventDefault();
-            undo();
+            undoCallCount++;
+            await undo();
             updateAllThumbnails();
         }
 
         // Redo: Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y
-        if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z') || (e.shiftKey && e.key === 'Z'))) {
+        if ((e.ctrlKey || e.metaKey) && (
+            (e.shiftKey && (e.key === 'z' || e.key === 'Z')) ||
+            (e.key === 'y' || e.key === 'Y')
+        )) {
             e.preventDefault();
-            redo();
+            await redo();
             updateAllThumbnails();
         }
 
