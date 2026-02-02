@@ -730,6 +730,7 @@ function renderCategoryTabs() {
     // Other Tabs from Data
     if (window.emojiData) {
         Object.keys(window.emojiData).forEach(category => {
+            if (category === 'component') return; // Hide skin tone modifiers
             const btn = document.createElement('button');
             btn.className = 'category-tab';
             btn.dataset.category = category;
