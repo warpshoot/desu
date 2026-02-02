@@ -1262,11 +1262,13 @@ function setupEventListeners() {
     };
 
     const handleCanvasEnd = (e) => {
-        // Windowからリスナー削除
-        window.removeEventListener('mousemove', handleCanvasMove);
-        window.removeEventListener('mouseup', handleCanvasEnd);
-        window.removeEventListener('touchmove', handleCanvasMove);
-        window.removeEventListener('touchend', handleCanvasEnd);
+        // Windowからリスナー削除 (すべての指が離れた時のみ)
+        if (!e.touches || e.touches.length === 0) {
+            window.removeEventListener('mousemove', handleCanvasMove);
+            window.removeEventListener('mouseup', handleCanvasEnd);
+            window.removeEventListener('touchmove', handleCanvasMove);
+            window.removeEventListener('touchend', handleCanvasEnd);
+        }
 
         // Check for Undo/Redo Tap Gestures (on clean release)
         if (e.touches && e.touches.length === 0) {
