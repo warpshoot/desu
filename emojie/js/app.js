@@ -1179,6 +1179,10 @@ function setupEventListeners() {
         const canvasX = (clientX - rect.left) * (canvas.width / rect.width);
         const canvasY = (clientY - rect.top) * (canvas.height / rect.height);
 
+        // Always track start position for tap vs drag detection
+        dragStartX = clientX;
+        dragStartY = clientY;
+
         // 描画モード: ドラッグなし、タップ判定のみ後で行う
         // 選択モード: ドラッグ判定を行う
         if (state.toolMode === 'select') {
@@ -1196,8 +1200,6 @@ function setupEventListeners() {
                     saveToHistory();
                     isDragging = true;
                     draggedEmoji = emojiObj;
-                    dragStartX = clientX;
-                    dragStartY = clientY;
                     emojiStartX = emojiObj.x;
                     emojiStartY = emojiObj.y;
                     state.didInteract = true;
@@ -1244,7 +1246,7 @@ function setupEventListeners() {
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
         const delta = Math.hypot(clientX - dragStartX, clientY - dragStartY);
-        if (delta > 5) state.didInteract = true;
+        if (delta > 10) state.didInteract = true;
 
         const rect = canvas.getBoundingClientRect();
         const deltaX = (clientX - dragStartX) * (canvas.width / rect.width);
