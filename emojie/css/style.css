@@ -261,28 +261,48 @@ body {
 }
 
 /* カテゴリタブ */
+/* カテゴリタブ */
 #emoji-categories {
     display: flex;
     background: #000;
     padding: 4px;
     gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    /* Hide scrollbar */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#emoji-categories::-webkit-scrollbar {
+    display: none;
 }
 
 .category-tab {
-    flex: 1;
-    padding: 8px;
+    flex: 0 0 auto;
+    /* Don't shrink, allow natural width */
+    padding: 8px 16px;
     border: none;
     background: transparent;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 20px;
+    /* Increase icon size slightly */
     transition: all 0.2s;
     color: #666;
     filter: grayscale(100%);
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .category-tab.active {
     color: #000;
     background: #fff;
+    border-radius: 4px;
+    /* border: 1px solid #000; Removed border for cleaner scroll look? Or keep it? keeping it match style */
     border: 1px solid #000;
 }
 
