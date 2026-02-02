@@ -1151,8 +1151,9 @@ function setupEventListeners() {
         // Update Gesture Global State
         const touches = e.touches ? e.touches.length : 1;
 
-        if (touches === 1 && state.maxFingers === 0) {
-            // First finger down, reset session
+        // If touches is 1, it implies a new session starting from 0 (since touchstart only fires on new contact).
+        // Therefore we should unconditionally reset the session state to prevent getting stuck.
+        if (touches === 1) {
             state.maxFingers = 1;
             state.isGestureActive = false;
             state.touchStartTime = Date.now();
@@ -1163,8 +1164,6 @@ function setupEventListeners() {
 
         if (state.maxFingers >= 2) {
             state.isGestureActive = true;
-            // If we were dragging an emoji, cancel it?
-            // For now, let's just mark gesture active so we don't 'place' on end
         }
 
         // Standard Logic
@@ -1212,6 +1211,7 @@ function setupEventListeners() {
         window.addEventListener('mouseup', handleCanvasEnd);
         window.addEventListener('touchmove', handleCanvasMove, { passive: false });
         window.addEventListener('touchend', handleCanvasEnd);
+        window.addEventListener('touchcancel', handleCanvasEnd);
     };
 
     const handleCanvasMove = (e) => {
