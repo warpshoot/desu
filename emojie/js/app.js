@@ -140,7 +140,9 @@ let state = {
     saveScale: 1,
     selectionMode: false,
     selectionRect: null,
-    toolMode: 'draw' // 'draw' or 'select'
+    toolMode: 'draw', // 'draw' or 'select'
+    historyStack: [],
+    redoStack: []
 };
 
 // DOM要素
@@ -156,8 +158,9 @@ const sizeSlider = document.getElementById('size-slider');
 const sizeValue = document.getElementById('size-value');
 const rotationSlider = document.getElementById('rotation-slider');
 const rotationValue = document.getElementById('rotation-value');
-const placeEmojiBtn = document.getElementById('place-emoji');
+// const placeEmojiBtn = document.getElementById('place-emoji'); // Deleted
 const deleteEmojiBtn = document.getElementById('delete-emoji');
+const flipHBtn = document.getElementById('flip-h');
 const layerControls = document.getElementById('layer-controls');
 const bringFrontBtn = document.getElementById('bring-front');
 const bringForwardBtn = document.getElementById('bring-forward');
@@ -172,13 +175,79 @@ const saveOverlay = document.getElementById('save-overlay');
 const saveUI = document.getElementById('save-ui');
 const saveAllBtn = document.getElementById('saveAllBtn');
 const confirmSelectionBtn = document.getElementById('confirmSelectionBtn');
+const copyClipboardBtn = document.getElementById('copyClipboardBtn');
 const redoSelectionBtn = document.getElementById('redoSelectionBtn');
 const cancelSaveBtn = document.getElementById('cancelSaveBtn');
 const transparentBgCheckbox = document.getElementById('transparentBg');
 const selectionCanvas = document.getElementById('selection-canvas');
 const selectionCtx = selectionCanvas.getContext('2d');
-const recentEmojisSection = document.getElementById('recent-emojis-section');
-const recentEmojisContainer = document.getElementById('recent-emojis');
+const selectionSize = document.getElementById('selection-size');
+const recentEmojisContainer = null; // Removed persistent section
+const undoBtn = document.getElementById('undo-btn');
+const redoBtn = document.getElementById('redo-btn');
+
+// History Management
+function saveToHistory() {
+    const currentState = JSON.stringify(state.canvasEmojis);
+
+    // 直前の状態と同じなら保存しない (重複回避)
+    if (state.historyStack.length > 0) {
+        const lastState = state.historyStack[state.historyStack.length - 1];
+        if (lastState === currentState) return;
+    }
+
+    state.historyStack.push(currentState);
+    state.redoStack = []; // Clear redo stack on new action
+    updateHistoryUI();
+}
+
+function undo() {
+    if (state.historyStack.length === 0) return;
+
+    // Save current state to redo stack
+    state.redoStack.push(JSON.stringify(state.canvasEmojis));
+
+    // Restore from history
+    const prevState = state.historyStack.pop();
+    state.canvasEmojis = JSON.parse(prevState);
+
+    // 選択状態の復元は難しいので解除推奨だが、IDが変わらなければ維持できるかも
+    // いったん解除する
+    state.selectedEmoji = null;
+    hideEditPanel(); // これがredrawも呼ぶ
+
+    updateHistoryUI();
+}
+
+function redo() {
+    if (state.redoStack.length === 0) return;
+
+    // Save current state to history
+    state.historyStack.push(JSON.stringify(state.canvasEmojis));
+
+    // Restore from redo
+    const nextState = state.redoStack.pop();
+    state.canvasEmojis = JSON.parse(nextState);
+
+    state.selectedEmoji = null;
+    hideEditPanel();
+
+    updateHistoryUI();
+}
+
+function updateHistoryUI() {
+    if (state.historyStack.length > 0) {
+        undoBtn.classList.remove('disabled');
+    } else {
+        undoBtn.classList.add('disabled');
+    }
+
+    if (state.redoStack.length > 0) {
+        redoBtn.classList.remove('disabled');
+    } else {
+        redoBtn.classList.add('disabled');
+    }
+}
 
 // 初期化
 function init() {
@@ -193,8 +262,8 @@ function init() {
     // 最近使った絵文字をロード
     loadRecentEmojis();
 
-    // 初期絵文字リストを表示
-    displayEmojis(emojiData.smileys);
+    // 初期絵文字リストを表示 (デフォルトを最近使ったものに)
+    displayEmojis('recent');
 
     // イベントリスナーを設定
     setupEventListeners();
@@ -213,9 +282,23 @@ function init() {
 }
 
 // 絵文字リストを表示
-function displayEmojis(emojis) {
+function displayEmojis(filter) {
     emojiList.innerHTML = '';
-    emojis.forEach(emoji => {
+
+    let emojisToShow = [];
+    if (filter === 'recent') {
+        emojisToShow = state.recentEmojis;
+        if (emojisToShow.length === 0) {
+            emojiList.innerHTML = '<div class="no-recent">🕒 まだ使った絵文字がありません</div>';
+            return;
+        }
+    } else if (Array.isArray(filter)) {
+        emojisToShow = filter;
+    } else if (emojiData[filter]) {
+        emojisToShow = emojiData[filter];
+    }
+
+    emojisToShow.forEach(emoji => {
         const item = document.createElement('div');
         item.className = 'emoji-item';
         item.textContent = emoji;
@@ -244,7 +327,7 @@ function selectEmojiForPlacement(emoji) {
 function showEditPanel() {
     // パネル自体の表示・非表示は制御しない（常時表示のため）
     // placeEmojiBtn.textContent = '完了'; // 完了ボタンは削除（または非表示）
-    placeEmojiBtn.style.display = 'none'; // 完了ボタン自体を隠す方針に変更
+    // placeEmojiBtn.style.display = 'none'; // 完了ボタン自体を隠す方針に変更
 
     // 削除ボタンとレイヤー操作は常に表示するが、編集モード以外は無効化（グレーアウト）
     // これによりUIの高さを固定し、ガタつきを防ぐ
@@ -299,8 +382,15 @@ function updateEditPanel() {
     rotationValue.textContent = Math.round(rotationSlider.value) + '°';
 
     // プレビューのスタイルを更新
+    let flipScale = 1;
+    if (state.editMode === 'new') {
+        flipScale = state.currentFlipX ? -1 : 1;
+    } else if (state.editMode === 'edit' && state.selectedEmoji) {
+        flipScale = state.selectedEmoji.flipX ? -1 : 1;
+    }
+
     emojiPreview.style.fontSize = sizeSlider.value + 'px';
-    emojiPreview.style.transform = `rotate(${rotationSlider.value}deg)`;
+    emojiPreview.style.transform = `rotate(${rotationSlider.value}deg) scaleX(${flipScale})`;
 }
 
 function updateToolModeUI() {
@@ -317,6 +407,7 @@ function updateToolModeUI() {
 function placeEmoji(x, y) {
     if (state.editMode === 'new' && x !== undefined && y !== undefined) {
         // 新規配置（座標指定あり）
+        saveToHistory(); // Save before adding
         const newEmoji = {
             id: state.nextId++,
             emoji: state.currentEmoji,
@@ -324,6 +415,7 @@ function placeEmoji(x, y) {
             y: y,
             size: state.currentSize,
             rotation: state.currentRotation,
+            flipX: state.currentFlipX,
             zIndex: state.canvasEmojis.length
         };
         state.canvasEmojis.push(newEmoji);
@@ -375,14 +467,16 @@ function redrawCanvas() {
 
         // 選択中の絵文字をハイライト
         if (state.selectedEmoji && state.selectedEmoji.id === emojiObj.id) {
-            ctx.strokeStyle = '#2196F3';
-            ctx.lineWidth = 3;
-            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
             const metrics = ctx.measureText(emojiObj.emoji);
             const textWidth = metrics.width;
             const textHeight = emojiObj.size;
             ctx.strokeRect(-textWidth / 2 - 5, -textHeight / 2 - 5, textWidth + 10, textHeight + 10);
-            ctx.setLineDash([]);
+        }
+
+        if (emojiObj.flipX) {
+            ctx.scale(-1, 1);
         }
 
         ctx.fillText(emojiObj.emoji, 0, 0);
@@ -424,6 +518,7 @@ function selectEmojiOnCanvas(x, y) {
 // 絵文字を削除
 function deleteEmoji() {
     if (state.selectedEmoji) {
+        saveToHistory(); // Save before delete
         state.canvasEmojis = state.canvasEmojis.filter(e => e.id !== state.selectedEmoji.id);
         hideEditPanel();
         redrawCanvas();
@@ -433,6 +528,7 @@ function deleteEmoji() {
 // レイヤー順序を変更
 function bringToFront() {
     if (state.selectedEmoji) {
+        saveToHistory();
         const maxZ = Math.max(...state.canvasEmojis.map(e => e.zIndex));
         state.selectedEmoji.zIndex = maxZ + 1;
         redrawCanvas();
@@ -441,6 +537,7 @@ function bringToFront() {
 
 function bringForward() {
     if (state.selectedEmoji) {
+        saveToHistory();
         const currentZ = state.selectedEmoji.zIndex;
         const nextEmoji = state.canvasEmojis.find(e => e.zIndex === currentZ + 1);
         if (nextEmoji) {
@@ -453,6 +550,7 @@ function bringForward() {
 
 function sendBackward() {
     if (state.selectedEmoji) {
+        saveToHistory();
         const currentZ = state.selectedEmoji.zIndex;
         const prevEmoji = state.canvasEmojis.find(e => e.zIndex === currentZ - 1);
         if (prevEmoji) {
@@ -465,6 +563,7 @@ function sendBackward() {
 
 function sendToBack() {
     if (state.selectedEmoji) {
+        saveToHistory();
         const minZ = Math.min(...state.canvasEmojis.map(e => e.zIndex));
         state.selectedEmoji.zIndex = minZ - 1;
         redrawCanvas();
@@ -502,21 +601,27 @@ function addToRecentEmojis(emoji) {
     displayRecentEmojis();
 }
 
-function displayRecentEmojis() {
-    if (state.recentEmojis.length === 0) {
-        recentEmojisSection.classList.remove('visible');
-        return;
+function flipEmoji() {
+    if (state.editMode === 'edit' && state.selectedEmoji) {
+        saveToHistory();
+        state.selectedEmoji.flipX = !state.selectedEmoji.flipX;
+        // 編集中はcurrentFlipXも同期（次回の新規作成のため）
+        state.currentFlipX = state.selectedEmoji.flipX;
+        updateEditPanel();
+        redrawCanvas();
+    } else {
+        // 新規配置モード
+        state.currentFlipX = !state.currentFlipX;
+        updateEditPanel();
     }
+}
 
-    recentEmojisSection.classList.add('visible');
-    recentEmojisContainer.innerHTML = '';
-    state.recentEmojis.forEach(emoji => {
-        const item = document.createElement('div');
-        item.className = 'emoji-item';
-        item.textContent = emoji;
-        item.addEventListener('click', () => selectEmojiForPlacement(emoji));
-        recentEmojisContainer.appendChild(item);
-    });
+function displayRecentEmojis() {
+    // カテゴリタブが 'recent' の場合のみ表示を更新
+    const activeTab = document.querySelector('.category-tab.active');
+    if (activeTab && activeTab.dataset.category === 'recent') {
+        displayEmojis('recent');
+    }
 }
 
 function saveRecentEmojis() {
@@ -544,6 +649,7 @@ function clearCanvas() {
     if (state.canvasEmojis.length === 0) return;
 
     if (confirm('すべての絵文字を削除しますか?')) {
+        saveToHistory();
         state.canvasEmojis = [];
         state.selectedEmoji = null;
         hideEditPanel();
@@ -616,6 +722,111 @@ function downloadCanvas(canvas, filename) {
     });
 }
 
+async function copyToClipboard(canvas) {
+    try {
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+        ]);
+
+        const originalText = copyClipboardBtn.textContent;
+        copyClipboardBtn.textContent = 'コピーしました！';
+        setTimeout(() => {
+            copyClipboardBtn.textContent = originalText;
+        }, 1500);
+    } catch (err) {
+        console.error('Failed to copy image:', err);
+        alert('クリップボードへのコピーに失敗しました');
+    }
+}
+
+function createRegionCanvas(rect) {
+    const canvasRect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / canvasRect.width;
+    const scaleY = canvas.height / canvasRect.height;
+
+    // キャンバス座標に変換
+    let x = (rect.x - canvasRect.left) * scaleX;
+    let y = (rect.y - canvasRect.top) * scaleY;
+    let w = rect.width * scaleX;
+    let h = rect.height * scaleY;
+
+    if (x + w < 0 || x > canvas.width || y + h < 0 || y > canvas.height) {
+        alert('選択範囲がキャンバス外です');
+        return null;
+    }
+    if (w < 1 || h < 1) {
+        alert('選択範囲が小さすぎます');
+        return null;
+    }
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = w * state.saveScale;
+    tempCanvas.height = h * state.saveScale;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.scale(state.saveScale, state.saveScale);
+
+    if (!transparentBgCheckbox.checked) {
+        tempCtx.fillStyle = '#ffffff';
+        tempCtx.fillRect(0, 0, w, h);
+    }
+
+    const sortedEmojis = [...state.canvasEmojis].sort((a, b) => a.zIndex - b.zIndex);
+    sortedEmojis.forEach(emojiObj => {
+        const halfSize = emojiObj.size / 2;
+        if (
+            emojiObj.x + halfSize >= x &&
+            emojiObj.x - halfSize <= x + w &&
+            emojiObj.y + halfSize >= y &&
+            emojiObj.y - halfSize <= y + h
+        ) {
+            tempCtx.save();
+            tempCtx.translate(emojiObj.x - x, emojiObj.y - y);
+            tempCtx.rotate((emojiObj.rotation * Math.PI) / 180);
+            tempCtx.font = `${emojiObj.size}px Arial`;
+            tempCtx.textAlign = 'center';
+            tempCtx.textBaseline = 'middle';
+
+            // Flip handling
+            if (emojiObj.flipX) {
+                tempCtx.scale(-1, 1);
+            }
+
+            tempCtx.fillText(emojiObj.emoji, 0, 0);
+            tempCtx.restore();
+        }
+    });
+    return tempCanvas;
+}
+
+function updateSelectionSizeDisplay(startX, startY, currentX, currentY) {
+    if (!selectionSize) return;
+
+    let w = 0, h = 0;
+    const canvasRect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / canvasRect.width;
+    const scaleY = canvas.height / canvasRect.height;
+
+    if (startX !== undefined && currentX !== undefined) {
+        // ドラッグ中の表示 (ウィンドウ座標 -> キャンバス座標相当に変換)
+        w = Math.abs(currentX - startX) * scaleX;
+        h = Math.abs(currentY - startY) * scaleY;
+    } else if (state.selectionRect) {
+        // 確定済みの表示
+        w = state.selectionRect.width * scaleX;
+        h = state.selectionRect.height * scaleY;
+    }
+
+    if (w > 0 && h > 0) {
+        const finalW = Math.round(w * state.saveScale);
+        const finalH = Math.round(h * state.saveScale);
+        selectionSize.textContent = `${finalW} x ${finalH} px`;
+        selectionSize.style.display = 'block';
+    } else {
+        selectionSize.style.display = 'none';
+    }
+}
+
 // 範囲選択保存（簡易版）
 function startSelection() {
     state.selectionMode = true;
@@ -631,6 +842,7 @@ function startSelection() {
     redoSelectionBtn.style.display = 'none';
 
     saveUI.querySelector('h3').textContent = 'キャンバス全体を保存するか、範囲を選択してください';
+    if (selectionSize) selectionSize.style.display = 'none';
 
     let startX, startY;
     let isDrawing = false;
@@ -656,10 +868,11 @@ function startSelection() {
         const currentY = e.touches ? e.touches[0].clientY : e.clientY;
 
         selectionCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
-        selectionCtx.strokeStyle = '#2196F3';
-        selectionCtx.lineWidth = 2;
-        selectionCtx.setLineDash([5, 5]);
+        selectionCtx.strokeStyle = '#000';
+        selectionCtx.lineWidth = 1;
         selectionCtx.strokeRect(startX, startY, currentX - startX, currentY - startY);
+
+        updateSelectionSizeDisplay(startX, startY, currentX, currentY);
     };
 
     const handleEnd = (e) => {
@@ -679,7 +892,10 @@ function startSelection() {
         };
 
         confirmSelectionBtn.style.display = 'inline-block';
+        copyClipboardBtn.style.display = 'inline-block';
         redoSelectionBtn.style.display = 'inline-block';
+
+        updateSelectionSizeDisplay(); // 確定済みの表示に更新
 
         selectionCanvas.removeEventListener('mousedown', handleStart);
         selectionCanvas.removeEventListener('mousemove', handleMove);
@@ -706,11 +922,7 @@ function setupEventListeners() {
             tab.classList.add('active');
 
             const category = tab.dataset.category;
-            if (category === 'all') {
-                displayEmojis(allEmojis);
-            } else {
-                displayEmojis(emojiData[category]);
-            }
+            displayEmojis(category);
         });
     });
 
@@ -758,17 +970,35 @@ function setupEventListeners() {
         }
     });
 
-    // 配置ボタン
-    placeEmojiBtn.addEventListener('click', placeEmoji);
+    // スライダー操作開始時に履歴保存
+    const handleSliderStart = () => {
+        if (state.editMode === 'edit' && state.selectedEmoji) {
+            saveToHistory();
+        }
+    };
+    sizeSlider.addEventListener('mousedown', handleSliderStart);
+    sizeSlider.addEventListener('touchstart', handleSliderStart);
+    rotationSlider.addEventListener('mousedown', handleSliderStart);
+    rotationSlider.addEventListener('touchstart', handleSliderStart);
+
+    // 配置ボタン (Deleted)
+    // placeEmojiBtn.addEventListener('click', placeEmoji);
 
     // 削除ボタン
     deleteEmojiBtn.addEventListener('click', deleteEmoji);
+
+    // 反転ボタン
+    flipHBtn.addEventListener('click', flipEmoji);
 
     // レイヤー順序ボタン
     bringFrontBtn.addEventListener('click', bringToFront);
     bringForwardBtn.addEventListener('click', bringForward);
     sendBackwardBtn.addEventListener('click', sendBackward);
     sendBackBtn.addEventListener('click', sendToBack);
+
+    // Undo/Redo
+    undoBtn.addEventListener('click', undo);
+    redoBtn.addEventListener('click', redo);
 
     // ツール切り替えボタン
     document.querySelectorAll('.segment-btn[data-mode]').forEach(btn => {
@@ -790,6 +1020,13 @@ function setupEventListeners() {
     let dragStartY = 0;
     let emojiStartX = 0;
     let emojiStartY = 0;
+
+    // Multi-touch state
+    let initialPinchDist = 0;
+    let initialPinchAngle = 0;
+    let initialScale = 1;
+    let initialRotation = 0;
+    let isGesturing = false;
 
     const handleCanvasStart = (e) => {
         // e.preventDefault(); // スクロール防止はCanvas内のみ有効にしたいが、タッチ開始時は防ぐ
@@ -816,6 +1053,7 @@ function setupEventListeners() {
                     canvasY >= emojiObj.y - halfSize &&
                     canvasY <= emojiObj.y + halfSize
                 ) {
+                    saveToHistory();
                     isDragging = true;
                     draggedEmoji = emojiObj;
                     dragStartX = clientX;
@@ -835,7 +1073,45 @@ function setupEventListeners() {
     };
 
     const handleCanvasMove = (e) => {
-        if (!isDragging || !draggedEmoji) return;
+        // Multi-touch gesture
+        if (e.touches && e.touches.length === 2 && draggedEmoji) {
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+
+            const dist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+            const angle = Math.atan2(touch2.clientY - touch1.clientY, touch2.clientX - touch1.clientX) * 180 / Math.PI;
+
+            if (!isGesturing) {
+                isGesturing = true;
+                initialPinchDist = dist;
+                initialPinchAngle = angle;
+                initialScale = draggedEmoji.size;
+                initialRotation = draggedEmoji.rotation;
+                saveToHistory(); // Save before gesture check
+                return;
+            }
+
+            // Scale
+            const scale = dist / initialPinchDist;
+            draggedEmoji.size = Math.max(20, Math.min(800, initialScale * scale));
+
+            // Rotate
+            const rotationDelta = angle - initialPinchAngle;
+            draggedEmoji.rotation = (initialRotation + rotationDelta) % 360;
+
+            updateEditPanel();
+            redrawCanvas();
+
+            if (e.cancelable) e.preventDefault();
+            return;
+        }
+
+        // Reset gesture if fingers lifted
+        if (isGesturing && (!e.touches || e.touches.length < 2)) {
+            isGesturing = false;
+        }
+
+        if (!isDragging || !draggedEmoji || isGesturing) return;
 
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -932,6 +1208,17 @@ function setupEventListeners() {
         creditModal.classList.remove('visible');
     });
 
+    // クリップボードにコピー
+    if (copyClipboardBtn) {
+        copyClipboardBtn.addEventListener('click', async () => {
+            if (!state.selectionRect) return;
+            const tempCanvas = createRegionCanvas(state.selectionRect);
+            if (tempCanvas) {
+                await copyToClipboard(tempCanvas);
+            }
+        });
+    }
+
     // 選択範囲やり直し
     if (redoSelectionBtn) {
         redoSelectionBtn.addEventListener('click', startSelection);
@@ -943,100 +1230,22 @@ function setupEventListeners() {
             document.querySelectorAll('.option-btn[data-scale]').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             state.saveScale = parseInt(btn.dataset.scale);
+            updateSelectionSizeDisplay(); // サイズ表示を更新
         });
     });
 
     // 範囲選択ボタン
     if (confirmSelectionBtn) {
         confirmSelectionBtn.addEventListener('click', () => {
-            // 範囲選択の確定処理
             if (!state.selectionRect) return;
-
-            const canvasRect = canvas.getBoundingClientRect();
-            const rect = state.selectionRect;
-
-            // キャンバス座標に変換
-            // x, y はキャンバス内の描画座標 (0 ~ 600)
-            const scaleX = canvas.width / canvasRect.width;
-            const scaleY = canvas.height / canvasRect.height;
-
-            // 選択範囲の左上 (ウィンドウ座標 -> キャンバスローカル座標)
-            let x = (rect.x - canvasRect.left) * scaleX;
-            let y = (rect.y - canvasRect.top) * scaleY;
-            let w = rect.width * scaleX;
-            let h = rect.height * scaleY;
-
-            // キャンバスからはみ出している部分をカットするか、単純にそのまま使うか。
-            // ユーザーは「見たまま」を期待するはず。キャンバス外は白(または透明)になるべき。
-            // しかし描画ループなどではキャンバス外除外が必要。
-            // ここでは startX/Y が負になってもOKとして、width/heightを正しく維持する方針にする。
-            // ただし、もし選択範囲がキャンバスと全く重なっていない場合はエラーにする。
-
-            // キャンバス矩形(0,0,600,600)と選択矩形(x,y,w,h)の交差判定
-            if (x + w < 0 || x > canvas.width || y + h < 0 || y > canvas.height) {
-                alert('選択範囲がキャンバス外です');
-                return;
+            const tempCanvas = createRegionCanvas(state.selectionRect);
+            if (tempCanvas) {
+                downloadCanvas(tempCanvas, `emojie-selection-${Date.now()}.png`);
+                closeSaveUI();
             }
-
-            // w, h が極端に小さい場合は無視
-            if (w < 1 || h < 1) {
-                alert('選択範囲が小さすぎます');
-                return;
-            }
-
-            // 選択範囲を保存
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = w * state.saveScale;
-            tempCanvas.height = h * state.saveScale;
-            const tempCtx = tempCanvas.getContext('2d');
-
-            // スケーリング
-            tempCtx.scale(state.saveScale, state.saveScale);
-
-            // 背景を描画
-            if (!transparentBgCheckbox.checked) {
-                tempCtx.fillStyle = '#ffffff';
-                tempCtx.fillRect(0, 0, w, h);
-            }
-
-            // 絵文字を描画（範囲内のみ）
-            const sortedEmojis = [...state.canvasEmojis].sort((a, b) => a.zIndex - b.zIndex);
-            sortedEmojis.forEach(emojiObj => {
-                // 範囲内にあるかチェック
-                const halfSize = emojiObj.size / 2;
-                if (
-                    emojiObj.x + halfSize >= x &&
-                    emojiObj.x - halfSize <= x + w &&
-                    emojiObj.y + halfSize >= y &&
-                    emojiObj.y - halfSize <= y + h
-                ) {
-                    tempCtx.save();
-                    tempCtx.translate(emojiObj.x - x, emojiObj.y - y);
-                    tempCtx.rotate((emojiObj.rotation * Math.PI) / 180);
-                    tempCtx.font = `${emojiObj.size}px Arial`;
-                    tempCtx.textAlign = 'center';
-                    tempCtx.textBaseline = 'middle';
-                    tempCtx.fillText(emojiObj.emoji, 0, 0);
-                    tempCtx.restore();
-                }
-            });
-
-            // ダウンロード
-            downloadCanvas(tempCanvas, `emojie-selection-${Date.now()}.png`);
-            closeSaveUI();
         });
     }
-
-    if (redoSelectionBtn) {
-        redoSelectionBtn.addEventListener('click', () => {
-            // 範囲選択のやり直し
-            state.selectionRect = null;
-            selectionCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
-            confirmSelectionBtn.style.display = 'none';
-            redoSelectionBtn.style.display = 'none';
-            startSelection();
-        });
-    }
+    // 選択範囲やり直し (削除済み - setupEventListeners内で定義済み)
 
     // ピンチイン/アウトでキャンバス拡大縮小
     let currentScale = 1;

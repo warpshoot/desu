@@ -18,7 +18,7 @@ body {
     height: 100%;
     overflow: hidden;
     touch-action: none;
-    background: #f5f5f5;
+    background: #fff;
     font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, 'YuGothic', 'Yu Gothic', sans-serif;
     display: flex;
     flex-direction: column;
@@ -28,8 +28,7 @@ body {
 #canvas-area {
     flex: 1;
     position: relative;
-    background: #e5e5f5;
-    /* 少し色をつけておく */
+    background: #fff;
     overflow: hidden;
 }
 
@@ -43,8 +42,8 @@ body {
     max-width: 90%;
     max-height: 90%;
     aspect-ratio: 1 / 1;
-    background: rgba(255, 255, 255, 0.3);
-    border: 2px dashed #999;
+    background: #fff;
+    border: 1px solid #000;
     z-index: 1;
 }
 
@@ -57,14 +56,15 @@ body {
 
 /* 編集パネル (中央・ツールバー) */
 #edit-panel {
-    background: #f0f0f6;
-    border-top: 1px solid #ccc;
-    border-bottom: 1px solid #ccc;
+    background: #000;
+    border-top: 1px solid #fff;
+    border-bottom: 1px solid #fff;
     padding: 8px 12px;
     z-index: 11;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0;
+    /* Remove gap as rows have their own margins */
     flex-shrink: 0;
     /* 縮まないようにする */
 }
@@ -81,11 +81,27 @@ body {
 /* ツール切り替え */
 .segment-control {
     display: flex;
-    background: #e3e3e9;
+    flex-direction: column;
+    background: #000;
     padding: 2px;
-    border-radius: 8px;
+    border: 1px solid #fff;
     gap: 2px;
     flex-shrink: 0;
+    filter: grayscale(100%);
+}
+
+.segment-btn {
+    border: none;
+    background: transparent;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.segment-btn.active {
+    background: #fff;
+    color: #000;
 }
 
 /* ... (segment-btn styles) ... */
@@ -96,9 +112,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    background: #000;
+    border: 1px solid #fff;
     overflow: hidden;
     flex-shrink: 0;
 }
@@ -121,18 +136,28 @@ body {
 }
 
 .control-group label {
-    font-size: 10px;
-    color: #666;
-    width: auto;
-    /* 自動幅 */
-    margin-right: 2px;
+    font-size: 16px;
+    color: #fff;
+    width: 24px;
+    text-align: center;
+    margin-right: 4px;
+    filter: grayscale(100%);
 }
 
 .control-group input[type="range"] {
-    width: 80px;
-    /* 固定幅で短く */
-    height: 20px;
+    width: 100px;
+    height: 24px;
     margin: 0;
+    cursor: pointer;
+    accent-color: #fff;
+}
+
+#size-value,
+#rotation-value {
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    min-width: 45px;
 }
 
 /* アクション群（右側） */
@@ -141,6 +166,8 @@ body {
     gap: 8px;
     align-items: center;
     flex-shrink: 0;
+    margin-left: auto;
+    /* Push to right */
 }
 
 .button-group {
@@ -149,32 +176,52 @@ body {
     /* ボタン間隔狭める */
 }
 
+.button-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.button-row {
+    display: flex;
+    gap: 2px;
+}
+
 /* ボタン調整 */
 .edit-btn {
-    /* ... existing styles ... */
+    border: 1px solid #fff;
+    background: #000;
+    color: #fff;
     padding: 6px 8px;
-    /* パディング調整 */
     height: 32px;
-    /* 高さ統一 */
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.1s;
+    filter: grayscale(100%);
+    cursor: pointer;
+}
+
+#flip-h {
+    height: 64px;
+    /* Matches 2 rows of sliders roughly */
+    width: 32px;
+    padding: 0;
 }
 
 .edit-btn.delete-btn {
-    border-color: #ff3b30;
-    color: #ff3b30;
+    border-color: #999;
+    /* Neutralize red for grayscale */
+    color: #333;
     margin-left: 4px;
-    /* レイヤー操作と少し離す */
 }
 
 /* 絵文字ピッカーコンテナ (下部・固定高さ) */
 #emoji-picker-container {
-    height: 40vh;
-    /* 高さ40% */
-    min-height: 250px;
-    background: #d1d3d9;
-    /* iOS Keyboard Gray */
+    height: 25vh;
+    /* 高さ25% */
+    min-height: 180px;
+    background: #000;
     display: flex;
     flex-direction: column;
     z-index: 10;
@@ -184,21 +231,25 @@ body {
 /* 検索バー */
 #emoji-search-bar {
     padding: 8px;
-    background: #d1d3d9;
+    background: #000;
+    border-bottom: 1px solid #fff;
 }
 
 #emoji-search {
     width: 100%;
-    padding: 6px 8px;
-    border: none;
-    background: #fff;
-    font-size: 14px;
-    border-radius: 4px;
-    /* iOS textbox style */
+    padding: 8px 12px;
+    border: 1px solid #fff;
+    background: #000;
+    color: #fff;
+    font-size: 15px;
+    border-radius: 0;
     text-align: center;
+    transition: all 0.2s;
 }
 
 #emoji-search:focus {
+    background: #fff;
+    color: #000;
     text-align: left;
     outline: none;
 }
@@ -206,9 +257,9 @@ body {
 /* カテゴリタブ */
 #emoji-categories {
     display: flex;
-    background: #d1d3d9;
-    padding: 0 4px 4px;
-    gap: 1px;
+    background: #000;
+    padding: 4px;
+    gap: 4px;
 }
 
 .category-tab {
@@ -220,12 +271,13 @@ body {
     font-size: 16px;
     transition: all 0.2s;
     color: #666;
+    filter: grayscale(100%);
 }
 
 .category-tab.active {
     color: #000;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
+    background: #fff;
+    border: 1px solid #000;
 }
 
 /* 絵文字リスト */
@@ -233,13 +285,22 @@ body {
     flex: 1;
     overflow-y: auto;
     padding: 4px;
-    background: #d1d3d9;
+    background: #000;
 }
 
 .emoji-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
     gap: 4px;
+    background: #000;
+}
+
+.no-recent {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 20px;
+    color: #888;
+    font-size: 14px;
 }
 
 .emoji-item {
@@ -248,11 +309,15 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 26px;
     cursor: pointer;
-    border-radius: 4px;
     background: #fff;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+    border: 1px solid #000;
+    transition: transform 0.1s, background 0.1s;
+}
+
+.emoji-item:hover {
+    background: #f8f8fa;
 }
 
 .emoji-item:active {
@@ -273,11 +338,12 @@ body {
 
 .tool-btn {
     position: relative;
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    border: 1px solid #999;
-    background: rgba(255, 255, 255, 0.7);
+    width: 40px;
+    /* Matched to emoji-item size */
+    height: 40px;
+    border-radius: 0;
+    border: 1px solid #000;
+    background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -285,21 +351,13 @@ body {
     transition: transform 0.1s, background 0.1s;
     color: #333;
     overflow: visible;
+    filter: grayscale(100%);
 }
 
-.tool-btn svg {
-    width: 24px;
-    height: 24px;
-    stroke: currentColor;
-    fill: none;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.tool-btn svg .filled {
-    fill: currentColor;
-    stroke: none;
+.tool-btn .emoji-icon {
+    font-size: 20px;
+    /* Balanced for 40px button */
+    line-height: 1;
 }
 
 .tool-btn:active {
@@ -307,8 +365,9 @@ body {
 }
 
 .tool-btn.active {
-    border: 1px solid #000;
-    background: #fff;
+    border: 1px solid #fff;
+    background: #000;
+    color: #fff;
 }
 
 /* ツールチップ */
@@ -325,7 +384,7 @@ body {
     font-size: 13px;
     white-space: nowrap;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    border: 1px solid #ddd;
+    border: 2px solid #000;
     z-index: 400;
     pointer-events: none;
 }
@@ -384,11 +443,10 @@ body.help-mode .tool-tooltip {
     position: fixed;
     top: max(20px, env(safe-area-inset-top));
     left: 20px;
-    background: rgba(255, 255, 255, 0.92);
+    background: #fff;
     padding: 16px 24px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    z-index: 202;
+    border: 1px solid #000;
+    z-index: 401;
     /* UIを最前面に (キャンバスより上) */
     text-align: center;
     transition: opacity 0.2s;
@@ -445,9 +503,9 @@ body.help-mode .tool-tooltip {
 .save-btn {
     padding: 8px 16px;
     margin: 4px;
-    border: 1px solid #333;
+    border: 1px solid #000;
     background: #fff;
-    border-radius: 8px;
+    border-radius: 0;
     cursor: pointer;
     font-size: 12px;
     transition: all 0.2s;
@@ -487,7 +545,8 @@ body.help-mode .tool-tooltip {
     top: 0;
     left: 0;
     /* pointer-events: none; <== Removed to allow interaction */
-    z-index: 201;
+    z-index: 300;
+    /* Ensure it's above save-ui */
 }
 
 /* クレジットボタン */
@@ -602,6 +661,25 @@ body.help-mode .tool-tooltip {
     pointer-events: none;
 }
 
+/* History Controls */
+.history-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.divider {
+    width: 1px;
+    height: 32px;
+    background: #000;
+    margin: 0 8px;
+}
+
+/* Panel Row Layout */
+.panel-row.top-row {
+    justify-content: space-between;
+}
+
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
     #canvas-container {
@@ -610,7 +688,7 @@ body.help-mode .tool-tooltip {
     }
 
     #emoji-picker-container {
-        height: 40vh;
+        height: 25vh;
     }
 
     #edit-panel {
@@ -647,7 +725,7 @@ body.bg-white #canvas-container {
 }
 
 .canvas-emoji.selected {
-    outline: 2px dashed #2196F3;
+    outline: 1px solid #333;
     outline-offset: 4px;
 }
 

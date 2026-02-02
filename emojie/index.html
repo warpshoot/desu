@@ -23,25 +23,15 @@
         <!-- 右上ツールバー (キャンバスエリア内に配置) -->
         <div id="toolbar-right">
             <div class="tool-btn" id="bgToggleBtn">
-                <svg viewBox="0 0 24 24">
-                    <rect x="4" y="4" width="16" height="16" />
-                </svg>
+                <span class="emoji-icon">🖼️</span>
                 <div class="tool-tooltip tool-tooltip-bottom">背景</div>
             </div>
-
             <div class="tool-btn" id="saveBtn">
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 4 L12 16 M6 12 L12 18 L18 12" />
-                    <path d="M4 20 L20 20" />
-                </svg>
+                <span class="emoji-icon">📥</span>
                 <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-2">保存</div>
             </div>
-
             <div class="tool-btn" id="clearBtn">
-                <svg viewBox="0 0 24 24">
-                    <path
-                        d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34" />
-                </svg>
+                <span class="emoji-icon">💣</span>
                 <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-3">全消去</div>
             </div>
         </div>
@@ -49,12 +39,20 @@
 
     <!-- 編集パネル (Flex Item 2) -->
     <div id="edit-panel">
-        <div class="panel-row">
+        <div class="panel-row top-row">
             <!-- ツール切り替え -->
             <div id="tool-switch" class="segment-control">
                 <button class="segment-btn active" data-mode="draw" title="描画モード">😀</button>
                 <button class="segment-btn" data-mode="select" title="選択モード">👆</button>
             </div>
+
+            <!-- Undo/Redo (New) -->
+            <div class="history-controls">
+                <button id="undo-btn" class="edit-btn icon-btn disabled" title="元に戻す">↩️</button>
+                <button id="redo-btn" class="edit-btn icon-btn disabled" title="やり直し">↪️</button>
+            </div>
+
+            <div class="divider"></div>
 
             <div class="preview-container">
                 <div id="emoji-preview">😀</div>
@@ -62,28 +60,35 @@
 
             <div class="controls-container">
                 <div class="control-group">
-                    <label>サイズ</label>
+                    <label>📏</label>
                     <input type="range" id="size-slider" min="20" max="800" value="60" step="1">
                     <span id="size-value">60px</span>
                 </div>
 
                 <div class="control-group">
-                    <label>回転</label>
+                    <label>🔄</label>
                     <input type="range" id="rotation-slider" min="0" max="360" value="0" step="1">
                     <span id="rotation-value">0°</span>
                 </div>
             </div>
 
+            <button id="flip-h" class="edit-btn icon-btn" title="左右反転">↔️</button>
+
+            <div class="divider"></div>
+
             <!-- アクション (右側へ集約) -->
             <div class="actions-container">
-                <div id="layer-controls" class="button-group">
-                    <button id="bring-front" class="edit-btn icon-btn" title="最前面">⬆️⬆️</button>
-                    <button id="bring-forward" class="edit-btn icon-btn" title="前面">⬆️</button>
-                    <button id="send-backward" class="edit-btn icon-btn" title="背面">⬇️</button>
-                    <button id="send-back" class="edit-btn icon-btn" title="最背面">⬇️⬇️</button>
+                <div id="layer-controls" class="button-grid">
+                    <div class="button-row">
+                        <button id="bring-front" class="edit-btn icon-btn" title="最前面">🔝</button>
+                        <button id="bring-forward" class="edit-btn icon-btn" title="前面">🔼</button>
+                    </div>
+                    <div class="button-row">
+                        <button id="send-back" class="edit-btn icon-btn" title="最背面">🔚</button>
+                        <button id="send-backward" class="edit-btn icon-btn" title="背面">🔽</button>
+                    </div>
                 </div>
                 <button id="delete-emoji" class="edit-btn delete-btn icon-btn" title="削除">🗑️</button>
-                <button id="place-emoji" style="display:none;">配置</button>
             </div>
         </div>
     </div>
@@ -91,22 +96,18 @@
     <!-- 絵文字ピッカーエリア (Flex Item 3) -->
     <div id="emoji-picker-container">
         <div id="emoji-search-bar">
-            <input type="text" id="emoji-search" placeholder="🔍 絵文字を検索...">
+            <input type="text" id="emoji-search" placeholder="🔍">
         </div>
 
-        <!-- 最近使った絵文字 -->
-        <div id="recent-emojis-section">
-            <div class="section-label">最近使ったもの</div>
-            <div id="recent-emojis" class="emoji-list"></div>
-        </div>
+
 
         <!-- カテゴリタブ -->
         <div id="emoji-categories">
-            <button class="category-tab active" data-category="smileys">😀</button>
+            <button class="category-tab active" data-category="recent" title="最近使ったもの">🕒</button>
+            <button class="category-tab" data-category="smileys">😀</button>
             <button class="category-tab" data-category="animals">🐶</button>
             <button class="category-tab" data-category="food">🍎</button>
             <button class="category-tab" data-category="symbols">⭐</button>
-            <button class="category-tab" data-category="all">🌈</button>
         </div>
 
         <!-- 絵文字リスト -->
@@ -138,6 +139,7 @@
         <div>
             <button class="save-btn" id="saveAllBtn">全体を保存</button>
             <button class="save-btn primary" id="confirmSelectionBtn" style="display:none;">確定</button>
+            <button class="save-btn" id="copyClipboardBtn" style="display:none;">コピー</button>
             <button class="save-btn" id="redoSelectionBtn" style="display:none;">やり直し</button>
             <button class="save-btn" id="cancelSaveBtn">閉じる</button>
         </div>
