@@ -223,9 +223,10 @@ body {
 
 /* 絵文字ピッカーコンテナ (下部・固定高さ) */
 #emoji-picker-container {
-    height: 25vh;
-    /* 高さ25% */
-    min-height: 180px;
+    height: 30vh;
+    /* 25vh -> 30vh */
+    min-height: 230px;
+    /* 180px -> 230px (+50px approx 1 row) */
     background: #000;
     display: flex;
     flex-direction: column;
@@ -693,7 +694,7 @@ body.help-mode .tool-tooltip {
     }
 
     #emoji-picker-container {
-        height: 25vh;
+        height: 30vh;
     }
 
     #edit-panel {
