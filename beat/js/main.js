@@ -15,6 +15,10 @@ class Sequencer {
         this.paintingTrack = null;
         this.isTwoFingerTouch = false; // Track two-finger touches globally
 
+        // Dance animation
+        this.danceFrame = 0;
+        this.dancer = null;
+
         this.init();
     }
 
@@ -36,6 +40,9 @@ class Sequencer {
             },
             () => {
                 // onPlay
+                if (this.dancer) {
+                    this.dancer.classList.add('playing');
+                }
             },
             () => {
                 this.clearPlayheads();
@@ -102,11 +109,32 @@ class Sequencer {
             this.onStep(step, time);
         });
 
-        this.audioEngine.setStopCallback(() => {
+        this.audioEngine.setStopCallback(async () => {
+            // Stop recording if active
+            if (this.audioEngine.isRecording) {
+                await this.audioEngine.stopRecording();
+                // Update recording UI state
+                if (this.controls) {
+                    this.controls.isRecordingArmed = false;
+                    if (this.controls.recBtn) {
+                        this.controls.recBtn.classList.remove('recording');
+                        this.controls.recBtn.classList.remove('armed');
+                    }
+                }
+            }
+
             if (this.controls) {
                 this.controls.resetUI();
             }
+            // Reset dance animation
+            this.resetDanceAnimation();
         });
+
+        // Initialize dance animation
+        this.dancer = document.getElementById('visualizer-display');
+        if (this.dancer) {
+            this.danceFrame = 0;
+        }
 
         // Global two-finger detection for pan scrolling
         window.addEventListener('touchstart', (e) => {
@@ -689,6 +717,9 @@ class Sequencer {
                 );
             }
         }
+
+        // Update dance animation every step (16th note - fastest)
+        this.updateDanceFrame();
     }
 
     setupTrackControls() {
@@ -764,6 +795,28 @@ class Sequencer {
                 });
             }
         });
+    }
+
+    updateDanceFrame() {
+        if (!this.dancer) return;
+
+        // Update frame (8 frames total)
+        this.danceFrame = (this.danceFrame + 1) % 8;
+
+        // Update background position (each frame is 48px wide)
+        const frameWidth = 48;
+        this.dancer.style.backgroundPosition = `${-this.danceFrame * frameWidth}px 0px`;
+    }
+
+    resetDanceAnimation() {
+        if (!this.dancer) return;
+
+        // Reset to first frame
+        this.danceFrame = 0;
+        this.dancer.style.backgroundPosition = '0px 0px';
+
+        // Remove playing class to hide animation
+        this.dancer.classList.remove('playing');
     }
 }
 

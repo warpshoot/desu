@@ -26,6 +26,11 @@ export class AudioEngine {
 
         // Callbacks
         this.onStepCallback = null;
+        this.onStopCallback = null;
+
+        // Recorder
+        this.recorder = null;
+        this.isRecording = false;
 
         // Active configuration (clone of TRACKS to support tuning)
         this.activeTrackConfigs = JSON.parse(JSON.stringify(TRACKS)).map(track => ({
@@ -41,6 +46,10 @@ export class AudioEngine {
 
         // Create master limiter
         this.limiter = new Tone.Limiter(-3).toDestination();
+
+        // Create recorder (default format - browser dependent)
+        this.recorder = new Tone.Recorder();
+        this.limiter.connect(this.recorder);
 
         // Create instruments and signal chain for each track
         for (let i = 0; i < TRACKS.length; i++) {
@@ -359,5 +368,42 @@ export class AudioEngine {
                 // We could also update 'type' by re-creating instruments, but for 'Parameter Kits' we just update params
             }
         }
+    }
+
+    async startRecording() {
+        if (!this.recorder || this.isRecording) return;
+
+        this.isRecording = true;
+        await this.recorder.start();
+        console.log('Recording started');
+    }
+
+    async stopRecording() {
+        if (!this.recorder || !this.isRecording) return;
+
+        this.isRecording = false;
+        const recording = await this.recorder.stop();
+
+        // Detect actual file format from MIME type
+        const mimeType = recording.type;
+        let extension = 'webm'; // default
+        if (mimeType.includes('mp4')) {
+            extension = 'mp4';
+        } else if (mimeType.includes('webm')) {
+            extension = 'webm';
+        } else if (mimeType.includes('ogg')) {
+            extension = 'ogg';
+        }
+
+        // Download the recording
+        const url = URL.createObjectURL(recording);
+        const anchor = document.createElement('a');
+        anchor.download = `beat-${Date.now()}.${extension}`;
+        anchor.href = url;
+        anchor.click();
+
+        // Clean up
+        URL.revokeObjectURL(url);
+        console.log(`Recording stopped and downloaded as ${extension}`);
     }
 }
