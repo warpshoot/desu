@@ -393,7 +393,6 @@ function displayEmojis(filter) {
             emojiList.appendChild(item);
         } else {
             // 非対応の場合は「？」を表示するか、非表示にするか
-            // ここでは薄い「？」を表示してクリック不可にする
             item.textContent = '?';
             item.classList.add('unsupported');
             // item.title = 'この環境では表示できません';
@@ -486,6 +485,17 @@ function updateEditPanel() {
 
     emojiPreview.style.fontSize = sizeSlider.value + 'px';
     emojiPreview.style.transform = `rotate(${rotationSlider.value}deg) scaleX(${flipScale})`;
+
+    // Update flip button state
+    const flipHBtn = document.getElementById('flip-h');
+    if (flipHBtn) {
+        const isFlipped = flipScale < 0; // -1 means flipped
+        if (isFlipped) {
+            flipHBtn.classList.add('active');
+        } else {
+            flipHBtn.classList.remove('active');
+        }
+    }
 }
 
 function updateToolModeUI() {

@@ -207,6 +207,12 @@ body {
     cursor: pointer;
 }
 
+.edit-btn.active {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+}
+
 #flip-h {
     height: 70px;
     width: 34px;
