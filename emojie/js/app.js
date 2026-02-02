@@ -145,7 +145,7 @@ let state = {
 
 // DOM要素
 const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas ? canvas.getContext('2d') : null;
 const canvasContainer = document.getElementById('canvas-container');
 const emojiList = document.getElementById('emoji-list');
 const emojiSearch = document.getElementById('emoji-search');
@@ -176,19 +176,27 @@ const redoSelectionBtn = document.getElementById('redoSelectionBtn');
 const cancelSaveBtn = document.getElementById('cancelSaveBtn');
 const transparentBgCheckbox = document.getElementById('transparentBg');
 const selectionCanvas = document.getElementById('selection-canvas');
-const selectionCtx = selectionCanvas.getContext('2d');
+const selectionCtx = selectionCanvas ? selectionCanvas.getContext('2d') : null;
 const recentEmojisSection = document.getElementById('recent-emojis-section');
 const recentEmojisContainer = document.getElementById('recent-emojis');
 
 // 初期化
 function init() {
+    // 必須要素のチェック
+    if (!canvas || !canvasContainer) {
+        console.error('必須要素が見つかりません: canvas または canvasContainer');
+        return;
+    }
+
     // キャンバスサイズを設定
     canvas.width = 600;
     canvas.height = 600;
 
     // セレクションキャンバスのサイズを設定
-    selectionCanvas.width = window.innerWidth;
-    selectionCanvas.height = window.innerHeight;
+    if (selectionCanvas) {
+        selectionCanvas.width = window.innerWidth;
+        selectionCanvas.height = window.innerHeight;
+    }
 
     // 最近使った絵文字をロード
     loadRecentEmojis();
@@ -214,6 +222,11 @@ function init() {
 
 // 絵文字リストを表示
 function displayEmojis(emojis) {
+    if (!emojiList) {
+        console.error('絵文字リスト要素が見つかりません');
+        return;
+    }
+
     emojiList.innerHTML = '';
     emojis.forEach(emoji => {
         const item = document.createElement('div');
@@ -244,19 +257,19 @@ function selectEmojiForPlacement(emoji) {
 function showEditPanel() {
     // パネル自体の表示・非表示は制御しない（常時表示のため）
     // placeEmojiBtn.textContent = '完了'; // 完了ボタンは削除（または非表示）
-    placeEmojiBtn.style.display = 'none'; // 完了ボタン自体を隠す方針に変更
+    if (placeEmojiBtn) placeEmojiBtn.style.display = 'none'; // 完了ボタン自体を隠す方針に変更
 
     // 削除ボタンとレイヤー操作は常に表示するが、編集モード以外は無効化（グレーアウト）
     // これによりUIの高さを固定し、ガタつきを防ぐ
-    deleteEmojiBtn.style.display = 'block';
-    layerControls.style.display = 'flex';
+    if (deleteEmojiBtn) deleteEmojiBtn.style.display = 'block';
+    if (layerControls) layerControls.style.display = 'flex';
 
     if (state.editMode === 'edit') {
-        deleteEmojiBtn.classList.remove('disabled');
-        layerControls.classList.remove('disabled');
+        if (deleteEmojiBtn) deleteEmojiBtn.classList.remove('disabled');
+        if (layerControls) layerControls.classList.remove('disabled');
     } else {
-        deleteEmojiBtn.classList.add('disabled');
-        layerControls.classList.add('disabled');
+        if (deleteEmojiBtn) deleteEmojiBtn.classList.add('disabled');
+        if (layerControls) layerControls.classList.add('disabled');
     }
 
     // 編集モードならプレビュー等を更新
@@ -280,6 +293,11 @@ function hideEditPanel() {
 
 // 編集パネルを更新
 function updateEditPanel() {
+    if (!emojiPreview || !sizeSlider || !rotationSlider || !sizeValue || !rotationValue) {
+        console.error('編集パネルの要素が見つかりません');
+        return;
+    }
+
     if (state.editMode === 'new') {
         emojiPreview.textContent = state.currentEmoji;
         sizeSlider.value = state.currentSize;
@@ -354,6 +372,11 @@ function placeEmoji(x, y) {
 
 // キャンバスを再描画
 function redrawCanvas() {
+    if (!ctx || !canvas) {
+        console.error('キャンバス要素が見つかりません');
+        return;
+    }
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // 背景を描画（白背景の場合のみ）
@@ -503,6 +526,10 @@ function addToRecentEmojis(emoji) {
 }
 
 function displayRecentEmojis() {
+    if (!recentEmojisSection || !recentEmojisContainer) {
+        return;
+    }
+
     if (state.recentEmojis.length === 0) {
         recentEmojisSection.classList.remove('visible');
         return;
@@ -553,26 +580,45 @@ function clearCanvas() {
 
 // 保存機能
 function openSaveUI() {
-    saveOverlay.classList.add('active');
-    saveUI.classList.add('active');
+    if (saveOverlay) {
+        saveOverlay.classList.add('active');
+    }
+    if (saveUI) {
+        saveUI.classList.add('active');
+    }
     // 選択モード開始
     startSelection();
 }
 
 function closeSaveUI() {
-    saveOverlay.classList.remove('active');
-    saveUI.classList.remove('active');
-    // インラインスタイルが残っている可能性があるので削除
-    saveUI.style.display = '';
+    if (saveOverlay) {
+        saveOverlay.classList.remove('active');
+    }
+    if (saveUI) {
+        saveUI.classList.remove('active');
+        // インラインスタイルが残っている可能性があるので削除
+        saveUI.style.display = '';
+    }
 
     state.selectionMode = false;
     state.selectionRect = null;
-    selectionCanvas.style.display = 'none';
-    confirmSelectionBtn.style.display = 'none';
-    redoSelectionBtn.style.display = 'none';
+    if (selectionCanvas) {
+        selectionCanvas.style.display = 'none';
+    }
+    if (confirmSelectionBtn) {
+        confirmSelectionBtn.style.display = 'none';
+    }
+    if (redoSelectionBtn) {
+        redoSelectionBtn.style.display = 'none';
+    }
 }
 
 function saveAll() {
+    if (!canvas) {
+        console.error('キャンバス要素が見つかりません');
+        return;
+    }
+
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = canvas.width * state.saveScale;
     tempCanvas.height = canvas.height * state.saveScale;
@@ -582,7 +628,7 @@ function saveAll() {
     tempCtx.scale(state.saveScale, state.saveScale);
 
     // 背景を描画
-    if (!transparentBgCheckbox.checked) {
+    if (transparentBgCheckbox && !transparentBgCheckbox.checked) {
         tempCtx.fillStyle = '#ffffff';
         tempCtx.fillRect(0, 0, canvas.width, canvas.height);
     }
@@ -618,6 +664,11 @@ function downloadCanvas(canvas, filename) {
 
 // 範囲選択保存（簡易版）
 function startSelection() {
+    if (!selectionCanvas || !selectionCtx) {
+        console.error('選択キャンバス要素が見つかりません');
+        return;
+    }
+
     state.selectionMode = true;
     selectionCanvas.style.display = 'block';
     // キャンバスサイズを再度合わせる（ウィンドウリサイズ対応）
@@ -627,10 +678,16 @@ function startSelection() {
     // 前回の描画をクリア
     selectionCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
     state.selectionRect = null;
-    confirmSelectionBtn.style.display = 'none';
-    redoSelectionBtn.style.display = 'none';
+    if (confirmSelectionBtn) {
+        confirmSelectionBtn.style.display = 'none';
+    }
+    if (redoSelectionBtn) {
+        redoSelectionBtn.style.display = 'none';
+    }
 
-    saveUI.querySelector('h3').textContent = 'キャンバス全体を保存するか、範囲を選択してください';
+    if (saveUI && saveUI.querySelector('h3')) {
+        saveUI.querySelector('h3').textContent = 'キャンバス全体を保存するか、範囲を選択してください';
+    }
 
     let startX, startY;
     let isDrawing = false;
@@ -715,60 +772,78 @@ function setupEventListeners() {
     });
 
     // 検索
-    emojiSearch.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        if (query === '') {
-            displayEmojis(emojiData.smileys);
-            return;
-        }
+    if (emojiSearch) {
+        emojiSearch.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            if (query === '') {
+                displayEmojis(emojiData.smileys);
+                return;
+            }
 
-        // 絵文字キーワードまたは絵文字そのもので検索
-        const filtered = allEmojis.filter(emoji => {
-            const keywords = emojiKeywords[emoji] || '';
-            return emoji.includes(query) || keywords.includes(query);
+            // 絵文字キーワードまたは絵文字そのもので検索
+            const filtered = allEmojis.filter(emoji => {
+                const keywords = emojiKeywords[emoji] || '';
+                return emoji.includes(query) || keywords.includes(query);
+            });
+            displayEmojis(filtered);
         });
-        displayEmojis(filtered);
-    });
+    }
 
     // スライダー
-    sizeSlider.addEventListener('input', (e) => {
-        const val = parseInt(e.target.value);
-        if (state.editMode === 'edit' && state.selectedEmoji) {
-            state.selectedEmoji.size = val;
-            // currentSizeも更新しておくと、次に新規作成するときに引き継がれる
-            state.currentSize = val;
-            updateEditPanel();
-            redrawCanvas();
-        } else {
-            state.currentSize = val;
-            updateEditPanel();
-        }
-    });
+    if (sizeSlider) {
+        sizeSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            if (state.editMode === 'edit' && state.selectedEmoji) {
+                state.selectedEmoji.size = val;
+                // currentSizeも更新しておくと、次に新規作成するときに引き継がれる
+                state.currentSize = val;
+                updateEditPanel();
+                redrawCanvas();
+            } else {
+                state.currentSize = val;
+                updateEditPanel();
+            }
+        });
+    }
 
-    rotationSlider.addEventListener('input', (e) => {
-        const val = parseInt(e.target.value);
-        if (state.editMode === 'edit' && state.selectedEmoji) {
-            state.selectedEmoji.rotation = val;
-            state.currentRotation = val;
-            updateEditPanel();
-            redrawCanvas();
-        } else {
-            state.currentRotation = val;
-            updateEditPanel();
-        }
-    });
+    if (rotationSlider) {
+        rotationSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            if (state.editMode === 'edit' && state.selectedEmoji) {
+                state.selectedEmoji.rotation = val;
+                state.currentRotation = val;
+                updateEditPanel();
+                redrawCanvas();
+            } else {
+                state.currentRotation = val;
+                updateEditPanel();
+            }
+        });
+    }
 
     // 配置ボタン
-    placeEmojiBtn.addEventListener('click', placeEmoji);
+    if (placeEmojiBtn) {
+        placeEmojiBtn.addEventListener('click', placeEmoji);
+    }
 
     // 削除ボタン
-    deleteEmojiBtn.addEventListener('click', deleteEmoji);
+    if (deleteEmojiBtn) {
+        deleteEmojiBtn.addEventListener('click', deleteEmoji);
+    }
 
     // レイヤー順序ボタン
-    bringFrontBtn.addEventListener('click', bringToFront);
-    bringForwardBtn.addEventListener('click', bringForward);
-    sendBackwardBtn.addEventListener('click', sendBackward);
-    sendBackBtn.addEventListener('click', sendToBack);
+    if (bringFrontBtn) {
+        bringFrontBtn.addEventListener('click', bringToFront);
+    }
+    if (bringForwardBtn) {
+        bringForwardBtn.addEventListener('click', bringForward);
+    }
+    if (sendBackwardBtn) {
+        sendBackwardBtn.addEventListener('click', sendBackward);
+    }
+    if (sendBackBtn) {
+        sendBackBtn.addEventListener('click', sendToBack);
+    }
 
     // ツール切り替えボタン
     document.querySelectorAll('.segment-btn[data-mode]').forEach(btn => {
@@ -905,32 +980,50 @@ function setupEventListeners() {
         draggedEmoji = null;
     };
 
-    canvas.addEventListener('mousedown', handleCanvasStart);
-    // canvas.addEventListener('mousemove', handleCanvasMove); // Windowで管理
-    // canvas.addEventListener('mouseup', handleCanvasEnd);   // Windowで管理
-    canvas.addEventListener('touchstart', handleCanvasStart, { passive: false });
-    // canvas.addEventListener('touchmove', handleCanvasMove, { passive: false }); // Windowで管理
-    // canvas.addEventListener('touchend', handleCanvasEnd);   // Windowで管理
+    if (canvas) {
+        canvas.addEventListener('mousedown', handleCanvasStart);
+        // canvas.addEventListener('mousemove', handleCanvasMove); // Windowで管理
+        // canvas.addEventListener('mouseup', handleCanvasEnd);   // Windowで管理
+        canvas.addEventListener('touchstart', handleCanvasStart, { passive: false });
+        // canvas.addEventListener('touchmove', handleCanvasMove, { passive: false }); // Windowで管理
+        // canvas.addEventListener('touchend', handleCanvasEnd);   // Windowで管理
+    }
 
     // 背景切り替え
-    bgToggleBtn.addEventListener('click', toggleBackground);
+    if (bgToggleBtn) {
+        bgToggleBtn.addEventListener('click', toggleBackground);
+    }
 
     // 保存
-    saveBtn.addEventListener('click', openSaveUI);
-    saveAllBtn.addEventListener('click', saveAll);
-    cancelSaveBtn.addEventListener('click', closeSaveUI);
+    if (saveBtn) {
+        saveBtn.addEventListener('click', openSaveUI);
+    }
+    if (saveAllBtn) {
+        saveAllBtn.addEventListener('click', saveAll);
+    }
+    if (cancelSaveBtn) {
+        cancelSaveBtn.addEventListener('click', closeSaveUI);
+    }
 
     // 全消去
-    clearBtn.addEventListener('click', clearCanvas);
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearCanvas);
+    }
 
     // クレジット
-    creditBtn.addEventListener('click', () => {
-        creditModal.classList.add('visible');
-    });
+    if (creditBtn) {
+        creditBtn.addEventListener('click', () => {
+            if (creditModal) {
+                creditModal.classList.add('visible');
+            }
+        });
+    }
 
-    creditModal.addEventListener('click', () => {
-        creditModal.classList.remove('visible');
-    });
+    if (creditModal) {
+        creditModal.addEventListener('click', () => {
+            creditModal.classList.remove('visible');
+        });
+    }
 
     // 選択範囲やり直し
     if (redoSelectionBtn) {
@@ -1031,50 +1124,58 @@ function setupEventListeners() {
         redoSelectionBtn.addEventListener('click', () => {
             // 範囲選択のやり直し
             state.selectionRect = null;
-            selectionCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
-            confirmSelectionBtn.style.display = 'none';
-            redoSelectionBtn.style.display = 'none';
+            if (selectionCtx && selectionCanvas) {
+                selectionCtx.clearRect(0, 0, selectionCanvas.width, selectionCanvas.height);
+            }
+            if (confirmSelectionBtn) {
+                confirmSelectionBtn.style.display = 'none';
+            }
+            if (redoSelectionBtn) {
+                redoSelectionBtn.style.display = 'none';
+            }
             startSelection();
         });
     }
 
     // ピンチイン/アウトでキャンバス拡大縮小
-    let currentScale = 1;
-    let initialDistance = 0;
+    if (canvasContainer) {
+        let currentScale = 1;
+        let initialDistance = 0;
 
-    const getDistance = (touch1, touch2) => {
-        const dx = touch1.clientX - touch2.clientX;
-        const dy = touch1.clientY - touch2.clientY;
-        return Math.sqrt(dx * dx + dy * dy);
-    };
+        const getDistance = (touch1, touch2) => {
+            const dx = touch1.clientX - touch2.clientX;
+            const dy = touch1.clientY - touch2.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        };
 
-    canvasContainer.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 2) {
-            initialDistance = getDistance(e.touches[0], e.touches[1]);
-        }
-    }, { passive: true });
+        canvasContainer.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                initialDistance = getDistance(e.touches[0], e.touches[1]);
+            }
+        }, { passive: true });
 
-    canvasContainer.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 2 && initialDistance > 0) {
-            const currentDistance = getDistance(e.touches[0], e.touches[1]);
-            const scale = currentDistance / initialDistance;
-            currentScale = Math.max(0.5, Math.min(3, currentScale * scale));
+        canvasContainer.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2 && initialDistance > 0) {
+                const currentDistance = getDistance(e.touches[0], e.touches[1]);
+                const scale = currentDistance / initialDistance;
+                currentScale = Math.max(0.5, Math.min(3, currentScale * scale));
+                canvasContainer.style.transform = `translate(-50%, -50%) scale(${currentScale})`;
+                initialDistance = currentDistance;
+            }
+        }, { passive: true });
+
+        canvasContainer.addEventListener('touchend', () => {
+            initialDistance = 0;
+        }, { passive: true });
+
+        // マウスホイールでズーム（デスクトップ用）
+        canvasContainer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            currentScale = Math.max(0.5, Math.min(3, currentScale * delta));
             canvasContainer.style.transform = `translate(-50%, -50%) scale(${currentScale})`;
-            initialDistance = currentDistance;
-        }
-    }, { passive: true });
-
-    canvasContainer.addEventListener('touchend', () => {
-        initialDistance = 0;
-    }, { passive: true });
-
-    // マウスホイールでズーム（デスクトップ用）
-    canvasContainer.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        currentScale = Math.max(0.5, Math.min(3, currentScale * delta));
-        canvasContainer.style.transform = `translate(-50%, -50%) scale(${currentScale})`;
-    }, { passive: false });
+        }, { passive: false });
+    }
 }
 
 // アプリケーション起動
