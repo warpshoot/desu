@@ -696,7 +696,7 @@ function addToRecentEmojis(emoji) {
         state.recentEmojis.pop();
     }
     saveRecentEmojis();
-    displayEmojis('recent');
+    // displayEmojis('recent'); // Don't switch view automatically
 }
 
 function flipEmoji() {
