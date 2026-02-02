@@ -15,6 +15,7 @@ import {
     getActiveLayerCanvas,
     clearLayer,
     moveLayer,
+    mergeLayerDown,
     MAX_LAYERS
 } from './state.js';
 import {
@@ -662,6 +663,7 @@ function setupLayerMenuActions(menu, layerId) {
     const slider = document.getElementById('layerOpacitySlider');
     const visToggle = menu.querySelector('.layer-visible-toggle');
     const deleteBtn = menu.querySelector('.layer-delete');
+    const mergeBtn = menu.querySelector('.layer-merge-btn');
 
     // Remove old listeners
     const newSlider = slider.cloneNode(true);
@@ -672,6 +674,9 @@ function setupLayerMenuActions(menu, layerId) {
 
     const newDeleteBtn = deleteBtn.cloneNode(true);
     deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+
+    const newMergeBtn = mergeBtn.cloneNode(true);
+    mergeBtn.parentNode.replaceChild(newMergeBtn, mergeBtn);
 
     // Move buttons
     const moveButtons = menu.querySelectorAll('.layer-move-btn');
@@ -716,6 +721,29 @@ function setupLayerMenuActions(menu, layerId) {
             if (btn) btn.classList.toggle('hidden-layer', !layer.visible);
         }
     });
+
+    // Merge button
+    newMergeBtn.addEventListener('click', async () => {
+        const index = layers.findIndex(l => l.id === layerId);
+        if (index <= 0) return;
+
+        showConfirmModal(
+            "この操作によりアンドゥ履歴が失われます。\n下のレイヤーに統合しますか？",
+            'layerMerge',
+            async () => {
+                if (mergeLayerDown(layerId)) {
+                    await resetHistory();
+                    window.renderLayerButtons();
+                    updateActiveLayerIndicator();
+                    hideAllMenus();
+                }
+            }
+        );
+    });
+
+    // Disable merge if bottom layer
+    const isBottom = layers.findIndex(l => l.id === layerId) <= 0;
+    newMergeBtn.classList.toggle('disabled', isBottom);
 
     // Delete button
     newDeleteBtn.addEventListener('click', async () => {

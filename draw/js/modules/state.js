@@ -153,6 +153,39 @@ export function moveLayer(id, direction) {
     return true;
 }
 
+/**
+ * Merge a layer into the one below it
+ * id: ID of the layer to merge down
+ */
+export function mergeLayerDown(id) {
+    const index = layers.findIndex(l => l.id === id);
+    if (index === -1) return false;
+    if (index === 0) return false; // Bottom-most layer cannot merge down
+
+    const topLayer = layers[index];
+    const bottomLayer = layers[index - 1];
+
+    // Draw top layer onto bottom layer
+    // Use globalAlpha to preserve top layer's opacity
+    bottomLayer.ctx.save();
+    bottomLayer.ctx.globalAlpha = topLayer.opacity;
+    bottomLayer.ctx.drawImage(topLayer.canvas, 0, 0);
+    bottomLayer.ctx.restore();
+
+    // Remove the top layer
+    topLayer.canvas.remove();
+    layers.splice(index, 1);
+
+    updateLayerZIndices();
+
+    // If the merged layer was active, set active layer to the bottom one (now merged)
+    if (state.activeLayer === id) {
+        state.activeLayer = bottomLayer.id;
+    }
+
+    return true;
+}
+
 // ============================================
 // State Object to manage application state
 // ============================================
