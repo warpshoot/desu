@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>DESU™ emojie</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="/desu/favicon.js"></script>
+</head>
+
+<body>
+    <!-- キャンバスエリア -->
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <!-- 絵文字ピッカーエリア -->
+    <div id="emoji-picker-container">
+        <div id="emoji-search-bar">
+            <input type="text" id="emoji-search" placeholder="🔍 絵文字を検索...">
+        </div>
+
+        <!-- 最近使った絵文字 -->
+        <div id="recent-emojis-section">
+            <div class="section-label">最近使ったもの</div>
+            <div id="recent-emojis" class="emoji-list"></div>
+        </div>
+
+        <!-- カテゴリタブ -->
+        <div id="emoji-categories">
+            <button class="category-tab active" data-category="smileys">😀 顔</button>
+            <button class="category-tab" data-category="animals">🐶 動物</button>
+            <button class="category-tab" data-category="food">🍎 食べ物</button>
+            <button class="category-tab" data-category="symbols">⭐ 記号</button>
+            <button class="category-tab" data-category="all">🌈 すべて</button>
+        </div>
+
+        <!-- 絵文字リスト -->
+        <div id="emoji-list-container">
+            <div id="emoji-list" class="emoji-list"></div>
+        </div>
+    </div>
+
+    <!-- 編集パネル -->
+    <div id="edit-panel" class="hidden">
+        <div class="panel-header">編集</div>
+
+        <div class="preview-container">
+            <div id="emoji-preview">😀</div>
+        </div>
+
+        <div class="control-group">
+            <label>サイズ</label>
+            <input type="range" id="size-slider" min="20" max="200" value="60" step="1">
+            <span id="size-value">60px</span>
+        </div>
+
+        <div class="control-group">
+            <label>回転</label>
+            <input type="range" id="rotation-slider" min="0" max="360" value="0" step="1">
+            <span id="rotation-value">0°</span>
+        </div>
+
+        <!-- レイヤー順序ボタン -->
+        <div id="layer-controls" class="button-group" style="display:none;">
+            <button id="bring-front" class="edit-btn">最前面へ</button>
+            <button id="bring-forward" class="edit-btn">前へ</button>
+            <button id="send-backward" class="edit-btn">後ろへ</button>
+            <button id="send-back" class="edit-btn">最背面へ</button>
+        </div>
+
+        <div class="button-group">
+            <button id="delete-emoji" class="edit-btn delete-btn" style="display:none;">🗑 削除</button>
+            <button id="place-emoji" class="edit-btn primary">配置</button>
+        </div>
+    </div>
+
+    <!-- 右上ツールバー -->
+    <div id="toolbar-right">
+        <div class="tool-btn" id="bgToggleBtn">
+            <svg viewBox="0 0 24 24">
+                <rect x="4" y="4" width="16" height="16" />
+            </svg>
+            <div class="tool-tooltip tool-tooltip-bottom">背景</div>
+        </div>
+
+        <div class="tool-btn" id="saveBtn">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 4 L12 16 M6 12 L12 18 L18 12" />
+                <path d="M4 20 L20 20" />
+            </svg>
+            <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-2">保存</div>
+        </div>
+
+        <div class="tool-btn" id="clearBtn">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34" />
+            </svg>
+            <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-3">全消去</div>
+        </div>
+    </div>
+
+    <!-- 保存UI -->
+    <div id="save-overlay"></div>
+    <div id="save-ui">
+        <h3>範囲をドラッグして選択</h3>
+        <div id="selection-size" style="display:none; font-size: 13px; color: #666; margin-bottom: 8px;"></div>
+
+        <div class="option-group">
+            <div class="option-group-label">倍率</div>
+            <div class="option-buttons">
+                <button class="option-btn active" data-scale="1">1x</button>
+                <button class="option-btn" data-scale="2">2x</button>
+                <button class="option-btn" data-scale="3">3x</button>
+            </div>
+        </div>
+
+        <label>
+            <input type="checkbox" id="transparentBg" checked>
+            背景透過
+        </label>
+
+        <div>
+            <button class="save-btn" id="saveAllBtn">全体を保存</button>
+            <button class="save-btn primary" id="confirmSelectionBtn" style="display:none;">確定</button>
+            <button class="save-btn" id="redoSelectionBtn" style="display:none;">やり直し</button>
+            <button class="save-btn" id="cancelSaveBtn">閉じる</button>
+        </div>
+    </div>
+
+    <canvas id="selection-canvas"></canvas>
+
+    <!-- クレジットボタンとモーダル -->
+    <div id="credit-btn">?</div>
+    <div id="credit-modal">
+        <div id="credit-content">
+            <h2>DESU™ emojie</h2>
+            <a href="https://warpshoot.github.io/desu/" target="_blank" id="credit-logo">
+                <img src="../images/logo.gif" alt="DESU™ emojie">
+            </a>
+            <div id="credit-author">
+                by <a href="https://warpshoot.github.io/" target="_blank">wpy</a>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+
+</html>
