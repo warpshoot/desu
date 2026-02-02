@@ -14,6 +14,7 @@ body {
     overflow: hidden;
     touch-action: none;
     background: #808080;
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
 }
 
 /* ============================================
@@ -993,7 +994,7 @@ body.help-mode #tool-panel {
 }
 
 .tooltip-offset-3 {
-    top: 170px;
+    top: 150px;
 }
 
 /* Relative position for tooltip containers */

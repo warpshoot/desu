@@ -11,7 +11,8 @@ function exitSaveMode() {
         const ids = [
             'save-overlay', 'save-ui', 'selection-canvas', 'generating',
             'toolbar-left', 'toolbar-right', 'resetZoomBtn',
-            'confirmSelectionBtn', 'copyClipboardBtn', 'redoSelectionBtn'
+            'confirmSelectionBtn', 'copyClipboardBtn', 'redoSelectionBtn',
+            'event-canvas'
         ];
 
         ids.forEach(id => {
@@ -25,6 +26,11 @@ function exitSaveMode() {
                 el.style.display = 'flex';
             } else if (id === 'resetZoomBtn') {
                 el.style.display = '';
+            }
+
+            // Restore pointer events for main canvas interaction
+            if (id === 'event-canvas') {
+                el.style.pointerEvents = 'auto';
             }
 
             if (id === 'save-ui') {

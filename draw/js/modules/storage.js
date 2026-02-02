@@ -130,7 +130,7 @@ export async function exportProject() {
 
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'desu_drawing_' + Date.now() + '.desu';
+        a.download = 'desu_drawing_' + Date.now() + '.json';
         a.click();
 
         URL.revokeObjectURL(url);

@@ -204,7 +204,14 @@ function setupFileUI() {
                 }
                 // 2. Clear the last remaining layer
                 if (layers.length > 0) {
+                    // Clear content
                     clearLayer(layers[0].id);
+
+                    // Reset properties
+                    layers[0].opacity = 1.0;
+                    layers[0].visible = true;
+                    layers[0].canvas.style.opacity = '1.0';
+                    layers[0].canvas.style.display = 'block';
                 }
 
                 // 3. Reset history
