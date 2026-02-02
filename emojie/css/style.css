@@ -93,7 +93,11 @@ body {
 .segment-btn {
     border: none;
     background: transparent;
-    padding: 6px 12px;
+    padding: 0 12px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     font-size: 16px;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -107,8 +111,8 @@ body {
 /* ... (segment-btn styles) ... */
 
 .preview-container {
-    width: 50px;
-    height: 50px;
+    width: 70px;
+    height: 70px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -192,8 +196,9 @@ body {
     border: 1px solid #fff;
     background: #000;
     color: #fff;
-    padding: 6px 8px;
-    height: 32px;
+    padding: 0;
+    height: 34px;
+    width: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -203,9 +208,8 @@ body {
 }
 
 #flip-h {
-    height: 64px;
-    /* Matches 2 rows of sliders roughly */
-    width: 32px;
+    height: 70px;
+    width: 34px;
     padding: 0;
 }
 
@@ -214,6 +218,7 @@ body {
     /* Neutralize red for grayscale */
     color: #333;
     margin-left: 4px;
+    height: 70px;
 }
 
 /* 絵文字ピッカーコンテナ (下部・固定高さ) */

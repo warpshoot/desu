@@ -5,31 +5,49 @@ const emojiData = {
     smileys: [
         '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇',
         '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝',
-        '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄',
-        '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧',
-        '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐', '😕', '😟', '🙁',
-        '☹️', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭',
-        '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈',
-        '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖', '😺', '😸'
+        '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😶‍🌫️', '😏', '😒',
+        '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮',
+        '🤧', '🥵', '🥶', '🥴', '😵', '😵‍💫', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐',
+        '😕', '😟', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰',
+        '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡',
+        '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾',
+        '🤖', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '🙈', '🙉', '🙊',
+        '💋', '💌', '💘', '💝', '💖', '💗', '💓', '💞', '💕', '💟', '❣️', '💔', '❤️‍🔥',
+        '❤️‍🩹', '❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '👋', '🤚', '🖐️',
+        '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆',
+        '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲',
+        '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👂',
+        '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '👅', '👄', '👶', '🧒', '👦', '👧',
+        '🧑', '👱', '👨', '👨‍🦰', '👨‍🦱', '👨‍🦳', '👨‍🦲', '👩', '👩‍🦰', '👩‍🦱', '👩‍🦳', '👩‍🦲',
+        '👱‍♀️', '👱‍♂️', '🧓', '👴', '👵', '警察', '探偵', '衛兵', '忍者', '工事', '王子', '王女', 'ターバン', '👲', '🧕',
+        '🤵', '👰', '🤰', '🤱', '👼', '🎅', '🤶', '🦸', '🦹', '魔術師', '妖精', '吸血鬼', '人魚',
+        'エルフ', 'ジニー', 'ゾンビ', '💆', '💇', '🚶', '🧍', '🧎', '🏃', '踊る', '🕺', '🕴️', '👯'
     ],
     animals: [
-        '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷',
-        '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥',
-        '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞',
-        '🐜', '🦟', '🦗', '🕷️', '🕸️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑',
-        '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆',
-        '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄'
+        '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷',
+        '🐽', '🐸', '🐵', '🐒', '🦍', '🦧', '🦮', '🐕‍🦺', '🐩', '🐺', '🦝', '🐈‍⬛', '🐅', '🐆',
+        '🐴', '🐎', '🦄', '🦓', '🦌', '🦬', '🐂', '🐃', '🐄', '🐖', '🐗', '🐏', '🐑', '🐐',
+        '🐪', '🐫', '🦙', '🦒', '🐘', '🦣', '🦏', '🦛', '🐁', '🐀', '🐇', '🐿️', 'ビーバー',
+        'ハリネズミ', 'コウモリ', 'ナマケモノ', 'カワウソ', 'スカンク', 'カンガルー', '足跡', 'ターキー',
+        'ニワトリ', 'シャモ', 'ひよこ', '🐤', '🐥', 'バード', '鳩', 'イーグル', '鴨', 'スワン',
+        '梟', 'フラミンゴ', '孔雀', '鸚鵡', '亀', 'トカゲ', '蛇', '🐲', '🐉', 'プレシオサウルス',
+        'T-Rex', 'クジラ', 'マッコウクジラ', 'イルカ', 'アザラシ', '魚', '熱帯魚', 'フグ', '鮫',
+        'タコ', 'イカ', '海老', 'ロブスター', 'カニ', '貝殻', '珊瑚', 'カタツムリ', '蝶々', '毛虫',
+        '蟻', '蜜蜂', '甲虫', 'テントウムシ', 'コオロギ', '蜘蛛', '蜘蛛の巣', '蠍', '蚊', '蝿',
+        'ミミズ', '微生物', 'ブーケ', 'サクラ', '💮', '🏵️', '薔薇', '🥀', 'ハイビスカス', 'ヒマワリ',
+        '雛菊', 'チューリップ', '苗', '盆栽', '杉', '木', 'ヤシの木', 'サボテン', '稲穂', '🌿',
+        '☘️', '四つ葉のクローバー', '楓', '落ち葉', '風に舞う葉'
     ],
     food: [
-        '🍎', '🍏', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭',
-        '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕',
-        '🫒', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳',
-        '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🫓',
-        '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🥫', '🍝', '🍜', '🍲',
-        '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢',
-        '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿',
-        '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '☕', '🫖', '🍵', '🧃', '🥤', '🧋',
-        '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾', '🧊'
+        '🍎', '🍏', '🍊', 'レモン', 'バナナ', '🍉', '葡萄', 'イチゴ', 'ブルーベリー', 'メロン', 'チェリー', '桃', 'マンゴー',
+        'パイナップル', 'ココナッツ', 'キウイ', 'トマト', 'ナス', 'アボカド', 'ブロッコリー', '葉菜', 'キュウリ', '唐辛子', 'ピーマン', 'トウモロコシ', '人参',
+        'オリーブ', 'ニンニク', 'タマネギ', 'ジャガイモ', 'スイートポテト', 'クロワッサン', 'ベーグル', 'パン', 'バゲット', 'プレッツェル', 'チーズ', '卵', '目玉焼き',
+        'バター', 'パンケーキ', 'ワッフル', 'ベーコン', 'ステーキ', '鶏肉', '骨付き肉', '骨', 'ホットドッグ', 'ハンバーガー', 'フライドポテト', 'ピザ', 'フラットブレッド',
+        'サンドイッチ', 'ピタ', 'ファラフェル', 'タコス', 'ブリトー', 'タマル', 'サラダ', 'パエリア', 'フォンデュ', '缶詰', 'スパゲッティ', 'ラーメン', '鍋',
+        'カレー', '寿司', '弁当', '餃子', '牡蠣', '海老天', 'おにぎり', '御飯', '煎餅', 'なると', 'フォーチュンクッキー', '月餅', 'おでん',
+        '団子', 'かき氷', 'アイスクリーム', 'ソフトクリーム', 'パイ', 'カップケーキ', 'ショートケーキ', '誕生日ケーキ', 'プリン', 'ロリポップ', '飴', 'チョコ', 'ポップコーン',
+        'ドーナツ', 'クッキー', '栗', 'ピーナッツ', '蜂蜜', '牛乳', '哺乳瓶', 'コーヒー', 'ティーポット', 'お茶', 'ジュース', 'ソーダ', 'タピオカ',
+        '日本酒', 'ビール', 'ジョッキ', '乾杯', 'ワイン', 'ウイスキー', 'カクテル', 'トロピカルドリンク', 'マテ茶', 'シャンパン', '氷'
     ],
     symbols: [
         '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞',
@@ -54,8 +72,15 @@ const emojiData = {
         '🔊', '🔔', '🔕', '📣', '📢', '💬', '💭', '🗯️', '♠️', '♣️', '♥️', '♦️', '🃏',
         '🎴', '🀄', '🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖', '🕗', '🕘', '🕙', '🕚',
         '🕛', '🕜', '🕝', '🕞', '🕟', '🕠', '🕡', '🕢', '🕣', '🕤', '🕥', '🕦', '🕧',
-        '⭐', '🌟', '✨', '💫', '⚡', '💥', '🔥', '🌈', '☀️', '⛅', '☁️', '🌤️', '⛈️',
-        '🌦️', '🌧️', '⛆', '☔', '💧', '💦', '🌊', '🌙', '⭐'
+        '⭐', '🌟', '✨', '💫', '⚡', '💥', '🔥', '🌈', '☀️', '⛅', '雲', '🌤️', '⛈️',
+        '🌦️', '🌧️', '⛆', '☔', '💧', '💦', '波', '🌙', 'カボチャ', 'クリスマスツリー', '🎆', '🎇', '🧨',
+        'バルーン', '🎉', '🎊', '🎋', '🎍', '🎎', '🎏', '🎐', '🎑', '🧧', 'リボン', 'ギフト', 'チケット',
+        'トロフィー', '🥇', '🥈', '🥉', 'サッカー', '野球', 'バスケ', 'バレー', 'アメリカンフットボール', 'テニス', 'ボウリング', 'クリケット', '🏓',
+        'バドミントン', 'ボクシング', '道着', 'ゴルフ', 'スケート', '釣り', 'スノーボード', 'スキー', 'ソリ', 'ターゲット', '🎱', 'ビデオゲーム', 'ジョイスティック',
+        'ダイス', 'パズル', 'パレット', 'カチンコ', 'マイク', 'ヘッドホン', '🎼', 'キーボード', '鼓', 'ギタ', 'バイオリン', '🚗', 'タクシー',
+        '🚙', 'バス', 'パトカー', '救急車', '消防車', 'バン', 'トラック', 'トラクター', '自転車', 'スクーター', 'バイク', '船', '飛行機',
+        'ロケット', 'UFO', '家', '庭付き家', 'オフィス', '病院', '銀行', 'ホテル', '学校', 'コンビニ', '工場', '城', '東京タワー',
+        '自由の女神', '鳥居', '噴水', 'テント'
     ]
 };
 
@@ -134,15 +159,23 @@ let state = {
     currentEmoji: '😀',
     currentSize: 60,
     currentRotation: 0,
-    bgMode: 'transparent', // 'transparent' or 'white'
+    currentRotation: 0,
+    bgMode: 'white', // always white/color base, transparent is option on save
+    canvasColor: '#ffffff',
     recentEmojis: [],
     nextId: 1,
     saveScale: 1,
     selectionMode: false,
     selectionRect: null,
     toolMode: 'draw', // 'draw' or 'select'
+    toolMode: 'draw', // 'draw' or 'select'
     historyStack: [],
-    redoStack: []
+    redoStack: [],
+    // Gesture State
+    maxFingers: 0,
+    isGestureActive: false,
+    touchStartTime: 0,
+    didInteract: false // moved/dragged/pinched
 };
 
 // DOM要素
@@ -167,6 +200,7 @@ const bringForwardBtn = document.getElementById('bring-forward');
 const sendBackwardBtn = document.getElementById('send-backward');
 const sendBackBtn = document.getElementById('send-back');
 const bgToggleBtn = document.getElementById('bgToggleBtn');
+const bgColorPicker = document.getElementById('bgColorPicker');
 const saveBtn = document.getElementById('saveBtn');
 const clearBtn = document.getElementById('clearBtn');
 const creditBtn = document.getElementById('credit-btn');
@@ -281,8 +315,85 @@ function init() {
     updateEditPanel();
 }
 
+// 絵文字対応チェック
+const supportCtx = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+supportCtx.canvas.width = 50; // 幅広にしておく
+supportCtx.canvas.height = 30;
+supportCtx.font = '24px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+
+// 基準幅を取得 (😀)
+const standardWidth = supportCtx.measureText('😀').width;
+
+function getSupportedEmoji(emoji) {
+    if (!emoji) return null;
+
+    // 1. 強制表示リスト (VS16付与)
+    const whitelist = ['👀', '🙏', '☝️', '✋', '✊', '🙌', '💅', '👣'];
+    if (whitelist.includes(emoji)) {
+        return emoji.endsWith('\uFE0F') ? emoji : emoji + '\uFE0F';
+    }
+
+    // 2. 幅チェック (ZWJ結合失敗の検出)
+    // 結合に失敗すると2文字分以上の幅になることが多い
+    const width = supportCtx.measureText(emoji).width;
+    // 基準の1.8倍以上ならアウトとする (多少の誤差許容)
+    if (width > standardWidth * 1.8) {
+        return '?';
+    }
+
+    // 3. カラーチェック
+    const isColor = (text) => {
+        supportCtx.clearRect(0, 0, 50, 30);
+
+        supportCtx.fillText(text, 0, 24);
+
+        // ピクセルチェック (中心部 + 全体スキャン)
+        const fullData = supportCtx.getImageData(0, 0, 50, 30).data;
+        let hasColor = false;
+        let hasPixels = false;
+
+        for (let i = 0; i < fullData.length; i += 4) {
+            const r = fullData[i];
+            const g = fullData[i + 1];
+            const b = fullData[i + 2];
+            const a = fullData[i + 3];
+
+            if (a > 20) {
+                hasPixels = true;
+                // 彩度があるか確認 (グレーでない)
+                if (Math.abs(r - g) > 5 || Math.abs(r - b) > 5 || Math.abs(g - b) > 5) {
+                    hasColor = true;
+                    break;
+                }
+            }
+        }
+        return { hasPixels, hasColor };
+    };
+
+    const res1 = isColor(emoji);
+    if (res1.hasColor) return emoji;
+
+    // 白黒 -> VS16試行
+    if (!res1.hasColor) {
+        const withVS16 = emoji + '\uFE0F';
+
+        // VS16つけても幅が爆発していないか確認
+        if (supportCtx.measureText(withVS16).width > standardWidth * 1.8) {
+            return '?';
+        }
+
+        const res2 = isColor(withVS16);
+        if (res2.hasColor) return withVS16;
+
+        return '?';
+    }
+
+    return '?';
+}
+
 // 絵文字リストを表示
 function displayEmojis(filter) {
+
     emojiList.innerHTML = '';
 
     let emojisToShow = [];
@@ -301,9 +412,22 @@ function displayEmojis(filter) {
     emojisToShow.forEach(emoji => {
         const item = document.createElement('div');
         item.className = 'emoji-item';
-        item.textContent = emoji;
-        item.addEventListener('click', () => selectEmojiForPlacement(emoji));
-        emojiList.appendChild(item);
+
+        // サポートチェック & 整形
+        const supported = getSupportedEmoji(emoji);
+
+        if (supported && supported !== '?') {
+            item.textContent = supported;
+            item.addEventListener('click', () => selectEmojiForPlacement(supported));
+            emojiList.appendChild(item);
+        } else {
+            // 非対応の場合は「？」を表示するか、非表示にするか
+            // ここでは薄い「？」を表示してクリック不可にする
+            item.textContent = '?';
+            item.classList.add('unsupported');
+            // item.title = 'この環境では表示できません';
+            // emojiList.appendChild(item); // 邪魔なら追加しない
+        }
     });
 }
 
@@ -449,8 +573,9 @@ function redrawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // 背景を描画（白背景の場合のみ）
+    // 背景を描画
     if (state.bgMode === 'white') {
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = state.canvasColor;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
@@ -581,9 +706,11 @@ function updateBackground() {
     if (state.bgMode === 'transparent') {
         document.body.classList.add('bg-transparent');
         document.body.classList.remove('bg-white');
+        canvas.style.backgroundColor = 'transparent';
     } else {
         document.body.classList.add('bg-white');
         document.body.classList.remove('bg-transparent');
+        canvas.style.backgroundColor = state.canvasColor;
     }
 }
 
@@ -1021,16 +1148,34 @@ function setupEventListeners() {
     let emojiStartX = 0;
     let emojiStartY = 0;
 
-    // Multi-touch state
-    let initialPinchDist = 0;
-    let initialPinchAngle = 0;
-    let initialScale = 1;
-    let initialRotation = 0;
-    let isGesturing = false;
+    // Multi-touch state (Global consolidated)
+    // Refactored to handle gestures robustly
 
     const handleCanvasStart = (e) => {
-        // e.preventDefault(); // スクロール防止はCanvas内のみ有効にしたいが、タッチ開始時は防ぐ
+        // Update Gesture Global State
+        const touches = e.touches ? e.touches.length : 1;
+
+        if (touches === 1 && state.maxFingers === 0) {
+            // First finger down, reset session
+            state.maxFingers = 1;
+            state.isGestureActive = false;
+            state.touchStartTime = Date.now();
+            state.didInteract = false;
+        } else {
+            state.maxFingers = Math.max(state.maxFingers, touches);
+        }
+
+        if (state.maxFingers >= 2) {
+            state.isGestureActive = true;
+            // If we were dragging an emoji, cancel it?
+            // For now, let's just mark gesture active so we don't 'place' on end
+        }
+
+        // Standard Logic
         if (e.type === 'touchstart') e.preventDefault();
+
+        // If gesture active, don't start drag/place logic
+        if (state.isGestureActive || touches > 1) return;
 
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -1060,6 +1205,7 @@ function setupEventListeners() {
                     dragStartY = clientY;
                     emojiStartX = emojiObj.x;
                     emojiStartY = emojiObj.y;
+                    state.didInteract = true;
                     break;
                 }
             }
@@ -1073,48 +1219,36 @@ function setupEventListeners() {
     };
 
     const handleCanvasMove = (e) => {
-        // Multi-touch gesture
-        if (e.touches && e.touches.length === 2 && draggedEmoji) {
-            const touch1 = e.touches[0];
-            const touch2 = e.touches[1];
-
-            const dist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
-            const angle = Math.atan2(touch2.clientY - touch1.clientY, touch2.clientX - touch1.clientX) * 180 / Math.PI;
-
-            if (!isGesturing) {
-                isGesturing = true;
-                initialPinchDist = dist;
-                initialPinchAngle = angle;
-                initialScale = draggedEmoji.size;
-                initialRotation = draggedEmoji.rotation;
-                saveToHistory(); // Save before gesture check
-                return;
+        if (e.touches) {
+            state.maxFingers = Math.max(state.maxFingers, e.touches.length);
+            if (e.touches.length >= 2) {
+                state.isGestureActive = true;
+                isDragging = false; // Cancel drag if pinch starts
             }
-
-            // Scale
-            const scale = dist / initialPinchDist;
-            draggedEmoji.size = Math.max(20, Math.min(800, initialScale * scale));
-
-            // Rotate
-            const rotationDelta = angle - initialPinchAngle;
-            draggedEmoji.rotation = (initialRotation + rotationDelta) % 360;
-
-            updateEditPanel();
-            redrawCanvas();
-
-            if (e.cancelable) e.preventDefault();
-            return;
         }
 
-        // Reset gesture if fingers lifted
-        if (isGesturing && (!e.touches || e.touches.length < 2)) {
-            isGesturing = false;
-        }
+        // Multi-touch gesture (Zoom/Rotate Emoji - only in edit mode?)
+        // The original code handled emoji scaling via pinch IF an emoji was being dragged?
+        // Let's preserve specific logic: "Pinch to zoom/rotate currently dragged emoji" 
+        // OR "Pinch to zoom canvas"
+        // User requested: "Pinch operation ... also implement pan operation with 2 fingers"
+        // And "prevent drawing when pinch".
 
-        if (!isDragging || !draggedEmoji || isGesturing) return;
+        // If 2+ fingers, we are in Canvas Pan/Zoom mode (handled by canvasContainer listeners), 
+        // OR Emoji manipulation mode.
+        // Let's decide: If we are 'dragging' an emoji, maybe allow pinch?
+        // But user said "Pinch operation ... drawing disabled".
+        // Let's defer 2-finger logic to canvasContainer or specific handler to avoid conflict.
+
+        if (state.isGestureActive) return;
+
+        if (!isDragging || !draggedEmoji) return;
 
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const delta = Math.hypot(clientX - dragStartX, clientY - dragStartY);
+        if (delta > 5) state.didInteract = true;
 
         const rect = canvas.getBoundingClientRect();
         const deltaX = (clientX - dragStartX) * (canvas.width / rect.width);
@@ -1133,6 +1267,38 @@ function setupEventListeners() {
         window.removeEventListener('mouseup', handleCanvasEnd);
         window.removeEventListener('touchmove', handleCanvasMove);
         window.removeEventListener('touchend', handleCanvasEnd);
+
+        // Check for Undo/Redo Tap Gestures (on clean release)
+        if (e.touches && e.touches.length === 0) {
+            // All fingers up
+            const duration = Date.now() - state.touchStartTime;
+
+            // Undo: 2 fingers, short tap, no significant interaction
+            if (state.maxFingers === 2 && duration < 400 && !state.didInteract) {
+                undo();
+                // Reset
+                state.maxFingers = 0;
+                return;
+            }
+            // Redo: 3 fingers
+            if (state.maxFingers === 3 && duration < 400 && !state.didInteract) {
+                redo();
+                state.maxFingers = 0;
+                return;
+            }
+        }
+
+        // If gesture was active, do nothing
+        if (state.isGestureActive || state.maxFingers > 1) {
+            // Reset if all fingers up
+            if (!e.touches || e.touches.length === 0) {
+                state.maxFingers = 0;
+                state.isGestureActive = false;
+                isDragging = false;
+                draggedEmoji = null;
+            }
+            return;
+        }
 
         if (isDragging && draggedEmoji) {
             // ドラッグ終了
@@ -1158,20 +1324,25 @@ function setupEventListeners() {
 
                 // 描画モード
                 if (state.toolMode === 'draw') {
-                    placeEmoji(canvasX, canvasY);
+                    // Check for interaction again just to be safe
+                    if (!state.didInteract) {
+                        placeEmoji(canvasX, canvasY);
+                    }
                     return;
                 }
 
                 // 選択モード
                 if (state.toolMode === 'select') {
-                    if (selectEmojiOnCanvas(clientX, clientY)) {
-                        // 選択成功
-                    } else {
-                        // 空白タップ -> 選択解除
-                        state.selectedEmoji = null;
-                        state.editMode = 'new';
-                        showEditPanel();
-                        redrawCanvas();
+                    if (!state.didInteract) {
+                        if (selectEmojiOnCanvas(clientX, clientY)) {
+                            // 選択成功
+                        } else {
+                            // 空白タップ -> 選択解除
+                            state.selectedEmoji = null;
+                            state.editMode = 'new';
+                            showEditPanel();
+                            redrawCanvas();
+                        }
                     }
                 }
             }
@@ -1179,6 +1350,13 @@ function setupEventListeners() {
 
         isDragging = false;
         draggedEmoji = null;
+
+        // Reset state if all fingers up
+        if (!e.touches || e.touches.length === 0) {
+            state.maxFingers = 0;
+            state.isGestureActive = false;
+            state.didInteract = false;
+        }
     };
 
     canvas.addEventListener('mousedown', handleCanvasStart);
@@ -1188,8 +1366,23 @@ function setupEventListeners() {
     // canvas.addEventListener('touchmove', handleCanvasMove, { passive: false }); // Windowで管理
     // canvas.addEventListener('touchend', handleCanvasEnd);   // Windowで管理
 
-    // 背景切り替え
-    bgToggleBtn.addEventListener('click', toggleBackground);
+    // 背景切り替え (Color Picker)
+    // bgToggleBtn.addEventListener('click', toggleBackground); // Old toggle
+
+    // Trigger color picker
+    bgToggleBtn.addEventListener('click', (e) => {
+        // If clicking the button (not input), trigger input
+        if (e.target !== bgColorPicker) {
+            bgColorPicker.click();
+        }
+    });
+
+    bgColorPicker.addEventListener('input', (e) => {
+        state.canvasColor = e.target.value;
+        state.bgMode = 'white'; // Force white mode (color mode)
+        updateBackground();
+        redrawCanvas();
+    });
 
     // 保存
     saveBtn.addEventListener('click', openSaveUI);
@@ -1247,9 +1440,17 @@ function setupEventListeners() {
     }
     // 選択範囲やり直し (削除済み - setupEventListeners内で定義済み)
 
-    // ピンチイン/アウトでキャンバス拡大縮小
+    // ピンチイン/アウトでキャンバス拡大縮小 + PAN
     let currentScale = 1;
     let initialDistance = 0;
+    let initialCenter = { x: 0, y: 0 };
+    let initialTranslate = { x: -50, y: -50 }; // CSS starts at -50%, -50%
+    // We need to track actual translate pixels if we want smooth pan, 
+    // but the CSS uses transform: translate(-50%, -50%) scale(X). 
+    // Mixing percentage and pixels is hard. 
+    // Let's start tracking pan in pixels relative to center.
+    let panX = 0;
+    let panY = 0;
 
     const getDistance = (touch1, touch2) => {
         const dx = touch1.clientX - touch2.clientX;
@@ -1257,19 +1458,63 @@ function setupEventListeners() {
         return Math.sqrt(dx * dx + dy * dy);
     };
 
+    const getCenter = (touch1, touch2) => {
+        return {
+            x: (touch1.clientX + touch2.clientX) / 2,
+            y: (touch1.clientY + touch2.clientY) / 2
+        };
+    };
+
+    // Note: canvasContainer listeners need to coordinate with canvas listeners via state
     canvasContainer.addEventListener('touchstart', (e) => {
         if (e.touches.length === 2) {
             initialDistance = getDistance(e.touches[0], e.touches[1]);
+            initialCenter = getCenter(e.touches[0], e.touches[1]);
+            // Store current pan state?
+            // panX/Y persists
         }
     }, { passive: true });
 
     canvasContainer.addEventListener('touchmove', (e) => {
         if (e.touches.length === 2 && initialDistance > 0) {
             const currentDistance = getDistance(e.touches[0], e.touches[1]);
+            const currentCenter = getCenter(e.touches[0], e.touches[1]);
+
+            // Zoom
             const scale = currentDistance / initialDistance;
-            currentScale = Math.max(0.5, Math.min(3, currentScale * scale));
-            canvasContainer.style.transform = `translate(-50%, -50%) scale(${currentScale})`;
+            const newScale = Math.max(0.5, Math.min(3, currentScale * scale)); // apply relative change? Or absolute? 
+            // Implementation detail: standard pinch is relative to previous frame or initial. 
+            // Here we use absolute tracking from start of gesture?
+            // "currentScale" is global.
+            // Let's apply change to currentScale.
+
+            // Actually, simplistic approach:
+            currentScale = Math.max(0.5, Math.min(3, currentScale * (currentDistance / initialDistance)));
+
+            // Pan
+            const dx = currentCenter.x - initialCenter.x;
+            const dy = currentCenter.y - initialCenter.y;
+
+            panX += dx;
+            panY += dy;
+
+            // Update transform
+            // Note: need to maintain -50% offset for centering
+            canvasContainer.style.transform = `translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${currentScale})`;
+
+            // Reset for next frame so we don't compound zoom explosively if using relative math above
+            // But 'currentDistance / initialDistance' is absolute ratio of THIS gesture.
+            // So we should NOT update initialDistance if we apply to *accumulated* currentScale?
+            // Wait, logic above `currentScale * scale` compounds.
+            // Correct way:
+            // newScale = startScale * (currDist / startDist).
+            // But we didn't save startScale.
+
+            // Let's just do incremental updates (standard web habit)
             initialDistance = currentDistance;
+            initialCenter = currentCenter;
+
+            state.didInteract = true; // Mark as interacted so we don't Undo
         }
     }, { passive: true });
 
@@ -1282,7 +1527,8 @@ function setupEventListeners() {
         e.preventDefault();
         const delta = e.deltaY > 0 ? 0.9 : 1.1;
         currentScale = Math.max(0.5, Math.min(3, currentScale * delta));
-        canvasContainer.style.transform = `translate(-50%, -50%) scale(${currentScale})`;
+        // Reset pan on zoom? No, keep it.
+        canvasContainer.style.transform = `translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${currentScale})`;
     }, { passive: false });
 }
 
