@@ -57,7 +57,8 @@ const emojiData = {
         '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️',
         '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢',
         '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️',
-        '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅', '🈯', '💹',
+        '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰',
+        '♻️', '✅', '🈯', '💹',
         '❇️', '✳️', '❎', '🌐', '💠', '🌀', '💤', '🏧', '🚾', '♿', '🅿️', '🈳', '🈂️',
         '🛂', '🛃', '🛄', '🛅', '🚹', '🚺', '🚼', '⚧️', '🚻', '🚮', '🎦', '📶', '🈁',
         '🔣', 'ℹ️', '🔤', '🔡', '🔠', '🆖', '🆗', '🆙', '🆒', '🆕', '🆓', '0️⃣', '1️⃣',
@@ -84,72 +85,36 @@ const emojiData = {
     ]
 };
 
-// 絵文字キーワード辞書 (簡易版)
-const emojiKeywords = {
-    // Smileys & People
-    '😀': '笑顔 smile happy', '😃': '笑顔 smile happy', '😄': '笑顔 smile happy',
-    '😁': '笑顔 smile happy', '😆': '笑顔 smile happy', '😅': '汗 苦笑 sweat',
-    '🤣': '爆笑 涙 lol', '😂': '泣き笑い 涙 lol', '😊': 'ニコニコ smile',
-    '😇': '天使 angel', '🥰': 'ラブ love heart', '😍': '好き love heart',
-    '🤩': 'スター 星 star wow', '😘': 'キス kiss', '😗': 'キス kiss',
-    '😭': '泣く cry tear', '😢': '泣く cry', '😤': '怒る angry',
-    '😡': '怒る angry', '🤬': '罵倒 angry', '💀': 'ドクロ 骸骨 skull',
-    '💩': 'うんち poop', '🤡': 'ピエロ clown', '👻': 'お化け ghost',
-    '👽': 'エイリアン alien', '👾': 'ゲーム game', '🤖': 'ロボット robot',
-    '😺': '猫 cat', '😸': '猫 cat',
+// 絵文字キーワード辞書
+// Loaded from emojis.js as window.emojiKeywords
 
-    // Animals
-    '🐶': '犬 dog', '🐱': '猫 cat', '🐭': 'ネズミ mouse', '🐹': 'ハムスター',
-    '🐰': 'うさぎ rabbit', '🦊': 'キツネ fox', '🐻': '熊 bear',
-    '🐼': 'パンダ panda', '🐨': 'コアラ koala', '🐯': '虎 tiger',
-    '🦁': 'ライオン lion', '🐮': '牛 cow', '🐷': '豚 pig',
-    '🐸': 'カエル frog', '🐵': '猿 monkey', '🐔': '鶏 chicken',
-    '🐧': 'ペンギン penguin', '🐦': '鳥 bird', '🦆': 'カモ duck',
-    '🦅': '鷲 eagle', '🦉': 'フクロウ owl', '🐺': '狼 wolf',
-    '🐗': '猪 boar', '🐴': '馬 horse', '🦄': 'ユニコーン unicorn',
-    '🐝': '蜂 bee', '🐛': '毛虫 bug', '🦋': '蝶 butterfly',
-    '🐢': '亀 turtle', '🐍': '蛇 snake', '🐙': 'タコ octopus',
-    '🦑': 'イカ squid', '🦐': 'エビ shrimp', '🦀': 'カニ crab',
-    '🐡': 'フグ blowfish', '🐠': '魚 fish', '🐟': '魚 fish',
-    '🐬': 'イルカ dolphin', '🐳': 'クジラ whale', '🦈': 'サメ shark',
+// すべての絵文字リスト (loaded from emojis.js)
+const allEmojis = [];
 
-    // Food
-    '🍎': 'リンゴ apple', '🍏': 'リンゴ apple', '🍊': 'みかん orange',
-    '🍋': 'レモン lemon', '🍌': 'バナナ banana', '🍉': 'スイカ watermelon',
-    '🍇': 'ぶどう grape', '🍓': 'イチゴ strawberry', '🍑': '桃 peach',
-    '🍒': 'さくらんぼ cherry', '🍍': 'パイナップル pineapple', '🥝': 'キウイ kiwi',
-    '🍅': 'トマト tomato', '🍆': 'ナス eggplant', '🌽': 'トウモロコシ corn',
-    '🥕': '人参 carrot', '🍔': 'ハンバーガー burger', '🍟': 'ポテト fries',
-    '🍕': 'ピザ pizza', '🌭': 'ホットドッグ hotdog', '🥪': 'サンドイッチ sandwich',
-    '🌮': 'タコス taco', '🍣': '寿司 sushi', '🍙': 'おにぎり rice',
-    '🍚': 'ご飯 rice', '🍛': 'カレー curry', '🍜': 'ラーメン ramen',
-    '🍝': 'パスタ pasta', '🍞': 'パン bread', '🥐': 'クロワッサン',
-    '🍰': 'ケーキ cake', '🎂': '誕生日 birthday', '🍦': 'アイス icecream',
-    '🍩': 'ドーナツ donut', '🍪': 'クッキー cookie', '🍫': 'チョコ chocolate',
-    '🍬': '飴 candy', '🍭': 'キャンディ candy', '☕': 'コーヒー coffee',
-    '🍵': 'お茶 tea', '🍺': 'ビール beer', '🍷': 'ワイン wine',
-    '🍹': 'カクテル cocktail',
-
-    // Symbols
-    '❤️': 'ハート heart love', '🧡': 'ハート heart', '💛': 'ハート heart',
-    '💚': 'ハート heart', '💙': 'ハート heart', '💜': 'ハート heart',
-    '💔': '失恋 heart break', '⭐': '星 star', '🌟': '星 starキラキラ',
-    '✨': 'キラキラ sparkle', '⚡': '雷 thunder', '🔥': '炎 fire',
-    '☀️': '太陽 sun', '☁️': '雲 cloud', '雨': '雨 rain', '☔': '傘 umbrella',
-    '❄️': '雪 snow', '⛄': '雪だるま snowman', '🌸': '桜 flower',
-    '🌹': 'バラ rose', '🌺': 'ハイビスカス flower', '🌻': 'ひまわり flower',
-    '🎵': '音符 music', '🎶': '音符 music', '💯': '100点 score',
-    '💢': '怒り angry', '💤': '睡眠 sleep', '💦': '汗 sweat water',
-    '🎉': 'クラッカー party', '🎊': 'くす玉 party', '🎈': '風船 balloon'
+// カテゴリ用アイコンマッピング
+const categoryIcons = {
+    recent: '🕒',
+    smileys: '😀',
+    people: '👋',
+    animals: '🐶',
+    food: '🍎',
+    travel: '🚗',
+    activities: '⚽',
+    objects: '💡',
+    symbols: '⭐',
+    flags: '🏁'
 };
 
-// すべての絵文字リスト
-const allEmojis = [
-    ...emojiData.smileys,
-    ...emojiData.animals,
-    ...emojiData.food,
-    ...emojiData.symbols
-];
+// 初期化時にデータを統合
+function initializeEmojiData() {
+    if (window.emojiData) {
+        Object.keys(window.emojiData).forEach(key => {
+            if (Array.isArray(window.emojiData[key])) {
+                allEmojis.push(...window.emojiData[key]);
+            }
+        });
+    }
+}
 
 // アプリケーション状態
 let state = {
@@ -184,7 +149,7 @@ const ctx = canvas.getContext('2d');
 const canvasContainer = document.getElementById('canvas-container');
 const emojiList = document.getElementById('emoji-list');
 const emojiSearch = document.getElementById('emoji-search');
-const categoryTabs = document.querySelectorAll('.category-tab');
+// const categoryTabs = document.querySelectorAll('.category-tab'); // Dynamic now
 const editPanel = document.getElementById('edit-panel');
 const emojiPreview = document.getElementById('emoji-preview');
 const sizeSlider = document.getElementById('size-slider');
@@ -288,6 +253,12 @@ function init() {
     // キャンバスサイズを設定
     canvas.width = 600;
     canvas.height = 600;
+
+    // データを初期化
+    initializeEmojiData();
+
+    // カテゴリタブを生成
+    renderCategoryTabs();
 
     // セレクションキャンバスのサイズを設定
     selectionCanvas.width = window.innerWidth;
@@ -405,8 +376,8 @@ function displayEmojis(filter) {
         }
     } else if (Array.isArray(filter)) {
         emojisToShow = filter;
-    } else if (emojiData[filter]) {
-        emojisToShow = emojiData[filter];
+    } else if (window.emojiData && window.emojiData[filter]) {
+        emojisToShow = window.emojiData[filter];
     }
 
     emojisToShow.forEach(emoji => {
@@ -725,7 +696,7 @@ function addToRecentEmojis(emoji) {
         state.recentEmojis.pop();
     }
     saveRecentEmojis();
-    displayRecentEmojis();
+    displayEmojis('recent');
 }
 
 function flipEmoji() {
@@ -743,12 +714,45 @@ function flipEmoji() {
     }
 }
 
-function displayRecentEmojis() {
-    // カテゴリタブが 'recent' の場合のみ表示を更新
-    const activeTab = document.querySelector('.category-tab.active');
-    if (activeTab && activeTab.dataset.category === 'recent') {
-        displayEmojis('recent');
+// カテゴリタブを動的に生成
+function renderCategoryTabs() {
+    const container = document.getElementById('emoji-categories');
+    container.innerHTML = '';
+
+    // Recent Tab
+    const recentBtn = document.createElement('button');
+    recentBtn.className = 'category-tab active';
+    recentBtn.dataset.category = 'recent';
+    recentBtn.title = '最近使ったもの';
+    recentBtn.textContent = categoryIcons['recent'];
+    container.appendChild(recentBtn);
+
+    // Other Tabs from Data
+    if (window.emojiData) {
+        Object.keys(window.emojiData).forEach(category => {
+            const btn = document.createElement('button');
+            btn.className = 'category-tab';
+            btn.dataset.category = category;
+            btn.textContent = categoryIcons[category] || '📦'; // Default icon
+            container.appendChild(btn);
+        });
     }
+
+    // Add event listeners to new tabs
+    const tabs = container.querySelectorAll('.category-tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // UI Update
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            // Scroll to top
+            if (emojiList) emojiList.scrollTop = 0;
+
+            const category = tab.dataset.category;
+            displayEmojis(category);
+        });
+    });
 }
 
 function saveRecentEmojis() {
@@ -764,7 +768,7 @@ function loadRecentEmojis() {
         const saved = localStorage.getItem('desu-emojie-recent');
         if (saved) {
             state.recentEmojis = JSON.parse(saved);
-            displayRecentEmojis();
+            displayEmojis('recent');
         }
     } catch (e) {
         console.error('Failed to load recent emojis:', e);
@@ -1043,15 +1047,7 @@ function startSelection() {
 // イベントリスナーの設定
 function setupEventListeners() {
     // カテゴリタブ
-    categoryTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            categoryTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-
-            const category = tab.dataset.category;
-            displayEmojis(category);
-        });
-    });
+    // Category tabs listeners are handled in renderCategoryTabs(), so removed here.
 
     // 検索
     emojiSearch.addEventListener('input', (e) => {
