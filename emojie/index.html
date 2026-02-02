@@ -14,12 +14,81 @@
 </head>
 
 <body>
-    <!-- キャンバスエリア -->
-    <div id="canvas-container">
-        <canvas id="canvas"></canvas>
+    <!-- キャンバスエリア (Flex Item 1) -->
+    <div id="canvas-area">
+        <div id="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <!-- 右上ツールバー (キャンバスエリア内に配置) -->
+        <div id="toolbar-right">
+            <div class="tool-btn" id="bgToggleBtn">
+                <svg viewBox="0 0 24 24">
+                    <rect x="4" y="4" width="16" height="16" />
+                </svg>
+                <div class="tool-tooltip tool-tooltip-bottom">背景</div>
+            </div>
+
+            <div class="tool-btn" id="saveBtn">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 4 L12 16 M6 12 L12 18 L18 12" />
+                    <path d="M4 20 L20 20" />
+                </svg>
+                <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-2">保存</div>
+            </div>
+
+            <div class="tool-btn" id="clearBtn">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34" />
+                </svg>
+                <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-3">全消去</div>
+            </div>
+        </div>
     </div>
 
-    <!-- 絵文字ピッカーエリア -->
+    <!-- 編集パネル (Flex Item 2) -->
+    <div id="edit-panel">
+        <div class="panel-row">
+            <!-- ツール切り替え -->
+            <div id="tool-switch" class="segment-control">
+                <button class="segment-btn active" data-mode="draw" title="描画モード">😀</button>
+                <button class="segment-btn" data-mode="select" title="選択モード">👆</button>
+            </div>
+
+            <div class="preview-container">
+                <div id="emoji-preview">😀</div>
+            </div>
+
+            <div class="controls-container">
+                <div class="control-group">
+                    <label>サイズ</label>
+                    <input type="range" id="size-slider" min="20" max="800" value="60" step="1">
+                    <span id="size-value">60px</span>
+                </div>
+
+                <div class="control-group">
+                    <label>回転</label>
+                    <input type="range" id="rotation-slider" min="0" max="360" value="0" step="1">
+                    <span id="rotation-value">0°</span>
+                </div>
+            </div>
+
+            <!-- アクション (右側へ集約) -->
+            <div class="actions-container">
+                <div id="layer-controls" class="button-group">
+                    <button id="bring-front" class="edit-btn icon-btn" title="最前面">⬆️⬆️</button>
+                    <button id="bring-forward" class="edit-btn icon-btn" title="前面">⬆️</button>
+                    <button id="send-backward" class="edit-btn icon-btn" title="背面">⬇️</button>
+                    <button id="send-back" class="edit-btn icon-btn" title="最背面">⬇️⬇️</button>
+                </div>
+                <button id="delete-emoji" class="edit-btn delete-btn icon-btn" title="削除">🗑️</button>
+                <button id="place-emoji" style="display:none;">配置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 絵文字ピッカーエリア (Flex Item 3) -->
     <div id="emoji-picker-container">
         <div id="emoji-search-bar">
             <input type="text" id="emoji-search" placeholder="🔍 絵文字を検索...">
@@ -33,76 +102,16 @@
 
         <!-- カテゴリタブ -->
         <div id="emoji-categories">
-            <button class="category-tab active" data-category="smileys">😀 顔</button>
-            <button class="category-tab" data-category="animals">🐶 動物</button>
-            <button class="category-tab" data-category="food">🍎 食べ物</button>
-            <button class="category-tab" data-category="symbols">⭐ 記号</button>
-            <button class="category-tab" data-category="all">🌈 すべて</button>
+            <button class="category-tab active" data-category="smileys">😀</button>
+            <button class="category-tab" data-category="animals">🐶</button>
+            <button class="category-tab" data-category="food">🍎</button>
+            <button class="category-tab" data-category="symbols">⭐</button>
+            <button class="category-tab" data-category="all">🌈</button>
         </div>
 
         <!-- 絵文字リスト -->
         <div id="emoji-list-container">
             <div id="emoji-list" class="emoji-list"></div>
-        </div>
-    </div>
-
-    <!-- 編集パネル -->
-    <div id="edit-panel" class="hidden">
-        <div class="panel-header">編集</div>
-
-        <div class="preview-container">
-            <div id="emoji-preview">😀</div>
-        </div>
-
-        <div class="control-group">
-            <label>サイズ</label>
-            <input type="range" id="size-slider" min="20" max="200" value="60" step="1">
-            <span id="size-value">60px</span>
-        </div>
-
-        <div class="control-group">
-            <label>回転</label>
-            <input type="range" id="rotation-slider" min="0" max="360" value="0" step="1">
-            <span id="rotation-value">0°</span>
-        </div>
-
-        <!-- レイヤー順序ボタン -->
-        <div id="layer-controls" class="button-group" style="display:none;">
-            <button id="bring-front" class="edit-btn">最前面へ</button>
-            <button id="bring-forward" class="edit-btn">前へ</button>
-            <button id="send-backward" class="edit-btn">後ろへ</button>
-            <button id="send-back" class="edit-btn">最背面へ</button>
-        </div>
-
-        <div class="button-group">
-            <button id="delete-emoji" class="edit-btn delete-btn" style="display:none;">🗑 削除</button>
-            <button id="place-emoji" class="edit-btn primary">配置</button>
-        </div>
-    </div>
-
-    <!-- 右上ツールバー -->
-    <div id="toolbar-right">
-        <div class="tool-btn" id="bgToggleBtn">
-            <svg viewBox="0 0 24 24">
-                <rect x="4" y="4" width="16" height="16" />
-            </svg>
-            <div class="tool-tooltip tool-tooltip-bottom">背景</div>
-        </div>
-
-        <div class="tool-btn" id="saveBtn">
-            <svg viewBox="0 0 24 24">
-                <path d="M12 4 L12 16 M6 12 L12 18 L18 12" />
-                <path d="M4 20 L20 20" />
-            </svg>
-            <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-2">保存</div>
-        </div>
-
-        <div class="tool-btn" id="clearBtn">
-            <svg viewBox="0 0 24 24">
-                <path
-                    d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34" />
-            </svg>
-            <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-3">全消去</div>
         </div>
     </div>
 
