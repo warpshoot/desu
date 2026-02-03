@@ -953,13 +953,17 @@ function downloadCanvas(canvas, filename) {
 
 async function copyToClipboard(canvas) {
     try {
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        // Safari requires ClipboardItem with Promise factory to maintain user gesture context
         await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob })
+            new ClipboardItem({
+                'image/png': new Promise((resolve) => {
+                    canvas.toBlob(resolve, 'image/png');
+                })
+            })
         ]);
 
         const originalText = copyClipboardBtn.textContent;
-        copyClipboardBtn.textContent = 'コピーしました！';
+        copyClipboardBtn.textContent = 'コピーしました!';
         setTimeout(() => {
             copyClipboardBtn.textContent = originalText;
         }, 1500);
