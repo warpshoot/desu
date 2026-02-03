@@ -71,8 +71,15 @@ body {
 .panel-row {
     display: flex;
     align-items: center;
-    gap: 12px;
-    justify-content: space-between;
+    gap: 8px;
+    /* Slightly reduce gap (12->8) */
+    justify-content: center;
+    /* Center alignment */
+}
+
+/* Hide vertical divider in panel row */
+.panel-row .divider {
+    display: none;
 }
 
 /* ツール切り替え */
