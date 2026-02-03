@@ -710,9 +710,7 @@ body.help-mode .tool-tooltip {
 }
 
 /* Panel Row Layout */
-.panel-row.top-row {
-    justify-content: space-between;
-}
+/* .panel-row.top-row removed to prevent space-between override */
 
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
