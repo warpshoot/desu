@@ -230,11 +230,16 @@ body {
 }
 
 .edit-btn.delete-btn {
-    border-color: #999;
-    /* Neutralize red for grayscale */
-    color: #333;
+    border-color: #ff4444;
+    /* Special Red Border */
+    /* Neutralize red for grayscale? No, user wants red. */
+    /* color: #333; */
+    color: #ff4444;
+    /* Red icon too */
     margin-left: 4px;
     height: 70px;
+    filter: none;
+    /* Disable grayscale */
 }
 
 /* 絵文字ピッカーコンテナ (下部・固定高さ) */
@@ -633,10 +638,17 @@ body.help-mode .tool-tooltip {
     padding: 20px;
 }
 
-@media (max-width: 768px) and (orientation: portrait) {
-    #credit-modal {
-        align-items: flex-end;
-        justify-content: flex-end;
+@media (max-width: 768px) {
+    #credit-content {
+        padding: 20px;
+        width: 300px;
+        /* Smaller width */
+        transform: scale(0.8);
+        /* Scale down slightly */
+    }
+
+    #credit-content h2 {
+        font-size: 18px;
     }
 }
 
@@ -851,14 +863,32 @@ body.bg-white #canvas-container {
     /* border-radius removed to match Emojie solid design */
 }
 
+/* Clear Button Special Red Style */
+#clearBtn {
+    border: 1px solid #ff4444;
+    color: #ff4444;
+}
+
+#clearBtn:active {
+    background: #ff4444;
+    color: #fff;
+}
+
 /* History Buttons specific */
 .history-btn {
     font-size: 20px;
 }
 
-.history-btn.disabled {
+/* Generic Disabled State */
+.disabled {
     opacity: 0.3;
     pointer-events: none;
+    filter: grayscale(100%);
+    /* Optional: force gray */
+}
+
+.history-btn.disabled {
+    /* history-btn specific overrides if needed, essentially same */
     background: rgba(255, 255, 255, 0.5);
     border-color: #ddd;
 }

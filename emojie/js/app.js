@@ -216,6 +216,7 @@ function undo() {
     state.selectedEmoji = null;
     hideEditPanel(); // これがredrawも呼ぶ
 
+    saveStorage(); // Save new state
     updateHistoryUI();
 }
 
@@ -232,6 +233,7 @@ function redo() {
     state.selectedEmoji = null;
     hideEditPanel();
 
+    saveStorage(); // Save new state
     updateHistoryUI();
 }
 
@@ -267,6 +269,8 @@ function init() {
 
     // 最近使った絵文字をロード
     loadRecentEmojis();
+    // データをロード
+    loadStorage();
 
     // 初期絵文字リストを表示 (デフォルトを最近使ったものに)
     displayEmojis('recent');
@@ -284,6 +288,7 @@ function init() {
     redrawCanvas();
 
     // プレビューの初期化
+    showEditPanel(); // Update button visibility based on initial state
     updateEditPanel();
 }
 
@@ -429,7 +434,7 @@ function showEditPanel() {
     deleteEmojiBtn.style.display = 'block';
     layerControls.style.display = 'flex';
 
-    if (state.editMode === 'edit') {
+    if (state.editMode === 'edit' && state.selectedEmoji) {
         deleteEmojiBtn.classList.remove('disabled');
         layerControls.classList.remove('disabled');
     } else {
@@ -548,6 +553,7 @@ function placeEmoji(x, y) {
     }
 
     redrawCanvas();
+    saveStorage(); // Save new state
 }
 
 // キャンバスを再描画
@@ -650,6 +656,7 @@ function deleteEmoji() {
         state.canvasEmojis = state.canvasEmojis.filter(e => e.id !== state.selectedEmoji.id);
         hideEditPanel();
         redrawCanvas();
+        saveStorage(); // Save new state
     }
 }
 
@@ -796,6 +803,39 @@ function saveRecentEmojis() {
     }
 }
 
+const STORAGE_KEY = 'desu-emojie-canvas';
+
+function saveStorage() {
+    try {
+        const data = {
+            canvasEmojis: state.canvasEmojis,
+            canvasColor: state.canvasColor,
+            bgMode: state.bgMode
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+        console.error('Failed to save canvas storage:', e);
+    }
+}
+
+function loadStorage() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const data = JSON.parse(saved);
+            if (data.canvasEmojis) state.canvasEmojis = data.canvasEmojis;
+            if (data.canvasColor) state.canvasColor = data.canvasColor;
+            if (data.bgMode) {
+                state.bgMode = data.bgMode;
+                // Update checkbox UI if it exists, though logic uses state.bgMode
+                // No, updateBackground() handles the visual application
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load canvas storage:', e);
+    }
+}
+
 function loadRecentEmojis() {
     try {
         const saved = localStorage.getItem('desu-emojie-recent');
@@ -818,6 +858,7 @@ function clearCanvas() {
         state.selectedEmoji = null;
         hideEditPanel();
         redrawCanvas();
+        saveStorage(); // Save new state
     }
 }
 
