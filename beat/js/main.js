@@ -61,6 +61,9 @@ class Sequencer {
             (scaleName) => { // onScaleChange
                 this.state.scale = scaleName;
                 saveState(this.state);
+            },
+            () => { // onInit (called when audioEngine is first initialized)
+                this.syncAudioWithState();
             }
         );
         this.controls.onVolumeChange = (vol) => {
@@ -264,26 +267,16 @@ class Sequencer {
     }
 
     restoreState() {
-        // 1. Controls
+        // 1. Controls UI
         this.controls.setBPM(this.state.bpm);
         this.controls.setSwing(this.state.swingEnabled);
         this.controls.setVolume(this.state.masterVolume);
         this.controls.setScale(this.state.scale);
         this.controls.setLoop(this.state.loopEnabled);
 
-        // 2. Audio Engine Global Params
-        this.audioEngine.setBPM(this.state.bpm);
-        this.audioEngine.setMasterVolume(this.state.masterVolume);
-
-        // 3. Audio Engine Track Params
-        for (let i = 0; i < ROWS; i++) {
-            // Params
-            const params = this.state.trackParams[i];
-            this.audioEngine.updateTrackParams(i, params);
-
-            // Mute/Solo
-            this.audioEngine.setTrackMute(i, this.state.mutedTracks ? this.state.mutedTracks[i] : false);
-            this.audioEngine.setTrackSolo(i, this.state.soloedTracks ? this.state.soloedTracks[i] : false);
+        // 2. Audio Engine (sync if already initialized)
+        if (this.audioEngine.initialized) {
+            this.syncAudioWithState();
         }
 
         this.audioEngine.setLoopRange(this.state.loopStart, this.state.loopEnd, this.state.loopEnabled);
@@ -298,6 +291,28 @@ class Sequencer {
 
         // 6. Update Track Controls UI (Mute/Solo buttons)
         this.setupTrackControls();
+    }
+
+    syncAudioWithState() {
+        if (!this.audioEngine.initialized) return;
+
+        // Global Params
+        this.audioEngine.setBPM(this.state.bpm);
+        this.audioEngine.setMasterVolume(this.state.masterVolume);
+        this.audioEngine.setSwing(this.state.swingEnabled);
+
+        // Track Params
+        for (let i = 0; i < ROWS; i++) {
+            // Params
+            const params = this.state.trackParams[i];
+            this.audioEngine.updateTrackParams(i, params);
+
+            // Mute/Solo
+            this.audioEngine.setTrackMute(i, this.state.mutedTracks ? this.state.mutedTracks[i] : false);
+            this.audioEngine.setTrackSolo(i, this.state.soloedTracks ? this.state.soloedTracks[i] : false);
+        }
+
+        this.audioEngine.setLoopRange(this.state.loopStart, this.state.loopEnd, this.state.loopEnabled);
     }
 
     initCreditModal() {
@@ -509,8 +524,7 @@ class Sequencer {
                         if (shouldPlay) {
                             if (!this.audioEngine.initialized) {
                                 await this.audioEngine.init();
-                                this.audioEngine.setBPM(this.state.bpm);
-                                this.audioEngine.setMasterVolume(this.state.masterVolume);
+                                this.syncAudioWithState();
                             }
                             const cellInstance = this.cells[t][s];
                             this.audioEngine.triggerNote(

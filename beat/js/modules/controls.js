@@ -1,7 +1,7 @@
 import { SCALES } from './constants.js';
 
 export class Controls {
-    constructor(audioEngine, onBPMChange, onSwingChange, onClear, onPlay, onStop, onLoopToggle, onScaleChange) {
+    constructor(audioEngine, onBPMChange, onSwingChange, onClear, onPlay, onStop, onLoopToggle, onScaleChange, onInit) {
         this.audioEngine = audioEngine;
         this.onBPMChange = onBPMChange;
         this.onSwingChange = onSwingChange;
@@ -10,6 +10,7 @@ export class Controls {
         this.onStop = onStop;
         this.onLoopToggle = onLoopToggle;
         this.onScaleChange = onScaleChange;
+        this.onInit = onInit;
         this.isPlaying = false;
         this.swingEnabled = false;
         this.isRecordingArmed = false;
@@ -108,9 +109,7 @@ export class Controls {
             this.playPauseBtn.addEventListener('click', async () => {
                 if (!this.audioEngine.initialized) {
                     await this.audioEngine.init();
-                    // Re-apply current state to the fresh audio engine
-                    this.audioEngine.setBPM(parseInt(this.bpmDragValue.textContent));
-                    this.audioEngine.setMasterVolume(parseFloat(this.volumeSlider.value));
+                    if (this.onInit) this.onInit();
                 }
                 await this.togglePlay();
             });
