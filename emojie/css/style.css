@@ -71,8 +71,8 @@ body {
 .panel-row {
     display: flex;
     align-items: center;
-    gap: 2px;
-    /* Tighten gap to 2px (matching button-grid) */
+    gap: 8px;
+    /* Restored "Global don't tighten" */
     justify-content: center;
     /* Center alignment */
 }
@@ -80,6 +80,14 @@ body {
 /* Hide vertical divider in panel row */
 .panel-row .divider {
     display: none;
+}
+
+/* New Wrapper for Sliders + Flip Button */
+.center-controls {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    /* Gap 0 between Sliders and Flip */
 }
 
 /* ツール切り替え */
@@ -138,8 +146,8 @@ body {
 .control-group {
     display: flex;
     align-items: center;
-    gap: 6px;
-    /* 少し狭める */
+    gap: 2px;
+    /* Set to 2px as requested */
 }
 
 .control-group label {
