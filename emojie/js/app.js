@@ -140,7 +140,8 @@ let state = {
     maxFingers: 0,
     isGestureActive: false,
     touchStartTime: 0,
-    didInteract: false // moved/dragged/pinched
+    didInteract: false, // moved/dragged/pinched
+    isResizing: false // slider interaction state
 };
 
 // DOM要素
@@ -483,7 +484,7 @@ function updateEditPanel() {
         flipScale = state.selectedEmoji.flipX ? -1 : 1;
     }
 
-    emojiPreview.style.fontSize = sizeSlider.value + 'px';
+    emojiPreview.style.fontSize = '40px'; // Fixed size for preview box
     emojiPreview.style.transform = `rotate(${rotationSlider.value}deg) scaleX(${flipScale})`;
 
     // Update flip button state
@@ -553,7 +554,6 @@ function placeEmoji(x, y) {
 function redrawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 背景を描画（白背景の場合のみ）
     // 背景を描画
     if (state.bgMode === 'white') {
         ctx.fillStyle = state.canvasColor;
@@ -588,6 +588,28 @@ function redrawCanvas() {
         ctx.fillText(emojiObj.emoji, 0, 0);
         ctx.restore();
     });
+
+    // Draw Ghost Preview (Center) if Resizing (ONLY in Draw Mode)
+    // User requested: "Don't need ghost in select mode because selected object updates directly"
+    if (state.isResizing && state.editMode !== 'edit') {
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((state.currentRotation * Math.PI) / 180);
+        ctx.font = `${state.currentSize}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.globalAlpha = 0.5; // Semi-transparent ghost
+
+        let displayEmoji = state.currentEmoji;
+        let flip = state.currentFlipX;
+
+        if (flip) {
+            ctx.scale(-1, 1);
+        }
+
+        ctx.fillText(displayEmoji, 0, 0);
+        ctx.restore();
+    }
 }
 
 // キャンバス上の絵文字を選択
@@ -1088,6 +1110,7 @@ function setupEventListeners() {
         } else {
             state.currentSize = val;
             updateEditPanel();
+            redrawCanvas(); // Update ghost in real-time
         }
     });
 
@@ -1104,16 +1127,29 @@ function setupEventListeners() {
         }
     });
 
-    // スライダー操作開始時に履歴保存
-    const handleSliderStart = () => {
-        if (state.editMode === 'edit' && state.selectedEmoji) {
-            saveToHistory();
-        }
+    // Size Slider Listeners
+    const handleSizeStart = () => {
+        state.isResizing = true;
+        if (state.editMode === 'edit' && state.selectedEmoji) saveToHistory();
+        redrawCanvas();
     };
-    sizeSlider.addEventListener('mousedown', handleSliderStart);
-    sizeSlider.addEventListener('touchstart', handleSliderStart);
-    rotationSlider.addEventListener('mousedown', handleSliderStart);
-    rotationSlider.addEventListener('touchstart', handleSliderStart);
+    const handleSizeEnd = () => {
+        state.isResizing = false;
+        redrawCanvas();
+    };
+
+    sizeSlider.addEventListener('mousedown', handleSizeStart);
+    sizeSlider.addEventListener('touchstart', handleSizeStart);
+    sizeSlider.addEventListener('mouseup', handleSizeEnd);
+    sizeSlider.addEventListener('touchend', handleSizeEnd);
+    sizeSlider.addEventListener('mouseleave', handleSizeEnd);
+
+    // Rotation Slider Listeners (History only)
+    const handleRotationStart = () => {
+        if (state.editMode === 'edit' && state.selectedEmoji) saveToHistory();
+    };
+    rotationSlider.addEventListener('mousedown', handleRotationStart);
+    rotationSlider.addEventListener('touchstart', handleRotationStart);
 
     // 配置ボタン (Deleted)
     // placeEmojiBtn.addEventListener('click', placeEmoji);

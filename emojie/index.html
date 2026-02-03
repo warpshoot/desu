@@ -20,6 +20,35 @@
             <canvas id="canvas"></canvas>
         </div>
 
+        <!-- 左側ツールバー (描画系・履歴) -->
+        <div id="toolbar-left">
+            <!-- ツール切り替え -->
+            <div class="tool-group">
+                <div class="tool-btn segment-btn active" data-mode="draw">
+                    <span class="emoji-icon">😀</span>
+                    <div class="tool-tooltip tool-tooltip-right">描画モード</div>
+                </div>
+                <div class="tool-btn segment-btn" data-mode="select">
+                    <span class="emoji-icon">👆</span>
+                    <div class="tool-tooltip tool-tooltip-right">選択モード</div>
+                </div>
+            </div>
+
+            <div class="divider-h"></div>
+
+            <!-- Undo/Redo -->
+            <div class="tool-group">
+                <button id="undo-btn" class="tool-btn history-btn disabled">
+                    <span class="emoji-icon">↩️</span>
+                    <div class="tool-tooltip tool-tooltip-right">元に戻す</div>
+                </button>
+                <button id="redo-btn" class="tool-btn history-btn disabled">
+                    <span class="emoji-icon">↪️</span>
+                    <div class="tool-tooltip tool-tooltip-right">やり直し</div>
+                </button>
+            </div>
+        </div>
+
         <!-- 右上ツールバー (キャンバスエリア内に配置) -->
         <div id="toolbar-right">
             <div class="tool-btn" id="bgToggleBtn">
@@ -42,19 +71,6 @@
     <!-- 編集パネル (Flex Item 2) -->
     <div id="edit-panel">
         <div class="panel-row top-row">
-            <!-- ツール切り替え -->
-            <div id="tool-switch" class="segment-control">
-                <button class="segment-btn active" data-mode="draw" title="描画モード">😀</button>
-                <button class="segment-btn" data-mode="select" title="選択モード">👆</button>
-            </div>
-
-            <!-- Undo/Redo (New) -->
-            <div class="history-controls">
-                <button id="undo-btn" class="edit-btn icon-btn disabled" title="元に戻す">↩️</button>
-                <button id="redo-btn" class="edit-btn icon-btn disabled" title="やり直し">↪️</button>
-            </div>
-
-            <div class="divider"></div>
 
             <div class="preview-container">
                 <div id="emoji-preview">😀</div>
@@ -74,9 +90,9 @@
                 </div>
             </div>
 
-            <button id="flip-h" class="edit-btn icon-btn" title="左右反転">↔️</button>
-
             <div class="divider"></div>
+
+            <button id="flip-h" class="edit-btn icon-btn" title="左右反転">↔️</button>
 
             <!-- アクション (右側へ集約) -->
             <div class="actions-container">
