@@ -141,7 +141,8 @@ let state = {
     isGestureActive: false,
     touchStartTime: 0,
     didInteract: false, // moved/dragged/pinched
-    isResizing: false // slider interaction state
+    isResizing: false, // slider interaction state
+    isRotating: false // slider interaction state
 };
 
 // DOM要素
@@ -185,6 +186,8 @@ const selectionSize = document.getElementById('selection-size');
 const recentEmojisContainer = null; // Removed persistent section
 const undoBtn = document.getElementById('undo-btn');
 const redoBtn = document.getElementById('redo-btn');
+const sizeLabel = document.getElementById('size-label');
+const rotationLabel = document.getElementById('rotation-label');
 
 // History Management
 function saveToHistory() {
@@ -408,7 +411,23 @@ function displayEmojis(filter) {
 }
 
 // 絵文字を選択して配置モードに
+// 絵文字を選択して配置モードに
 function selectEmojiForPlacement(emoji) {
+    // 既に絵文字を選択中の場合は、その絵文字を差し替える（位置・回転・サイズ維持）
+    if (state.editMode === 'edit' && state.selectedEmoji) {
+        saveToHistory();
+        state.selectedEmoji.emoji = emoji;
+
+        // プレビューとキャンバスを更新
+        updateEditPanel();
+        redrawCanvas();
+        saveStorage();
+
+        // 最近使った絵文字に追加
+        addToRecentEmojis(emoji);
+        return;
+    }
+
     state.currentEmoji = emoji;
     state.editMode = 'new';
     state.selectedEmoji = null;
@@ -597,7 +616,7 @@ function redrawCanvas() {
 
     // Draw Ghost Preview (Center) if Resizing (ONLY in Draw Mode)
     // User requested: "Don't need ghost in select mode because selected object updates directly"
-    if (state.isResizing && state.editMode !== 'edit') {
+    if ((state.isResizing || state.isRotating) && state.editMode !== 'edit') {
         ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate((state.currentRotation * Math.PI) / 180);
@@ -667,6 +686,7 @@ function bringToFront() {
         const maxZ = Math.max(...state.canvasEmojis.map(e => e.zIndex));
         state.selectedEmoji.zIndex = maxZ + 1;
         redrawCanvas();
+        saveStorage();
     }
 }
 
@@ -679,6 +699,7 @@ function bringForward() {
             nextEmoji.zIndex = currentZ;
             state.selectedEmoji.zIndex = currentZ + 1;
             redrawCanvas();
+            saveStorage();
         }
     }
 }
@@ -692,6 +713,7 @@ function sendBackward() {
             prevEmoji.zIndex = currentZ;
             state.selectedEmoji.zIndex = currentZ - 1;
             redrawCanvas();
+            saveStorage();
         }
     }
 }
@@ -702,6 +724,7 @@ function sendToBack() {
         const minZ = Math.min(...state.canvasEmojis.map(e => e.zIndex));
         state.selectedEmoji.zIndex = minZ - 1;
         redrawCanvas();
+        saveStorage();
     }
 }
 
@@ -746,6 +769,7 @@ function flipEmoji() {
         state.currentFlipX = state.selectedEmoji.flipX;
         updateEditPanel();
         redrawCanvas();
+        saveStorage();
     } else {
         // 新規配置モード
         state.currentFlipX = !state.currentFlipX;
@@ -1165,6 +1189,7 @@ function setupEventListeners() {
         } else {
             state.currentRotation = val;
             updateEditPanel();
+            redrawCanvas(); // Show ghost preview
         }
     });
 
@@ -1177,6 +1202,7 @@ function setupEventListeners() {
     const handleSizeEnd = () => {
         state.isResizing = false;
         redrawCanvas();
+        if (state.editMode === 'edit' && state.selectedEmoji) saveStorage();
     };
 
     sizeSlider.addEventListener('mousedown', handleSizeStart);
@@ -1187,10 +1213,21 @@ function setupEventListeners() {
 
     // Rotation Slider Listeners (History only)
     const handleRotationStart = () => {
+        state.isRotating = true;
         if (state.editMode === 'edit' && state.selectedEmoji) saveToHistory();
+        redrawCanvas();
     };
+    const handleRotationEnd = () => {
+        state.isRotating = false;
+        redrawCanvas();
+        if (state.editMode === 'edit' && state.selectedEmoji) saveStorage();
+    };
+
     rotationSlider.addEventListener('mousedown', handleRotationStart);
     rotationSlider.addEventListener('touchstart', handleRotationStart);
+    rotationSlider.addEventListener('mouseup', handleRotationEnd);
+    rotationSlider.addEventListener('touchend', handleRotationEnd);
+    rotationSlider.addEventListener('mouseleave', handleRotationEnd);
 
     // 配置ボタン (Deleted)
     // placeEmojiBtn.addEventListener('click', placeEmoji);
@@ -1210,6 +1247,37 @@ function setupEventListeners() {
     // Undo/Redo
     undoBtn.addEventListener('click', undo);
     redoBtn.addEventListener('click', redo);
+
+    // Reset Size/Rotation by clicking labels
+    sizeLabel.addEventListener('click', () => {
+        const defaultSize = 60;
+        if (state.editMode === 'edit' && state.selectedEmoji) {
+            saveToHistory();
+            state.selectedEmoji.size = defaultSize;
+            state.currentSize = defaultSize;
+        } else {
+            state.currentSize = defaultSize;
+        }
+        sizeSlider.value = defaultSize;
+        updateEditPanel();
+        redrawCanvas();
+        if (state.editMode === 'edit' && state.selectedEmoji) saveStorage();
+    });
+
+    rotationLabel.addEventListener('click', () => {
+        const defaultRotation = 0;
+        if (state.editMode === 'edit' && state.selectedEmoji) {
+            saveToHistory();
+            state.selectedEmoji.rotation = defaultRotation;
+            state.currentRotation = defaultRotation;
+        } else {
+            state.currentRotation = defaultRotation;
+        }
+        rotationSlider.value = defaultRotation;
+        updateEditPanel();
+        redrawCanvas();
+        if (state.editMode === 'edit' && state.selectedEmoji) saveStorage();
+    });
 
     // ツール切り替えボタン
     document.querySelectorAll('.segment-btn[data-mode]').forEach(btn => {
@@ -1394,7 +1462,9 @@ function setupEventListeners() {
             state.editMode = 'edit';
             showEditPanel();
             updateEditPanel();
+            updateEditPanel();
             redrawCanvas();
+            saveStorage();
         } else if (!isDragging && !draggedEmoji) {
             // タップ判定
             // (mouseup/touchendの座標は、changedTouchesを見る)
@@ -1625,7 +1695,41 @@ function setupEventListeners() {
     let panStartY = 0;
     let isSpacePressed = false;
 
+    // Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
+        // Ignore if user is typing in search box
+        if (e.target.id === 'emoji-search') return;
+
+        // Undo: Ctrl/Cmd + Z
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+            e.preventDefault();
+            undo();
+            return;
+        }
+
+        // Redo: Ctrl/Cmd + Shift + Z
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
+            e.preventDefault();
+            redo();
+            return;
+        }
+
+        // Delete: Delete or Backspace
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            e.preventDefault();
+            deleteEmoji();
+            return;
+        }
+
+        // Mode Switch: X
+        if (e.key === 'x' || e.key === 'X') {
+            e.preventDefault();
+            state.toolMode = state.toolMode === 'draw' ? 'select' : 'draw';
+            updateToolModeUI();
+            return;
+        }
+
+        // Space for panning (existing logic below)
         if (e.code === 'Space') {
             isSpacePressed = true;
             canvasContainer.style.cursor = 'grab';
