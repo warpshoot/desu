@@ -1577,6 +1577,66 @@ function setupEventListeners() {
         // Reset pan on zoom? No, keep it.
         canvasContainer.style.transform = `translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${currentScale})`;
     }, { passive: false });
+
+    // PC用 パン操作 (スペースキー + ドラッグ / ミドルクリックドラッグ)
+    let isPanning = false;
+    let panStartX = 0;
+    let panStartY = 0;
+    let isSpacePressed = false;
+
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            isSpacePressed = true;
+            canvasContainer.style.cursor = 'grab';
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+            isSpacePressed = false;
+            canvasContainer.style.cursor = '';
+            if (!isPanning) {
+                // Stop panning if key released (optional, but keep panning if mouse still down? usually yes)
+            }
+        }
+    });
+
+    canvasContainer.addEventListener('mousedown', (e) => {
+        // e.button: 0 = Left, 1 = Middle
+        if (e.button === 1 || (e.button === 0 && isSpacePressed)) {
+            e.preventDefault(); // Prevent text selection etc.
+            isPanning = true;
+            panStartX = e.clientX;
+            panStartY = e.clientY;
+            canvasContainer.style.cursor = 'grabbing';
+            state.didInteract = true; // Prevent drawing on mouseup
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isPanning) return;
+
+        e.preventDefault();
+        const dx = e.clientX - panStartX;
+        const dy = e.clientY - panStartY;
+
+        panX += dx;
+        panY += dy;
+
+        canvasContainer.style.transform = `translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${currentScale})`;
+
+        panStartX = e.clientX;
+        panStartY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', (e) => {
+        if (isPanning) {
+            // Check if button released matches pan trigger? 
+            // Simplified: Stop panning on ANY mouseup if panning was active
+            isPanning = false;
+            canvasContainer.style.cursor = isSpacePressed ? 'grab' : '';
+        }
+    });
 }
 
 // アプリケーション起動
