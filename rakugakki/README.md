@@ -1,4 +1,4 @@
-# DESU™ tune
+# DESU™ rakugakki
 
 Draw colorful musical trajectories and hear them play back as music.
 
