@@ -648,20 +648,26 @@ body.playing .loop-handle {
     overflow: hidden;
     width: 48px;
     height: 48px;
-    border-radius: 50%; /* Circle shape */
-    background-color: #000; /* Black when stopped */
-    background-image: none; /* No image when stopped */
-    background-size: 384px 48px; /* 8 frames × 48px */
+    border-radius: 50%;
+    /* Circle shape */
+    background-color: #000;
+    /* Black when stopped */
+    background-image: none;
+    /* No image when stopped */
+    background-size: 384px 48px;
+    /* 8 frames × 48px */
     background-position: 0 0;
     background-repeat: no-repeat;
     image-rendering: pixelated;
-    transition: none; /* Instant frame switching, no smooth transition */
+    transition: none;
+    /* Instant frame switching, no smooth transition */
 }
 
 #visualizer-display.playing {
     /* Show animation only during playback */
     background-image: url('../assets/danceA.png');
-    filter: invert(1); /* Invert colors (black/white swap) */
+    filter: invert(1);
+    /* Invert colors (black/white swap) */
 }
 
 .control-btn:hover {
@@ -705,8 +711,15 @@ body.playing .loop-handle {
 }
 
 @keyframes recordingPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
 }
 
 #bpm-ctrl {
@@ -1075,5 +1088,214 @@ body.playing .loop-handle {
 
     #volume-ctrl {
         width: 100px;
+    }
+}
+
+/* Portrait orientation blocker */
+#rotate-prompt {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 9999;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+}
+
+#rotate-prompt .rotate-icon {
+    font-size: 48px;
+    animation: rotateHint 2s ease-in-out infinite;
+}
+
+#rotate-prompt .rotate-text {
+    font-size: 18px;
+    color: #fff;
+}
+
+@keyframes rotateHint {
+
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    50% {
+        transform: rotate(90deg);
+    }
+}
+
+@media (orientation: portrait) and (max-width: 768px) {
+    #rotate-prompt {
+        display: flex;
+    }
+}
+
+/* Landscape mobile - primary mobile experience */
+@media (max-width: 932px) and (orientation: landscape) {
+
+    /* Cell size reduction */
+    .cell {
+        width: 18px;
+        height: 56px;
+    }
+
+    #grid-container {
+        grid-template-columns: repeat(32, 18px);
+        grid-template-rows: repeat(5, 56px);
+    }
+
+    /* Beat spacing adjustment */
+    .cell[data-step="3"],
+    .cell[data-step="7"],
+    .cell[data-step="11"],
+    .cell[data-step="15"],
+    .cell[data-step="19"],
+    .cell[data-step="23"],
+    .cell[data-step="27"] {
+        margin-right: 4px;
+    }
+
+    .timeline-beat {
+        width: 78px;
+        /* 4*18 + 3*2 */
+        margin-right: 6px;
+    }
+
+    /* Track icons compact */
+    .track-icon {
+        width: 24px;
+        height: 56px;
+        font-size: 14px;
+    }
+
+    .track-ctrls button {
+        width: 18px;
+        height: 27px;
+        font-size: 9px;
+    }
+
+    /* Control bar horizontal layout */
+    #controls {
+        height: 60px;
+        gap: 12px;
+        padding: 0 12px;
+        display: flex;
+        flex-direction: row;
+    }
+
+    .control-group {
+        gap: 6px;
+    }
+
+    .control-btn {
+        width: 48px;
+        height: 48px;
+    }
+
+    #visualizer-display {
+        width: 36px;
+        height: 36px;
+    }
+
+    #volume-ctrl {
+        width: 80px;
+    }
+
+    #bpm-ctrl {
+        min-width: 50px;
+    }
+
+    #bpm-drag-value {
+        font-size: 16px;
+    }
+
+    /* Container adjustment */
+    #sequencer-container {
+        padding: 32px 8px 70px;
+    }
+
+    /* Tone panel */
+    #tone-panel {
+        padding: 12px;
+    }
+
+    .knob-row {
+        gap: 12px;
+    }
+
+    .knob {
+        width: 50px !important;
+        height: 50px !important;
+    }
+
+    /* Loop handles */
+    .loop-handle {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+        top: -36px;
+    }
+}
+
+/* Very small landscape (iPhone SE etc) */
+@media (max-width: 700px) and (orientation: landscape) {
+    .cell {
+        width: 16px;
+        height: 48px;
+    }
+
+    #grid-container {
+        grid-template-columns: repeat(32, 16px);
+        grid-template-rows: repeat(5, 48px);
+    }
+
+    .timeline-beat {
+        width: 70px;
+        /* 4*16 + 3*2 */
+    }
+
+    .track-icon {
+        width: 20px;
+        height: 48px;
+        font-size: 12px;
+    }
+
+    .track-ctrls button {
+        width: 16px;
+        height: 23px;
+        font-size: 8px;
+    }
+
+    #controls {
+        height: 52px;
+        gap: 8px;
+    }
+
+    .control-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    #visualizer-display {
+        width: 32px;
+        height: 32px;
+    }
+
+    #volume-ctrl {
+        width: 60px;
+    }
+
+    .knob {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    .loop-handle {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+        top: -32px;
     }
 }
