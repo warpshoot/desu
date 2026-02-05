@@ -1142,7 +1142,7 @@ body.playing .loop-handle {
     }
 
     #grid-container {
-        grid-template-columns: repeat(32, 18px);
+        grid-template-columns: repeat(32, auto);
         grid-template-rows: repeat(5, 42px);
     }
 
@@ -1158,8 +1158,8 @@ body.playing .loop-handle {
     }
 
     .timeline-beat {
-        width: 78px;
-        /* 4*18 + 3*2 */
+        width: 82px;
+        /* 4*18 (cells) + 3*2 (gaps) + 4 (margin-right) */
         margin-right: 6px;
     }
 
@@ -1216,6 +1216,13 @@ body.playing .loop-handle {
         padding: 32px 8px 70px;
     }
 
+    /* Sequencer inner - reduce padding */
+    #sequencer-inner {
+        padding: 4px;
+        gap: 6px;
+        width: fit-content;
+    }
+
     /* Tone panel */
     #tone-panel {
         padding: 12px;
@@ -1247,13 +1254,13 @@ body.playing .loop-handle {
     }
 
     #grid-container {
-        grid-template-columns: repeat(32, 16px);
+        grid-template-columns: repeat(32, auto);
         grid-template-rows: repeat(5, 36px);
     }
 
     .timeline-beat {
-        width: 70px;
-        /* 4*16 + 3*2 */
+        width: 74px;
+        /* 4*16 (cells) + 3*2 (gaps) + 4 (margin-right) */
     }
 
     .track-icon {
@@ -1297,5 +1304,12 @@ body.playing .loop-handle {
         height: 32px;
         font-size: 14px;
         top: -32px;
+    }
+
+    /* Sequencer inner - reduce padding */
+    #sequencer-inner {
+        padding: 4px;
+        gap: 5px;
+        width: fit-content;
     }
 }
