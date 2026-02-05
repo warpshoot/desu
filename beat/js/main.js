@@ -10,6 +10,15 @@ class Sequencer {
         this.state = loadState();
 
         this.audioEngine = new AudioEngine();
+
+        // Preset audio settings
+        const volumes = this.state.trackParams ? this.state.trackParams.map(p => p.vol) : undefined;
+        this.audioEngine.presetSettings({
+            trackVolumes: volumes,
+            mutedTracks: this.state.mutedTracks,
+            soloedTracks: this.state.soloedTracks
+        });
+
         this.cells = [];
         this.isPainting = false;
         this.paintingTrack = null;
@@ -36,6 +45,7 @@ class Sequencer {
             this.audioEngine,
             (bpm) => {
                 this.state.bpm = bpm;
+                this.updateVisualizerSpeed(bpm); // Sync visualizer speed
                 saveState(this.state);
             },
             (swingEnabled) => {
@@ -53,6 +63,9 @@ class Sequencer {
             },
             () => {
                 this.clearPlayheads();
+                if (this.dancer) {
+                    this.dancer.classList.remove('playing');
+                }
             },
             () => { // onLoopToggle
                 this.state.loopEnabled = !this.state.loopEnabled;
@@ -75,6 +88,7 @@ class Sequencer {
         );
         this.controls.onVolumeChange = (vol) => {
             this.state.masterVolume = vol;
+            this.audioEngine.setMasterVolume(vol);
             saveState(this.state);
         };
 
@@ -138,8 +152,8 @@ class Sequencer {
             }
             // Reset dance animation
             this.resetDanceAnimation();
-            // Close DJ mode if open
-            this.closeDJMode();
+            // Close DJ mode if open (force close even if Keep mode)
+            this.closeDJMode(true);
         });
 
         // Initialize dance animation
@@ -320,11 +334,22 @@ class Sequencer {
             this.audioEngine.updateTrackParams(i, params);
 
             // Mute/Solo
-            this.audioEngine.setTrackMute(i, this.state.mutedTracks ? this.state.mutedTracks[i] : false);
-            this.audioEngine.setTrackSolo(i, this.state.soloedTracks ? this.state.soloedTracks[i] : false);
+            const isMuted = this.state.mutedTracks ? this.state.mutedTracks[i] : false;
+            const isSoloed = this.state.soloedTracks ? this.state.soloedTracks[i] : false;
+
+            this.audioEngine.setTrackMute(i, isMuted);
+            this.audioEngine.setTrackSolo(i, isSoloed);
         }
 
+        // Force immediate gain update to prevent bleeding
+        this.audioEngine.updateTrackGains(true);
+
         this.audioEngine.setLoopRange(this.state.loopStart, this.state.loopEnd, this.state.loopEnabled);
+
+        // Sync visualizer speed
+        if (this.state.bpm) {
+            this.updateVisualizerSpeed(this.state.bpm);
+        }
     }
 
     initCreditModal() {
@@ -638,12 +663,14 @@ class Sequencer {
         // 3. Reset Sound Parameters
         this.state.trackParams = [];
         for (let i = 0; i < ROWS; i++) {
+            const defaults = TRACKS[i].defaultParams || {};
             const params = {
-                cutoff: KNOB_PARAMS.cutoff.default,
-                resonance: KNOB_PARAMS.resonance.default,
-                modulation: KNOB_PARAMS.modulation.default,
-                release: KNOB_PARAMS.release.default,
-                vol: KNOB_PARAMS.vol.default
+                tune: defaults.tune !== undefined ? defaults.tune : KNOB_PARAMS.tune.default,
+                cutoff: defaults.cutoff !== undefined ? defaults.cutoff : KNOB_PARAMS.cutoff.default,
+                resonance: defaults.resonance !== undefined ? defaults.resonance : KNOB_PARAMS.resonance.default,
+                modulation: defaults.modulation !== undefined ? defaults.modulation : KNOB_PARAMS.modulation.default,
+                release: defaults.release !== undefined ? defaults.release : KNOB_PARAMS.release.default,
+                vol: defaults.vol !== undefined ? defaults.vol : KNOB_PARAMS.vol.default
             };
             this.state.trackParams.push(params);
             // Apply to Audio Engine
@@ -746,6 +773,16 @@ class Sequencer {
 
         // Update dance animation every step (16th note - fastest)
         this.updateDanceFrame();
+
+        // DJ Standby Pulse (every beat)
+        if (this.djState && this.djState.standby && this.dancer) {
+            if (step % 4 === 0) {
+                this.dancer.classList.add('pulse');
+                setTimeout(() => {
+                    if (this.dancer) this.dancer.classList.remove('pulse');
+                }, 100);
+            }
+        }
     }
 
     setupTrackControls() {
@@ -851,61 +888,129 @@ class Sequencer {
     initDJMode() {
         // Get DOM elements
         this.djOverlay = document.getElementById('dj-overlay');
-        this.djCursor = document.getElementById('dj-cursor');
-        this.djFilterValue = document.getElementById('dj-filter-value');
-        this.djResValue = document.getElementById('dj-res-value');
+        // New visual elements
+        this.djOrigin = document.getElementById('dj-origin');
+        this.djCurrent = document.getElementById('dj-current');
+        this.djLine = document.getElementById('dj-line');
 
         if (!this.djOverlay || !this.dancer) return;
 
-        // Visualizer tap handler - open DJ overlay when playing
-        this.dancer.addEventListener('click', () => {
-            if (this.audioEngine.playing && !this.djModeActive) {
-                this.openDJMode();
+        // State
+        this.djState = {
+            mode: 0, // 0:Off, 1:Momentary, 2:Keep
+
+            touching: false,
+            x: 0.5, y: 0.5,           // Current interpolated pos
+            startX: 0.5, startY: 0.5, // Touch start pos (origin)
+            targetX: 0.5, targetY: 0.5 // Current touch target
+        };
+
+        // Start animation loop
+        this.renderDJLoop = this.renderDJLoop.bind(this);
+        requestAnimationFrame(this.renderDJLoop);
+
+        // Visualizer tap handler - Cycle DJ Mode
+        this.dancer.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (this.audioEngine.playing) {
+                this.cycleDJMode();
             }
         });
 
-        // Close overlay on tap (when not dragging)
-        let isDragging = false;
-        let startPos = { x: 0, y: 0 };
-
+        // Overlay interactions
         const onStart = (e) => {
-            isDragging = false;
+            this.djState.touching = true;
             const pos = this.getDJPosition(e);
-            startPos = pos;
-            this.updateDJFilter(pos);
+
+            // Set origin and target
+            this.djState.startX = pos.x;
+            this.djState.startY = pos.y;
+            this.djState.targetX = pos.x;
+            this.djState.targetY = pos.y;
+
+            // Immediate update to avoid lag
+            this.djState.x = pos.x;
+            this.djState.y = pos.y;
+
+            // Show visuals
+            this.djOrigin.classList.remove('hidden');
+            this.djCurrent.classList.remove('hidden');
+            this.djLine.classList.remove('hidden');
+
+            // Initial audio update (delta 0)
+            this.updateDJAudio(0, 0);
         };
 
         const onMove = (e) => {
+            if (!this.djState.touching) return;
             e.preventDefault();
-            isDragging = true;
             const pos = this.getDJPosition(e);
-            this.updateDJFilter(pos);
+            this.djState.targetX = pos.x;
+            this.djState.targetY = pos.y;
         };
 
         const onEnd = (e) => {
-            if (!isDragging) {
-                // Tap without drag - close overlay
-                this.closeDJMode();
+            this.djState.touching = false;
+
+            // Hide visuals
+            this.djOrigin.classList.add('hidden');
+            this.djCurrent.classList.add('hidden');
+            this.djLine.classList.add('hidden');
+
+            // Reset audio
+            this.audioEngine.resetDJFilter();
+
+            // Momentary Mode (1): Close on release
+            if (this.djState.mode === 1) {
+                this.closeDJMode(true);
             }
         };
 
+        // Mouse events
         this.djOverlay.addEventListener('mousedown', onStart);
-        this.djOverlay.addEventListener('mousemove', (e) => {
-            if (e.buttons === 1) onMove(e);
-        });
+        this.djOverlay.addEventListener('mousemove', onMove);
         this.djOverlay.addEventListener('mouseup', onEnd);
-        this.djOverlay.addEventListener('mouseleave', () => {
-            if (this.djModeActive) {
-                // Reset filter when leaving overlay area
-            }
-        });
+        this.djOverlay.addEventListener('mouseleave', onEnd); // End if mouse leaves window
 
+        // Touch events
         this.djOverlay.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            onStart(e);
+            if (e.touches.length === 1) {
+                e.preventDefault();
+                onStart(e);
+            }
         }, { passive: false });
-        this.djOverlay.addEventListener('touchmove', onMove, { passive: false });
+
+        this.djOverlay.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1) {
+                onMove(e);
+            }
+        }, { passive: false });
+
         this.djOverlay.addEventListener('touchend', onEnd);
+    }
+
+    renderDJLoop() {
+        if (this.djState.mode > 0) {
+            // Smoothly move current visual position to target
+            // Use 0.5 alpha for some lag/smoothness, or 1.0 for instant 1:1 feel
+            // For relative controls, 1:1 is usually better to feel "connected"
+            const smoothing = 0.5;
+            this.djState.x += (this.djState.targetX - this.djState.x) * smoothing;
+            this.djState.y += (this.djState.targetY - this.djState.y) * smoothing;
+
+            if (this.djState.touching) {
+                // Calculate deltas
+                const deltaX = this.djState.x - this.djState.startX;
+                const deltaY = this.djState.startY - this.djState.y; // Invert Y (screen down is positive)
+
+                // Update Audio (using target for faster response, or smoothed x/y?)
+                // Use smoothed for potentially less zipper noise, but might lag
+                // Let's use smoothed visual pos for consistency
+                this.updateDJAudio(deltaX, deltaY);
+                this.updateDJVisuals();
+            }
+        }
+        requestAnimationFrame(this.renderDJLoop);
     }
 
     getDJPosition(e) {
@@ -927,69 +1032,99 @@ class Sequencer {
         return { x, y };
     }
 
-    updateDJFilter(pos) {
-        if (!this.djModeActive) return;
+    updateDJVisuals() {
+        const { startX, startY, x, y } = this.djState;
 
-        // X axis: Filter cutoff (200Hz - 20000Hz, logarithmic)
-        const minFreq = 200;
-        const maxFreq = 20000;
-        const logMin = Math.log(minFreq);
-        const logMax = Math.log(maxFreq);
-        const cutoff = Math.exp(logMin + pos.x * (logMax - logMin));
+        // Use cached rect if available, or get current
+        const rect = this.djOverlay.getBoundingClientRect();
 
-        // Y axis: Resonance (inverted - top = high Q, bottom = low Q)
-        // Range: 0.5 - 15
-        const minQ = 0.5;
-        const maxQ = 15;
-        const resonance = minQ + (1 - pos.y) * (maxQ - minQ);
+        // Update Origin Marker
+        if (this.djOrigin) {
+            // Use pixels based on overlay rect to match line coordinates exactly
+            this.djOrigin.style.transform = `translate3d(${startX * rect.width}px, ${startY * rect.height}px, 0) translate(-50%, -50%)`;
+        }
 
-        // Update audio
+        // Update Current Marker
+        if (this.djCurrent) {
+            this.djCurrent.style.transform = `translate3d(${x * rect.width}px, ${y * rect.height}px, 0) translate(-50%, -50%)`;
+        }
+
+        // Update Line
+        if (this.djLine) {
+            const p1 = { x: startX * rect.width, y: startY * rect.height };
+            const p2 = { x: x * rect.width, y: y * rect.height };
+
+            const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+
+            this.djLine.style.width = `${dist}px`;
+            // Align vertical center of line to p1, then rotate
+            this.djLine.style.transform = `translate3d(${p1.x}px, ${p1.y}px, 0) translateY(-50%) rotate(${angle}rad)`;
+        }
+    }
+
+    updateDJAudio(deltaX, deltaY) {
+        // Base values
+        const baseFreq = 20000;
+        const baseQ = 1.0;
+
+        // X Axis -> Resonance
+        // deltaX is (x - startX). Drag Right (x increases) -> deltaX becomes positive.
+        // We want Drag Right -> Higher Resonance.
+        const qRange = 14;
+        let resonance = baseQ + (deltaX * qRange * 2);
+        resonance = Math.max(0.5, Math.min(15, resonance));
+
+        // Y Axis -> Cutoff Frequency
+        // deltaY is (startY - y). Drag Down (y > startY) -> deltaY becomes negative.
+        // We want Drag Down -> Lower Frequency.
+        // So Negative Delta -> Smaller Factor.
+        let freqFactor = Math.pow(100, deltaY);
+        freqFactor = Math.max(0.01, Math.min(1.0, freqFactor));
+        const cutoff = baseFreq * freqFactor;
+
+        // Apply
         this.audioEngine.setDJFilter(cutoff, resonance);
+    }
 
-        // Update cursor position
-        if (this.djCursor) {
-            this.djCursor.style.left = `${pos.x * 100}%`;
-            this.djCursor.style.top = `${pos.y * 100}%`;
-        }
+    cycleDJMode() {
+        // Mode: 0->1->2->0
+        const nextMode = (this.djState.mode + 1) % 3;
+        this.djState.mode = nextMode;
 
-        // Update display values
-        if (this.djFilterValue) {
-            if (cutoff >= 1000) {
-                this.djFilterValue.textContent = `${(cutoff / 1000).toFixed(1)}kHz`;
-            } else {
-                this.djFilterValue.textContent = `${Math.round(cutoff)}Hz`;
-            }
-        }
-        if (this.djResValue) {
-            this.djResValue.textContent = resonance.toFixed(1);
+        this.dancer.classList.remove('standby');
+        this.dancer.classList.remove('dj-keep');
+
+        if (nextMode === 1) { // Momentary
+            this.djOverlay.classList.remove('hidden');
+            this.dancer.classList.add('standby');
+        } else if (nextMode === 2) { // Keep
+            this.djOverlay.classList.remove('hidden');
+            this.dancer.classList.add('dj-keep');
+        } else { // Off
+            this.closeDJMode(true);
         }
     }
 
-    openDJMode() {
-        if (!this.djOverlay) return;
+    closeDJMode(force = false) {
+        if (this.djState.mode === 2 && !force) return;
 
-        this.djModeActive = true;
-        this.djOverlay.classList.remove('hidden');
-
-        // Reset cursor to center
-        if (this.djCursor) {
-            this.djCursor.style.left = '50%';
-            this.djCursor.style.top = '50%';
-        }
-
-        // Reset display to default
-        if (this.djFilterValue) this.djFilterValue.textContent = '20kHz';
-        if (this.djResValue) this.djResValue.textContent = '1.0';
-    }
-
-    closeDJMode() {
-        if (!this.djOverlay) return;
-
-        this.djModeActive = false;
+        this.djState.mode = 0;
         this.djOverlay.classList.add('hidden');
-
-        // Reset audio filter
+        if (this.dancer) {
+            this.dancer.classList.remove('standby');
+            this.dancer.classList.remove('dj-keep');
+        }
         this.audioEngine.resetDJFilter();
+    }
+
+    updateVisualizerSpeed(bpm) {
+        if (!this.dancer) this.dancer = document.getElementById('visualizer-display');
+        if (this.dancer) {
+            // Formula: duration = 96 / bpm (Matches user historical feel)
+            const duration = 96 / bpm;
+            this.dancer.style.animationDuration = `${duration}s`;
+        }
     }
 }
 

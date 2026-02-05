@@ -655,7 +655,7 @@ body.playing .loop-handle {
     background-image: none;
     /* No image when stopped */
     background-size: 384px 48px;
-    /* 8 frames × 48px */
+    /* 8 frames ??48px */
     background-position: 0 0;
     background-repeat: no-repeat;
     image-rendering: pixelated;
@@ -1198,7 +1198,7 @@ body.playing .loop-handle {
         width: 36px;
         height: 36px;
         background-size: 288px 36px;
-        /* 8 frames × 36px */
+        /* 8 frames ??36px */
         transition: none !important;
         /* No sliding animation */
     }
@@ -1321,7 +1321,7 @@ body.playing .loop-handle {
         width: 32px;
         height: 32px;
         background-size: 256px 32px;
-        /* 8 frames × 32px */
+        /* 8 frames ??32px */
         transition: none !important;
         /* No sliding animation */
     }
@@ -1425,122 +1425,53 @@ body.playing .loop-handle {
     font-family: monospace;
 }
 
-/* DJ Visuals */
-#dj-visuals {
+#dj-crosshair {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    right: 0;
+    bottom: 0;
     pointer-events: none;
 }
 
-.dj-marker {
+#dj-cursor {
     position: absolute;
-    width: 40px;
-    height: 40px;
-    border: 3px solid #fff;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #fff;
     border-radius: 50%;
-    top: 0;
-    left: 0;
-    /* Centering handled by transform in JS */
-    will-change: transform;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    transform: translate(-50%, -50%);
+    left: 50%;
+    top: 50%;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
 }
 
-.dj-marker.hidden,
-#dj-line.hidden {
-    opacity: 0;
-}
-
-#dj-origin {
-    opacity: 0.5;
-    border-style: dashed;
-}
-
-#dj-current {
-    background: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
-}
-
-#dj-line {
+#dj-cursor::before,
+#dj-cursor::after {
+    content: '';
     position: absolute;
-    height: 4px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.8));
-    transform-origin: 0 50%;
-    top: 0;
-    left: 0;
-    border-radius: 2px;
-    will-change: transform;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+#dj-cursor::before {
+    /* Vertical line */
+    width: 1px;
+    height: 100vh;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#dj-cursor::after {
+    /* Horizontal line */
+    width: 100vw;
+    height: 1px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
 }
 
 /* Make visualizer clickable during playback */
 #visualizer-display.playing {
     cursor: pointer;
-}
-
-/* Basic Visualizer Style */
-/* Invert is active: Black border -> White border */
-/* Basic Visualizer Style */
-/* Matches historical log: Black bg by default */
-#visualizer-display {
-    position: relative;
-    z-index: 10;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    margin: 0 10px;
-
-    background-color: #000;
-    background-image: none;
-    background-repeat: no-repeat;
-    overflow: hidden;
-    cursor: default;
-
-    border: 1px solid #fff;
-    /* White border for visibility on black bg */
-    box-shadow: none;
-    transition: border-width 0.1s;
-}
-
-/* Sprite Animation Keyframes */
-@keyframes play-sprite {
-    0% {
-        background-position: 0 0;
-    }
-
-    100% {
-        background-position: -384px 0;
-    }
-
-    /* 48px * 8 frames */
-}
-
-/* Playing state: Show dancer with sprite animation */
-#visualizer-display.playing {
-    background: url('../assets/danceA.png') no-repeat 0 0;
-    background-size: 384px 48px;
-    filter: invert(1);
-    border-color: #000;
-    /* Black border inverts to White */
-    animation: play-sprite 0.8s steps(8) infinite;
-    cursor: pointer;
-}
-
-/* Standby (Momentary): 2px border */
-#visualizer-display.standby {
-    border-width: 2px !important;
-    animation: none;
-}
-
-/* Keep Mode: 3px border */
-#visualizer-display.dj-keep {
-    border-width: 3px !important;
-    animation: none;
-}
-
-/* Beat Pulse: Scale effect only */
-#visualizer-display.pulse {
-    transform: scale(1.02);
-    transition: transform 0.05s ease-out;
 }

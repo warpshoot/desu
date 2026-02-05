@@ -43,10 +43,21 @@ export class AudioEngine {
         }));
     }
 
+    presetSettings(settings) {
+        if (settings.trackVolumes) this.trackVolumes = settings.trackVolumes;
+        if (settings.mutedTracks) this.mutedTracks = settings.mutedTracks;
+        if (settings.soloedTracks) this.soloedTracks = settings.soloedTracks;
+    }
+
     async init() {
         if (this.initialized) return;
 
         await Tone.start();
+
+        // Apply cached master volume if any
+        if (this.cachedMasterVolume !== undefined) {
+            Tone.Destination.volume.value = this.cachedMasterVolume;
+        }
 
         // Create master DJ filter (before limiter)
         this.djFilter = new Tone.Filter({
@@ -119,8 +130,22 @@ export class AudioEngine {
                 rolloff: -24
             });
 
-            // Create gain
-            const gain = new Tone.Gain(0.7);
+            // Create gain (use preset volume if available)
+            let initialGain = 0.7;
+            if (this.trackVolumes[i] !== undefined) initialGain = this.trackVolumes[i];
+
+            // Check mute/solo context
+            const isAnySolo = this.soloedTracks.some(s => s);
+            const isMuted = this.mutedTracks[i];
+            const isSoloed = this.soloedTracks[i];
+
+            if (isAnySolo) {
+                initialGain = isSoloed ? initialGain : 0;
+            } else {
+                initialGain = isMuted ? 0 : initialGain;
+            }
+
+            const gain = new Tone.Gain(initialGain);
 
             // Connect: instrument -> filter -> gain -> djFilter -> limiter
             instrument.connect(filter);
@@ -216,6 +241,7 @@ export class AudioEngine {
     }
 
     setMasterVolume(db) {
+        this.cachedMasterVolume = db;
         if (!this.initialized) return;
         Tone.Destination.volume.value = db;
     }
@@ -355,7 +381,7 @@ export class AudioEngine {
         if (this.limiter) this.limiter.dispose();
     }
 
-    updateTrackGains() {
+    updateTrackGains(immediate = false) {
         const isAnySolo = this.soloedTracks.some(s => s);
 
         for (let i = 0; i < this.gains.length; i++) {
@@ -371,9 +397,14 @@ export class AudioEngine {
                 targetGain = isMuted ? 0 : baseVol;
             }
 
-            // Apply smoothly
+            // Apply
             if (this.gains[i]) {
-                this.gains[i].gain.rampTo(targetGain, 0.05);
+                if (immediate) {
+                    this.gains[i].gain.cancelScheduledValues(0);
+                    this.gains[i].gain.value = targetGain;
+                } else {
+                    this.gains[i].gain.rampTo(targetGain, 0.05);
+                }
             }
         }
     }

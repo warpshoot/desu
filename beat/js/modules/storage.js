@@ -1,4 +1,4 @@
-import { STORAGE_KEY, DEFAULT_BPM, KNOB_PARAMS, DEFAULT_ROLL_SUBDIVISION, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, COLS, ROWS, DEFAULT_SCALE } from './constants.js';
+import { STORAGE_KEY, DEFAULT_BPM, KNOB_PARAMS, DEFAULT_ROLL_SUBDIVISION, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, COLS, ROWS, DEFAULT_SCALE, TRACKS } from './constants.js';
 
 let saveTimeout = null;
 
@@ -92,13 +92,14 @@ export function loadState() {
                 const currentLen = state.trackParams ? state.trackParams.length : 0;
                 if (!state.trackParams) state.trackParams = [];
                 for (let i = currentLen; i < ROWS; i++) {
+                    const defaults = TRACKS[i].defaultParams || {};
                     state.trackParams[i] = {
-                        tune: KNOB_PARAMS.tune.default,
-                        cutoff: KNOB_PARAMS.cutoff.default,
-                        resonance: KNOB_PARAMS.resonance.default,
-                        modulation: KNOB_PARAMS.modulation.default,
-                        release: KNOB_PARAMS.release.default,
-                        vol: KNOB_PARAMS.vol.default
+                        tune: defaults.tune !== undefined ? defaults.tune : KNOB_PARAMS.tune.default,
+                        cutoff: defaults.cutoff !== undefined ? defaults.cutoff : KNOB_PARAMS.cutoff.default,
+                        resonance: defaults.resonance !== undefined ? defaults.resonance : KNOB_PARAMS.resonance.default,
+                        modulation: defaults.modulation !== undefined ? defaults.modulation : KNOB_PARAMS.modulation.default,
+                        release: defaults.release !== undefined ? defaults.release : KNOB_PARAMS.release.default,
+                        vol: defaults.vol !== undefined ? defaults.vol : KNOB_PARAMS.vol.default
                     };
                 }
             }
@@ -152,13 +153,14 @@ export function createDefaultState() {
 
     const trackParams = [];
     for (let i = 0; i < ROWS; i++) {
+        const defaults = TRACKS[i].defaultParams || {};
         trackParams[i] = {
-            tune: KNOB_PARAMS.tune.default,
-            cutoff: KNOB_PARAMS.cutoff.default,
-            resonance: KNOB_PARAMS.resonance.default,
-            modulation: KNOB_PARAMS.modulation.default,
-            release: KNOB_PARAMS.release.default,
-            vol: KNOB_PARAMS.vol.default
+            tune: defaults.tune !== undefined ? defaults.tune : KNOB_PARAMS.tune.default,
+            cutoff: defaults.cutoff !== undefined ? defaults.cutoff : KNOB_PARAMS.cutoff.default,
+            resonance: defaults.resonance !== undefined ? defaults.resonance : KNOB_PARAMS.resonance.default,
+            modulation: defaults.modulation !== undefined ? defaults.modulation : KNOB_PARAMS.modulation.default,
+            release: defaults.release !== undefined ? defaults.release : KNOB_PARAMS.release.default,
+            vol: defaults.vol !== undefined ? defaults.vol : KNOB_PARAMS.vol.default
         };
     }
 
