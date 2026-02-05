@@ -1376,3 +1376,102 @@ body.playing .loop-handle {
         width: fit-content;
     }
 }
+
+/* DJ Mode Overlay */
+#dj-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 80px;
+    /* Above controls */
+    background: rgba(0, 0, 0, 0.75);
+    z-index: 900;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+#dj-overlay.hidden {
+    display: none;
+}
+
+#dj-params {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 48px;
+    pointer-events: none;
+}
+
+.dj-param {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.dj-param-label {
+    font-size: 12px;
+    color: #666;
+    letter-spacing: 0.2em;
+}
+
+.dj-param-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: #fff;
+    font-family: monospace;
+}
+
+#dj-crosshair {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+#dj-cursor {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    left: 50%;
+    top: 50%;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+#dj-cursor::before,
+#dj-cursor::after {
+    content: '';
+    position: absolute;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+#dj-cursor::before {
+    /* Vertical line */
+    width: 1px;
+    height: 100vh;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#dj-cursor::after {
+    /* Horizontal line */
+    width: 100vw;
+    height: 1px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Make visualizer clickable during playback */
+#visualizer-display.playing {
+    cursor: pointer;
+}

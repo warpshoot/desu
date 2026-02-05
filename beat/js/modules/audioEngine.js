@@ -17,6 +17,10 @@ export class AudioEngine {
         this.gains = [];
         this.limiter = null;
 
+        // DJ Mode (master filter)
+        this.djFilter = null;
+        this.djFilterEnabled = false;
+
         // Mute/Solo state
         this.mutedTracks = [false, false, false, false, false];
         this.soloedTracks = [false, false, false, false, false];
@@ -44,8 +48,19 @@ export class AudioEngine {
 
         await Tone.start();
 
+        // Create master DJ filter (before limiter)
+        this.djFilter = new Tone.Filter({
+            frequency: 20000,
+            type: 'lowpass',
+            rolloff: -24,
+            Q: 1
+        });
+
         // Create master limiter
         this.limiter = new Tone.Limiter(-3).toDestination();
+
+        // Connect DJ filter to limiter
+        this.djFilter.connect(this.limiter);
 
         // Create recorder (default format - browser dependent)
         this.recorder = new Tone.Recorder();
@@ -107,10 +122,10 @@ export class AudioEngine {
             // Create gain
             const gain = new Tone.Gain(0.7);
 
-            // Connect: instrument -> filter -> gain -> limiter
+            // Connect: instrument -> filter -> gain -> djFilter -> limiter
             instrument.connect(filter);
             filter.connect(gain);
-            gain.connect(this.limiter);
+            gain.connect(this.djFilter);
 
             this.instruments.push(instrument);
             this.filters.push(filter);
@@ -314,11 +329,29 @@ export class AudioEngine {
         }
     }
 
+    // DJ Mode filter control
+    setDJFilter(cutoff, resonance) {
+        if (!this.initialized || !this.djFilter) return;
+
+        this.djFilterEnabled = true;
+        this.djFilter.frequency.rampTo(cutoff, 0.05);
+        this.djFilter.Q.rampTo(resonance, 0.05);
+    }
+
+    resetDJFilter() {
+        if (!this.initialized || !this.djFilter) return;
+
+        this.djFilterEnabled = false;
+        this.djFilter.frequency.rampTo(20000, 0.1);
+        this.djFilter.Q.rampTo(1, 0.1);
+    }
+
     dispose() {
         this.stop();
         this.instruments.forEach(inst => inst.dispose());
         this.filters.forEach(f => f.dispose());
         this.gains.forEach(g => g.dispose());
+        if (this.djFilter) this.djFilter.dispose();
         if (this.limiter) this.limiter.dispose();
     }
 

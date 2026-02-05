@@ -19,6 +19,13 @@ class Sequencer {
         this.danceFrame = 0;
         this.dancer = null;
 
+        // DJ Mode state
+        this.djModeActive = false;
+        this.djOverlay = null;
+        this.djCursor = null;
+        this.djFilterValue = null;
+        this.djResValue = null;
+
         this.init();
     }
 
@@ -131,6 +138,8 @@ class Sequencer {
             }
             // Reset dance animation
             this.resetDanceAnimation();
+            // Close DJ mode if open
+            this.closeDJMode();
         });
 
         // Initialize dance animation
@@ -138,6 +147,9 @@ class Sequencer {
         if (this.dancer) {
             this.danceFrame = 0;
         }
+
+        // Initialize DJ Mode
+        this.initDJMode();
 
         // Global two-finger detection for pan scrolling
         window.addEventListener('touchstart', (e) => {
@@ -834,6 +846,150 @@ class Sequencer {
 
         // Remove playing class to hide animation
         this.dancer.classList.remove('playing');
+    }
+
+    initDJMode() {
+        // Get DOM elements
+        this.djOverlay = document.getElementById('dj-overlay');
+        this.djCursor = document.getElementById('dj-cursor');
+        this.djFilterValue = document.getElementById('dj-filter-value');
+        this.djResValue = document.getElementById('dj-res-value');
+
+        if (!this.djOverlay || !this.dancer) return;
+
+        // Visualizer tap handler - open DJ overlay when playing
+        this.dancer.addEventListener('click', () => {
+            if (this.audioEngine.playing && !this.djModeActive) {
+                this.openDJMode();
+            }
+        });
+
+        // Close overlay on tap (when not dragging)
+        let isDragging = false;
+        let startPos = { x: 0, y: 0 };
+
+        const onStart = (e) => {
+            isDragging = false;
+            const pos = this.getDJPosition(e);
+            startPos = pos;
+            this.updateDJFilter(pos);
+        };
+
+        const onMove = (e) => {
+            e.preventDefault();
+            isDragging = true;
+            const pos = this.getDJPosition(e);
+            this.updateDJFilter(pos);
+        };
+
+        const onEnd = (e) => {
+            if (!isDragging) {
+                // Tap without drag - close overlay
+                this.closeDJMode();
+            }
+        };
+
+        this.djOverlay.addEventListener('mousedown', onStart);
+        this.djOverlay.addEventListener('mousemove', (e) => {
+            if (e.buttons === 1) onMove(e);
+        });
+        this.djOverlay.addEventListener('mouseup', onEnd);
+        this.djOverlay.addEventListener('mouseleave', () => {
+            if (this.djModeActive) {
+                // Reset filter when leaving overlay area
+            }
+        });
+
+        this.djOverlay.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            onStart(e);
+        }, { passive: false });
+        this.djOverlay.addEventListener('touchmove', onMove, { passive: false });
+        this.djOverlay.addEventListener('touchend', onEnd);
+    }
+
+    getDJPosition(e) {
+        const rect = this.djOverlay.getBoundingClientRect();
+        let clientX, clientY;
+
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+
+        // Normalize to 0-1 range
+        const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+
+        return { x, y };
+    }
+
+    updateDJFilter(pos) {
+        if (!this.djModeActive) return;
+
+        // X axis: Filter cutoff (200Hz - 20000Hz, logarithmic)
+        const minFreq = 200;
+        const maxFreq = 20000;
+        const logMin = Math.log(minFreq);
+        const logMax = Math.log(maxFreq);
+        const cutoff = Math.exp(logMin + pos.x * (logMax - logMin));
+
+        // Y axis: Resonance (inverted - top = high Q, bottom = low Q)
+        // Range: 0.5 - 15
+        const minQ = 0.5;
+        const maxQ = 15;
+        const resonance = minQ + (1 - pos.y) * (maxQ - minQ);
+
+        // Update audio
+        this.audioEngine.setDJFilter(cutoff, resonance);
+
+        // Update cursor position
+        if (this.djCursor) {
+            this.djCursor.style.left = `${pos.x * 100}%`;
+            this.djCursor.style.top = `${pos.y * 100}%`;
+        }
+
+        // Update display values
+        if (this.djFilterValue) {
+            if (cutoff >= 1000) {
+                this.djFilterValue.textContent = `${(cutoff / 1000).toFixed(1)}kHz`;
+            } else {
+                this.djFilterValue.textContent = `${Math.round(cutoff)}Hz`;
+            }
+        }
+        if (this.djResValue) {
+            this.djResValue.textContent = resonance.toFixed(1);
+        }
+    }
+
+    openDJMode() {
+        if (!this.djOverlay) return;
+
+        this.djModeActive = true;
+        this.djOverlay.classList.remove('hidden');
+
+        // Reset cursor to center
+        if (this.djCursor) {
+            this.djCursor.style.left = '50%';
+            this.djCursor.style.top = '50%';
+        }
+
+        // Reset display to default
+        if (this.djFilterValue) this.djFilterValue.textContent = '20kHz';
+        if (this.djResValue) this.djResValue.textContent = '1.0';
+    }
+
+    closeDJMode() {
+        if (!this.djOverlay) return;
+
+        this.djModeActive = false;
+        this.djOverlay.classList.add('hidden');
+
+        // Reset audio filter
+        this.audioEngine.resetDJFilter();
     }
 }
 
