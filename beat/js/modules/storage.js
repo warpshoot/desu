@@ -93,6 +93,7 @@ export function loadState() {
                 if (!state.trackParams) state.trackParams = [];
                 for (let i = currentLen; i < ROWS; i++) {
                     state.trackParams[i] = {
+                        tune: KNOB_PARAMS.tune.default,
                         cutoff: KNOB_PARAMS.cutoff.default,
                         resonance: KNOB_PARAMS.resonance.default,
                         modulation: KNOB_PARAMS.modulation.default,
@@ -102,11 +103,14 @@ export function loadState() {
                 }
             }
 
-            // Migration: Add vol if missing in existing trackParams
+            // Migration: Add vol and tune if missing in existing trackParams
             if (state.trackParams) {
                 state.trackParams.forEach(params => {
                     if (params.vol === undefined) {
                         params.vol = KNOB_PARAMS.vol.default;
+                    }
+                    if (params.tune === undefined) {
+                        params.tune = KNOB_PARAMS.tune.default;
                     }
                 });
             }
@@ -149,6 +153,7 @@ export function createDefaultState() {
     const trackParams = [];
     for (let i = 0; i < ROWS; i++) {
         trackParams[i] = {
+            tune: KNOB_PARAMS.tune.default,
             cutoff: KNOB_PARAMS.cutoff.default,
             resonance: KNOB_PARAMS.resonance.default,
             modulation: KNOB_PARAMS.modulation.default,
