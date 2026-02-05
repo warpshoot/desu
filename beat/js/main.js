@@ -817,8 +817,11 @@ class Sequencer {
         // Update frame (8 frames total)
         this.danceFrame = (this.danceFrame + 1) % 8;
 
-        // Update background position (each frame is 48px wide)
-        const frameWidth = 48;
+        // Get current background-size to calculate frame width
+        const bgSize = window.getComputedStyle(this.dancer).backgroundSize;
+        const totalWidth = parseInt(bgSize.split(' ')[0]); // Extract width from "XXXpx YYpx"
+        const frameWidth = totalWidth / 8; // 8 frames total
+
         this.dancer.style.backgroundPosition = `${-this.danceFrame * frameWidth}px 0px`;
     }
 
