@@ -659,7 +659,7 @@ body.playing .loop-handle {
     background-position: 0 0;
     background-repeat: no-repeat;
     image-rendering: pixelated;
-    transition: none;
+    transition: none !important;
     /* Instant frame switching, no smooth transition */
 }
 
@@ -1197,6 +1197,10 @@ body.playing .loop-handle {
     #visualizer-display {
         width: 36px;
         height: 36px;
+        background-size: 288px 36px;
+        /* 8 frames × 36px */
+        transition: none !important;
+        /* No sliding animation */
     }
 
     #volume-ctrl {
@@ -1288,6 +1292,10 @@ body.playing .loop-handle {
     #visualizer-display {
         width: 32px;
         height: 32px;
+        background-size: 256px 32px;
+        /* 8 frames × 32px */
+        transition: none !important;
+        /* No sliding animation */
     }
 
     #volume-ctrl {
