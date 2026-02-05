@@ -64,7 +64,7 @@ export class Controls {
         this.scaleSelect.style.borderRadius = '4px';
         this.scaleSelect.style.padding = '2px 4px';
         this.scaleSelect.style.fontSize = '11px';
-        this.scaleSelect.style.width = '80px';
+        this.scaleSelect.style.width = '95px';
         this.scaleSelect.style.outline = 'none';
 
         // Populate options
