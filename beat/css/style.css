@@ -23,36 +23,6 @@ body.playing #sequencer-container {
     background: #000 !important;
 }
 
-/* ... (skipping unchanged properties) ... */
-
-.loop-handle {
-    position: absolute;
-    top: -44px;
-    /* Adjusted for larger touch target */
-    width: 44px;
-    height: 44px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: grab;
-    z-index: 500;
-    font-size: 20px;
-    color: #000;
-    /* Pure black */
-    user-select: none;
-    transition: transform 0.1s ease;
-    background: none;
-    /* No background */
-    border-radius: 0;
-    /* touch-action removed - controlled by JavaScript to allow two-finger pan */
-}
-
-body.playing .loop-handle {
-    color: #fff;
-}
-
-/* ... (skipping unchanged properties) ... */
-
 .control-btn.active#play-pause-btn {
     background: #fff;
     color: #0a0a0a;
@@ -316,86 +286,6 @@ body.playing #credit-btn:hover {
     position: relative;
     /* CRITICAL for absolute handles */
 }
-
-#timeline-container {
-    display: flex;
-    gap: 2px;
-    padding: 0 4px;
-    /* Match grid padding */
-    position: relative;
-    height: 0;
-    /* Collapse height */
-    z-index: 100;
-}
-
-.loop-handle {
-    position: absolute;
-    top: -44px;
-    /* Adjusted for larger touch target */
-    width: 44px;
-    height: 44px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: grab;
-    z-index: 500;
-    font-size: 20px;
-    color: #000;
-    /* Black for light bg (default) */
-    user-select: none;
-    transition: transform 0.1s ease;
-    background: none;
-    /* No background */
-    border-radius: 0;
-    /* touch-action removed - controlled by JavaScript to allow two-finger pan */
-}
-
-body.playing .loop-handle {
-    color: #fff;
-}
-
-.loop-handle:active {
-    cursor: grabbing;
-    transform: scale(1.2);
-}
-
-#loop-start-handle {
-    left: 0;
-}
-
-#loop-end-handle {
-    right: 0;
-}
-
-.timeline-beat {
-    width: 102px;
-    /* 4*24 (cells) + 3*2 (gaps) */
-    height: 8px;
-    background: transparent;
-    /* Hide background */
-    border: none;
-    /* Hide border */
-    box-sizing: border-box;
-    cursor: grab;
-    transition: all 0.2s ease;
-    margin-right: 8px;
-    /* 2px gap + 6px margin */
-}
-
-.timeline-beat:last-child {
-    margin-right: 0;
-}
-
-.timeline-beat:hover {
-    border-color: #666;
-}
-
-.timeline-beat.in-range {
-    background: transparent;
-    border-color: transparent;
-}
-
-/* Markers removed */
 
 /* Grid */
 #grid-container {
@@ -685,7 +575,6 @@ body.playing .loop-handle {
     border-color: #fff;
 }
 
-#loop-btn.active,
 #swing-btn.active {
     color: #000;
     background: #fff;
@@ -919,11 +808,6 @@ body.playing .loop-handle {
         margin-right: 6px;
     }
 
-    .timeline-beat {
-        width: 102px;
-        /* 4*24 + 3*2 */
-    }
-
     #tone-panel {
         padding: 16px;
         width: 90%;
@@ -958,13 +842,8 @@ body.playing .loop-handle {
         grid-row: 1;
     }
 
-    #loop-btn {
-        grid-column: 3;
-        grid-row: 1;
-    }
-
     #swing-btn {
-        grid-column: 4;
+        grid-column: 3;
         grid-row: 1;
     }
 
@@ -1027,18 +906,6 @@ body.playing .loop-handle {
 
     .pitch-indicator {
         height: 2px;
-    }
-
-    .timeline-beat {
-        width: 86px;
-        /* 4*20 + 3*2 */
-    }
-
-    .loop-handle {
-        width: 36px;
-        height: 36px;
-        font-size: 16px;
-        top: -36px;
     }
 
     #controls {
@@ -1143,12 +1010,6 @@ body.playing .loop-handle {
     .cell[data-step="7"],
     .cell[data-step="11"] {
         margin-right: 4px;
-    }
-
-    .timeline-beat {
-        width: 82px;
-        /* 4*18 (cells) + 3*2 (gaps) + 4 (margin-right) */
-        margin-right: 6px;
     }
 
     /* Track icons compact */
@@ -1257,13 +1118,6 @@ body.playing .loop-handle {
         margin-top: 12px;
     }
 
-    /* Loop handles */
-    .loop-handle {
-        width: 36px;
-        height: 36px;
-        font-size: 16px;
-        top: -36px;
-    }
 }
 
 /* Very small landscape (iPhone SE etc) */
@@ -1276,11 +1130,6 @@ body.playing .loop-handle {
     #grid-container {
         grid-template-columns: repeat(16, auto);
         grid-template-rows: repeat(5, 36px);
-    }
-
-    .timeline-beat {
-        width: 74px;
-        /* 4*16 (cells) + 3*2 (gaps) + 4 (margin-right) */
     }
 
     .track-icon {
@@ -1348,13 +1197,6 @@ body.playing .loop-handle {
     #credit-author {
         font-size: 12px;
         margin-top: 10px;
-    }
-
-    .loop-handle {
-        width: 32px;
-        height: 32px;
-        font-size: 14px;
-        top: -32px;
     }
 
     /* Sequencer inner - reduce padding */

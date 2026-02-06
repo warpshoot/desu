@@ -1,14 +1,13 @@
 import { SCALES } from './constants.js';
 
 export class Controls {
-    constructor(audioEngine, onBPMChange, onSwingChange, onClear, onPlay, onStop, onLoopToggle, onScaleChange, onInit) {
+    constructor(audioEngine, onBPMChange, onSwingChange, onClear, onPlay, onStop, _unused, onScaleChange, onInit) {
         this.audioEngine = audioEngine;
         this.onBPMChange = onBPMChange;
         this.onSwingChange = onSwingChange;
         this.onClear = onClear;
         this.onPlay = onPlay;
         this.onStop = onStop;
-        this.onLoopToggle = onLoopToggle;
         this.onScaleChange = onScaleChange;
         this.onInit = onInit;
         this.isPlaying = false;
@@ -18,7 +17,6 @@ export class Controls {
         this.playPauseBtn = document.getElementById('play-pause-btn');
         this.stopBtn = document.getElementById('stop-btn');
         this.clearBtn = document.getElementById('clear-btn');
-        this.loopBtn = document.getElementById('loop-btn');
         this.swingBtn = document.getElementById('swing-btn');
         this.recBtn = document.getElementById('rec-btn');
 
@@ -172,13 +170,6 @@ export class Controls {
             });
         }
 
-        // Loop toggle
-        if (this.loopBtn) {
-            this.loopBtn.addEventListener('click', () => {
-                if (this.onLoopToggle) this.onLoopToggle();
-            });
-        }
-
         // Shortcuts
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
@@ -186,8 +177,6 @@ export class Controls {
             if (e.code === 'Space') {
                 e.preventDefault();
                 this.togglePlay();
-            } else if (e.code === 'KeyL') {
-                if (this.onLoopToggle) this.onLoopToggle();
             }
         });
     }
