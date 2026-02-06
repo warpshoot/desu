@@ -1,4 +1,4 @@
-import { STORAGE_KEY, DEFAULT_BPM, KNOB_PARAMS, DEFAULT_ROLL_SUBDIVISION, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, COLS, ROWS, DEFAULT_SCALE, TRACKS, MAX_PATTERNS } from './constants.js';
+import { STORAGE_KEY, DEFAULT_BPM, KNOB_PARAMS, DEFAULT_ROLL_SUBDIVISION, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, ROWS, DEFAULT_SCALE, TRACKS, MAX_PATTERNS, COLS } from './constants.js';
 
 let saveTimeout = null;
 
@@ -53,9 +53,6 @@ export function createDefaultPattern() {
         trackParams,
         swingEnabled: DEFAULT_SWING_ENABLED,
         trackOctaves,
-        loopStart: 0,
-        loopEnd: COLS - 1,
-        loopEnabled: true,
         mutedTracks,
         soloedTracks,
         scale: DEFAULT_SCALE
@@ -101,14 +98,11 @@ function migratePatternGrid(pattern) {
 // Migrate pattern-level fields
 function migratePatternFields(pattern) {
     if (pattern.swingEnabled === undefined) pattern.swingEnabled = DEFAULT_SWING_ENABLED;
-    if (pattern.loopEnabled === undefined) {
-        pattern.loopEnabled = true;
-        pattern.loopStart = 0;
-        pattern.loopEnd = COLS - 1;
-    }
-    // Clamp loop range to COLS
-    if (pattern.loopEnd >= COLS) pattern.loopEnd = COLS - 1;
-    if (pattern.loopStart >= COLS) pattern.loopStart = 0;
+
+    // Remove legacy loop range fields
+    delete pattern.loopEnabled;
+    delete pattern.loopStart;
+    delete pattern.loopEnd;
 
     if (!pattern.trackOctaves || pattern.trackOctaves.length < ROWS) {
         if (!pattern.trackOctaves) pattern.trackOctaves = [];
@@ -175,9 +169,6 @@ export function loadState() {
                     trackParams: state.trackParams,
                     swingEnabled: state.swingEnabled,
                     trackOctaves: state.trackOctaves,
-                    loopStart: state.loopStart,
-                    loopEnd: state.loopEnd,
-                    loopEnabled: state.loopEnabled,
                     mutedTracks: state.mutedTracks,
                     soloedTracks: state.soloedTracks,
                     scale: state.scale

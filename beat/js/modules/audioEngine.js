@@ -7,10 +7,6 @@ export class AudioEngine {
         this.currentStep = 0;
         this.swingEnabled = false;
 
-        this.loopStart = 0;
-        this.loopEnd = COLS - 1;
-        this.loopEnabled = true;
-
         // Audio chain components
         this.instruments = [];
         this.distortions = [];
@@ -201,33 +197,8 @@ export class AudioEngine {
             this.onStepCallback(this.currentStep, adjustedTime);
         }
 
-        // Calculate next step
-        const nextStep = this.currentStep + 1;
-
-        if (this.loopEnabled) {
-            // Wrap within loop range
-            this.currentStep = (nextStep > this.loopEnd) ? this.loopStart : nextStep;
-        } else {
-            // Stop at end of range or COLS
-            if (nextStep > this.loopEnd || nextStep >= COLS) {
-                Tone.Transport.scheduleOnce(() => {
-                    this.stop();
-                }, "+16n");
-            } else {
-                this.currentStep = nextStep;
-            }
-        }
-    }
-
-    setLoopRange(start, end, enabled) {
-        this.loopStart = start;
-        this.loopEnd = end;
-        this.loopEnabled = enabled;
-
-        // If current step is outside new range, jump to start
-        if (this.currentStep < this.loopStart || this.currentStep > this.loopEnd) {
-            this.currentStep = this.loopStart;
-        }
+        // Calculate next step (always loop 0 → COLS-1)
+        this.currentStep = (this.currentStep + 1) % COLS;
     }
 
     setStepCallback(callback) {

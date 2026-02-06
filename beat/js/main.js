@@ -1,4 +1,4 @@
-import { ROWS, COLS, OCTAVE_RANGE, TAP_THRESHOLD, PITCH_RANGE, DURATION_RANGE, DEFAULT_ROLL_SUBDIVISION, TRACKS, KNOB_PARAMS, DEFAULT_BPM, DEFAULT_SCALE, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, MAX_PATTERNS, PATTERN_NAMES } from './modules/constants.js';
+import { ROWS, COLS, TAP_THRESHOLD, TRACKS, KNOB_PARAMS, DEFAULT_BPM, DEFAULT_SCALE, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, MAX_PATTERNS, PATTERN_NAMES } from './modules/constants.js';
 import { AudioEngine } from './modules/audioEngine.js';
 import { Cell } from './modules/cell.js';
 import { Controls } from './modules/controls.js';
@@ -76,13 +76,7 @@ class Sequencer {
                     this.dancer.classList.remove('playing');
                 }
             },
-            () => { // onLoopToggle
-                this.pattern.loopEnabled = !this.pattern.loopEnabled;
-                this.audioEngine.setLoopRange(this.pattern.loopStart, this.pattern.loopEnd, this.pattern.loopEnabled);
-                this.controls.setLoop(this.pattern.loopEnabled);
-                this.updateTimelineVisuals();
-                saveState(this.state);
-            },
+            null, // onLoopToggle (removed)
             (scaleName) => { // onScaleChange
                 this.pattern.scale = scaleName;
                 saveState(this.state);
@@ -118,24 +112,10 @@ class Sequencer {
             );
         }
 
-        this.audioEngine.setLoopRange(this.pattern.loopStart, this.pattern.loopEnd, this.pattern.loopEnabled);
-
-        this.initTimeline();
-
         this.initRollMenu();
 
         this.setupTrackIcons();
         this.setupTrackControls();
-
-        // Setup controls callbacks
-        this.controls.setLoop = (enabled) => {
-            const loopBtn = document.getElementById('loop-btn');
-            if (loopBtn) {
-                loopBtn.classList.toggle('active', enabled);
-            }
-        };
-
-        this.controls.setLoop(this.pattern.loopEnabled);
 
         this.audioEngine.setStepCallback((step, time) => {
             this.onStep(step, time);
@@ -353,14 +333,9 @@ class Sequencer {
         this.controls.setBPM(this.pattern.bpm);
         this.controls.setSwing(this.pattern.swingEnabled);
         this.controls.setScale(this.pattern.scale);
-        this.controls.setLoop(this.pattern.loopEnabled);
-        this.audioEngine.setLoopRange(this.pattern.loopStart, this.pattern.loopEnd, this.pattern.loopEnabled);
 
         // Update track controls (mute/solo)
         this.setupTrackControls();
-
-        // Update timeline
-        this.updateTimelineVisuals();
 
         this.updatePatternPadUI();
         saveState(this.state);
@@ -527,24 +502,18 @@ class Sequencer {
         this.controls.setSwing(pat.swingEnabled);
         this.controls.setVolume(this.state.masterVolume);
         this.controls.setScale(pat.scale);
-        this.controls.setLoop(pat.loopEnabled);
 
         // 2. Audio Engine
         if (this.audioEngine.initialized) {
             this.syncAudioWithState();
         }
 
-        this.audioEngine.setLoopRange(pat.loopStart, pat.loopEnd, pat.loopEnabled);
-
-        // 4. Update UI Grid
+        // 3. Update UI Grid
         const gridContainer = document.getElementById('grid-container');
         if (gridContainer) gridContainer.innerHTML = '';
         this.createGrid();
 
-        // 5. Update Timeline
-        this.updateTimelineVisuals();
-
-        // 6. Update Track Controls UI (Mute/Solo buttons)
+        // 4. Update Track Controls UI (Mute/Solo buttons)
         this.setupTrackControls();
     }
 
@@ -571,7 +540,6 @@ class Sequencer {
         }
 
         this.audioEngine.updateTrackGains(true);
-        this.audioEngine.setLoopRange(pat.loopStart, pat.loopEnd, pat.loopEnabled);
 
         if (pat.bpm) {
             this.updateVisualizerSpeed(pat.bpm);
@@ -628,117 +596,6 @@ class Sequencer {
                     this.rollMenuElement.classList.add('hidden');
                 }
             });
-        });
-    }
-
-    // ========================
-    // Timeline
-    // ========================
-
-    initTimeline() {
-        this.timelineContainer = document.getElementById('timeline-container');
-        this.startHandle = document.getElementById('loop-start-handle');
-        this.endHandle = document.getElementById('loop-end-handle');
-        this.timelineBeats = [];
-
-        // 16 steps / 4 = 4 beats
-        const numBeats = COLS / 4;
-        for (let beat = 0; beat < numBeats; beat++) {
-            const beatElement = document.createElement('div');
-            beatElement.className = 'timeline-beat';
-            beatElement.dataset.beat = beat;
-            this.timelineContainer.appendChild(beatElement);
-            this.timelineBeats.push(beatElement);
-        }
-
-        const setupHandleDrag = (handle, isStart) => {
-            const onMove = (e) => {
-                if (e.touches && e.touches.length !== 1) return;
-                if (e.touches && e.touches.length === 1) {
-                    e.preventDefault();
-                }
-
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const timelineRect = this.timelineContainer.getBoundingClientRect();
-                const targetY = timelineRect.top + timelineRect.height / 2;
-
-                const element = document.elementFromPoint(clientX, targetY);
-                if (element && element.classList.contains('timeline-beat')) {
-                    const newBeat = parseInt(element.dataset.beat);
-
-                    if (isStart) {
-                        const stepStart = newBeat * 4;
-                        if (stepStart <= this.pattern.loopEnd) {
-                            this.pattern.loopStart = stepStart;
-                        }
-                    } else {
-                        const stepEnd = (newBeat * 4) + 3;
-                        if (stepEnd >= this.pattern.loopStart) {
-                            this.pattern.loopEnd = stepEnd;
-                        }
-                    }
-
-                    this.audioEngine.setLoopRange(this.pattern.loopStart, this.pattern.loopEnd, this.pattern.loopEnabled);
-                    this.updateTimelineVisuals();
-                    saveState(this.state);
-                }
-            };
-
-            const onEnd = () => {
-                window.removeEventListener('mousemove', onMove);
-                window.removeEventListener('mouseup', onEnd);
-                window.removeEventListener('touchmove', onMove);
-                window.removeEventListener('touchend', onEnd);
-            };
-
-            handle.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                window.addEventListener('mousemove', onMove);
-                window.addEventListener('mouseup', onEnd);
-            });
-
-            handle.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 1) {
-                    e.preventDefault();
-                    window.addEventListener('touchmove', onMove, { passive: false });
-                    window.addEventListener('touchend', onEnd);
-                }
-            }, { passive: false });
-        };
-
-        setupHandleDrag(this.startHandle, true);
-        setupHandleDrag(this.endHandle, false);
-
-        requestAnimationFrame(() => {
-            this.updateTimelineVisuals();
-        });
-    }
-
-    updateTimelineVisuals() {
-        if (!this.cells.length || !this.cells[0].length) return;
-
-        const gridContainer = document.getElementById('grid-container');
-        const gridWrapper = document.getElementById('grid-wrapper');
-        if (!gridContainer || !gridWrapper) return;
-
-        const wrapperRect = gridWrapper.getBoundingClientRect();
-
-        const startCellEl = this.cells[0][this.pattern.loopStart].element;
-        const startRect = startCellEl.getBoundingClientRect();
-        const startX = startRect.left - wrapperRect.left;
-        this.startHandle.style.left = `${startX - 34}px`;
-
-        const endCellEl = this.cells[0][this.pattern.loopEnd].element;
-        const endRect = endCellEl.getBoundingClientRect();
-        const endX = endRect.right - wrapperRect.left;
-        this.endHandle.style.left = `${endX - 10}px`;
-
-        this.timelineBeats.forEach((beatElement, index) => {
-            const stepStart = index * 4;
-            const stepEnd = stepStart + 3;
-            const inRange = stepStart >= this.pattern.loopStart && stepEnd <= this.pattern.loopEnd;
-
-            beatElement.classList.toggle('in-range', inRange && this.pattern.loopEnabled);
         });
     }
 
@@ -960,8 +817,8 @@ class Sequencer {
             }
         }
 
-        // Check if we need to perform queued pattern switch at loop end
-        if (this.state.nextPattern !== null && step === pat.loopEnd) {
+        // Check if we need to perform queued pattern switch at end of bar
+        if (this.state.nextPattern !== null && step === COLS - 1) {
             // Schedule switch on next step (will take effect before next onStep fires)
             requestAnimationFrame(() => {
                 this.performQueuedSwitch();
