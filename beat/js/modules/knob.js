@@ -18,29 +18,45 @@ export class Knob {
     }
 
     setupEvents() {
-        // Mouse events
-        this.canvas.addEventListener('mousedown', (e) => {
+        // Store bound event handlers so we can remove them later
+        this.boundMouseDown = (e) => {
             e.preventDefault();
             e.stopPropagation();
             this.onDragStart(e.clientY);
-        });
-        window.addEventListener('mousemove', (e) => this.onDragMove(e.clientY));
-        window.addEventListener('mouseup', () => this.onDragEnd());
-
-        // Touch events
-        this.canvas.addEventListener('touchstart', (e) => {
+        };
+        this.boundMouseMove = (e) => this.onDragMove(e.clientY);
+        this.boundMouseUp = () => this.onDragEnd();
+        this.boundTouchStart = (e) => {
             if (e.touches.length === 1) {
                 e.preventDefault();
                 this.onDragStart(e.touches[0].clientY);
             }
-        }, { passive: false });
-        window.addEventListener('touchmove', (e) => {
+        };
+        this.boundTouchMove = (e) => {
             if (this.isDragging && e.touches.length === 1) {
                 e.preventDefault();
                 this.onDragMove(e.touches[0].clientY);
             }
-        }, { passive: false });
-        window.addEventListener('touchend', () => this.onDragEnd());
+        };
+        this.boundTouchEnd = () => this.onDragEnd();
+
+        // Add event listeners
+        this.canvas.addEventListener('mousedown', this.boundMouseDown);
+        window.addEventListener('mousemove', this.boundMouseMove);
+        window.addEventListener('mouseup', this.boundMouseUp);
+        this.canvas.addEventListener('touchstart', this.boundTouchStart, { passive: false });
+        window.addEventListener('touchmove', this.boundTouchMove, { passive: false });
+        window.addEventListener('touchend', this.boundTouchEnd);
+    }
+
+    destroy() {
+        // Remove all event listeners
+        this.canvas.removeEventListener('mousedown', this.boundMouseDown);
+        window.removeEventListener('mousemove', this.boundMouseMove);
+        window.removeEventListener('mouseup', this.boundMouseUp);
+        this.canvas.removeEventListener('touchstart', this.boundTouchStart);
+        window.removeEventListener('touchmove', this.boundTouchMove);
+        window.removeEventListener('touchend', this.boundTouchEnd);
     }
 
     onDragStart(y) {
