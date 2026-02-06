@@ -1,17 +1,19 @@
 import { SCALES } from './constants.js';
 
 export class Controls {
-    constructor(audioEngine, onBPMChange, onSwingChange, onClear, onPlay, onStop, _unused, onScaleChange, onInit) {
+    constructor(audioEngine, onBPMChange, onSwingChange, onClear, onPlay, onStop, onRepeatToggle, onScaleChange, onInit) {
         this.audioEngine = audioEngine;
         this.onBPMChange = onBPMChange;
         this.onSwingChange = onSwingChange;
         this.onClear = onClear;
         this.onPlay = onPlay;
         this.onStop = onStop;
+        this.onRepeatToggle = onRepeatToggle;
         this.onScaleChange = onScaleChange;
         this.onInit = onInit;
         this.isPlaying = false;
         this.swingEnabled = false;
+        this.repeatEnabled = true;
         this.isRecordingArmed = false;
 
         this.playPauseBtn = document.getElementById('play-pause-btn');
@@ -19,6 +21,7 @@ export class Controls {
         this.clearBtn = document.getElementById('clear-btn');
         this.swingBtn = document.getElementById('swing-btn');
         this.recBtn = document.getElementById('rec-btn');
+        this.repeatBtn = document.getElementById('repeat-btn');
 
         this.bpmDragValue = document.getElementById('bpm-drag-value');
         this.bpmDecBtn = document.getElementById('bpm-dec');
@@ -124,6 +127,13 @@ export class Controls {
         if (this.recBtn) {
             this.recBtn.addEventListener('click', () => {
                 this.toggleRecordArm();
+            });
+        }
+
+        // Repeat button
+        if (this.repeatBtn) {
+            this.repeatBtn.addEventListener('click', () => {
+                this.toggleRepeat();
             });
         }
 
@@ -353,6 +363,23 @@ export class Controls {
             this.swingBtn.classList.add('active');
         } else {
             this.swingBtn.classList.remove('active');
+        }
+    }
+
+    toggleRepeat() {
+        this.repeatEnabled = !this.repeatEnabled;
+        if (this.repeatBtn) {
+            this.repeatBtn.classList.toggle('active', this.repeatEnabled);
+        }
+        if (this.onRepeatToggle) {
+            this.onRepeatToggle(this.repeatEnabled);
+        }
+    }
+
+    setRepeat(enabled) {
+        this.repeatEnabled = enabled;
+        if (this.repeatBtn) {
+            this.repeatBtn.classList.toggle('active', enabled);
         }
     }
 

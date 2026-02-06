@@ -186,6 +186,7 @@ export function loadState() {
                     currentPattern: 0,
                     nextPattern: null,
                     masterVolume: state.masterVolume !== undefined ? state.masterVolume : -12,
+                    repeatEnabled: true,
                     patterns,
                     chain: new Array(CHAIN_LENGTH).fill(null)
                 };
@@ -195,6 +196,7 @@ export function loadState() {
             if (state.currentPattern === undefined) state.currentPattern = 0;
             if (state.nextPattern === undefined) state.nextPattern = null;
             if (state.masterVolume === undefined) state.masterVolume = -12;
+            if (state.repeatEnabled === undefined) state.repeatEnabled = true;
 
             // Ensure we have MAX_PATTERNS patterns
             if (!state.patterns) state.patterns = [];
@@ -232,6 +234,7 @@ export function createDefaultState() {
         currentPattern: 0,
         nextPattern: null,
         masterVolume: -12,
+        repeatEnabled: true,
         patterns,
         chain: new Array(CHAIN_LENGTH).fill(null)
     };

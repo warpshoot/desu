@@ -98,7 +98,10 @@ class Sequencer {
                     this.dancer.classList.remove('playing');
                 }
             },
-            null, // unused
+            (repeatEnabled) => { // onRepeatToggle
+                this.state.repeatEnabled = repeatEnabled;
+                saveState(this.state);
+            },
             (scaleName) => { // onScaleChange
                 this.pattern.scale = scaleName;
                 saveState(this.state);
@@ -115,6 +118,7 @@ class Sequencer {
 
         this.controls.setBPM(this.pattern.bpm);
         this.controls.setSwing(this.pattern.swingEnabled || false);
+        this.controls.setRepeat(this.state.repeatEnabled !== false);
         this.controls.setVolume(this.state.masterVolume || -12);
         this.controls.setScale(this.pattern.scale || 'Chromatic');
 
@@ -647,6 +651,7 @@ class Sequencer {
         // 1. Controls UI
         this.controls.setBPM(pat.bpm);
         this.controls.setSwing(pat.swingEnabled);
+        this.controls.setRepeat(this.state.repeatEnabled !== false);
         this.controls.setVolume(this.state.masterVolume);
         this.controls.setScale(pat.scale);
 
@@ -964,15 +969,29 @@ class Sequencer {
             }
         }
 
-        // At end of bar: chain advance or queued pattern switch
+        // At end of bar: chain advance, queued pattern switch, or one-shot stop
         if (step === COLS - 1) {
             if (this.isChainActive()) {
-                requestAnimationFrame(() => {
-                    this.advanceChain();
-                });
+                // Check if repeat is OFF and this is the last chain slot
+                const repeatEnabled = this.state.repeatEnabled !== false;
+                if (!repeatEnabled && this.getNextChainPosition(this.chainPosition) <= this.chainPosition) {
+                    // Reached end of chain — stop
+                    requestAnimationFrame(() => {
+                        this.controls.stop();
+                    });
+                } else {
+                    requestAnimationFrame(() => {
+                        this.advanceChain();
+                    });
+                }
             } else if (this.state.nextPattern !== null) {
                 requestAnimationFrame(() => {
                     this.performQueuedSwitch();
+                });
+            } else if (this.state.repeatEnabled === false) {
+                // One-shot mode: stop after this bar
+                requestAnimationFrame(() => {
+                    this.controls.stop();
                 });
             }
         }
