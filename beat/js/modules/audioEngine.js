@@ -17,8 +17,10 @@ export class AudioEngine {
         this.gains = [];
         this.limiter = null;
 
-        // DJ Mode (master filter)
-        this.djFilter = null;
+        // DJ Mode (master filter chain: HPF → LPF → Delay)
+        this.djLPF = null;
+        this.djHPF = null;
+        this.djDelay = null;
         this.djFilterEnabled = false;
 
         // Mute/Solo state
@@ -59,19 +61,32 @@ export class AudioEngine {
             Tone.Destination.volume.value = this.cachedMasterVolume;
         }
 
-        // Create master DJ filter (before limiter)
-        this.djFilter = new Tone.Filter({
+        // Create master DJ effect chain: HPF → LPF → Delay → Limiter
+        this.djHPF = new Tone.Filter({
+            frequency: 20,
+            type: 'highpass',
+            rolloff: -24,
+            Q: 1
+        });
+        this.djLPF = new Tone.Filter({
             frequency: 20000,
             type: 'lowpass',
             rolloff: -24,
             Q: 1
         });
+        this.djDelay = new Tone.FeedbackDelay({
+            delayTime: '8n',
+            feedback: 0.4,
+            wet: 0
+        });
 
         // Create master limiter
         this.limiter = new Tone.Limiter(-3).toDestination();
 
-        // Connect DJ filter to limiter
-        this.djFilter.connect(this.limiter);
+        // Connect chain: HPF → LPF → Delay → Limiter
+        this.djHPF.connect(this.djLPF);
+        this.djLPF.connect(this.djDelay);
+        this.djDelay.connect(this.limiter);
 
         // Create recorder (default format - browser dependent)
         this.recorder = new Tone.Recorder();
@@ -147,10 +162,10 @@ export class AudioEngine {
 
             const gain = new Tone.Gain(initialGain);
 
-            // Connect: instrument -> filter -> gain -> djFilter -> limiter
+            // Connect: instrument -> filter -> gain -> djHPF -> djLPF -> djDelay -> limiter
             instrument.connect(filter);
             filter.connect(gain);
-            gain.connect(this.djFilter);
+            gain.connect(this.djHPF);
 
             this.instruments.push(instrument);
             this.filters.push(filter);
@@ -355,21 +370,27 @@ export class AudioEngine {
         }
     }
 
-    // DJ Mode filter control
-    setDJFilter(cutoff, resonance) {
-        if (!this.initialized || !this.djFilter) return;
+    // DJ Mode effect control (dual filter + delay)
+    setDJFilter(lpfCutoff, hpfCutoff, resonance, delayWet) {
+        if (!this.initialized || !this.djLPF) return;
 
         this.djFilterEnabled = true;
-        this.djFilter.frequency.rampTo(cutoff, 0.05);
-        this.djFilter.Q.rampTo(resonance, 0.05);
+        this.djLPF.frequency.rampTo(lpfCutoff, 0.05);
+        this.djHPF.frequency.rampTo(hpfCutoff, 0.05);
+        this.djLPF.Q.rampTo(resonance, 0.05);
+        this.djHPF.Q.rampTo(resonance, 0.05);
+        this.djDelay.wet.rampTo(delayWet, 0.05);
     }
 
     resetDJFilter() {
-        if (!this.initialized || !this.djFilter) return;
+        if (!this.initialized || !this.djLPF) return;
 
         this.djFilterEnabled = false;
-        this.djFilter.frequency.rampTo(20000, 0.1);
-        this.djFilter.Q.rampTo(1, 0.1);
+        this.djLPF.frequency.rampTo(20000, 0.1);
+        this.djHPF.frequency.rampTo(20, 0.1);
+        this.djLPF.Q.rampTo(1, 0.1);
+        this.djHPF.Q.rampTo(1, 0.1);
+        this.djDelay.wet.rampTo(0, 0.15);
     }
 
     dispose() {
@@ -377,7 +398,9 @@ export class AudioEngine {
         this.instruments.forEach(inst => inst.dispose());
         this.filters.forEach(f => f.dispose());
         this.gains.forEach(g => g.dispose());
-        if (this.djFilter) this.djFilter.dispose();
+        if (this.djLPF) this.djLPF.dispose();
+        if (this.djHPF) this.djHPF.dispose();
+        if (this.djDelay) this.djDelay.dispose();
         if (this.limiter) this.limiter.dispose();
     }
 

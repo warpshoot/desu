@@ -1064,27 +1064,44 @@ class Sequencer {
     }
 
     updateDJAudio(deltaX, deltaY) {
-        // Base values
-        const baseFreq = 20000;
-        const baseQ = 1.0;
+        // Kaoss Pad style mapping:
+        //   X left  (deltaX < 0) : HPF sweep (cuts bass)
+        //   X right (deltaX > 0) : LPF sweep (cuts treble)
+        //   Y up    (deltaY > 0) : Resonance + Delay (effect depth)
+        //   Y down  (deltaY < 0) : Neutral (dry)
 
-        // X Axis -> Resonance
-        // deltaX is (x - startX). Drag Right (x increases) -> deltaX becomes positive.
-        // We want Drag Right -> Higher Resonance.
-        const qRange = 14;
-        let resonance = baseQ + (deltaX * qRange * 2);
-        resonance = Math.max(0.5, Math.min(15, resonance));
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
 
-        // Y Axis -> Cutoff Frequency
-        // deltaY is (startY - y). Drag Down (y > startY) -> deltaY becomes negative.
-        // We want Drag Down -> Lower Frequency.
-        // So Negative Delta -> Smaller Factor.
-        let freqFactor = Math.pow(100, deltaY);
-        freqFactor = Math.max(0.01, Math.min(1.0, freqFactor));
-        const cutoff = baseFreq * freqFactor;
+        // --- X Axis: Filter Sweep ---
+        let lpfCutoff = 20000; // fully open
+        let hpfCutoff = 20;    // fully open
 
-        // Apply
-        this.audioEngine.setDJFilter(cutoff, resonance);
+        if (deltaX > 0) {
+            // Drag RIGHT: LPF sweep (remove treble)
+            const factor = Math.pow(0.001, Math.min(absX * 2, 1));
+            lpfCutoff = 20000 * factor;
+            lpfCutoff = Math.max(200, lpfCutoff);
+        } else if (deltaX < 0) {
+            // Drag LEFT: HPF sweep (remove bass)
+            const factor = Math.pow(300, Math.min(absX * 2, 1));
+            hpfCutoff = 20 * factor;
+            hpfCutoff = Math.min(6000, hpfCutoff);
+        }
+
+        // --- Y Axis: Effect Depth (resonance + delay) ---
+        let resonance = 1.0;
+        let delayWet = 0;
+
+        if (deltaY > 0) {
+            // Drag UP: resonance peaks on active filter + delay echo
+            resonance = 1.0 + (absY * 28);
+            resonance = Math.min(15, resonance);
+            delayWet = Math.min(0.6, absY * 2);
+        }
+        // deltaY <= 0: neutral, no extra effect
+
+        this.audioEngine.setDJFilter(lpfCutoff, hpfCutoff, resonance, delayWet);
     }
 
     cycleDJMode() {
