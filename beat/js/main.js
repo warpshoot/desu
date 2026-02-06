@@ -1064,27 +1064,53 @@ class Sequencer {
     }
 
     updateDJAudio(deltaX, deltaY) {
-        // Base values
-        const baseFreq = 20000;
+        // All 4 directions produce distinct, audible effects:
+        //   UP    (deltaY > 0) : High-pass filter sweep (cuts bass)
+        //   DOWN  (deltaY < 0) : Low-pass filter sweep (cuts treble)
+        //   RIGHT (deltaX > 0) : Resonance boost (filter peak)
+        //   LEFT  (deltaX < 0) : Delay / echo effect
+
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+
+        // --- Y Axis: Dual Filter ---
+        let lpfCutoff = 20000; // fully open
+        let hpfCutoff = 20;    // fully open
+
+        if (deltaY < 0) {
+            // Drag DOWN: LPF sweep (remove treble)
+            // absY range ~0-0.5, map aggressively to 20000 → 200 Hz
+            const factor = Math.pow(0.001, Math.min(absY * 2, 1));
+            lpfCutoff = 20000 * factor;
+            lpfCutoff = Math.max(200, lpfCutoff);
+        } else if (deltaY > 0) {
+            // Drag UP: HPF sweep (remove bass)
+            // absY range ~0-0.5, map to 20 → 6000 Hz
+            const factor = Math.pow(300, Math.min(absY * 2, 1));
+            hpfCutoff = 20 * factor;
+            hpfCutoff = Math.min(6000, hpfCutoff);
+        }
+
+        // --- X Axis: Resonance (right) + Delay (left) ---
         const baseQ = 1.0;
+        let resonance = baseQ;
+        let delayWet = 0;
 
-        // X Axis -> Resonance
-        // deltaX is (x - startX). Drag Right (x increases) -> deltaX becomes positive.
-        // We want Drag Right -> Higher Resonance.
-        const qRange = 14;
-        let resonance = baseQ + (deltaX * qRange * 2);
-        resonance = Math.max(0.5, Math.min(15, resonance));
+        if (deltaX > 0) {
+            // Drag RIGHT: Resonance boost
+            resonance = baseQ + (absX * 28); // range 1-15
+            resonance = Math.min(15, resonance);
+        } else if (deltaX < 0) {
+            // Drag LEFT: Delay effect
+            delayWet = Math.min(0.7, absX * 2.5);
+            // Also add mild resonance for character
+            resonance = baseQ + (absX * 8);
+            resonance = Math.min(6, resonance);
+        }
 
-        // Y Axis -> Cutoff Frequency
-        // deltaY is (startY - y). Drag Down (y > startY) -> deltaY becomes negative.
-        // We want Drag Down -> Lower Frequency.
-        // So Negative Delta -> Smaller Factor.
-        let freqFactor = Math.pow(100, deltaY);
-        freqFactor = Math.max(0.01, Math.min(1.0, freqFactor));
-        const cutoff = baseFreq * freqFactor;
+        // Diagonal combos naturally work: e.g. down-right = filtered + resonant
 
-        // Apply
-        this.audioEngine.setDJFilter(cutoff, resonance);
+        this.audioEngine.setDJFilter(lpfCutoff, hpfCutoff, resonance, delayWet);
     }
 
     cycleDJMode() {
