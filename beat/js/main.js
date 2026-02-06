@@ -475,15 +475,51 @@ class Sequencer {
             slot.className = 'chain-slot';
             slot.dataset.index = i;
 
-            slot.addEventListener('click', () => {
-                this.onChainSlotTap(i);
+            let pressTimer = null;
+            let didLongPress = false;
+
+            const startPress = (e) => {
+                didLongPress = false;
+                pressTimer = setTimeout(() => {
+                    didLongPress = true;
+                    this.onChainSlotClear(i);
+                }, 500);
+            };
+
+            const endPress = (e) => {
+                clearTimeout(pressTimer);
+                if (!didLongPress) {
+                    this.onChainSlotTap(i);
+                }
+            };
+
+            const cancelPress = () => {
+                clearTimeout(pressTimer);
+            };
+
+            slot.addEventListener('mousedown', startPress);
+            slot.addEventListener('mouseup', endPress);
+            slot.addEventListener('mouseleave', cancelPress);
+            slot.addEventListener('touchstart', startPress, { passive: true });
+            slot.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                endPress(e);
             });
+            slot.addEventListener('touchcancel', cancelPress);
 
             container.appendChild(slot);
             this.chainSlots.push(slot);
         }
 
         this.updateChainUI();
+    }
+
+    onChainSlotClear(index) {
+        if (this.state.chain[index] !== null) {
+            this.state.chain[index] = null;
+            saveState(this.state);
+            this.updateChainUI();
+        }
     }
 
     onChainSlotTap(index) {

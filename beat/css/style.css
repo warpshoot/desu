@@ -1471,6 +1471,7 @@ body.playing #credit-btn:hover {
 .pattern-pad.active {
     background: #000;
     color: #fff;
+    font-weight: 900;
     border-bottom-color: transparent;
 }
 
