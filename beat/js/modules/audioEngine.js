@@ -77,8 +77,8 @@ export class AudioEngine {
             wet: 0
         });
 
-        // Create master limiter (tight threshold for mobile)
-        this.limiter = new Tone.Limiter(-6).toDestination();
+        // Master limiter: -3dB gives headroom for driven kick/bass transients
+        this.limiter = new Tone.Limiter(-3).toDestination();
 
         // Connect chain: HPF → LPF → Delay → Limiter
         this.djHPF.connect(this.djLPF);
@@ -101,19 +101,19 @@ export class AudioEngine {
                         pitchDecay: 0.05,
                         octaves: 7,
                         oscillator: { type: 'sine' },
-                        envelope: { attack: 0.005, decay: 0.4, sustain: 0.01, release: 0.8 }
+                        envelope: { attack: 0.01, decay: 0.4, sustain: 0.01, release: 1.0 }
                     });
                     break;
                 case 'noise':
                     instrument = new Tone.NoiseSynth({
                         noise: { type: 'white' },
-                        envelope: { attack: 0.003, decay: 0.2, sustain: 0 }
+                        envelope: { attack: 0.008, decay: 0.2, sustain: 0 }
                     });
                     break;
                 case 'metal':
                     instrument = new Tone.MetalSynth({
                         frequency: 200,
-                        envelope: { attack: 0.003, decay: 0.1, release: 0.1 },
+                        envelope: { attack: 0.008, decay: 0.1, release: 0.15 },
                         harmonicity: 5.1,
                         modulationIndex: 32,
                         resonance: 4000,
@@ -128,17 +128,19 @@ export class AudioEngine {
                         modulationIndex: isBass ? 14 : 10,
                         detune: 0,
                         oscillator: { type: isBass ? 'triangle' : 'sine' },
-                        envelope: { attack: 0.005, decay: 0.2, sustain: isBass ? 0.7 : 0.2, release: 0.3 },
+                        envelope: { attack: 0.01, decay: 0.2, sustain: isBass ? 0.7 : 0.2, release: 0.4 },
                         modulation: { type: 'square' },
-                        modulationEnvelope: { attack: 0.005, decay: 0.2, sustain: 0.2, release: 0.3 }
+                        modulationEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.4 }
                     });
                     break;
             }
 
             // Create distortion (drive knob)
+            // oversample '4x' eliminates aliasing artifacts from the waveshaper,
+            // critical for low-frequency content (kick/bass)
             const distortion = new Tone.Distortion({
                 distortion: 0,
-                oversample: 'none'
+                oversample: '4x'
             });
 
             // Create filter
@@ -266,21 +268,23 @@ export class AudioEngine {
             if (trackConfig.type === 'membrane') {
                 const totalPitch = pitch + (octaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch);
-                instrument.triggerAttackRelease(freq, noteDuration * 0.3, triggerTime);
+                // Longer gate time lets the envelope release naturally without clipping
+                instrument.triggerAttackRelease(freq, noteDuration * 0.6, triggerTime);
             } else if (trackConfig.type === 'noise') {
                 // Snare: trigger with duration and time
                 const totalPitch = pitch + (octaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch);
-                instrument.triggerAttackRelease(noteDuration * 0.2, triggerTime);
+                instrument.triggerAttackRelease(noteDuration * 0.3, triggerTime);
             } else if (trackConfig.type === 'metal') {
                 // Hi-hat (MetalSynth): (frequency, duration, time)
                 const totalPitch = pitch + (octaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch).toFrequency();
-                instrument.triggerAttackRelease(freq, noteDuration * 0.2, triggerTime);
+                instrument.triggerAttackRelease(freq, noteDuration * 0.3, triggerTime);
             } else if (trackConfig.type === 'fm') {
                 const totalPitch = pitch + (octaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch).toFrequency();
-                instrument.triggerAttackRelease(freq, noteDuration * 0.5, triggerTime);
+                // Longer gate for bass/lead prevents release clipping with drive
+                instrument.triggerAttackRelease(freq, noteDuration * 0.7, triggerTime);
             }
         }
     }
@@ -298,16 +302,35 @@ export class AudioEngine {
         }
         if (params.decay !== undefined) {
             const instrument = this.instruments[track];
+            // Clamp minimum decay to avoid clicks from ultra-short envelopes
+            const safeDecay = Math.max(0.02, params.decay);
             if (instrument.envelope) {
-                instrument.envelope.decay = params.decay;
+                instrument.envelope.decay = safeDecay;
             } else if (instrument.voice && instrument.voice.envelope) {
                 // For PolySynth
-                instrument.set({ envelope: { decay: params.decay } });
+                instrument.set({ envelope: { decay: safeDecay } });
             }
         }
         if (params.drive !== undefined) {
             if (this.distortions[track]) {
-                this.distortions[track].distortion = params.drive / 100;
+                // Smooth drive changes to avoid discontinuity clicks
+                const target = params.drive / 100;
+                const current = this.distortions[track].distortion;
+                const diff = target - current;
+                if (Math.abs(diff) < 0.01) {
+                    this.distortions[track].distortion = target;
+                } else {
+                    // Interpolate in small steps over ~50ms to avoid pops
+                    const steps = 5;
+                    const stepSize = diff / steps;
+                    for (let s = 0; s < steps; s++) {
+                        setTimeout(() => {
+                            if (this.distortions[track]) {
+                                this.distortions[track].distortion = Math.min(1, Math.max(0, current + stepSize * (s + 1)));
+                            }
+                        }, s * 10);
+                    }
+                }
             }
         }
         if (params.tune !== undefined) {
@@ -385,11 +408,11 @@ export class AudioEngine {
                 targetGain = isMuted ? 0 : baseVol;
             }
 
-            // Apply
+            // Apply with ramp to avoid clicks from abrupt gain changes
             if (this.gains[i]) {
                 if (immediate) {
                     this.gains[i].gain.cancelScheduledValues(0);
-                    this.gains[i].gain.value = targetGain;
+                    this.gains[i].gain.rampTo(targetGain, 0.01);
                 } else {
                     this.gains[i].gain.rampTo(targetGain, 0.05);
                 }
