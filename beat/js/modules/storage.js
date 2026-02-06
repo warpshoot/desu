@@ -1,4 +1,4 @@
-import { STORAGE_KEY, DEFAULT_BPM, KNOB_PARAMS, DEFAULT_ROLL_SUBDIVISION, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, ROWS, DEFAULT_SCALE, TRACKS, MAX_PATTERNS, COLS } from './constants.js';
+import { STORAGE_KEY, DEFAULT_BPM, KNOB_PARAMS, DEFAULT_ROLL_SUBDIVISION, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, ROWS, DEFAULT_SCALE, TRACKS, MAX_PATTERNS, COLS, CHAIN_LENGTH } from './constants.js';
 
 let saveTimeout = null;
 
@@ -186,7 +186,8 @@ export function loadState() {
                     currentPattern: 0,
                     nextPattern: null,
                     masterVolume: state.masterVolume !== undefined ? state.masterVolume : -12,
-                    patterns
+                    patterns,
+                    chain: new Array(CHAIN_LENGTH).fill(null)
                 };
             }
 
@@ -205,6 +206,11 @@ export function loadState() {
             for (let i = 0; i < state.patterns.length; i++) {
                 migratePatternGrid(state.patterns[i]);
                 migratePatternFields(state.patterns[i]);
+            }
+
+            // Migrate: add chain if missing
+            if (!state.chain) {
+                state.chain = new Array(CHAIN_LENGTH).fill(null);
             }
 
             return state;
@@ -226,7 +232,8 @@ export function createDefaultState() {
         currentPattern: 0,
         nextPattern: null,
         masterVolume: -12,
-        patterns
+        patterns,
+        chain: new Array(CHAIN_LENGTH).fill(null)
     };
 }
 
