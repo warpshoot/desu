@@ -668,8 +668,8 @@ class Sequencer {
                 tune: defaults.tune !== undefined ? defaults.tune : KNOB_PARAMS.tune.default,
                 cutoff: defaults.cutoff !== undefined ? defaults.cutoff : KNOB_PARAMS.cutoff.default,
                 resonance: defaults.resonance !== undefined ? defaults.resonance : KNOB_PARAMS.resonance.default,
-                modulation: defaults.modulation !== undefined ? defaults.modulation : KNOB_PARAMS.modulation.default,
-                release: defaults.release !== undefined ? defaults.release : KNOB_PARAMS.release.default,
+                drive: defaults.drive !== undefined ? defaults.drive : KNOB_PARAMS.drive.default,
+                decay: defaults.decay !== undefined ? defaults.decay : KNOB_PARAMS.decay.default,
                 vol: defaults.vol !== undefined ? defaults.vol : KNOB_PARAMS.vol.default
             };
             this.state.trackParams.push(params);

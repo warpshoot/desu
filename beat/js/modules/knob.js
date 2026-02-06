@@ -12,6 +12,7 @@ export class Knob {
         this.isDragging = false;
         this.startY = 0;
         this.startValue = 0;
+        this.lastClickTime = 0;
 
         this.setupEvents();
         this.draw();
@@ -22,6 +23,13 @@ export class Knob {
         this.boundMouseDown = (e) => {
             e.preventDefault();
             e.stopPropagation();
+            const now = Date.now();
+            if (now - this.lastClickTime < 300) {
+                this.resetToDefault();
+                this.lastClickTime = 0;
+                return;
+            }
+            this.lastClickTime = now;
             this.onDragStart(e.clientY);
         };
         this.boundMouseMove = (e) => this.onDragMove(e.clientY);
@@ -29,6 +37,13 @@ export class Knob {
         this.boundTouchStart = (e) => {
             if (e.touches.length === 1) {
                 e.preventDefault();
+                const now = Date.now();
+                if (now - this.lastClickTime < 300) {
+                    this.resetToDefault();
+                    this.lastClickTime = 0;
+                    return;
+                }
+                this.lastClickTime = now;
                 this.onDragStart(e.touches[0].clientY);
             }
         };
@@ -69,19 +84,31 @@ export class Knob {
         if (!this.isDragging) return;
 
         const delta = this.startY - y;
-        const range = this.config.max - this.config.min;
-        const sensitivity = range / 200; // 200px for full range
+        const pixelRange = this.config.sensitivity || 200;
+        const sensitivity = 1 / pixelRange;
 
-        let newValue = this.startValue + (delta * sensitivity);
-
-        // Apply scale
+        // Convert start value to normalized 0-1 space
+        let startNormalized;
         if (this.config.scale === 'log') {
-            // For logarithmic parameters like cutoff
-            const normalized = (newValue - this.config.min) / range;
             const logMin = Math.log(this.config.min);
             const logMax = Math.log(this.config.max);
-            const logValue = logMin + normalized * (logMax - logMin);
-            newValue = Math.exp(logValue);
+            startNormalized = (Math.log(this.startValue) - logMin) / (logMax - logMin);
+        } else {
+            startNormalized = (this.startValue - this.config.min) / (this.config.max - this.config.min);
+        }
+
+        // Apply delta in normalized space
+        let normalized = startNormalized + (delta * sensitivity);
+        normalized = Math.max(0, Math.min(1, normalized));
+
+        // Convert back to actual value
+        let newValue;
+        if (this.config.scale === 'log') {
+            const logMin = Math.log(this.config.min);
+            const logMax = Math.log(this.config.max);
+            newValue = Math.exp(logMin + normalized * (logMax - logMin));
+        } else {
+            newValue = this.config.min + normalized * (this.config.max - this.config.min);
         }
 
         // Clamp
@@ -98,6 +125,14 @@ export class Knob {
 
     onDragEnd() {
         this.isDragging = false;
+    }
+
+    resetToDefault() {
+        this.value = this.config.default;
+        this.draw();
+        if (this.onChange) {
+            this.onChange(this.value);
+        }
     }
 
     setValue(value) {
