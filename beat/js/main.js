@@ -1,9 +1,9 @@
-import { ROWS, COLS, OCTAVE_RANGE, TAP_THRESHOLD, PITCH_RANGE, DURATION_RANGE, DEFAULT_ROLL_SUBDIVISION, TRACKS, KNOB_PARAMS, DEFAULT_BPM, DEFAULT_SCALE, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE } from './modules/constants.js';
+import { ROWS, COLS, OCTAVE_RANGE, TAP_THRESHOLD, PITCH_RANGE, DURATION_RANGE, DEFAULT_ROLL_SUBDIVISION, TRACKS, KNOB_PARAMS, DEFAULT_BPM, DEFAULT_SCALE, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, MAX_PATTERNS, PATTERN_NAMES } from './modules/constants.js';
 import { AudioEngine } from './modules/audioEngine.js';
 import { Cell } from './modules/cell.js';
 import { Controls } from './modules/controls.js';
 import { TonePanel } from './modules/tonePanel.js';
-import { loadState, saveState, createDefaultState, exportProject, importProject } from './modules/storage.js';
+import { loadState, saveState, createDefaultState, createDefaultPattern, getCurrentPattern, exportProject, importProject } from './modules/storage.js';
 
 class Sequencer {
     constructor() {
@@ -11,18 +11,19 @@ class Sequencer {
 
         this.audioEngine = new AudioEngine();
 
-        // Preset audio settings
-        const volumes = this.state.trackParams ? this.state.trackParams.map(p => p.vol) : undefined;
+        // Preset audio settings from current pattern
+        const pat = getCurrentPattern(this.state);
+        const volumes = pat.trackParams ? pat.trackParams.map(p => p.vol) : undefined;
         this.audioEngine.presetSettings({
             trackVolumes: volumes,
-            mutedTracks: this.state.mutedTracks,
-            soloedTracks: this.state.soloedTracks
+            mutedTracks: pat.mutedTracks,
+            soloedTracks: pat.soloedTracks
         });
 
         this.cells = [];
         this.isPainting = false;
         this.paintingTrack = null;
-        this.isTwoFingerTouch = false; // Track two-finger touches globally
+        this.isTwoFingerTouch = false;
 
         // Dance animation
         this.danceFrame = 0;
@@ -35,7 +36,15 @@ class Sequencer {
         this.djFilterValue = null;
         this.djResValue = null;
 
+        // Pattern copy buffer
+        this.patternCopyBuffer = null;
+
         this.init();
+    }
+
+    // --- Helper: get current pattern ---
+    get pattern() {
+        return getCurrentPattern(this.state);
     }
 
     init() {
@@ -44,16 +53,16 @@ class Sequencer {
         this.controls = new Controls(
             this.audioEngine,
             (bpm) => {
-                this.state.bpm = bpm;
-                this.updateVisualizerSpeed(bpm); // Sync visualizer speed
+                this.pattern.bpm = bpm;
+                this.updateVisualizerSpeed(bpm);
                 saveState(this.state);
             },
             (swingEnabled) => {
-                this.state.swingEnabled = swingEnabled;
+                this.pattern.swingEnabled = swingEnabled;
                 saveState(this.state);
             },
             () => {
-                this.clearGrid();
+                this.clearCurrentPattern();
             },
             () => {
                 // onPlay
@@ -68,18 +77,18 @@ class Sequencer {
                 }
             },
             () => { // onLoopToggle
-                this.state.loopEnabled = !this.state.loopEnabled;
-                this.audioEngine.setLoopRange(this.state.loopStart, this.state.loopEnd, this.state.loopEnabled);
-                this.controls.setLoop(this.state.loopEnabled);
+                this.pattern.loopEnabled = !this.pattern.loopEnabled;
+                this.audioEngine.setLoopRange(this.pattern.loopStart, this.pattern.loopEnd, this.pattern.loopEnabled);
+                this.controls.setLoop(this.pattern.loopEnabled);
                 this.updateTimelineVisuals();
                 saveState(this.state);
             },
             (scaleName) => { // onScaleChange
-                this.state.scale = scaleName;
+                this.pattern.scale = scaleName;
                 saveState(this.state);
             },
             (scaleName) => { // onScaleChange
-                this.state.scale = scaleName;
+                this.pattern.scale = scaleName;
                 saveState(this.state);
             },
             () => { // onInit (called when audioEngine is first initialized)
@@ -92,11 +101,10 @@ class Sequencer {
             saveState(this.state);
         };
 
-        this.controls.setBPM(this.state.bpm);
-        this.controls.setSwing(this.state.swingEnabled || false);
+        this.controls.setBPM(this.pattern.bpm);
+        this.controls.setSwing(this.pattern.swingEnabled || false);
         this.controls.setVolume(this.state.masterVolume || -12);
-        this.controls.setScale(this.state.scale || 'Chromatic');
-        this.controls.setScale(this.state.scale || 'Chromatic');
+        this.controls.setScale(this.pattern.scale || 'Chromatic');
 
         const tonePanelEl = document.getElementById('tone-panel');
         if (tonePanelEl) {
@@ -104,13 +112,13 @@ class Sequencer {
                 tonePanelEl,
                 this.audioEngine,
                 (track, param, value) => {
-                    this.state.trackParams[track][param] = value;
+                    this.pattern.trackParams[track][param] = value;
                     saveState(this.state);
                 }
             );
         }
 
-        this.audioEngine.setLoopRange(this.state.loopStart, this.state.loopEnd, this.state.loopEnabled);
+        this.audioEngine.setLoopRange(this.pattern.loopStart, this.pattern.loopEnd, this.pattern.loopEnabled);
 
         this.initTimeline();
 
@@ -127,7 +135,7 @@ class Sequencer {
             }
         };
 
-        this.controls.setLoop(this.state.loopEnabled);
+        this.controls.setLoop(this.pattern.loopEnabled);
 
         this.audioEngine.setStepCallback((step, time) => {
             this.onStep(step, time);
@@ -137,7 +145,6 @@ class Sequencer {
             // Stop recording if active
             if (this.audioEngine.isRecording) {
                 await this.audioEngine.stopRecording();
-                // Update recording UI state
                 if (this.controls) {
                     this.controls.isRecordingArmed = false;
                     if (this.controls.recBtn) {
@@ -150,10 +157,12 @@ class Sequencer {
             if (this.controls) {
                 this.controls.resetUI();
             }
-            // Reset dance animation
             this.resetDanceAnimation();
-            // Close DJ mode if open (force close even if Keep mode)
             this.closeDJMode(true);
+
+            // Clear next pattern queue on stop
+            this.state.nextPattern = null;
+            this.updatePatternPadUI();
         });
 
         // Initialize dance animation
@@ -165,11 +174,13 @@ class Sequencer {
         // Initialize DJ Mode
         this.initDJMode();
 
+        // Initialize Pattern Bank UI
+        this.initPatternBank();
+
         // Global two-finger detection for pan scrolling
         window.addEventListener('touchstart', (e) => {
             if (e.touches.length >= 2) {
                 this.isTwoFingerTouch = true;
-                // Cancel any ongoing painting
                 this.isPainting = false;
             }
         }, { passive: true });
@@ -190,11 +201,10 @@ class Sequencer {
 
         // Touch painting support
         window.addEventListener('touchmove', (e) => {
-            // Allow two-finger panning by not preventing default
             if (e.touches.length >= 2) {
                 this.isTwoFingerTouch = true;
                 this.isPainting = false;
-                return; // Let browser handle two-finger scroll
+                return;
             }
 
             if (this.isPainting && e.touches.length === 1) {
@@ -205,7 +215,6 @@ class Sequencer {
                     const track = parseInt(element.dataset.track);
                     const step = parseInt(element.dataset.step);
 
-                    // Track locking check
                     if (!isNaN(track) && !isNaN(step)) {
                         if (this.paintingTrack === null || this.paintingTrack === track) {
                             this.cells[track][step].paintActivate();
@@ -219,6 +228,229 @@ class Sequencer {
         this.setupFileUI();
     }
 
+    // ========================
+    // Pattern Bank
+    // ========================
+
+    initPatternBank() {
+        this.patternPads = [];
+        const container = document.getElementById('pattern-bank');
+        if (!container) return;
+
+        for (let i = 0; i < MAX_PATTERNS; i++) {
+            const pad = document.createElement('button');
+            pad.className = 'pattern-pad';
+            pad.dataset.pattern = i;
+            pad.textContent = PATTERN_NAMES[i];
+
+            // Tap: switch pattern
+            pad.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.onPatternPadTap(i);
+            });
+
+            // Long press: context menu (copy/paste/clear)
+            let longPressTimer = null;
+            const startLongPress = (e) => {
+                longPressTimer = setTimeout(() => {
+                    e.preventDefault();
+                    this.showPatternContextMenu(i, pad);
+                }, 500);
+            };
+            const cancelLongPress = () => {
+                clearTimeout(longPressTimer);
+            };
+
+            pad.addEventListener('mousedown', startLongPress);
+            pad.addEventListener('mouseup', cancelLongPress);
+            pad.addEventListener('mouseleave', cancelLongPress);
+            pad.addEventListener('touchstart', (e) => {
+                startLongPress(e);
+            }, { passive: false });
+            pad.addEventListener('touchend', cancelLongPress);
+            pad.addEventListener('touchmove', cancelLongPress);
+
+            container.appendChild(pad);
+            this.patternPads.push(pad);
+        }
+
+        // Initialize context menu element
+        this.patternMenu = document.getElementById('pattern-menu');
+        if (this.patternMenu) {
+            document.getElementById('pattern-copy').addEventListener('click', () => {
+                this.copyPattern(this.patternMenuTarget);
+                this.hidePatternMenu();
+            });
+            document.getElementById('pattern-paste').addEventListener('click', () => {
+                this.pastePattern(this.patternMenuTarget);
+                this.hidePatternMenu();
+            });
+            document.getElementById('pattern-clear').addEventListener('click', () => {
+                this.clearPatternSlot(this.patternMenuTarget);
+                this.hidePatternMenu();
+            });
+
+            // Close on outside click
+            document.addEventListener('click', (e) => {
+                if (this.patternMenu && !this.patternMenu.contains(e.target)) {
+                    this.hidePatternMenu();
+                }
+            });
+        }
+
+        this.updatePatternPadUI();
+    }
+
+    onPatternPadTap(index) {
+        if (index === this.state.currentPattern && this.state.nextPattern === null) return;
+
+        if (this.audioEngine.playing) {
+            // Queue pattern switch at loop end
+            if (index === this.state.currentPattern) {
+                // Cancel queue
+                this.state.nextPattern = null;
+            } else {
+                this.state.nextPattern = index;
+            }
+            this.updatePatternPadUI();
+            saveState(this.state);
+        } else {
+            // Immediate switch when stopped
+            this.switchToPattern(index);
+        }
+    }
+
+    switchToPattern(index) {
+        if (index < 0 || index >= MAX_PATTERNS) return;
+
+        this.state.currentPattern = index;
+        this.state.nextPattern = null;
+
+        // Restore UI from new pattern
+        this.restoreState();
+
+        saveState(this.state);
+        this.updatePatternPadUI();
+    }
+
+    // Called from onStep when we reach loop end - performs the queued switch
+    performQueuedSwitch() {
+        if (this.state.nextPattern === null) return;
+
+        const nextIdx = this.state.nextPattern;
+        this.state.currentPattern = nextIdx;
+        this.state.nextPattern = null;
+
+        // Update grid UI
+        const gridContainer = document.getElementById('grid-container');
+        if (gridContainer) gridContainer.innerHTML = '';
+        this.createGrid();
+
+        // Sync audio params
+        this.syncAudioWithState();
+
+        // Update controls to reflect new pattern's settings
+        this.controls.setBPM(this.pattern.bpm);
+        this.controls.setSwing(this.pattern.swingEnabled);
+        this.controls.setScale(this.pattern.scale);
+        this.controls.setLoop(this.pattern.loopEnabled);
+        this.audioEngine.setLoopRange(this.pattern.loopStart, this.pattern.loopEnd, this.pattern.loopEnabled);
+
+        // Update track controls (mute/solo)
+        this.setupTrackControls();
+
+        // Update timeline
+        this.updateTimelineVisuals();
+
+        this.updatePatternPadUI();
+        saveState(this.state);
+    }
+
+    updatePatternPadUI() {
+        if (!this.patternPads) return;
+
+        for (let i = 0; i < this.patternPads.length; i++) {
+            const pad = this.patternPads[i];
+            pad.classList.remove('active', 'queued', 'has-data');
+
+            if (i === this.state.currentPattern) {
+                pad.classList.add('active');
+            }
+            if (i === this.state.nextPattern) {
+                pad.classList.add('queued');
+            }
+            // Check if pattern has any active steps
+            if (this.isPatternNonEmpty(i)) {
+                pad.classList.add('has-data');
+            }
+        }
+    }
+
+    isPatternNonEmpty(index) {
+        const pat = this.state.patterns[index];
+        if (!pat || !pat.grid) return false;
+        for (let t = 0; t < pat.grid.length; t++) {
+            for (let s = 0; s < pat.grid[t].length; s++) {
+                if (pat.grid[t][s].active) return true;
+            }
+        }
+        return false;
+    }
+
+    showPatternContextMenu(index, padElement) {
+        this.patternMenuTarget = index;
+        if (!this.patternMenu) return;
+
+        // Enable/disable paste
+        const pasteBtn = document.getElementById('pattern-paste');
+        if (pasteBtn) {
+            pasteBtn.classList.toggle('disabled', !this.patternCopyBuffer);
+        }
+
+        const rect = padElement.getBoundingClientRect();
+        this.patternMenu.style.left = `${rect.left}px`;
+        this.patternMenu.style.top = `${rect.top - this.patternMenu.offsetHeight - 4}px`;
+        this.patternMenu.classList.remove('hidden');
+    }
+
+    hidePatternMenu() {
+        if (this.patternMenu) {
+            this.patternMenu.classList.add('hidden');
+        }
+    }
+
+    copyPattern(index) {
+        this.patternCopyBuffer = JSON.parse(JSON.stringify(this.state.patterns[index]));
+    }
+
+    pastePattern(index) {
+        if (!this.patternCopyBuffer) return;
+        this.state.patterns[index] = JSON.parse(JSON.stringify(this.patternCopyBuffer));
+
+        // If pasting to current pattern, refresh UI
+        if (index === this.state.currentPattern) {
+            this.restoreState();
+        }
+
+        saveState(this.state);
+        this.updatePatternPadUI();
+    }
+
+    clearPatternSlot(index) {
+        this.state.patterns[index] = createDefaultPattern();
+
+        if (index === this.state.currentPattern) {
+            this.restoreState();
+        }
+
+        saveState(this.state);
+        this.updatePatternPadUI();
+    }
+
+    // ========================
+    // File UI
+    // ========================
+
     setupFileUI() {
         const fileBtn = document.getElementById('file-btn');
         const fileMenu = document.getElementById('file-menu');
@@ -229,61 +461,52 @@ class Sequencer {
 
         if (!fileBtn || !fileMenu) return;
 
-        // Toggle menu
         fileBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const rect = fileBtn.getBoundingClientRect();
-            // Position menu above the button (since it's at the bottom)
             fileMenu.style.position = 'fixed';
-            fileMenu.style.bottom = (window.innerHeight - rect.top + 5) + 'px'; // Above button
+            fileMenu.style.bottom = (window.innerHeight - rect.top + 5) + 'px';
             fileMenu.style.left = (rect.left - 20) + 'px';
-            fileMenu.style.top = 'auto'; // Clear top
-
+            fileMenu.style.top = 'auto';
             fileMenu.classList.toggle('hidden');
         });
 
-        // Close menu on outside click
         document.addEventListener('click', (e) => {
             if (!fileMenu.contains(e.target) && !fileBtn.contains(e.target)) {
                 fileMenu.classList.add('hidden');
             }
         });
 
-        // NEW Project
         newBtn.addEventListener('click', () => {
-            if (confirm('Create new project? Current progress will be lost.')) {
-                this.clearGrid();
+            if (confirm('Create new project? All patterns will be lost.')) {
+                this.state = createDefaultState();
+                this.audioEngine.stop();
+                this.restoreState();
+                this.updatePatternPadUI();
+                saveState(this.state);
                 fileMenu.classList.add('hidden');
             }
         });
 
-        // SAVE Project
         saveBtn.addEventListener('click', () => {
             exportProject(this.state);
             fileMenu.classList.add('hidden');
         });
 
-        // LOAD Project
         loadBtn.addEventListener('click', () => {
             fileInput.click();
             fileMenu.classList.add('hidden');
         });
 
-        // File Input Change
         fileInput.addEventListener('change', async (e) => {
             if (e.target.files.length > 0) {
                 const file = e.target.files[0];
                 try {
                     const newState = await importProject(file);
                     this.state = newState;
-
-                    // Stop audio engine before full reset
                     this.audioEngine.stop();
-
-                    // Re-apply state to all components
                     this.restoreState();
-
-                    // Reset input
+                    this.updatePatternPadUI();
                     fileInput.value = '';
                 } catch (err) {
                     alert('Failed to load project.');
@@ -292,20 +515,26 @@ class Sequencer {
         });
     }
 
-    restoreState() {
-        // 1. Controls UI
-        this.controls.setBPM(this.state.bpm);
-        this.controls.setSwing(this.state.swingEnabled);
-        this.controls.setVolume(this.state.masterVolume);
-        this.controls.setScale(this.state.scale);
-        this.controls.setLoop(this.state.loopEnabled);
+    // ========================
+    // State restore / sync
+    // ========================
 
-        // 2. Audio Engine (sync if already initialized)
+    restoreState() {
+        const pat = this.pattern;
+
+        // 1. Controls UI
+        this.controls.setBPM(pat.bpm);
+        this.controls.setSwing(pat.swingEnabled);
+        this.controls.setVolume(this.state.masterVolume);
+        this.controls.setScale(pat.scale);
+        this.controls.setLoop(pat.loopEnabled);
+
+        // 2. Audio Engine
         if (this.audioEngine.initialized) {
             this.syncAudioWithState();
         }
 
-        this.audioEngine.setLoopRange(this.state.loopStart, this.state.loopEnd, this.state.loopEnabled);
+        this.audioEngine.setLoopRange(pat.loopStart, pat.loopEnd, pat.loopEnabled);
 
         // 4. Update UI Grid
         const gridContainer = document.getElementById('grid-container');
@@ -322,35 +551,36 @@ class Sequencer {
     syncAudioWithState() {
         if (!this.audioEngine.initialized) return;
 
+        const pat = this.pattern;
+
         // Global Params
-        this.audioEngine.setBPM(this.state.bpm);
+        this.audioEngine.setBPM(pat.bpm);
         this.audioEngine.setMasterVolume(this.state.masterVolume);
-        this.audioEngine.setSwing(this.state.swingEnabled);
+        this.audioEngine.setSwing(pat.swingEnabled);
 
         // Track Params
         for (let i = 0; i < ROWS; i++) {
-            // Params
-            const params = this.state.trackParams[i];
+            const params = pat.trackParams[i];
             this.audioEngine.updateTrackParams(i, params);
 
-            // Mute/Solo
-            const isMuted = this.state.mutedTracks ? this.state.mutedTracks[i] : false;
-            const isSoloed = this.state.soloedTracks ? this.state.soloedTracks[i] : false;
+            const isMuted = pat.mutedTracks ? pat.mutedTracks[i] : false;
+            const isSoloed = pat.soloedTracks ? pat.soloedTracks[i] : false;
 
             this.audioEngine.setTrackMute(i, isMuted);
             this.audioEngine.setTrackSolo(i, isSoloed);
         }
 
-        // Force immediate gain update to prevent bleeding
         this.audioEngine.updateTrackGains(true);
+        this.audioEngine.setLoopRange(pat.loopStart, pat.loopEnd, pat.loopEnabled);
 
-        this.audioEngine.setLoopRange(this.state.loopStart, this.state.loopEnd, this.state.loopEnabled);
-
-        // Sync visualizer speed
-        if (this.state.bpm) {
-            this.updateVisualizerSpeed(this.state.bpm);
+        if (pat.bpm) {
+            this.updateVisualizerSpeed(pat.bpm);
         }
     }
+
+    // ========================
+    // Credit modal
+    // ========================
 
     initCreditModal() {
         const creditBtn = document.getElementById('credit-btn');
@@ -376,18 +606,20 @@ class Sequencer {
         }
     }
 
+    // ========================
+    // Roll menu
+    // ========================
+
     initRollMenu() {
         this.rollMenuElement = document.getElementById('roll-menu');
         this.currentRollCell = null;
 
-        // Click outside to close
         document.addEventListener('mousedown', (e) => {
             if (!this.rollMenuElement.contains(e.target)) {
                 this.rollMenuElement.classList.add('hidden');
             }
         });
 
-        // Option selection
         this.rollMenuElement.querySelectorAll('.roll-option').forEach(option => {
             option.addEventListener('click', () => {
                 if (this.currentRollCell) {
@@ -399,14 +631,19 @@ class Sequencer {
         });
     }
 
+    // ========================
+    // Timeline
+    // ========================
+
     initTimeline() {
         this.timelineContainer = document.getElementById('timeline-container');
         this.startHandle = document.getElementById('loop-start-handle');
         this.endHandle = document.getElementById('loop-end-handle');
         this.timelineBeats = [];
 
-        // Create guides
-        for (let beat = 0; beat < 8; beat++) {
+        // 16 steps / 4 = 4 beats
+        const numBeats = COLS / 4;
+        for (let beat = 0; beat < numBeats; beat++) {
             const beatElement = document.createElement('div');
             beatElement.className = 'timeline-beat';
             beatElement.dataset.beat = beat;
@@ -416,17 +653,12 @@ class Sequencer {
 
         const setupHandleDrag = (handle, isStart) => {
             const onMove = (e) => {
-                // Only handle single-finger touches for loop handles
                 if (e.touches && e.touches.length !== 1) return;
-
                 if (e.touches && e.touches.length === 1) {
                     e.preventDefault();
                 }
 
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-                // Use a Y coordinate consistent with the timeline blocks
                 const timelineRect = this.timelineContainer.getBoundingClientRect();
                 const targetY = timelineRect.top + timelineRect.height / 2;
 
@@ -436,17 +668,17 @@ class Sequencer {
 
                     if (isStart) {
                         const stepStart = newBeat * 4;
-                        if (stepStart <= this.state.loopEnd) {
-                            this.state.loopStart = stepStart;
+                        if (stepStart <= this.pattern.loopEnd) {
+                            this.pattern.loopStart = stepStart;
                         }
                     } else {
                         const stepEnd = (newBeat * 4) + 3;
-                        if (stepEnd >= this.state.loopStart) {
-                            this.state.loopEnd = stepEnd;
+                        if (stepEnd >= this.pattern.loopStart) {
+                            this.pattern.loopEnd = stepEnd;
                         }
                     }
 
-                    this.audioEngine.setLoopRange(this.state.loopStart, this.state.loopEnd, this.state.loopEnabled);
+                    this.audioEngine.setLoopRange(this.pattern.loopStart, this.pattern.loopEnd, this.pattern.loopEnabled);
                     this.updateTimelineVisuals();
                     saveState(this.state);
                 }
@@ -460,7 +692,7 @@ class Sequencer {
             };
 
             handle.addEventListener('mousedown', (e) => {
-                e.preventDefault(); // Prevent text selection
+                e.preventDefault();
                 window.addEventListener('mousemove', onMove);
                 window.addEventListener('mouseup', onEnd);
             });
@@ -477,7 +709,6 @@ class Sequencer {
         setupHandleDrag(this.startHandle, true);
         setupHandleDrag(this.endHandle, false);
 
-        // Wait for next frame to ensure layout is ready
         requestAnimationFrame(() => {
             this.updateTimelineVisuals();
         });
@@ -492,32 +723,32 @@ class Sequencer {
 
         const wrapperRect = gridWrapper.getBoundingClientRect();
 
-        // Find start position
-        const startCellEl = this.cells[0][this.state.loopStart].element;
+        const startCellEl = this.cells[0][this.pattern.loopStart].element;
         const startRect = startCellEl.getBoundingClientRect();
         const startX = startRect.left - wrapperRect.left;
-        this.startHandle.style.left = `${startX - 34}px`; // Shifted left by ~1 cell (24px) from -10px
+        this.startHandle.style.left = `${startX - 34}px`;
 
-        // Find end position
-        const endCellEl = this.cells[0][this.state.loopEnd].element;
+        const endCellEl = this.cells[0][this.pattern.loopEnd].element;
         const endRect = endCellEl.getBoundingClientRect();
         const endX = endRect.right - wrapperRect.left;
-        this.endHandle.style.left = `${endX - 10}px`; // Shifted right by another 12px (total 24px) from -34px
+        this.endHandle.style.left = `${endX - 10}px`;
 
-        // Update guides
         this.timelineBeats.forEach((beatElement, index) => {
             const stepStart = index * 4;
             const stepEnd = stepStart + 3;
-            const inRange = stepStart >= this.state.loopStart && stepEnd <= this.state.loopEnd;
+            const inRange = stepStart >= this.pattern.loopStart && stepEnd <= this.pattern.loopEnd;
 
-            beatElement.classList.toggle('in-range', inRange && this.state.loopEnabled);
+            beatElement.classList.toggle('in-range', inRange && this.pattern.loopEnabled);
         });
     }
+
+    // ========================
+    // Roll menu UI
+    // ========================
 
     showRollMenu(cell, x, y) {
         this.currentRollCell = cell;
 
-        // Mark current sub
         const currentSub = cell.data.rollMode ? cell.data.rollSubdivision : 1;
         this.rollMenuElement.querySelectorAll('.roll-option').forEach(opt => {
             opt.classList.toggle('active', parseInt(opt.dataset.roll) === currentSub);
@@ -525,14 +756,18 @@ class Sequencer {
 
         this.rollMenuElement.classList.remove('hidden');
 
-        // Position menu above cell
         const menuRect = this.rollMenuElement.getBoundingClientRect();
         this.rollMenuElement.style.left = `${x - menuRect.width / 2}px`;
         this.rollMenuElement.style.top = `${y - menuRect.height - 10}px`;
     }
 
+    // ========================
+    // Grid
+    // ========================
+
     createGrid() {
         const gridContainer = document.getElementById('grid-container');
+        const pat = this.pattern;
 
         for (let track = 0; track < ROWS; track++) {
             const trackConfig = TRACKS[track];
@@ -543,7 +778,7 @@ class Sequencer {
                 cellElement.dataset.track = track;
                 cellElement.dataset.step = step;
 
-                const cellData = this.state.grid[track][step];
+                const cellData = pat.grid[track][step];
                 if (cellData.active) {
                     cellElement.classList.add('active');
                 }
@@ -571,7 +806,7 @@ class Sequencer {
                                 Tone.now() + 0.05,
                                 d.rollMode,
                                 d.rollSubdivision,
-                                this.state.trackOctaves[t]
+                                pat.trackOctaves[t]
                             );
                         }
                     },
@@ -591,7 +826,7 @@ class Sequencer {
                     trackConfig.baseFreq,
                     document.getElementById('note-indicator'),
                     () => this.isTwoFingerTouch,
-                    () => this.state.scale || 'Chromatic'
+                    () => pat.scale || 'Chromatic'
                 );
 
                 this.cells[track][step] = cell;
@@ -603,7 +838,6 @@ class Sequencer {
     setupTrackIcons() {
         this.trackIcons = document.querySelectorAll('.track-icon');
 
-        // Track double-tap state
         const tapState = [];
         for (let i = 0; i < TRACKS.length; i++) {
             tapState[i] = { count: 0, lastTapTime: 0, timer: null };
@@ -626,10 +860,9 @@ class Sequencer {
                 state.lastTapTime = now;
                 clearTimeout(state.timer);
 
-                // Single tap: open tone panel
                 state.timer = setTimeout(() => {
                     if (state.count === 1) {
-                        this.tonePanel.toggle(track, this.state.trackParams[track]);
+                        this.tonePanel.toggle(track, this.pattern.trackParams[track]);
                     }
                     state.count = 0;
                 }, TAP_THRESHOLD);
@@ -638,75 +871,28 @@ class Sequencer {
     }
 
 
-    clearGrid() {
-        // Stop playback first to reset UI
+    clearCurrentPattern() {
+        // Stop playback first
         if (this.controls) {
             this.controls.stop();
         }
 
-        // 1. Reset Pattern
-        this.state.grid = createDefaultState().grid;
+        // Reset current pattern to defaults
+        this.state.patterns[this.state.currentPattern] = createDefaultPattern();
 
-        // 2. Reset Mute/Solo
-        this.state.mutedTracks = new Array(ROWS).fill(false);
-        this.state.soloedTracks = new Array(ROWS).fill(false);
+        // Rebuild UI
+        this.restoreState();
 
-        // Update UI buttons
+        // Update track controls
         document.querySelectorAll('.mute-btn, .solo-btn').forEach(btn => btn.classList.remove('active'));
-
-        // Update AudioEngine states
         for (let i = 0; i < ROWS; i++) {
             this.audioEngine.setTrackMute(i, false);
             this.audioEngine.setTrackSolo(i, false);
         }
 
-        // 3. Reset Sound Parameters
-        this.state.trackParams = [];
-        for (let i = 0; i < ROWS; i++) {
-            const defaults = TRACKS[i].defaultParams || {};
-            const params = {
-                tune: defaults.tune !== undefined ? defaults.tune : KNOB_PARAMS.tune.default,
-                cutoff: defaults.cutoff !== undefined ? defaults.cutoff : KNOB_PARAMS.cutoff.default,
-                resonance: defaults.resonance !== undefined ? defaults.resonance : KNOB_PARAMS.resonance.default,
-                drive: defaults.drive !== undefined ? defaults.drive : KNOB_PARAMS.drive.default,
-                decay: defaults.decay !== undefined ? defaults.decay : KNOB_PARAMS.decay.default,
-                vol: defaults.vol !== undefined ? defaults.vol : KNOB_PARAMS.vol.default
-            };
-            this.state.trackParams.push(params);
-            // Apply to Audio Engine
-            this.audioEngine.updateTrackParams(i, params);
-        }
-
-        // 4. Reset BPM, Scale, Swing, Volume, Octaves
-        this.state.bpm = DEFAULT_BPM;
-        this.controls.setBPM(DEFAULT_BPM);
-
-        this.state.scale = DEFAULT_SCALE;
-        this.controls.setScale(DEFAULT_SCALE);
-
-        this.state.swingEnabled = DEFAULT_SWING_ENABLED;
-        this.controls.setSwing(DEFAULT_SWING_ENABLED);
-
-        this.state.masterVolume = -12;
-        this.controls.setVolume(-12);
-
-        this.state.loopEnabled = true;
-        this.state.loopStart = 0;
-        this.state.loopEnd = COLS - 1;
-        this.controls.setLoop(true);
-        this.audioEngine.setLoopRange(0, COLS - 1, true);
-        this.updateTimelineVisuals();
-
-        this.state.trackOctaves = new Array(ROWS).fill(DEFAULT_OCTAVE);
-
-        // 5. Rebuild Grid UI
-        const gridContainer = document.getElementById('grid-container');
-        if (gridContainer) gridContainer.innerHTML = ''; // Clear existing
-        this.createGrid();
-
         saveState(this.state);
+        this.updatePatternPadUI();
 
-        // Close tone panel if open
         if (this.tonePanel && this.tonePanel.isOpen()) {
             this.tonePanel.close();
         }
@@ -724,12 +910,18 @@ class Sequencer {
         const icon = this.trackIcons[trackIndex];
         if (icon) {
             icon.classList.remove('playing');
-            void icon.offsetWidth; // Force reflow
+            void icon.offsetWidth;
             icon.classList.add('playing');
         }
     }
 
+    // ========================
+    // Step callback (core sequencer)
+    // ========================
+
     onStep(step, time) {
+        const pat = this.pattern;
+
         // Update playhead visuals
         for (let track = 0; track < ROWS; track++) {
             for (let s = 0; s < COLS; s++) {
@@ -739,13 +931,11 @@ class Sequencer {
             // Trigger notes for active cells
             const cell = this.cells[track][step];
             if (cell.data.active) {
-                // Visual feedback
                 cell.triggerPulse();
 
-                // Track Icon Pulse Logic (Sync with AudioEngine logic)
-                const isAnySolo = this.state.soloedTracks && this.state.soloedTracks.some(s => s);
-                const isSoloed = this.state.soloedTracks && this.state.soloedTracks[track];
-                const isMuted = this.state.mutedTracks && this.state.mutedTracks[track];
+                const isAnySolo = pat.soloedTracks && pat.soloedTracks.some(s => s);
+                const isSoloed = pat.soloedTracks && pat.soloedTracks[track];
+                const isMuted = pat.mutedTracks && pat.mutedTracks[track];
 
                 let shouldPulse = true;
                 if (isAnySolo) {
@@ -758,7 +948,6 @@ class Sequencer {
                     this.triggerTrackPulse(track);
                 }
 
-                // Trigger audio
                 this.audioEngine.triggerNote(
                     track,
                     cell.getEffectivePitch(),
@@ -766,15 +955,23 @@ class Sequencer {
                     time,
                     cell.data.rollMode,
                     cell.data.rollSubdivision,
-                    this.state.trackOctaves[track]
+                    pat.trackOctaves[track]
                 );
             }
         }
 
-        // Update dance animation every step (16th note - fastest)
+        // Check if we need to perform queued pattern switch at loop end
+        if (this.state.nextPattern !== null && step === pat.loopEnd) {
+            // Schedule switch on next step (will take effect before next onStep fires)
+            requestAnimationFrame(() => {
+                this.performQueuedSwitch();
+            });
+        }
+
+        // Update dance animation
         this.updateDanceFrame();
 
-        // DJ Standby Pulse (every beat)
+        // DJ Standby Pulse
         if (this.djState && this.djState.standby && this.dancer) {
             if (step % 4 === 0) {
                 this.dancer.classList.add('pulse');
@@ -785,50 +982,50 @@ class Sequencer {
         }
     }
 
+    // ========================
+    // Track controls (mute/solo)
+    // ========================
+
     setupTrackControls() {
-        // Sync initial state
+        const pat = this.pattern;
         const controls = document.querySelectorAll('.track-ctrls');
 
         controls.forEach((ctrl, i) => {
             const muteBtn = ctrl.querySelector('.mute-btn');
             const soloBtn = ctrl.querySelector('.solo-btn');
 
-            // Remove old listeners to prevent duplicates (though we init once)
             const newMuteBtn = muteBtn.cloneNode(true);
             const newSoloBtn = soloBtn.cloneNode(true);
             muteBtn.parentNode.replaceChild(newMuteBtn, muteBtn);
             soloBtn.parentNode.replaceChild(newSoloBtn, soloBtn);
 
             if (newMuteBtn && newSoloBtn) {
-                // Initial state
-                if (this.state.mutedTracks && this.state.mutedTracks[i]) {
+                if (pat.mutedTracks && pat.mutedTracks[i]) {
                     newMuteBtn.classList.add('active');
                     this.audioEngine.setTrackMute(i, true);
                 }
-                if (this.state.soloedTracks && this.state.soloedTracks[i]) {
+                if (pat.soloedTracks && pat.soloedTracks[i]) {
                     newSoloBtn.classList.add('active');
                     this.audioEngine.setTrackSolo(i, true);
                 }
 
-                // Listeners
                 newMuteBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     e.preventDefault();
 
                     newMuteBtn.classList.toggle('active');
-                    void newMuteBtn.offsetWidth; // Force Reflow
+                    void newMuteBtn.offsetWidth;
                     const isMuted = newMuteBtn.classList.contains('active');
 
-                    if (!this.state.mutedTracks) this.state.mutedTracks = [];
-                    this.state.mutedTracks[i] = isMuted;
+                    if (!pat.mutedTracks) pat.mutedTracks = [];
+                    pat.mutedTracks[i] = isMuted;
                     this.audioEngine.setTrackMute(i, isMuted);
 
-                    // Mutually exclusive: If Muting, turn off Solo
                     if (isMuted && newSoloBtn.classList.contains('active')) {
                         newSoloBtn.classList.remove('active');
-                        void newSoloBtn.offsetWidth; // Force Reflow
-                        if (!this.state.soloedTracks) this.state.soloedTracks = [];
-                        this.state.soloedTracks[i] = false;
+                        void newSoloBtn.offsetWidth;
+                        if (!pat.soloedTracks) pat.soloedTracks = [];
+                        pat.soloedTracks[i] = false;
                         this.audioEngine.setTrackSolo(i, false);
                     }
 
@@ -842,15 +1039,14 @@ class Sequencer {
                     newSoloBtn.classList.toggle('active');
                     const isSoloed = newSoloBtn.classList.contains('active');
 
-                    if (!this.state.soloedTracks) this.state.soloedTracks = [];
-                    this.state.soloedTracks[i] = isSoloed;
+                    if (!pat.soloedTracks) pat.soloedTracks = [];
+                    pat.soloedTracks[i] = isSoloed;
                     this.audioEngine.setTrackSolo(i, isSoloed);
 
-                    // Mutually exclusive: If Soloing, turn off Mute
                     if (isSoloed && newMuteBtn.classList.contains('active')) {
                         newMuteBtn.classList.remove('active');
-                        if (!this.state.mutedTracks) this.state.mutedTracks = [];
-                        this.state.mutedTracks[i] = false;
+                        if (!pat.mutedTracks) pat.mutedTracks = [];
+                        pat.mutedTracks[i] = false;
                         this.audioEngine.setTrackMute(i, false);
                     }
 
@@ -860,56 +1056,49 @@ class Sequencer {
         });
     }
 
+    // ========================
+    // Dance animation
+    // ========================
+
     updateDanceFrame() {
         if (!this.dancer) return;
-
-        // Update frame (8 frames total)
         this.danceFrame = (this.danceFrame + 1) % 8;
-
-        // Get current background-size to calculate frame width
         const bgSize = window.getComputedStyle(this.dancer).backgroundSize;
-        const totalWidth = parseInt(bgSize.split(' ')[0]); // Extract width from "XXXpx YYpx"
-        const frameWidth = totalWidth / 8; // 8 frames total
-
+        const totalWidth = parseInt(bgSize.split(' ')[0]);
+        const frameWidth = totalWidth / 8;
         this.dancer.style.backgroundPosition = `${-this.danceFrame * frameWidth}px 0px`;
     }
 
     resetDanceAnimation() {
         if (!this.dancer) return;
-
-        // Reset to first frame
         this.danceFrame = 0;
         this.dancer.style.backgroundPosition = '0px 0px';
-
-        // Remove playing class to hide animation
         this.dancer.classList.remove('playing');
     }
 
+    // ========================
+    // DJ Mode
+    // ========================
+
     initDJMode() {
-        // Get DOM elements
         this.djOverlay = document.getElementById('dj-overlay');
-        // New visual elements
         this.djOrigin = document.getElementById('dj-origin');
         this.djCurrent = document.getElementById('dj-current');
         this.djLine = document.getElementById('dj-line');
 
         if (!this.djOverlay || !this.dancer) return;
 
-        // State
         this.djState = {
-            mode: 0, // 0:Off, 1:Momentary, 2:Keep
-
+            mode: 0,
             touching: false,
-            x: 0.5, y: 0.5,           // Current interpolated pos
-            startX: 0.5, startY: 0.5, // Touch start pos (origin)
-            targetX: 0.5, targetY: 0.5 // Current touch target
+            x: 0.5, y: 0.5,
+            startX: 0.5, startY: 0.5,
+            targetX: 0.5, targetY: 0.5
         };
 
-        // Start animation loop
         this.renderDJLoop = this.renderDJLoop.bind(this);
         requestAnimationFrame(this.renderDJLoop);
 
-        // Visualizer tap handler - Cycle DJ Mode
         this.dancer.addEventListener('click', (e) => {
             e.stopPropagation();
             if (this.audioEngine.playing) {
@@ -917,27 +1106,18 @@ class Sequencer {
             }
         });
 
-        // Overlay interactions
         const onStart = (e) => {
             this.djState.touching = true;
             const pos = this.getDJPosition(e);
-
-            // Set origin and target
             this.djState.startX = pos.x;
             this.djState.startY = pos.y;
             this.djState.targetX = pos.x;
             this.djState.targetY = pos.y;
-
-            // Immediate update to avoid lag
             this.djState.x = pos.x;
             this.djState.y = pos.y;
-
-            // Show visuals
             this.djOrigin.classList.remove('hidden');
             this.djCurrent.classList.remove('hidden');
             this.djLine.classList.remove('hidden');
-
-            // Initial audio update (delta 0)
             this.updateDJAudio(0, 0);
         };
 
@@ -951,28 +1131,20 @@ class Sequencer {
 
         const onEnd = (e) => {
             this.djState.touching = false;
-
-            // Hide visuals
             this.djOrigin.classList.add('hidden');
             this.djCurrent.classList.add('hidden');
             this.djLine.classList.add('hidden');
-
-            // Reset audio
             this.audioEngine.resetDJFilter();
-
-            // Momentary Mode (1): Close on release
             if (this.djState.mode === 1) {
                 this.closeDJMode(true);
             }
         };
 
-        // Mouse events
         this.djOverlay.addEventListener('mousedown', onStart);
         this.djOverlay.addEventListener('mousemove', onMove);
         this.djOverlay.addEventListener('mouseup', onEnd);
-        this.djOverlay.addEventListener('mouseleave', onEnd); // End if mouse leaves window
+        this.djOverlay.addEventListener('mouseleave', onEnd);
 
-        // Touch events
         this.djOverlay.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) {
                 e.preventDefault();
@@ -991,21 +1163,13 @@ class Sequencer {
 
     renderDJLoop() {
         if (this.djState.mode > 0) {
-            // Smoothly move current visual position to target
-            // Use 0.5 alpha for some lag/smoothness, or 1.0 for instant 1:1 feel
-            // For relative controls, 1:1 is usually better to feel "connected"
             const smoothing = 0.5;
             this.djState.x += (this.djState.targetX - this.djState.x) * smoothing;
             this.djState.y += (this.djState.targetY - this.djState.y) * smoothing;
 
             if (this.djState.touching) {
-                // Calculate deltas
                 const deltaX = this.djState.x - this.djState.startX;
-                const deltaY = this.djState.startY - this.djState.y; // Invert Y (screen down is positive)
-
-                // Update Audio (using target for faster response, or smoothed x/y?)
-                // Use smoothed for potentially less zipper noise, but might lag
-                // Let's use smoothed visual pos for consistency
+                const deltaY = this.djState.startY - this.djState.y;
                 this.updateDJAudio(deltaX, deltaY);
                 this.updateDJVisuals();
             }
@@ -1025,7 +1189,6 @@ class Sequencer {
             clientY = e.clientY;
         }
 
-        // Normalize to 0-1 range
         const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
         const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
 
@@ -1034,22 +1197,16 @@ class Sequencer {
 
     updateDJVisuals() {
         const { startX, startY, x, y } = this.djState;
-
-        // Use cached rect if available, or get current
         const rect = this.djOverlay.getBoundingClientRect();
 
-        // Update Origin Marker
         if (this.djOrigin) {
-            // Use pixels based on overlay rect to match line coordinates exactly
             this.djOrigin.style.transform = `translate3d(${startX * rect.width}px, ${startY * rect.height}px, 0) translate(-50%, -50%)`;
         }
 
-        // Update Current Marker
         if (this.djCurrent) {
             this.djCurrent.style.transform = `translate3d(${x * rect.width}px, ${y * rect.height}px, 0) translate(-50%, -50%)`;
         }
 
-        // Update Line
         if (this.djLine) {
             const p1 = { x: startX * rect.width, y: startY * rect.height };
             const p2 = { x: x * rect.width, y: y * rect.height };
@@ -1058,67 +1215,53 @@ class Sequencer {
             const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
 
             this.djLine.style.width = `${dist}px`;
-            // Align vertical center of line to p1, then rotate
             this.djLine.style.transform = `translate3d(${p1.x}px, ${p1.y}px, 0) translateY(-50%) rotate(${angle}rad)`;
         }
     }
 
     updateDJAudio(deltaX, deltaY) {
-        // Kaoss Pad style mapping:
-        //   X left  (deltaX < 0) : HPF sweep (cuts bass)
-        //   X right (deltaX > 0) : LPF sweep (cuts treble)
-        //   Y up    (deltaY > 0) : Resonance + Delay (effect depth)
-        //   Y down  (deltaY < 0) : Neutral (dry)
-
         const absX = Math.abs(deltaX);
         const absY = Math.abs(deltaY);
 
-        // --- X Axis: Filter Sweep ---
-        let lpfCutoff = 20000; // fully open
-        let hpfCutoff = 20;    // fully open
+        let lpfCutoff = 20000;
+        let hpfCutoff = 20;
 
         if (deltaX > 0) {
-            // Drag RIGHT: LPF sweep (remove treble)
             const factor = Math.pow(0.001, Math.min(absX * 2, 1));
             lpfCutoff = 20000 * factor;
             lpfCutoff = Math.max(200, lpfCutoff);
         } else if (deltaX < 0) {
-            // Drag LEFT: HPF sweep (remove bass)
             const factor = Math.pow(300, Math.min(absX * 2, 1));
             hpfCutoff = 20 * factor;
             hpfCutoff = Math.min(6000, hpfCutoff);
         }
 
-        // --- Y Axis: Effect Depth (resonance + delay) ---
         let resonance = 1.0;
         let delayWet = 0;
 
         if (deltaY > 0) {
-            // Drag UP: resonance peaks on active filter + delay echo
             resonance = 1.0 + (absY * 28);
             resonance = Math.min(15, resonance);
             delayWet = Math.min(0.6, absY * 2);
         }
-        // deltaY <= 0: neutral, no extra effect
 
         this.audioEngine.setDJFilter(lpfCutoff, hpfCutoff, resonance, delayWet);
     }
 
     cycleDJMode() {
-        // Mode: 0->1->2->0
         const nextMode = (this.djState.mode + 1) % 3;
         this.djState.mode = nextMode;
 
         this.dancer.classList.remove('standby');
         this.dancer.classList.remove('dj-keep');
 
-        if (nextMode === 1) { // Momentary
+        if (nextMode === 1) {
             this.djOverlay.classList.remove('hidden');
             this.dancer.classList.add('standby');
-        } else if (nextMode === 2) { // Keep
+        } else if (nextMode === 2) {
             this.djOverlay.classList.remove('hidden');
             this.dancer.classList.add('dj-keep');
-        } else { // Off
+        } else {
             this.closeDJMode(true);
         }
     }
@@ -1138,7 +1281,6 @@ class Sequencer {
     updateVisualizerSpeed(bpm) {
         if (!this.dancer) this.dancer = document.getElementById('visualizer-display');
         if (this.dancer) {
-            // Formula: duration = 96 / bpm (Matches user historical feel)
             const duration = 96 / bpm;
             this.dancer.style.animationDuration = `${duration}s`;
         }

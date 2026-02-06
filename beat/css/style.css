@@ -400,7 +400,7 @@ body.playing .loop-handle {
 /* Grid */
 #grid-container {
     display: grid;
-    grid-template-columns: repeat(32, auto);
+    grid-template-columns: repeat(16, auto);
     grid-template-rows: repeat(5, 72px);
     /* Taller rows */
     gap: 2px;
@@ -436,14 +436,10 @@ body.playing .loop-handle {
     border: 1px solid rgba(0, 0, 0, 0.5);
 }
 
-/* Beat spacing: Add margin every 4 cells */
+/* Beat spacing: Add margin every 4 cells (16 steps = 4 beats) */
 .cell[data-step="3"],
 .cell[data-step="7"],
-.cell[data-step="11"],
-.cell[data-step="15"],
-.cell[data-step="19"],
-.cell[data-step="23"],
-.cell[data-step="27"] {
+.cell[data-step="11"] {
     margin-right: 6px;
 }
 
@@ -902,7 +898,7 @@ body.playing .loop-handle {
     }
 
     #grid-container {
-        grid-template-columns: repeat(32, 24px);
+        grid-template-columns: repeat(16, 24px);
         grid-template-rows: repeat(5, 80px);
         gap: 2px;
     }
@@ -919,11 +915,7 @@ body.playing .loop-handle {
     /* Beat spacing for mobile */
     .cell[data-step="3"],
     .cell[data-step="7"],
-    .cell[data-step="11"],
-    .cell[data-step="15"],
-    .cell[data-step="19"],
-    .cell[data-step="23"],
-    .cell[data-step="27"] {
+    .cell[data-step="11"] {
         margin-right: 6px;
     }
 
@@ -1023,7 +1015,7 @@ body.playing .loop-handle {
     }
 
     #grid-container {
-        grid-template-columns: repeat(32, 20px);
+        grid-template-columns: repeat(16, 20px);
         grid-template-rows: repeat(5, 70px);
         gap: 2px;
     }
@@ -1142,18 +1134,14 @@ body.playing .loop-handle {
     }
 
     #grid-container {
-        grid-template-columns: repeat(32, auto);
+        grid-template-columns: repeat(16, auto);
         grid-template-rows: repeat(5, 42px);
     }
 
     /* Beat spacing adjustment */
     .cell[data-step="3"],
     .cell[data-step="7"],
-    .cell[data-step="11"],
-    .cell[data-step="15"],
-    .cell[data-step="19"],
-    .cell[data-step="23"],
-    .cell[data-step="27"] {
+    .cell[data-step="11"] {
         margin-right: 4px;
     }
 
@@ -1286,7 +1274,7 @@ body.playing .loop-handle {
     }
 
     #grid-container {
-        grid-template-columns: repeat(32, auto);
+        grid-template-columns: repeat(16, auto);
         grid-template-rows: repeat(5, 36px);
     }
 
@@ -1543,4 +1531,138 @@ body.playing .loop-handle {
 #visualizer-display.pulse {
     transform: scale(1.02);
     transition: transform 0.05s ease-out;
+}
+
+/* ======================== */
+/* Pattern Bank             */
+/* ======================== */
+
+#pattern-bank {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    padding: 0;
+}
+
+.pattern-pad {
+    width: 40px;
+    height: 40px;
+    background: #1a1a1a;
+    border: 2px solid #333;
+    color: #666;
+    font-family: monospace;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.pattern-pad:hover {
+    border-color: #666;
+    color: #aaa;
+}
+
+.pattern-pad.has-data {
+    color: #aaa;
+    background: #222;
+}
+
+.pattern-pad.active {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+}
+
+.pattern-pad.queued {
+    border-color: #fff;
+    color: #fff;
+    animation: patternBlink 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes patternBlink {
+    0% {
+        opacity: 0.4;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+body.playing .pattern-pad {
+    border-color: #444;
+}
+
+body.playing .pattern-pad.active {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+}
+
+body.playing .pattern-pad.has-data {
+    color: #ccc;
+}
+
+/* Pattern Context Menu */
+#pattern-menu {
+    position: fixed;
+    background: #1a1a1a;
+    border: 2px solid #fff;
+    display: flex;
+    z-index: 2000;
+    pointer-events: auto;
+}
+
+#pattern-menu.hidden {
+    display: none;
+}
+
+#pattern-menu .menu-item {
+    padding: 8px 14px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    border-right: 1px solid #333;
+    transition: background 0.1s ease;
+}
+
+#pattern-menu .menu-item:last-child {
+    border-right: none;
+}
+
+#pattern-menu .menu-item:hover {
+    background: #333;
+}
+
+#pattern-menu .menu-item.disabled {
+    color: #444;
+    pointer-events: none;
+}
+
+/* Landscape mobile pattern bank */
+@media (max-width: 932px) and (orientation: landscape) {
+    #pattern-bank {
+        gap: 3px;
+    }
+
+    .pattern-pad {
+        width: 32px;
+        height: 32px;
+        font-size: 13px;
+        border-width: 1px;
+    }
+}
+
+/* Very small landscape */
+@media (max-width: 700px) and (orientation: landscape) {
+    .pattern-pad {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
 }
