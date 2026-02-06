@@ -75,6 +75,7 @@ class Sequencer {
                 // onPlay
                 if (this.dancer) {
                     this.dancer.classList.add('playing');
+                    this.dancer.classList.remove('paused');
                 }
                 // Start chain from first filled slot
                 if (this.isChainActive() && this.chainPosition === -1 && this.state.chainEnabled !== false) {
@@ -116,6 +117,11 @@ class Sequencer {
                 this.syncAudioWithState();
             }
         );
+        this.controls.onPause = () => {
+            if (this.dancer) {
+                this.dancer.classList.add('paused');
+            }
+        };
         this.controls.onVolumeChange = (vol) => {
             this.state.masterVolume = vol;
             this.audioEngine.setMasterVolume(vol);
@@ -1017,15 +1023,39 @@ class Sequencer {
 
         const tapState = [];
         for (let i = 0; i < TRACKS.length; i++) {
-            tapState[i] = { count: 0, lastTapTime: 0, timer: null };
+            tapState[i] = { count: 0, lastTapTime: 0, timer: null, longPressTimer: null, didLongPress: false };
         }
 
         this.trackIcons.forEach((icon, track) => {
+            const state = tapState[track];
+
+            // Long-press to clear track
+            const startLongPress = () => {
+                state.didLongPress = false;
+                state.longPressTimer = setTimeout(() => {
+                    state.didLongPress = true;
+                    this.clearTrack(track);
+                }, 500);
+            };
+            const cancelLongPress = () => {
+                clearTimeout(state.longPressTimer);
+            };
+
+            icon.addEventListener('mousedown', startLongPress);
+            icon.addEventListener('mouseup', cancelLongPress);
+            icon.addEventListener('mouseleave', cancelLongPress);
+            icon.addEventListener('touchstart', startLongPress, { passive: true });
+            icon.addEventListener('touchend', cancelLongPress);
+            icon.addEventListener('touchmove', cancelLongPress, { passive: true });
+
             icon.addEventListener('click', (e) => {
                 e.stopPropagation();
+                if (state.didLongPress) {
+                    state.didLongPress = false;
+                    return;
+                }
 
                 const now = Date.now();
-                const state = tapState[track];
                 const timeSinceLastTap = now - state.lastTapTime;
 
                 if (timeSinceLastTap < TAP_THRESHOLD) {
@@ -1072,6 +1102,28 @@ class Sequencer {
 
         if (this.tonePanel && this.tonePanel.isOpen()) {
             this.tonePanel.close();
+        }
+    }
+
+    clearTrack(trackIndex) {
+        const pat = this.pattern;
+        for (let step = 0; step < COLS; step++) {
+            pat.grid[trackIndex][step].active = false;
+            pat.grid[trackIndex][step].pitch = 0;
+            pat.grid[trackIndex][step].duration = 0.5;
+            pat.grid[trackIndex][step].rollMode = false;
+            pat.grid[trackIndex][step].rollSubdivision = 4;
+            this.cells[trackIndex][step].element.classList.remove('active', 'roll');
+            this.cells[trackIndex][step].updateVisuals();
+        }
+        saveState(this.state);
+        this.updatePatternPadUI();
+
+        // Flash feedback
+        const icon = this.trackIcons[trackIndex];
+        if (icon) {
+            icon.classList.add('cleared');
+            setTimeout(() => icon.classList.remove('cleared'), 300);
         }
     }
 
@@ -1270,6 +1322,7 @@ class Sequencer {
         this.danceFrame = 0;
         this.dancer.style.backgroundPosition = '0px 0px';
         this.dancer.classList.remove('playing');
+        this.dancer.classList.remove('paused');
     }
 
     // ========================
