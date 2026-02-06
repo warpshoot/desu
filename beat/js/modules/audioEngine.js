@@ -9,7 +9,7 @@ export class AudioEngine {
 
         // Audio chain components
         this.instruments = [];
-        this.distortions = [];
+        this.distortions = []; // {waveshaper, dcBlocker} per track
         this.filters = [];
         this.gains = [];
         this.limiter = null;
@@ -77,8 +77,9 @@ export class AudioEngine {
             wet: 0
         });
 
-        // Master limiter: -3dB gives headroom for driven kick/bass transients
-        this.limiter = new Tone.Limiter(-3).toDestination();
+        // Master limiter: -1dB gives enough headroom for combined signals
+        // Tighter values cause pumping when kick+snare hit together
+        this.limiter = new Tone.Limiter(-1).toDestination();
 
         // Connect chain: HPF → LPF → Delay → Limiter
         this.djHPF.connect(this.djLPF);
@@ -135,12 +136,20 @@ export class AudioEngine {
                     break;
             }
 
-            // Create distortion (drive knob)
-            // oversample '4x' eliminates aliasing artifacts from the waveshaper,
-            // critical for low-frequency content (kick/bass)
-            const distortion = new Tone.Distortion({
-                distortion: 0,
-                oversample: '4x'
+            // Soft-clip drive using tanh waveshaper (warm, musical distortion)
+            // Tone.Distortion uses harsh polynomial clipping that creates
+            // intermodulation noise with FM synthesis and noise sources
+            const waveshaper = new Tone.WaveShaper(
+                this._makeSoftClipCurve(0), 8192
+            );
+            waveshaper.oversample = '4x';
+
+            // DC blocker: removes DC offset that waveshaping can introduce,
+            // which causes clicks/pops at note boundaries
+            const dcBlocker = new Tone.Filter({
+                frequency: 15,
+                type: 'highpass',
+                rolloff: -12
             });
 
             // Create filter
@@ -167,14 +176,15 @@ export class AudioEngine {
 
             const gain = new Tone.Gain(initialGain);
 
-            // Connect: instrument -> distortion -> filter -> gain -> djHPF -> djLPF -> djDelay -> limiter
-            instrument.connect(distortion);
-            distortion.connect(filter);
+            // Signal chain: instrument → waveshaper → dcBlocker → filter → gain → master
+            instrument.connect(waveshaper);
+            waveshaper.connect(dcBlocker);
+            dcBlocker.connect(filter);
             filter.connect(gain);
             gain.connect(this.djHPF);
 
             this.instruments.push(instrument);
-            this.distortions.push(distortion);
+            this.distortions.push({ waveshaper, dcBlocker });
             this.filters.push(filter);
             this.gains.push(gain);
         }
@@ -312,25 +322,11 @@ export class AudioEngine {
             }
         }
         if (params.drive !== undefined) {
-            if (this.distortions[track]) {
-                // Smooth drive changes to avoid discontinuity clicks
-                const target = params.drive / 100;
-                const current = this.distortions[track].distortion;
-                const diff = target - current;
-                if (Math.abs(diff) < 0.01) {
-                    this.distortions[track].distortion = target;
-                } else {
-                    // Interpolate in small steps over ~50ms to avoid pops
-                    const steps = 5;
-                    const stepSize = diff / steps;
-                    for (let s = 0; s < steps; s++) {
-                        setTimeout(() => {
-                            if (this.distortions[track]) {
-                                this.distortions[track].distortion = Math.min(1, Math.max(0, current + stepSize * (s + 1)));
-                            }
-                        }, s * 10);
-                    }
-                }
+            const dist = this.distortions[track];
+            if (dist && dist.waveshaper) {
+                // Update tanh soft-clip curve — no discontinuity since
+                // the WaveShaper continuously maps samples through the curve
+                dist.waveshaper.curve = this._makeSoftClipCurve(params.drive / 100);
             }
         }
         if (params.tune !== undefined) {
@@ -380,10 +376,30 @@ export class AudioEngine {
         this.djDelay.wet.rampTo(0, 0.15);
     }
 
+    // Generate normalized tanh soft-clip curve
+    // amount: 0 (clean) to 1 (heavy saturation)
+    // tanh gives warm, tube-like saturation without the harsh intermodulation
+    // artifacts of polynomial hard-clipping (Tone.Distortion)
+    _makeSoftClipCurve(amount) {
+        const samples = 8192;
+        const curve = new Float32Array(samples);
+        // k=1: nearly linear (clean), k=16: heavy soft saturation
+        const k = 1 + amount * 15;
+        const norm = 1 / Math.tanh(k);
+        for (let i = 0; i < samples; i++) {
+            const x = (i / (samples - 1)) * 2 - 1;
+            curve[i] = Math.tanh(x * k) * norm;
+        }
+        return curve;
+    }
+
     dispose() {
         this.stop();
         this.instruments.forEach(inst => inst.dispose());
-        this.distortions.forEach(d => d.dispose());
+        this.distortions.forEach(d => {
+            if (d.waveshaper) d.waveshaper.dispose();
+            if (d.dcBlocker) d.dcBlocker.dispose();
+        });
         this.filters.forEach(f => f.dispose());
         this.gains.forEach(g => g.dispose());
         if (this.djLPF) this.djLPF.dispose();
