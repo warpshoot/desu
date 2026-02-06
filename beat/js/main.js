@@ -462,6 +462,50 @@ class Sequencer {
         if (!this.state.chain) {
             this.state.chain = new Array(CHAIN_LENGTH).fill(null);
         }
+        if (this.state.chainEnabled === undefined) {
+            this.state.chainEnabled = true;
+        }
+
+        // CH toggle button
+        this.chainToggleBtn = document.createElement('button');
+        this.chainToggleBtn.id = 'chain-toggle';
+        this.chainToggleBtn.textContent = 'CH';
+
+        let chPressTimer = null;
+        let chDidLongPress = false;
+
+        const chStartPress = () => {
+            chDidLongPress = false;
+            chPressTimer = setTimeout(() => {
+                chDidLongPress = true;
+                // Long press: clear all chain slots
+                this.state.chain = new Array(CHAIN_LENGTH).fill(null);
+                this.chainPosition = -1;
+                saveState(this.state);
+                this.updateChainUI();
+            }, 500);
+        };
+        const chEndPress = () => {
+            clearTimeout(chPressTimer);
+            if (!chDidLongPress) {
+                this.state.chainEnabled = !this.state.chainEnabled;
+                if (!this.state.chainEnabled) {
+                    this.chainPosition = -1;
+                }
+                saveState(this.state);
+                this.updateChainUI();
+            }
+        };
+        const chCancelPress = () => { clearTimeout(chPressTimer); };
+
+        this.chainToggleBtn.addEventListener('mousedown', chStartPress);
+        this.chainToggleBtn.addEventListener('mouseup', chEndPress);
+        this.chainToggleBtn.addEventListener('mouseleave', chCancelPress);
+        this.chainToggleBtn.addEventListener('touchstart', chStartPress, { passive: true });
+        this.chainToggleBtn.addEventListener('touchend', (e) => { e.preventDefault(); chEndPress(); });
+        this.chainToggleBtn.addEventListener('touchcancel', chCancelPress);
+
+        container.appendChild(this.chainToggleBtn);
 
         for (let i = 0; i < CHAIN_LENGTH; i++) {
             if (i > 0) {
@@ -541,7 +585,7 @@ class Sequencer {
     }
 
     isChainActive() {
-        return this.state.chain && this.state.chain.some(s => s !== null);
+        return this.state.chainEnabled !== false && this.state.chain && this.state.chain.some(s => s !== null);
     }
 
     advanceChain() {
@@ -599,12 +643,21 @@ class Sequencer {
     updateChainUI() {
         if (!this.chainSlots.length) return;
 
+        const enabled = this.state.chainEnabled !== false;
+        const container = document.getElementById('chain-container');
+        if (container) {
+            container.classList.toggle('chain-disabled', !enabled);
+        }
+        if (this.chainToggleBtn) {
+            this.chainToggleBtn.classList.toggle('active', enabled);
+        }
+
         for (let i = 0; i < CHAIN_LENGTH; i++) {
             const slot = this.chainSlots[i];
             const value = this.state.chain[i];
 
             slot.classList.toggle('filled', value !== null);
-            slot.classList.toggle('playing', i === this.chainPosition && this.audioEngine.playing);
+            slot.classList.toggle('playing', enabled && i === this.chainPosition && this.audioEngine.playing);
             slot.textContent = value !== null ? PATTERN_NAMES[value] : '';
         }
     }
