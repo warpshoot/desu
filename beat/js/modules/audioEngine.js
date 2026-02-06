@@ -77,8 +77,8 @@ export class AudioEngine {
             wet: 0
         });
 
-        // Create master limiter
-        this.limiter = new Tone.Limiter(-3).toDestination();
+        // Create master limiter (tight threshold for mobile)
+        this.limiter = new Tone.Limiter(-6).toDestination();
 
         // Connect chain: HPF → LPF → Delay → Limiter
         this.djHPF.connect(this.djLPF);
@@ -99,21 +99,21 @@ export class AudioEngine {
                 case 'membrane':
                     instrument = new Tone.MembraneSynth({
                         pitchDecay: 0.05,
-                        octaves: 10,
+                        octaves: 7,
                         oscillator: { type: 'sine' },
-                        envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4 }
+                        envelope: { attack: 0.005, decay: 0.4, sustain: 0.01, release: 0.8 }
                     });
                     break;
                 case 'noise':
                     instrument = new Tone.NoiseSynth({
                         noise: { type: 'white' },
-                        envelope: { attack: 0.001, decay: 0.2, sustain: 0 }
+                        envelope: { attack: 0.003, decay: 0.2, sustain: 0 }
                     });
                     break;
                 case 'metal':
                     instrument = new Tone.MetalSynth({
                         frequency: 200,
-                        envelope: { attack: 0.001, decay: 0.1, release: 0.1 },
+                        envelope: { attack: 0.003, decay: 0.1, release: 0.1 },
                         harmonicity: 5.1,
                         modulationIndex: 32,
                         resonance: 4000,
@@ -121,16 +121,16 @@ export class AudioEngine {
                     });
                     break;
                 case 'fm':
-                    // Check if it's Bass (Track 3) - tough condition, but we know Bass is index 3
                     const isBass = (i === 3);
                     instrument = new Tone.PolySynth(Tone.FMSynth, {
-                        harmonicity: isBass ? 1 : 3, // Bass: Lock to fundamental
-                        modulationIndex: isBass ? 20 : 10,
+                        maxPolyphony: isBass ? 2 : 6,
+                        harmonicity: isBass ? 1 : 3,
+                        modulationIndex: isBass ? 14 : 10,
                         detune: 0,
-                        oscillator: { type: isBass ? 'triangle' : 'sine' }, // Bass: Triangle for bite
-                        envelope: { attack: 0.01, decay: 0.2, sustain: isBass ? 0.8 : 0.2, release: 0.5 }, // Bass: High sustain
+                        oscillator: { type: isBass ? 'triangle' : 'sine' },
+                        envelope: { attack: 0.005, decay: 0.2, sustain: isBass ? 0.7 : 0.2, release: 0.3 },
                         modulation: { type: 'square' },
-                        modulationEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 }
+                        modulationEnvelope: { attack: 0.005, decay: 0.2, sustain: 0.2, release: 0.3 }
                     });
                     break;
             }
@@ -138,7 +138,7 @@ export class AudioEngine {
             // Create distortion (drive knob)
             const distortion = new Tone.Distortion({
                 distortion: 0,
-                oversample: '2x'
+                oversample: 'none'
             });
 
             // Create filter

@@ -162,13 +162,17 @@ body.playing #credit-btn:hover {
 
 #sequencer-inner {
     display: flex;
+    flex-direction: column;
+    background: #000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    padding: 0;
+}
+
+#sequencer-main {
+    display: flex;
     align-items: flex-start;
     gap: 8px;
-    /* 2px gap + 6px spacing to match beat markers */
-    background: #000;
     padding: 4px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    /* Remove width 100% to hug content */
     justify-content: center;
 }
 
@@ -752,7 +756,7 @@ body.playing #credit-btn:hover {
         padding: 70px 10px 140px;
     }
 
-    #sequencer-inner {
+    #sequencer-main {
         /* Allow horizontal scrolling for grid */
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -1069,8 +1073,8 @@ body.playing #credit-btn:hover {
         padding: 32px 8px 70px;
     }
 
-    /* Sequencer inner - reduce padding */
-    #sequencer-inner {
+    /* Sequencer main - reduce padding */
+    #sequencer-main {
         padding: 4px;
         gap: 6px;
         width: fit-content;
@@ -1199,8 +1203,8 @@ body.playing #credit-btn:hover {
         margin-top: 10px;
     }
 
-    /* Sequencer inner - reduce padding */
-    #sequencer-inner {
+    /* Sequencer main - reduce padding */
+    #sequencer-main {
         padding: 4px;
         gap: 5px;
         width: fit-content;
@@ -1376,24 +1380,24 @@ body.playing #credit-btn:hover {
 }
 
 /* ======================== */
-/* Pattern Bank             */
+/* Pattern Bank (tabs)      */
 /* ======================== */
 
 #pattern-bank {
     display: flex;
-    gap: 4px;
-    justify-content: center;
-    padding: 0;
+    gap: 0;
+    padding: 4px 4px 0;
 }
 
 .pattern-pad {
-    width: 40px;
-    height: 40px;
-    background: #1a1a1a;
-    border: 2px solid #333;
-    color: #666;
+    flex: 1;
+    height: 28px;
+    background: #111;
+    border: none;
+    border-bottom: 2px solid #333;
+    color: #555;
     font-family: monospace;
-    font-size: 16px;
+    font-size: 13px;
     font-weight: bold;
     cursor: pointer;
     transition: all 0.1s ease;
@@ -1404,23 +1408,21 @@ body.playing #credit-btn:hover {
 }
 
 .pattern-pad:hover {
-    border-color: #666;
+    background: #1a1a1a;
     color: #aaa;
 }
 
 .pattern-pad.has-data {
-    color: #aaa;
-    background: #222;
+    color: #888;
 }
 
 .pattern-pad.active {
-    background: #fff;
-    color: #000;
-    border-color: #fff;
+    background: #000;
+    color: #fff;
+    border-bottom-color: transparent;
 }
 
 .pattern-pad.queued {
-    border-color: #fff;
     color: #fff;
     animation: patternBlink 0.4s ease-in-out infinite alternate;
 }
@@ -1434,18 +1436,8 @@ body.playing #credit-btn:hover {
     }
 }
 
-body.playing .pattern-pad {
-    border-color: #444;
-}
-
-body.playing .pattern-pad.active {
-    background: #fff;
-    color: #000;
-    border-color: #fff;
-}
-
 body.playing .pattern-pad.has-data {
-    color: #ccc;
+    color: #999;
 }
 
 /* Pattern Context Menu */
@@ -1488,23 +1480,16 @@ body.playing .pattern-pad.has-data {
 
 /* Landscape mobile pattern bank */
 @media (max-width: 932px) and (orientation: landscape) {
-    #pattern-bank {
-        gap: 3px;
-    }
-
     .pattern-pad {
-        width: 32px;
-        height: 32px;
-        font-size: 13px;
-        border-width: 1px;
+        height: 24px;
+        font-size: 11px;
     }
 }
 
 /* Very small landscape */
 @media (max-width: 700px) and (orientation: landscape) {
     .pattern-pad {
-        width: 28px;
-        height: 28px;
-        font-size: 12px;
+        height: 22px;
+        font-size: 10px;
     }
 }
