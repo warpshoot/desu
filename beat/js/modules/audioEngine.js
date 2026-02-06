@@ -10,9 +10,11 @@ export class AudioEngine {
         // Audio chain components
         this.instruments = [];
         this.distortions = []; // {waveshaper, dcBlocker} per track
+        this.trackCompressors = []; // per-track compressor (null if not needed)
         this.filters = [];
         this.gains = [];
-        this.limiter = null;
+        this.compressor = null; // master bus compressor
+        this.limiter = null; // safety limiter (0dB ceiling)
 
         // DJ Mode (master filter chain: HPF → LPF → Delay)
         this.djLPF = null;
@@ -77,14 +79,25 @@ export class AudioEngine {
             wet: 0
         });
 
-        // Master limiter: -1dB gives enough headroom for combined signals
-        // Tighter values cause pumping when kick+snare hit together
-        this.limiter = new Tone.Limiter(-1).toDestination();
+        // Master bus compressor: smooth dynamics control
+        // Prevents pumping that a brick-wall limiter causes when
+        // noise (snare) peaks hit alongside kick/bass
+        this.compressor = new Tone.Compressor({
+            threshold: -12,
+            ratio: 4,
+            attack: 0.01,
+            release: 0.15,
+            knee: 6
+        });
 
-        // Connect chain: HPF → LPF → Delay → Limiter
+        // Safety limiter at 0dB: only catches absolute peaks to prevent clipping
+        this.limiter = new Tone.Limiter(0).toDestination();
+
+        // Connect chain: HPF → LPF → Delay → Compressor → Limiter
         this.djHPF.connect(this.djLPF);
         this.djLPF.connect(this.djDelay);
-        this.djDelay.connect(this.limiter);
+        this.djDelay.connect(this.compressor);
+        this.compressor.connect(this.limiter);
 
         // Create recorder (default format - browser dependent)
         this.recorder = new Tone.Recorder();
@@ -176,15 +189,35 @@ export class AudioEngine {
 
             const gain = new Tone.Gain(initialGain);
 
-            // Signal chain: instrument → waveshaper → dcBlocker → filter → gain → master
+            // Per-track compressor for noise (snare) — tames random peaks
+            // that otherwise trigger the master compressor/limiter and
+            // cause audible pumping on kick/bass
+            let trackComp = null;
+            if (track.type === 'noise') {
+                trackComp = new Tone.Compressor({
+                    threshold: -20,
+                    ratio: 6,
+                    attack: 0.002,
+                    release: 0.08,
+                    knee: 10
+                });
+            }
+
+            // Signal chain: instrument → waveshaper → dcBlocker → filter → [comp] → gain → master
             instrument.connect(waveshaper);
             waveshaper.connect(dcBlocker);
             dcBlocker.connect(filter);
-            filter.connect(gain);
+            if (trackComp) {
+                filter.connect(trackComp);
+                trackComp.connect(gain);
+            } else {
+                filter.connect(gain);
+            }
             gain.connect(this.djHPF);
 
             this.instruments.push(instrument);
             this.distortions.push({ waveshaper, dcBlocker });
+            this.trackCompressors.push(trackComp);
             this.filters.push(filter);
             this.gains.push(gain);
         }
@@ -400,11 +433,13 @@ export class AudioEngine {
             if (d.waveshaper) d.waveshaper.dispose();
             if (d.dcBlocker) d.dcBlocker.dispose();
         });
+        this.trackCompressors.forEach(c => { if (c) c.dispose(); });
         this.filters.forEach(f => f.dispose());
         this.gains.forEach(g => g.dispose());
         if (this.djLPF) this.djLPF.dispose();
         if (this.djHPF) this.djHPF.dispose();
         if (this.djDelay) this.djDelay.dispose();
+        if (this.compressor) this.compressor.dispose();
         if (this.limiter) this.limiter.dispose();
     }
 
