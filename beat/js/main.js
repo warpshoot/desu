@@ -11,9 +11,11 @@ class Sequencer {
 
         this.audioEngine = new AudioEngine();
 
-        // Preset audio settings from current pattern
+        // Preset audio settings
+        // Sounds/BPM from Global State
+        // Mute/Solo from Pattern (Local)
         const pat = getCurrentPattern(this.state);
-        const volumes = pat.trackParams ? pat.trackParams.map(p => p.vol) : undefined;
+        const volumes = this.state.trackParams ? this.state.trackParams.map(p => p.vol) : undefined;
         this.audioEngine.presetSettings({
             trackVolumes: volumes,
             mutedTracks: pat.mutedTracks,
@@ -57,7 +59,7 @@ class Sequencer {
         this.controls = new Controls(
             this.audioEngine,
             (bpm) => {
-                this.pattern.bpm = bpm;
+                this.state.bpm = bpm;
                 this.updateVisualizerSpeed(bpm);
                 saveState(this.state);
             },
@@ -65,8 +67,9 @@ class Sequencer {
                 this.pattern.swingEnabled = swingEnabled;
                 saveState(this.state);
             },
+
             () => {
-                this.clearCurrentPattern();
+                this.onClearBtnClick();
             },
             () => {
                 // onPlay
@@ -74,7 +77,7 @@ class Sequencer {
                     this.dancer.classList.add('playing');
                 }
                 // Start chain from first filled slot
-                if (this.isChainActive() && this.chainPosition === -1) {
+                if (this.isChainActive() && this.chainPosition === -1 && this.state.chainEnabled !== false) {
                     this.chainPosition = this.getFirstChainPosition();
                     const targetPattern = this.state.chain[this.chainPosition];
                     if (targetPattern !== this.state.currentPattern) {
@@ -82,8 +85,11 @@ class Sequencer {
                         const gridContainer = document.getElementById('grid-container');
                         if (gridContainer) gridContainer.innerHTML = '';
                         this.createGrid();
+                        // Only partial sync (Mutes etc) - Global settings persist
                         this.syncAudioWithState();
-                        this.controls.setBPM(this.pattern.bpm);
+
+                        // Controls update
+                        this.controls.setBPM(this.state.bpm);
                         this.controls.setSwing(this.pattern.swingEnabled);
                         this.controls.setScale(this.pattern.scale);
                         this.setupTrackControls();
@@ -116,7 +122,7 @@ class Sequencer {
             saveState(this.state);
         };
 
-        this.controls.setBPM(this.pattern.bpm);
+        this.controls.setBPM(this.state.bpm);
         this.controls.setSwing(this.pattern.swingEnabled || false);
         this.controls.setRepeat(this.state.repeatEnabled !== false);
         this.controls.setVolume(this.state.masterVolume || -12);
@@ -128,13 +134,14 @@ class Sequencer {
                 tonePanelEl,
                 this.audioEngine,
                 (track, param, value) => {
-                    this.pattern.trackParams[track][param] = value;
+                    this.state.trackParams[track][param] = value;
                     saveState(this.state);
                 }
             );
         }
 
         this.initRollMenu();
+        this.initClearMenu();
 
         this.setupTrackIcons();
         this.setupTrackControls();
@@ -356,8 +363,8 @@ class Sequencer {
         // Sync audio params
         this.syncAudioWithState();
 
-        // Update controls to reflect new pattern's settings
-        this.controls.setBPM(this.pattern.bpm);
+        // Update controls to reflect new pattern's settings (Local Only)
+        // BPM/Volume/TrackParams are global, so no update needed
         this.controls.setSwing(this.pattern.swingEnabled);
         this.controls.setScale(this.pattern.scale);
 
@@ -684,6 +691,11 @@ class Sequencer {
             fileMenu.style.left = (rect.left - 20) + 'px';
             fileMenu.style.top = 'auto';
             fileMenu.classList.toggle('hidden');
+
+            // Close clear menu if open
+            if (this.clearMenuElement && !this.clearMenuElement.classList.contains('hidden')) {
+                this.clearMenuElement.classList.add('hidden');
+            }
         });
 
         document.addEventListener('click', (e) => {
@@ -738,11 +750,11 @@ class Sequencer {
         const pat = this.pattern;
 
         // 1. Controls UI
-        this.controls.setBPM(pat.bpm);
-        this.controls.setSwing(pat.swingEnabled);
+        this.controls.setBPM(this.state.bpm); // Global
+        this.controls.setSwing(pat.swingEnabled); // Local
         this.controls.setRepeat(this.state.repeatEnabled !== false);
         this.controls.setVolume(this.state.masterVolume);
-        this.controls.setScale(pat.scale);
+        this.controls.setScale(pat.scale); // Local
 
         // 2. Audio Engine
         if (this.audioEngine.initialized) {
@@ -764,15 +776,16 @@ class Sequencer {
         const pat = this.pattern;
 
         // Global Params
-        this.audioEngine.setBPM(pat.bpm);
+        this.audioEngine.setBPM(this.state.bpm);
         this.audioEngine.setMasterVolume(this.state.masterVolume);
-        this.audioEngine.setSwing(pat.swingEnabled);
+        this.audioEngine.setSwing(pat.swingEnabled); // Swing is local
 
-        // Track Params
+        // Track Params (Global)
         for (let i = 0; i < ROWS; i++) {
-            const params = pat.trackParams[i];
+            const params = this.state.trackParams[i];
             this.audioEngine.updateTrackParams(i, params);
 
+            // Mute/Solo (Local)
             const isMuted = pat.mutedTracks ? pat.mutedTracks[i] : false;
             const isSoloed = pat.soloedTracks ? pat.soloedTracks[i] : false;
 
@@ -782,8 +795,8 @@ class Sequencer {
 
         this.audioEngine.updateTrackGains(true);
 
-        if (pat.bpm) {
-            this.updateVisualizerSpeed(pat.bpm);
+        if (this.state.bpm) {
+            this.updateVisualizerSpeed(this.state.bpm);
         }
     }
 
@@ -812,6 +825,72 @@ class Sequencer {
                     e.stopPropagation();
                 });
             }
+        }
+    }
+
+    // ========================
+    // Clear Menu
+    // ========================
+
+    initClearMenu() {
+        this.clearMenuElement = document.getElementById('clear-menu');
+        this.clearBtn = document.getElementById('clear-btn');
+
+        if (!this.clearMenuElement || !this.clearBtn) return;
+
+        // Menu button actions
+        document.getElementById('clear-pattern-btn').addEventListener('click', () => {
+            if (confirm('Clear current pattern steps and local settings?')) {
+                this.clearCurrentPattern();
+                this.clearMenuElement.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('clear-all-btn').addEventListener('click', () => {
+            if (confirm('RESET ALL? This will clear all patterns and reset all sounds.')) {
+                this.resetAll();
+                this.clearMenuElement.classList.add('hidden');
+            }
+        });
+
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            if (!this.clearMenuElement.classList.contains('hidden') &&
+                !this.clearMenuElement.contains(e.target) &&
+                !this.clearBtn.contains(e.target)) {
+                this.clearMenuElement.classList.add('hidden');
+            }
+        });
+    }
+
+    onClearBtnClick() {
+        if (!this.clearMenuElement || !this.clearBtn) return;
+
+        const rect = this.clearBtn.getBoundingClientRect();
+        this.clearMenuElement.style.position = 'fixed';
+        this.clearMenuElement.style.bottom = (window.innerHeight - rect.top + 5) + 'px';
+        this.clearMenuElement.style.left = (rect.left - 20) + 'px';
+        this.clearMenuElement.style.top = 'auto';
+
+        this.clearMenuElement.classList.toggle('hidden');
+
+        // Close file menu if open
+        const fileMenu = document.getElementById('file-menu');
+        if (fileMenu && !fileMenu.classList.contains('hidden')) {
+            fileMenu.classList.add('hidden');
+        }
+    }
+
+    resetAll() {
+        this.audioEngine.stop();
+        this.state = createDefaultState();
+        this.restoreState();
+        this.updatePatternPadUI();
+        this.updateChainUI(); // Also reset UI chain
+        saveState(this.state);
+
+        if (this.tonePanel && this.tonePanel.isOpen()) {
+            this.tonePanel.close();
         }
     }
 
@@ -960,7 +1039,7 @@ class Sequencer {
 
                 state.timer = setTimeout(() => {
                     if (state.count === 1) {
-                        this.tonePanel.toggle(track, this.pattern.trackParams[track]);
+                        this.tonePanel.toggle(track, this.state.trackParams[track]);
                     }
                     state.count = 0;
                 }, TAP_THRESHOLD);

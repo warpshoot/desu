@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="../favicon.js"></script>
     <style>
-        #file-menu {
+        .popup-menu {
             position: absolute;
             background: rgba(0, 0, 0, 0.9);
             border: 1px solid #444;
@@ -20,18 +20,18 @@
             min-width: 100px;
         }
 
-        #file-menu.hidden {
+        .popup-menu.hidden {
             display: none;
         }
 
-        #file-menu .menu-item {
+        .popup-menu .menu-item {
             padding: 8px 16px;
             color: #fff;
             cursor: pointer;
             font-size: 14px;
         }
 
-        #file-menu .menu-item:hover {
+        .popup-menu .menu-item:hover {
             background: #444;
         }
     </style>
@@ -73,48 +73,48 @@
             <div id="pattern-bank"></div>
 
             <div id="sequencer-main">
-            <div id="track-icons">
-                <div class="track-item" data-track="0">
-                    <div class="track-icon" title="Kick">K</div>
-                    <div class="track-ctrls">
-                        <button class="mute-btn" title="Mute">M</button>
-                        <button class="solo-btn" title="Solo">S</button>
+                <div id="track-icons">
+                    <div class="track-item" data-track="0">
+                        <div class="track-icon" title="Kick">K</div>
+                        <div class="track-ctrls">
+                            <button class="mute-btn" title="Mute">M</button>
+                            <button class="solo-btn" title="Solo">S</button>
+                        </div>
+                    </div>
+                    <div class="track-item" data-track="1">
+                        <div class="track-icon" title="Snare">S</div>
+                        <div class="track-ctrls">
+                            <button class="mute-btn" title="Mute">M</button>
+                            <button class="solo-btn" title="Solo">S</button>
+                        </div>
+                    </div>
+                    <div class="track-item" data-track="2">
+                        <div class="track-icon" title="Hi-hat">H</div>
+                        <div class="track-ctrls">
+                            <button class="mute-btn" title="Mute">M</button>
+                            <button class="solo-btn" title="Solo">S</button>
+                        </div>
+                    </div>
+                    <div class="track-item" data-track="3">
+                        <div class="track-icon" title="Bass">B</div>
+                        <div class="track-ctrls">
+                            <button class="mute-btn" title="Mute">M</button>
+                            <button class="solo-btn" title="Solo">S</button>
+                        </div>
+                    </div>
+                    <div class="track-item" data-track="4">
+                        <div class="track-icon" title="Lead">L</div>
+                        <div class="track-ctrls">
+                            <button class="mute-btn" title="Mute">M</button>
+                            <button class="solo-btn" title="Solo">S</button>
+                        </div>
                     </div>
                 </div>
-                <div class="track-item" data-track="1">
-                    <div class="track-icon" title="Snare">S</div>
-                    <div class="track-ctrls">
-                        <button class="mute-btn" title="Mute">M</button>
-                        <button class="solo-btn" title="Solo">S</button>
-                    </div>
-                </div>
-                <div class="track-item" data-track="2">
-                    <div class="track-icon" title="Hi-hat">H</div>
-                    <div class="track-ctrls">
-                        <button class="mute-btn" title="Mute">M</button>
-                        <button class="solo-btn" title="Solo">S</button>
-                    </div>
-                </div>
-                <div class="track-item" data-track="3">
-                    <div class="track-icon" title="Bass">B</div>
-                    <div class="track-ctrls">
-                        <button class="mute-btn" title="Mute">M</button>
-                        <button class="solo-btn" title="Solo">S</button>
-                    </div>
-                </div>
-                <div class="track-item" data-track="4">
-                    <div class="track-icon" title="Lead">L</div>
-                    <div class="track-ctrls">
-                        <button class="mute-btn" title="Mute">M</button>
-                        <button class="solo-btn" title="Solo">S</button>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Main grid -->
-            <div id="grid-wrapper">
-                <div id="grid-container"></div>
-            </div>
+                <!-- Main grid -->
+                <div id="grid-wrapper">
+                    <div id="grid-container"></div>
+                </div>
             </div><!-- /sequencer-main -->
         </div>
 
@@ -208,7 +208,7 @@
         </button>
 
         <!-- File Menu -->
-        <div id="file-menu" class="hidden">
+        <div id="file-menu" class="popup-menu hidden">
             <div class="menu-item" id="new-btn">NEW</div>
             <div class="menu-item" id="save-btn">SAVE</div>
             <div class="menu-item" id="load-btn">LOAD</div>
@@ -216,6 +216,12 @@
         </div>
 
         <button id="clear-btn" class="control-btn">CLR</button>
+
+        <!-- Clear Menu -->
+        <div id="clear-menu" class="popup-menu hidden">
+            <div class="menu-item" id="clear-pattern-btn">Clear Pattern</div>
+            <div class="menu-item" id="clear-all-btn">ALL Reset</div>
+        </div>
     </div>
 
     <!-- Roll Menu -->

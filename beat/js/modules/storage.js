@@ -15,6 +15,59 @@ export function saveState(state) {
 }
 
 // Create a single default pattern data object
+// Generate default track params
+function createDefaultTrackParams() {
+    const trackParams = [];
+    for (let i = 0; i < ROWS; i++) {
+        const defaults = TRACKS[i].defaultParams || {};
+        trackParams[i] = {
+            tune: defaults.tune !== undefined ? defaults.tune : KNOB_PARAMS.tune.default,
+            cutoff: defaults.cutoff !== undefined ? defaults.cutoff : KNOB_PARAMS.cutoff.default,
+            resonance: defaults.resonance !== undefined ? defaults.resonance : KNOB_PARAMS.resonance.default,
+            drive: defaults.drive !== undefined ? defaults.drive : KNOB_PARAMS.drive.default,
+            decay: defaults.decay !== undefined ? defaults.decay : KNOB_PARAMS.decay.default,
+            vol: defaults.vol !== undefined ? defaults.vol : KNOB_PARAMS.vol.default
+        };
+    }
+    return trackParams;
+}
+
+// Migrate track params (renames, defaults)
+function migrateTrackParams(trackParams) {
+    if (!trackParams) return createDefaultTrackParams();
+
+    // Ensure length matches ROWS
+    if (trackParams.length < ROWS) {
+        for (let i = trackParams.length; i < ROWS; i++) {
+            const defaults = TRACKS[i].defaultParams || {};
+            trackParams[i] = {
+                tune: defaults.tune !== undefined ? defaults.tune : KNOB_PARAMS.tune.default,
+                cutoff: defaults.cutoff !== undefined ? defaults.cutoff : KNOB_PARAMS.cutoff.default,
+                resonance: defaults.resonance !== undefined ? defaults.resonance : KNOB_PARAMS.resonance.default,
+                drive: defaults.drive !== undefined ? defaults.drive : KNOB_PARAMS.drive.default,
+                decay: defaults.decay !== undefined ? defaults.decay : KNOB_PARAMS.decay.default,
+                vol: defaults.vol !== undefined ? defaults.vol : KNOB_PARAMS.vol.default
+            };
+        }
+    }
+
+    trackParams.forEach(params => {
+        if (params.vol === undefined) params.vol = KNOB_PARAMS.vol.default;
+        if (params.tune === undefined) params.tune = KNOB_PARAMS.tune.default;
+        if (params.drive === undefined) {
+            params.drive = KNOB_PARAMS.drive.default;
+            if (params.modulation !== undefined) delete params.modulation;
+        }
+        if (params.decay === undefined) {
+            params.decay = params.release !== undefined ? params.release : KNOB_PARAMS.decay.default;
+            if (params.release !== undefined) delete params.release;
+        }
+    });
+
+    return trackParams;
+}
+
+// Create a single default pattern data object
 export function createDefaultPattern() {
     const grid = [];
     for (let track = 0; track < ROWS; track++) {
@@ -30,27 +83,12 @@ export function createDefaultPattern() {
         }
     }
 
-    const trackParams = [];
-    for (let i = 0; i < ROWS; i++) {
-        const defaults = TRACKS[i].defaultParams || {};
-        trackParams[i] = {
-            tune: defaults.tune !== undefined ? defaults.tune : KNOB_PARAMS.tune.default,
-            cutoff: defaults.cutoff !== undefined ? defaults.cutoff : KNOB_PARAMS.cutoff.default,
-            resonance: defaults.resonance !== undefined ? defaults.resonance : KNOB_PARAMS.resonance.default,
-            drive: defaults.drive !== undefined ? defaults.drive : KNOB_PARAMS.drive.default,
-            decay: defaults.decay !== undefined ? defaults.decay : KNOB_PARAMS.decay.default,
-            vol: defaults.vol !== undefined ? defaults.vol : KNOB_PARAMS.vol.default
-        };
-    }
-
     const trackOctaves = new Array(ROWS).fill(DEFAULT_OCTAVE);
     const mutedTracks = new Array(ROWS).fill(false);
     const soloedTracks = new Array(ROWS).fill(false);
 
     return {
         grid,
-        bpm: DEFAULT_BPM,
-        trackParams,
         swingEnabled: DEFAULT_SWING_ENABLED,
         trackOctaves,
         mutedTracks,
@@ -95,7 +133,7 @@ function migratePatternGrid(pattern) {
     }
 }
 
-// Migrate pattern-level fields
+// Migrate pattern-level fields (Local settings)
 function migratePatternFields(pattern) {
     if (pattern.swingEnabled === undefined) pattern.swingEnabled = DEFAULT_SWING_ENABLED;
 
@@ -110,39 +148,10 @@ function migratePatternFields(pattern) {
             pattern.trackOctaves[i] = DEFAULT_OCTAVE;
         }
     }
-    if (!pattern.trackParams || pattern.trackParams.length < ROWS) {
-        if (!pattern.trackParams) pattern.trackParams = [];
-        for (let i = pattern.trackParams.length; i < ROWS; i++) {
-            const defaults = TRACKS[i].defaultParams || {};
-            pattern.trackParams[i] = {
-                tune: defaults.tune !== undefined ? defaults.tune : KNOB_PARAMS.tune.default,
-                cutoff: defaults.cutoff !== undefined ? defaults.cutoff : KNOB_PARAMS.cutoff.default,
-                resonance: defaults.resonance !== undefined ? defaults.resonance : KNOB_PARAMS.resonance.default,
-                drive: defaults.drive !== undefined ? defaults.drive : KNOB_PARAMS.drive.default,
-                decay: defaults.decay !== undefined ? defaults.decay : KNOB_PARAMS.decay.default,
-                vol: defaults.vol !== undefined ? defaults.vol : KNOB_PARAMS.vol.default
-            };
-        }
-    }
-    // Migration: rename modulation->drive, release->decay in existing trackParams
-    if (pattern.trackParams) {
-        pattern.trackParams.forEach(params => {
-            if (params.vol === undefined) params.vol = KNOB_PARAMS.vol.default;
-            if (params.tune === undefined) params.tune = KNOB_PARAMS.tune.default;
-            if (params.drive === undefined) {
-                params.drive = KNOB_PARAMS.drive.default;
-                delete params.modulation;
-            }
-            if (params.decay === undefined) {
-                params.decay = params.release !== undefined ? params.release : KNOB_PARAMS.decay.default;
-                delete params.release;
-            }
-        });
-    }
+
     if (!pattern.mutedTracks) pattern.mutedTracks = new Array(ROWS).fill(false);
     if (!pattern.soloedTracks) pattern.soloedTracks = new Array(ROWS).fill(false);
     if (!pattern.scale) pattern.scale = DEFAULT_SCALE;
-    if (pattern.bpm === undefined) pattern.bpm = DEFAULT_BPM;
 }
 
 // Load state from localStorage
@@ -174,15 +183,14 @@ export function loadState() {
                     scale: state.scale
                 };
 
-                migratePatternGrid(oldPattern);
-                migratePatternFields(oldPattern);
-
+                // Create initial bank
                 const patterns = [oldPattern];
                 for (let i = 1; i < MAX_PATTERNS; i++) {
                     patterns.push(createDefaultPattern());
                 }
 
-                return {
+                // Initial partial state
+                const newState = {
                     currentPattern: 0,
                     nextPattern: null,
                     masterVolume: state.masterVolume !== undefined ? state.masterVolume : -12,
@@ -191,9 +199,13 @@ export function loadState() {
                     patterns,
                     chain: new Array(CHAIN_LENGTH).fill(null)
                 };
+
+                // Let the next block handle global migration
+                // We just need to make sure loop keys are valid
+                Object.assign(state, newState);
             }
 
-            // === Already new format: migrate each pattern ===
+            // === Already new format: ensure basic structure ===
             if (state.currentPattern === undefined) state.currentPattern = 0;
             if (state.nextPattern === undefined) state.nextPattern = null;
             if (state.masterVolume === undefined) state.masterVolume = -12;
@@ -206,15 +218,39 @@ export function loadState() {
                 state.patterns.push(createDefaultPattern());
             }
 
-            // Migrate each pattern
+            // === Migration: Hoist BPM and TrackParams to global if missing ===
+            if (state.bpm === undefined || state.trackParams === undefined) {
+                // Determine source pattern used for migration
+                const sourceIndex = state.currentPattern || 0;
+                const sourcePattern = state.patterns[sourceIndex] || state.patterns[0];
+
+                if (state.bpm === undefined) {
+                    state.bpm = sourcePattern.bpm !== undefined ? sourcePattern.bpm : DEFAULT_BPM;
+                }
+
+                if (state.trackParams === undefined) {
+                    state.trackParams = sourcePattern.trackParams
+                        ? JSON.parse(JSON.stringify(sourcePattern.trackParams))
+                        : createDefaultTrackParams();
+
+                    // Run migration on hoisted params
+                    state.trackParams = migrateTrackParams(state.trackParams);
+                }
+            }
+
+            // Ensure chain exists
+            if (!state.chain) {
+                state.chain = new Array(CHAIN_LENGTH).fill(null);
+            }
+
+            // Migrate each pattern (Grid + Local settings) and CLEANUP global props
             for (let i = 0; i < state.patterns.length; i++) {
                 migratePatternGrid(state.patterns[i]);
                 migratePatternFields(state.patterns[i]);
-            }
 
-            // Migrate: add chain if missing
-            if (!state.chain) {
-                state.chain = new Array(CHAIN_LENGTH).fill(null);
+                // Cleanup: Remove global props from individual patterns
+                delete state.patterns[i].bpm;
+                delete state.patterns[i].trackParams;
             }
 
             return state;
@@ -235,7 +271,9 @@ export function createDefaultState() {
     return {
         currentPattern: 0,
         nextPattern: null,
+        bpm: DEFAULT_BPM,
         masterVolume: -12,
+        trackParams: createDefaultTrackParams(),
         repeatEnabled: true,
         chainEnabled: true,
         patterns,

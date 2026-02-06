@@ -1099,9 +1099,11 @@ body.playing #credit-btn:hover {
     }
 
     #chain-container {
-        gap: 2px;
+        gap: 4px;
         padding: 2px 0 0;
         min-height: 24px;
+        flex-wrap: wrap;
+        justify-content: center;
     }
 
     .chain-arrow {
@@ -1669,6 +1671,7 @@ body.playing #credit-btn:hover {
     0% {
         opacity: 0.4;
     }
+
     100% {
         opacity: 1;
     }

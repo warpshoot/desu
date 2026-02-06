@@ -5,7 +5,7 @@ export const TRACKS = [
         color: '#ff4444',
         type: 'membrane',
         baseFreq: 'C1',
-        defaultParams: { tune: -12, cutoff: 1000, resonance: 1, drive: 15, decay: 0.4, vol: 1.0 } // Thick & Strong
+        defaultParams: { tune: -12, cutoff: 1000, resonance: 1, drive: 10, decay: 0.4, vol: 0.9 } // Thick & Strong
     },
     {
         name: 'Snare',
@@ -26,7 +26,7 @@ export const TRACKS = [
         color: '#bb66ff',
         type: 'fm',
         baseFreq: 'C2',
-        defaultParams: { tune: -12, cutoff: 4000, resonance: 1, drive: 20, decay: 0.3, vol: 1.6 } // Thick
+        defaultParams: { tune: -12, cutoff: 4000, resonance: 1, drive: 15, decay: 0.3, vol: 1.1 } // Thick
     },
     {
         name: 'Lead',
@@ -59,12 +59,12 @@ export const DEFAULT_ROLL_SUBDIVISION = 4;
 
 // Knob parameter ranges
 export const KNOB_PARAMS = {
-    tune:      { min: -24, max: 24, default: 0, scale: 'linear', sensitivity: 150 },
-    cutoff:    { min: 100, max: 16000, default: 4000, scale: 'log', sensitivity: 250 },
+    tune: { min: -24, max: 24, default: 0, scale: 'linear', sensitivity: 150 },
+    cutoff: { min: 100, max: 16000, default: 4000, scale: 'log', sensitivity: 250 },
     resonance: { min: 0.5, max: 15, default: 1, scale: 'log', sensitivity: 200 },
-    drive:     { min: 0, max: 100, default: 0, scale: 'linear', sensitivity: 200 },
-    decay:     { min: 0.01, max: 2.0, default: 0.3, scale: 'log', sensitivity: 250 },
-    vol:       { min: 0, max: 2.0, default: 0.7, scale: 'linear', sensitivity: 150 }
+    drive: { min: 0, max: 100, default: 0, scale: 'linear', sensitivity: 200 },
+    decay: { min: 0.01, max: 2.0, default: 0.3, scale: 'log', sensitivity: 250 },
+    vol: { min: 0, max: 2.0, default: 0.7, scale: 'linear', sensitivity: 150 }
 };
 
 // Storage key
@@ -106,10 +106,10 @@ export const DEFAULT_SCALE = 'Chromatic';
 
 export const TRACK_PRESETS = {
     0: { // Kick (Membrane)
-        '1': { tune: -12, cutoff: 1000, resonance: 1, drive: 15, decay: 0.4, vol: 1.0 },   // Thick & Strong
-        '2': { tune: -18, cutoff: 600, resonance: 0.5, drive: 10, decay: 0.8, vol: 1.2 },   // Sub/Deep 808
-        '3': { tune: 0, cutoff: 3000, resonance: 8, drive: 40, decay: 0.1, vol: 0.8 },      // Punchy/Clicky
-        '4': { tune: -8, cutoff: 2000, resonance: 3, drive: 70, decay: 0.3, vol: 0.9 }      // Distorted
+        '1': { tune: -12, cutoff: 1000, resonance: 1, drive: 10, decay: 0.4, vol: 0.9 },   // Thick & Strong
+        '2': { tune: -18, cutoff: 600, resonance: 0.5, drive: 5, decay: 0.8, vol: 1.0 },   // Sub/Deep 808
+        '3': { tune: 0, cutoff: 3000, resonance: 8, drive: 30, decay: 0.1, vol: 0.7 },      // Punchy/Clicky
+        '4': { tune: -8, cutoff: 2000, resonance: 3, drive: 60, decay: 0.3, vol: 0.8 }      // Distorted
     },
     1: { // Snare (Noise)
         '1': { tune: 0, cutoff: 8000, resonance: 1, drive: 0, decay: 0.2, vol: 0.7 },       // Standard
@@ -124,10 +124,10 @@ export const TRACK_PRESETS = {
         '4': { tune: -6, cutoff: 6000, resonance: 1, drive: 10, decay: 0.1, vol: 0.7 }       // Shaker
     },
     3: { // Bass (FM - Triangle)
-        '1': { tune: -12, cutoff: 4000, resonance: 1, drive: 20, decay: 0.3, vol: 1.6 },     // Thick
-        '2': { tune: -12, cutoff: 1200, resonance: 0.5, drive: 0, decay: 0.5, vol: 2.0 },    // Sub
-        '3': { tune: 0, cutoff: 2000, resonance: 12, drive: 50, decay: 0.15, vol: 1.4 },     // Acid
-        '4': { tune: 12, cutoff: 4000, resonance: 2, drive: 15, decay: 0.08, vol: 1.2 }      // Pluck
+        '1': { tune: -12, cutoff: 4000, resonance: 1, drive: 15, decay: 0.3, vol: 1.1 },     // Thick
+        '2': { tune: -12, cutoff: 1200, resonance: 0.5, drive: 0, decay: 0.5, vol: 1.3 },    // Sub
+        '3': { tune: 0, cutoff: 2000, resonance: 12, drive: 40, decay: 0.15, vol: 1.0 },     // Acid
+        '4': { tune: 12, cutoff: 4000, resonance: 2, drive: 10, decay: 0.08, vol: 1.0 }      // Pluck
     },
     4: { // Lead (FM)
         '1': { tune: 0, cutoff: 4000, resonance: 1, drive: 0, decay: 0.3, vol: 0.7 },        // Soft

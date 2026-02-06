@@ -172,10 +172,8 @@ export class Controls {
         // Clear button
         if (this.clearBtn) {
             this.clearBtn.addEventListener('click', () => {
-                if (window.confirm('全ての設定とグリッドをリセットしますか？')) {
-                    if (this.onClear) {
-                        this.onClear();
-                    }
+                if (this.onClear) {
+                    this.onClear();
                 }
             });
         }
