@@ -1776,6 +1776,46 @@ body.playing .chain-slot.playing {
     background: #444;
 }
 
+/* Chain toggle button */
+#chain-toggle {
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: 2px solid #333;
+    color: #555;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin-right: 4px;
+}
+
+#chain-toggle:hover {
+    border-color: #666;
+    color: #888;
+}
+
+#chain-toggle.active {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+}
+
+/* Chain disabled: gray out slots */
+#chain-container.chain-disabled .chain-slot {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+#chain-container.chain-disabled .chain-arrow {
+    opacity: 0.3;
+}
+
 /* Chain arrow indicators */
 .chain-arrow {
     display: flex;
@@ -1802,6 +1842,13 @@ body.playing .chain-arrow {
         font-size: 11px;
     }
 
+    #chain-toggle {
+        width: 28px;
+        height: 28px;
+        font-size: 9px;
+        margin-right: 2px;
+    }
+
     .chain-arrow {
         font-size: 8px;
     }
@@ -1823,5 +1870,12 @@ body.playing .chain-arrow {
         width: 24px;
         height: 24px;
         font-size: 10px;
+    }
+
+    #chain-toggle {
+        width: 24px;
+        height: 24px;
+        font-size: 8px;
+        margin-right: 2px;
     }
 }
