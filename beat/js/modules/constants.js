@@ -44,6 +44,7 @@ export const COLS = 16;
 // Pattern bank
 export const MAX_PATTERNS = 8;
 export const PATTERN_NAMES = ['1', '2', '3', '4', '5', '6', '7', '8'];
+export const CHAIN_LENGTH = 8;
 
 // Default values
 export const DEFAULT_BPM = 120;

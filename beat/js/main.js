@@ -1,4 +1,4 @@
-import { ROWS, COLS, TAP_THRESHOLD, TRACKS, KNOB_PARAMS, DEFAULT_BPM, DEFAULT_SCALE, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, MAX_PATTERNS, PATTERN_NAMES } from './modules/constants.js';
+import { ROWS, COLS, TAP_THRESHOLD, TRACKS, KNOB_PARAMS, DEFAULT_BPM, DEFAULT_SCALE, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, MAX_PATTERNS, PATTERN_NAMES, CHAIN_LENGTH } from './modules/constants.js';
 import { AudioEngine } from './modules/audioEngine.js';
 import { Cell } from './modules/cell.js';
 import { Controls } from './modules/controls.js';
@@ -39,6 +39,10 @@ class Sequencer {
         // Pattern copy buffer
         this.patternCopyBuffer = null;
 
+        // Chain playback state (runtime only, not persisted)
+        this.chainPosition = -1; // -1 = not playing chain
+        this.chainSlots = [];
+
         this.init();
     }
 
@@ -69,6 +73,24 @@ class Sequencer {
                 if (this.dancer) {
                     this.dancer.classList.add('playing');
                 }
+                // Start chain from first filled slot
+                if (this.isChainActive() && this.chainPosition === -1) {
+                    this.chainPosition = this.getFirstChainPosition();
+                    const targetPattern = this.state.chain[this.chainPosition];
+                    if (targetPattern !== this.state.currentPattern) {
+                        this.state.currentPattern = targetPattern;
+                        const gridContainer = document.getElementById('grid-container');
+                        if (gridContainer) gridContainer.innerHTML = '';
+                        this.createGrid();
+                        this.syncAudioWithState();
+                        this.controls.setBPM(this.pattern.bpm);
+                        this.controls.setSwing(this.pattern.swingEnabled);
+                        this.controls.setScale(this.pattern.scale);
+                        this.setupTrackControls();
+                        this.updatePatternPadUI();
+                    }
+                    this.updateChainUI();
+                }
             },
             () => {
                 this.clearPlayheads();
@@ -76,11 +98,7 @@ class Sequencer {
                     this.dancer.classList.remove('playing');
                 }
             },
-            null, // onLoopToggle (removed)
-            (scaleName) => { // onScaleChange
-                this.pattern.scale = scaleName;
-                saveState(this.state);
-            },
+            null, // unused
             (scaleName) => { // onScaleChange
                 this.pattern.scale = scaleName;
                 saveState(this.state);
@@ -140,9 +158,11 @@ class Sequencer {
             this.resetDanceAnimation();
             this.closeDJMode(true);
 
-            // Clear next pattern queue on stop
+            // Clear next pattern queue and chain position on stop
             this.state.nextPattern = null;
+            this.chainPosition = -1;
             this.updatePatternPadUI();
+            this.updateChainUI();
         });
 
         // Initialize dance animation
@@ -156,6 +176,9 @@ class Sequencer {
 
         // Initialize Pattern Bank UI
         this.initPatternBank();
+
+        // Initialize Chain UI
+        this.initChainUI();
 
         // Global two-finger detection for pan scrolling
         window.addEventListener('touchstart', (e) => {
@@ -420,6 +443,130 @@ class Sequencer {
 
         saveState(this.state);
         this.updatePatternPadUI();
+    }
+
+    // ========================
+    // Pattern Chain
+    // ========================
+
+    initChainUI() {
+        this.chainSlots = [];
+        const container = document.getElementById('chain-container');
+        if (!container) return;
+
+        // Ensure chain data exists
+        if (!this.state.chain) {
+            this.state.chain = new Array(CHAIN_LENGTH).fill(null);
+        }
+
+        for (let i = 0; i < CHAIN_LENGTH; i++) {
+            if (i > 0) {
+                const arrow = document.createElement('span');
+                arrow.className = 'chain-arrow';
+                arrow.textContent = '>';
+                container.appendChild(arrow);
+            }
+
+            const slot = document.createElement('button');
+            slot.className = 'chain-slot';
+            slot.dataset.index = i;
+
+            slot.addEventListener('click', () => {
+                this.onChainSlotTap(i);
+            });
+
+            container.appendChild(slot);
+            this.chainSlots.push(slot);
+        }
+
+        this.updateChainUI();
+    }
+
+    onChainSlotTap(index) {
+        const current = this.state.chain[index];
+
+        if (current === null) {
+            // Empty → set to 0 (pattern 1)
+            this.state.chain[index] = 0;
+        } else if (current < MAX_PATTERNS - 1) {
+            // Cycle through patterns
+            this.state.chain[index] = current + 1;
+        } else {
+            // Last pattern → clear
+            this.state.chain[index] = null;
+        }
+
+        saveState(this.state);
+        this.updateChainUI();
+    }
+
+    isChainActive() {
+        return this.state.chain && this.state.chain.some(s => s !== null);
+    }
+
+    advanceChain() {
+        if (!this.isChainActive()) return;
+
+        // Find next filled slot
+        const nextPos = this.getNextChainPosition(this.chainPosition);
+        if (nextPos === -1) return; // No filled slots (shouldn't happen)
+
+        this.chainPosition = nextPos;
+        const targetPattern = this.state.chain[nextPos];
+
+        // Switch pattern if different
+        if (targetPattern !== this.state.currentPattern) {
+            this.state.currentPattern = targetPattern;
+            this.state.nextPattern = null;
+
+            // Rebuild UI for new pattern
+            const gridContainer = document.getElementById('grid-container');
+            if (gridContainer) gridContainer.innerHTML = '';
+            this.createGrid();
+
+            // Sync audio
+            this.syncAudioWithState();
+
+            // Update controls
+            this.controls.setBPM(this.pattern.bpm);
+            this.controls.setSwing(this.pattern.swingEnabled);
+            this.controls.setScale(this.pattern.scale);
+            this.setupTrackControls();
+        }
+
+        this.updatePatternPadUI();
+        this.updateChainUI();
+    }
+
+    getFirstChainPosition() {
+        for (let i = 0; i < CHAIN_LENGTH; i++) {
+            if (this.state.chain[i] !== null) return i;
+        }
+        return -1;
+    }
+
+    getNextChainPosition(currentPos) {
+        // Search from currentPos + 1, wrapping around
+        for (let offset = 1; offset <= CHAIN_LENGTH; offset++) {
+            const idx = (currentPos + offset) % CHAIN_LENGTH;
+            if (this.state.chain[idx] !== null) {
+                return idx;
+            }
+        }
+        return -1;
+    }
+
+    updateChainUI() {
+        if (!this.chainSlots.length) return;
+
+        for (let i = 0; i < CHAIN_LENGTH; i++) {
+            const slot = this.chainSlots[i];
+            const value = this.state.chain[i];
+
+            slot.classList.toggle('filled', value !== null);
+            slot.classList.toggle('playing', i === this.chainPosition && this.audioEngine.playing);
+            slot.textContent = value !== null ? PATTERN_NAMES[value] : '';
+        }
     }
 
     // ========================
@@ -817,12 +964,17 @@ class Sequencer {
             }
         }
 
-        // Check if we need to perform queued pattern switch at end of bar
-        if (this.state.nextPattern !== null && step === COLS - 1) {
-            // Schedule switch on next step (will take effect before next onStep fires)
-            requestAnimationFrame(() => {
-                this.performQueuedSwitch();
-            });
+        // At end of bar: chain advance or queued pattern switch
+        if (step === COLS - 1) {
+            if (this.isChainActive()) {
+                requestAnimationFrame(() => {
+                    this.advanceChain();
+                });
+            } else if (this.state.nextPattern !== null) {
+                requestAnimationFrame(() => {
+                    this.performQueuedSwitch();
+                });
+            }
         }
 
         // Update dance animation
