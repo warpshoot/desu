@@ -282,6 +282,16 @@ body.playing #credit-btn:hover {
     }
 }
 
+.track-icon.cleared {
+    animation: trackCleared 0.3s ease-out;
+}
+
+@keyframes trackCleared {
+    0% { background: #333; }
+    50% { background: #ff4444; opacity: 0.6; }
+    100% { background: #333; }
+}
+
 #grid-wrapper {
     display: flex;
     flex-direction: column;
@@ -1074,11 +1084,11 @@ body.playing #credit-btn:hover {
         height: 50px;
     }
 
-    /* Reduced beat spacing */
+    /* No beat spacing in portrait - save horizontal space */
     .cell[data-step="3"],
     .cell[data-step="7"],
     .cell[data-step="11"] {
-        margin-right: 3px;
+        margin-right: 0;
     }
 
     .pitch-indicator {
@@ -1598,6 +1608,11 @@ body.playing #credit-btn:hover {
     /* Black border inverts to White */
     animation: play-sprite 0.8s steps(8) infinite;
     cursor: pointer;
+}
+
+/* Paused: freeze animation in place */
+#visualizer-display.paused {
+    animation-play-state: paused;
 }
 
 /* Standby (Momentary): 2px border */

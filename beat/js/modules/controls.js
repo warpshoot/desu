@@ -295,7 +295,7 @@ export class Controls {
             }
         }
         document.body.classList.remove('playing'); // Disable dark mode
-        // No onStop call here as it's just pause
+        if (this.onPause) this.onPause();
     }
 
     async stop() {
