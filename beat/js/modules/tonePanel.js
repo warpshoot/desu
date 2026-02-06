@@ -95,12 +95,9 @@ export class TonePanel {
         this.currentTrack = track;
         this.element.classList.remove('hidden');
 
-        // Clear existing knobs
+        // Properly destroy existing knobs
         Object.values(this.knobs).forEach(knob => {
-            // Remove event listeners by replacing canvas
-            const oldCanvas = knob.canvas;
-            const newCanvas = oldCanvas.cloneNode(true);
-            oldCanvas.parentNode.replaceChild(newCanvas, oldCanvas);
+            knob.destroy();
         });
         this.knobs = {};
 
@@ -108,6 +105,11 @@ export class TonePanel {
         const knobElements = this.element.querySelectorAll('.knob');
         knobElements.forEach(canvas => {
             const param = canvas.dataset.param;
+            // Ensure canvas has proper dimensions
+            if (!canvas.width || !canvas.height) {
+                canvas.width = 80;
+                canvas.height = 80;
+            }
             const knob = new Knob(canvas, param, params[param], (value) => {
                 this.onKnobChange(param, value);
             });
