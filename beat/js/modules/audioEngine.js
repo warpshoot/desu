@@ -13,6 +13,7 @@ export class AudioEngine {
 
         // Audio chain components
         this.instruments = [];
+        this.distortions = [];
         this.filters = [];
         this.gains = [];
         this.limiter = null;
@@ -138,6 +139,12 @@ export class AudioEngine {
                     break;
             }
 
+            // Create distortion (drive knob)
+            const distortion = new Tone.Distortion({
+                distortion: 0,
+                oversample: '2x'
+            });
+
             // Create filter
             const filter = new Tone.Filter({
                 frequency: (i === 1 || i === 2) ? 8000 : 2000,
@@ -162,12 +169,14 @@ export class AudioEngine {
 
             const gain = new Tone.Gain(initialGain);
 
-            // Connect: instrument -> filter -> gain -> djHPF -> djLPF -> djDelay -> limiter
-            instrument.connect(filter);
+            // Connect: instrument -> distortion -> filter -> gain -> djHPF -> djLPF -> djDelay -> limiter
+            instrument.connect(distortion);
+            distortion.connect(filter);
             filter.connect(gain);
             gain.connect(this.djHPF);
 
             this.instruments.push(instrument);
+            this.distortions.push(distortion);
             this.filters.push(filter);
             this.gains.push(gain);
         }
@@ -316,34 +325,18 @@ export class AudioEngine {
         if (params.resonance !== undefined) {
             this.filters[track].Q.rampTo(params.resonance, 0.1);
         }
-        if (params.release !== undefined) {
+        if (params.decay !== undefined) {
             const instrument = this.instruments[track];
             if (instrument.envelope) {
-                instrument.envelope.release = params.release;
+                instrument.envelope.decay = params.decay;
             } else if (instrument.voice && instrument.voice.envelope) {
                 // For PolySynth
-                instrument.set({ envelope: { release: params.release } });
+                instrument.set({ envelope: { decay: params.decay } });
             }
         }
-        if (params.modulation !== undefined) {
-            const instrument = this.instruments[track];
-            const trackType = TRACKS[track].type;
-
-            if (trackType === 'membrane') {
-                // Kick: modulate pitch decay
-                instrument.pitchDecay = 0.01 + (params.modulation / 100) * 0.1;
-            } else if (trackType === 'noise') {
-                // Snare: modulate noise color (brown to white)
-                const types = ['brown', 'pink', 'white'];
-                const index = Math.floor((params.modulation / 100) * (types.length - 1));
-                instrument.noise.type = types[index];
-            } else if (trackType === 'metal') {
-                // Hi-hat: modulate harmonicity
-                if (instrument.harmonicity.rampTo) instrument.harmonicity.rampTo(3 + (params.modulation / 100) * 5, 0.1);
-                else instrument.harmonicity = 3 + (params.modulation / 100) * 5;
-            } else if (trackType === 'fm') {
-                // Synth: modulate FM depth
-                instrument.set({ modulationIndex: (params.modulation / 100) * 20 });
+        if (params.drive !== undefined) {
+            if (this.distortions[track]) {
+                this.distortions[track].distortion = params.drive / 100;
             }
         }
         if (params.tune !== undefined) {
@@ -396,6 +389,7 @@ export class AudioEngine {
     dispose() {
         this.stop();
         this.instruments.forEach(inst => inst.dispose());
+        this.distortions.forEach(d => d.dispose());
         this.filters.forEach(f => f.dispose());
         this.gains.forEach(g => g.dispose());
         if (this.djLPF) this.djLPF.dispose();

@@ -72,6 +72,20 @@ export function loadState() {
                 }
             }
 
+            // Migration: Rename modulation->drive, release->decay in trackParams
+            if (state.trackParams) {
+                state.trackParams.forEach((params, i) => {
+                    if (params.drive === undefined) {
+                        params.drive = KNOB_PARAMS.drive.default;
+                        delete params.modulation;
+                    }
+                    if (params.decay === undefined) {
+                        params.decay = params.release !== undefined ? params.release : KNOB_PARAMS.decay.default;
+                        delete params.release;
+                    }
+                });
+            }
+
             // Migration: Add missing fields
             if (state.swingEnabled === undefined) {
                 state.swingEnabled = DEFAULT_SWING_ENABLED;
@@ -97,8 +111,8 @@ export function loadState() {
                         tune: defaults.tune !== undefined ? defaults.tune : KNOB_PARAMS.tune.default,
                         cutoff: defaults.cutoff !== undefined ? defaults.cutoff : KNOB_PARAMS.cutoff.default,
                         resonance: defaults.resonance !== undefined ? defaults.resonance : KNOB_PARAMS.resonance.default,
-                        modulation: defaults.modulation !== undefined ? defaults.modulation : KNOB_PARAMS.modulation.default,
-                        release: defaults.release !== undefined ? defaults.release : KNOB_PARAMS.release.default,
+                        drive: defaults.drive !== undefined ? defaults.drive : KNOB_PARAMS.drive.default,
+                        decay: defaults.decay !== undefined ? defaults.decay : KNOB_PARAMS.decay.default,
                         vol: defaults.vol !== undefined ? defaults.vol : KNOB_PARAMS.vol.default
                     };
                 }
@@ -158,8 +172,8 @@ export function createDefaultState() {
             tune: defaults.tune !== undefined ? defaults.tune : KNOB_PARAMS.tune.default,
             cutoff: defaults.cutoff !== undefined ? defaults.cutoff : KNOB_PARAMS.cutoff.default,
             resonance: defaults.resonance !== undefined ? defaults.resonance : KNOB_PARAMS.resonance.default,
-            modulation: defaults.modulation !== undefined ? defaults.modulation : KNOB_PARAMS.modulation.default,
-            release: defaults.release !== undefined ? defaults.release : KNOB_PARAMS.release.default,
+            drive: defaults.drive !== undefined ? defaults.drive : KNOB_PARAMS.drive.default,
+            decay: defaults.decay !== undefined ? defaults.decay : KNOB_PARAMS.decay.default,
             vol: defaults.vol !== undefined ? defaults.vol : KNOB_PARAMS.vol.default
         };
     }
