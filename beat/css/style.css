@@ -1030,8 +1030,193 @@ body.playing #credit-btn:hover {
 }
 
 @media (orientation: portrait) and (max-width: 768px) {
+
+    /* Remove portrait blocker - portrait is now supported */
     #rotate-prompt {
-        display: flex;
+        display: none !important;
+    }
+
+    /* Container */
+    #sequencer-container {
+        padding: 40px 4px 140px;
+        gap: 4px;
+        overflow-x: auto;
+        overflow-y: auto;
+    }
+
+    /* Sequencer main */
+    #sequencer-main {
+        padding: 3px;
+        gap: 3px;
+    }
+
+    /* Track icons - compact for portrait width */
+    .track-icon {
+        width: 20px;
+        height: 50px;
+        font-size: 11px;
+    }
+
+    /* Hide mute/solo buttons to save width */
+    .track-ctrls {
+        display: none;
+    }
+
+    /* Grid - compact cells to fit portrait width */
+    #grid-container {
+        grid-template-columns: repeat(16, 18px);
+        grid-template-rows: repeat(5, 50px);
+        gap: 1px;
+    }
+
+    .cell {
+        width: 18px;
+        height: 50px;
+    }
+
+    /* Reduced beat spacing */
+    .cell[data-step="3"],
+    .cell[data-step="7"],
+    .cell[data-step="11"] {
+        margin-right: 3px;
+    }
+
+    .pitch-indicator {
+        height: 2px;
+    }
+
+    /* Pattern bank compact */
+    .pattern-pad {
+        height: 22px;
+        font-size: 10px;
+    }
+
+    /* Chain compact */
+    .chain-slot {
+        width: 24px;
+        height: 24px;
+        font-size: 10px;
+    }
+
+    #chain-container {
+        gap: 2px;
+        padding: 2px 0 0;
+        min-height: 24px;
+    }
+
+    .chain-arrow {
+        font-size: 8px;
+    }
+
+    /* Controls - 2 row grid layout */
+    #controls {
+        height: auto;
+        display: grid;
+        grid-template-columns: auto auto auto auto;
+        grid-template-rows: auto auto;
+        gap: 4px 6px;
+        padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Flatten control-group so children participate in grid */
+    .control-group {
+        display: contents;
+    }
+
+    /* Row 1: transport controls */
+    .control-stack {
+        grid-row: 1;
+        grid-column: 1;
+    }
+
+    #play-pause-btn {
+        grid-row: 1;
+        grid-column: 2;
+    }
+
+    #stop-btn {
+        grid-row: 1;
+        grid-column: 3;
+    }
+
+    #swing-btn {
+        grid-row: 1;
+        grid-column: 4;
+    }
+
+    /* Row 2: BPM, Volume, File */
+    #bpm-ctrl {
+        grid-row: 2;
+        grid-column: 1;
+        min-width: auto;
+    }
+
+    #volume-ctrl {
+        grid-row: 2;
+        grid-column: 2 / 4;
+        width: auto;
+    }
+
+    #file-btn {
+        grid-row: 2;
+        grid-column: 4;
+        width: 36px;
+        height: 36px;
+    }
+
+    /* Hide non-essential controls on portrait */
+    #visualizer-display {
+        display: none;
+    }
+
+    #clear-btn {
+        display: none;
+    }
+
+    #scale-ctrl {
+        display: none !important;
+    }
+
+    /* Control button sizes */
+    .control-btn {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+    }
+
+    .control-btn-sm {
+        width: 44px;
+        height: 20px;
+        font-size: 9px;
+    }
+
+    #bpm-drag-value {
+        font-size: 14px;
+    }
+
+    /* Credit button */
+    #credit-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+    }
+
+    /* Tone panel */
+    #tone-panel {
+        padding: 12px;
+        width: 90%;
+        max-width: 300px;
+    }
+
+    .knob-row {
+        gap: 12px;
+    }
+
+    .knob {
+        width: 50px !important;
+        height: 50px !important;
     }
 }
 
