@@ -1064,51 +1064,42 @@ class Sequencer {
     }
 
     updateDJAudio(deltaX, deltaY) {
-        // All 4 directions produce distinct, audible effects:
-        //   UP    (deltaY > 0) : High-pass filter sweep (cuts bass)
-        //   DOWN  (deltaY < 0) : Low-pass filter sweep (cuts treble)
-        //   RIGHT (deltaX > 0) : Resonance boost (filter peak)
-        //   LEFT  (deltaX < 0) : Delay / echo effect
+        // Kaoss Pad style mapping:
+        //   X left  (deltaX < 0) : HPF sweep (cuts bass)
+        //   X right (deltaX > 0) : LPF sweep (cuts treble)
+        //   Y up    (deltaY > 0) : Resonance + Delay (effect depth)
+        //   Y down  (deltaY < 0) : Neutral (dry)
 
         const absX = Math.abs(deltaX);
         const absY = Math.abs(deltaY);
 
-        // --- Y Axis: Dual Filter ---
+        // --- X Axis: Filter Sweep ---
         let lpfCutoff = 20000; // fully open
         let hpfCutoff = 20;    // fully open
 
-        if (deltaY < 0) {
-            // Drag DOWN: LPF sweep (remove treble)
-            // absY range ~0-0.5, map aggressively to 20000 → 200 Hz
-            const factor = Math.pow(0.001, Math.min(absY * 2, 1));
+        if (deltaX > 0) {
+            // Drag RIGHT: LPF sweep (remove treble)
+            const factor = Math.pow(0.001, Math.min(absX * 2, 1));
             lpfCutoff = 20000 * factor;
             lpfCutoff = Math.max(200, lpfCutoff);
-        } else if (deltaY > 0) {
-            // Drag UP: HPF sweep (remove bass)
-            // absY range ~0-0.5, map to 20 → 6000 Hz
-            const factor = Math.pow(300, Math.min(absY * 2, 1));
+        } else if (deltaX < 0) {
+            // Drag LEFT: HPF sweep (remove bass)
+            const factor = Math.pow(300, Math.min(absX * 2, 1));
             hpfCutoff = 20 * factor;
             hpfCutoff = Math.min(6000, hpfCutoff);
         }
 
-        // --- X Axis: Resonance (right) + Delay (left) ---
-        const baseQ = 1.0;
-        let resonance = baseQ;
+        // --- Y Axis: Effect Depth (resonance + delay) ---
+        let resonance = 1.0;
         let delayWet = 0;
 
-        if (deltaX > 0) {
-            // Drag RIGHT: Resonance boost
-            resonance = baseQ + (absX * 28); // range 1-15
+        if (deltaY > 0) {
+            // Drag UP: resonance peaks on active filter + delay echo
+            resonance = 1.0 + (absY * 28);
             resonance = Math.min(15, resonance);
-        } else if (deltaX < 0) {
-            // Drag LEFT: Delay effect
-            delayWet = Math.min(0.7, absX * 2.5);
-            // Also add mild resonance for character
-            resonance = baseQ + (absX * 8);
-            resonance = Math.min(6, resonance);
+            delayWet = Math.min(0.6, absY * 2);
         }
-
-        // Diagonal combos naturally work: e.g. down-right = filtered + resonant
+        // deltaY <= 0: neutral, no extra effect
 
         this.audioEngine.setDJFilter(lpfCutoff, hpfCutoff, resonance, delayWet);
     }
