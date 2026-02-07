@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Draw</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="/desu/favicon.js"></script>
+</head>
+<body>
+    <div id="app">
+        <div id="panel">
+            <div id="panel-header">
+                <h1>AI Draw</h1>
+                <div id="actions">
+                    <button id="renderBtn">Render</button>
+                    <button id="loadFileBtn">Load JSON</button>
+                    <button id="exportPngBtn" disabled>Export PNG</button>
+                    <button id="exportJsonBtn" disabled>Export JSON</button>
+                </div>
+            </div>
+            <textarea id="jsonInput" spellcheck="false" placeholder="Paste drawing JSON here..."></textarea>
+            <div id="status"></div>
+            <input type="file" id="fileInput" accept=".json" style="display:none;">
+        </div>
+        <div id="canvas-area">
+            <canvas id="canvas"></canvas>
+            <div id="drop-hint">Drop JSON file here</div>
+        </div>
+    </div>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

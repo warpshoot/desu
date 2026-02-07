@@ -1,0 +1,142 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a1a;
+    color: #e0e0e0;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#app {
+    display: flex;
+    height: 100vh;
+}
+
+/* Left panel */
+#panel {
+    width: 420px;
+    min-width: 320px;
+    display: flex;
+    flex-direction: column;
+    background: #222;
+    border-right: 1px solid #333;
+}
+
+#panel-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #333;
+}
+
+#panel-header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #fff;
+}
+
+#actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+#actions button {
+    padding: 6px 12px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: #333;
+    color: #e0e0e0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+#actions button:hover:not(:disabled) {
+    background: #444;
+}
+
+#actions button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+#renderBtn {
+    background: #2563eb !important;
+    border-color: #3b82f6 !important;
+    color: #fff !important;
+}
+
+#renderBtn:hover {
+    background: #1d4ed8 !important;
+}
+
+#jsonInput {
+    flex: 1;
+    padding: 12px;
+    background: #1a1a1a;
+    color: #d4d4d4;
+    border: none;
+    font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    tab-size: 2;
+}
+
+#status {
+    padding: 8px 16px;
+    font-size: 11px;
+    color: #888;
+    border-top: 1px solid #333;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+}
+
+#status.error { color: #ef4444; }
+#status.success { color: #22c55e; }
+
+/* Canvas area */
+#canvas-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: #111;
+    /* checkerboard for transparency */
+    background-image:
+        linear-gradient(45deg, #1a1a1a 25%, transparent 25%),
+        linear-gradient(-45deg, #1a1a1a 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #1a1a1a 75%),
+        linear-gradient(-45deg, transparent 75%, #1a1a1a 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+#canvas {
+    max-width: 90%;
+    max-height: 90%;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+
+#drop-hint {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(37, 99, 235, 0.15);
+    border: 2px dashed #3b82f6;
+    color: #3b82f6;
+    font-size: 18px;
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 10;
+}
+
+#drop-hint.visible {
+    display: flex;
+}
