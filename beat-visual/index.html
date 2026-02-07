@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beat Visual</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="/desu/favicon.js"></script>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div id="controls">
+        <button id="loadBtn" title="Load JSON">LOAD</button>
+        <button id="playBtn" title="Play/Pause" disabled>PLAY</button>
+        <button id="stopBtn" title="Stop" disabled>STOP</button>
+        <span id="info"></span>
+    </div>
+
+    <div id="step-display">
+        <div id="step-dots"></div>
+    </div>
+
+    <input type="file" id="fileInput" accept=".json" style="display:none;">
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
