@@ -101,6 +101,14 @@ class Sequencer {
             },
             (scaleName) => { // onScaleChange
                 this.pattern.scale = scaleName;
+                // Update all cell visuals to reflect new scale
+                for (let track = 0; track < ROWS; track++) {
+                    for (let step = 0; step < COLS; step++) {
+                        if (this.cells[track] && this.cells[track][step]) {
+                            this.cells[track][step].updateVisuals();
+                        }
+                    }
+                }
                 saveState(this.state);
             },
             () => { // onInit (called when audioEngine is first initialized)

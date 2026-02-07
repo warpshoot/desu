@@ -97,8 +97,9 @@ export class Controls {
 
 
     setScale(scaleName) {
-        if (this.scaleSelect && SCALES[scaleName]) {
-            this.scaleSelect.value = scaleName;
+        const name = scaleName || 'Chromatic';
+        if (this.scaleSelect && SCALES[name]) {
+            this.scaleSelect.value = name;
         }
     }
     setupEvents() {
