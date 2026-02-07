@@ -330,8 +330,9 @@ export class Cell {
             return;
         }
 
-        // Brightness based on pitch
-        const pitchNormalized = (this.data.pitch - PITCH_RANGE.min) / (PITCH_RANGE.max - PITCH_RANGE.min);
+        // Brightness based on effective pitch (scale-snapped)
+        const effectivePitch = this.getEffectivePitch ? this.getEffectivePitch() : this.data.pitch;
+        const pitchNormalized = (effectivePitch - PITCH_RANGE.min) / (PITCH_RANGE.max - PITCH_RANGE.min);
         const brightness = BRIGHTNESS_RANGE.min + pitchNormalized * (BRIGHTNESS_RANGE.max - BRIGHTNESS_RANGE.min);
         this.element.style.filter = `brightness(${brightness})`;
 
@@ -349,10 +350,10 @@ export class Cell {
 
         // Octave indicator
 
-        // Pitch indicator
+        // Pitch indicator (uses effective pitch to match actual playback)
         if (this.data.active) {
             const range = PITCH_RANGE.max - PITCH_RANGE.min;
-            const normalized = (this.data.pitch - PITCH_RANGE.min) / range;
+            const normalized = (effectivePitch - PITCH_RANGE.min) / range;
             // 0% at bottom, 100% at top. top 0 is top.
             // When pitch is max (24), top should be 0. When pitch is min (0), top should be 100%.
             const topPercent = (1 - normalized) * 90; // Use 90% to avoid sticking to bottom
