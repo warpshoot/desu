@@ -914,6 +914,7 @@ function flashLayer(layerId) {
         flashCanvas.style.pointerEvents = 'none';
         flashCanvas.style.zIndex = '50'; // Above layers
         flashCanvas.style.transition = 'opacity 0.2s';
+        flashCanvas.style.transformOrigin = '0 0'; // Match layer transform origin
 
         // Append to layer container to ensure correct stacking context if needed,
         // or just to body/layer-container. MUST be sibling to layers to share transform context?
