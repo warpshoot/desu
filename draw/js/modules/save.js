@@ -4,6 +4,29 @@ import {
     canvasBg
 } from './state.js';
 
+// Share or download a blob file (iOS Safari compatible)
+async function shareOrDownload(blob, fileName) {
+    if (navigator.canShare) {
+        const file = new File([blob], fileName, { type: blob.type });
+        try {
+            if (navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file] });
+                return;
+            }
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+        }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function exitSaveMode() {
     try {
         state.isSaveMode = false;
@@ -130,16 +153,7 @@ export async function saveRegion(x, y, w, h) {
 
         const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
         const fileName = 'desu_draw_' + Date.now() + '.png';
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        await shareOrDownload(blob, fileName);
         exitSaveMode();
     } catch (err) {
         console.error('保存エラー:', err);
@@ -216,16 +230,7 @@ export async function copyToClipboard(x, y, w, h) {
             try {
                 const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
                 const fileName = 'desu_draw_' + Date.now() + '.png';
-
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                await shareOrDownload(blob, fileName);
             } catch (downloadErr) {
                 console.error('ダウンロードエラー:', downloadErr);
                 alert('画像のダウンロードにも失敗しました: ' + downloadErr.message);

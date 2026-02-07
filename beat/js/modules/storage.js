@@ -287,14 +287,30 @@ export function getCurrentPattern(state) {
 }
 
 // Export state as JSON file
-export function exportProject(state) {
+export async function exportProject(state) {
     const data = JSON.stringify(state, null, 2);
+    const timestamp = new Date().toISOString().replace(/:/g, '-').slice(0, 19);
+    const filename = `beat_project_${timestamp}.json`;
+
+    // Use Web Share API on iOS Safari (Blob download doesn't save to Files app)
+    if (navigator.canShare) {
+        const file = new File([data], filename, { type: 'application/json' });
+        try {
+            if (navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file] });
+                return;
+            }
+        } catch (e) {
+            if (e.name === 'AbortError') return; // User cancelled share
+        }
+    }
+
+    // Fallback: traditional download
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const timestamp = new Date().toISOString().replace(/:/g, '-').slice(0, 19);
-    a.download = `beat_project_${timestamp}.json`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
