@@ -14,12 +14,11 @@ export class Chain {
         const container = document.getElementById('chain-container');
         if (!container) return;
 
-        const state = this.seq.state;
-        if (!state.chain) {
-            state.chain = new Array(CHAIN_LENGTH).fill(null);
+        if (!this.seq.state.chain) {
+            this.seq.state.chain = new Array(CHAIN_LENGTH).fill(null);
         }
-        if (state.chainEnabled === undefined) {
-            state.chainEnabled = true;
+        if (this.seq.state.chainEnabled === undefined) {
+            this.seq.state.chainEnabled = true;
         }
 
         // CH toggle button
@@ -34,20 +33,20 @@ export class Chain {
             chDidLongPress = false;
             chPressTimer = setTimeout(() => {
                 chDidLongPress = true;
-                state.chain = new Array(CHAIN_LENGTH).fill(null);
+                this.seq.state.chain = new Array(CHAIN_LENGTH).fill(null);
                 this.chainPosition = -1;
-                saveState(state);
+                saveState(this.seq.state);
                 this.updateUI();
             }, 500);
         };
         const chEndPress = () => {
             clearTimeout(chPressTimer);
             if (!chDidLongPress) {
-                state.chainEnabled = !state.chainEnabled;
-                if (!state.chainEnabled) {
+                this.seq.state.chainEnabled = !this.seq.state.chainEnabled;
+                if (!this.seq.state.chainEnabled) {
                     this.chainPosition = -1;
                 }
-                saveState(state);
+                saveState(this.seq.state);
                 this.updateUI();
             }
         };
