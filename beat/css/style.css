@@ -1109,15 +1109,23 @@ body.playing #credit-btn:hover {
     }
 
     #chain-container {
-        gap: 4px;
+        gap: 3px;
         padding: 2px 0 0;
         min-height: 24px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: center;
     }
 
-    .chain-arrow {
+    #chain-toggle {
+        width: auto;
+        height: 24px;
+        padding: 0 4px;
         font-size: 8px;
+        margin-right: 2px;
+    }
+
+    .chain-arrow {
+        display: none;
     }
 
     /* Controls - 2 row grid layout */
@@ -1796,7 +1804,7 @@ body.playing .chain-slot.playing {
 
 /* Chain toggle button */
 #chain-toggle {
-    width: 36px;
+    width: auto;
     height: 36px;
     background: transparent;
     border: 2px solid #333;
@@ -1809,7 +1817,7 @@ body.playing .chain-slot.playing {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
+    padding: 0 6px;
     margin-right: 4px;
 }
 
@@ -1861,8 +1869,9 @@ body.playing .chain-arrow {
     }
 
     #chain-toggle {
-        width: 28px;
+        width: auto;
         height: 28px;
+        padding: 0 4px;
         font-size: 9px;
         margin-right: 2px;
     }
@@ -1891,8 +1900,9 @@ body.playing .chain-arrow {
     }
 
     #chain-toggle {
-        width: 24px;
+        width: auto;
         height: 24px;
+        padding: 0 3px;
         font-size: 8px;
         margin-right: 2px;
     }

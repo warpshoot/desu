@@ -482,7 +482,7 @@ class Sequencer {
         // CH toggle button
         this.chainToggleBtn = document.createElement('button');
         this.chainToggleBtn.id = 'chain-toggle';
-        this.chainToggleBtn.textContent = 'CH';
+        this.chainToggleBtn.textContent = 'CHAIN';
 
         let chPressTimer = null;
         let chDidLongPress = false;
