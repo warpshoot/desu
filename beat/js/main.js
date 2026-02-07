@@ -299,6 +299,8 @@ class Sequencer {
                     this.audioEngine.stop();
                     this.restoreState();
                     this.patternBank.updateUI();
+                    this.chain.chainPosition = -1;
+                    this.chain.updateUI();
                     fileInput.value = '';
                 } catch (err) {
                     alert('Failed to load project.');
