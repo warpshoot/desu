@@ -1576,13 +1576,29 @@ function saveSelection(selection, copy = false) {
 }
 
 // Export Project (JSON)
-function exportProject() {
+async function exportProject() {
     const data = JSON.stringify(grid);
+    const filename = 'desu_pattern_' + Date.now() + '.json';
+
+    // Use Web Share API on iOS Safari (Blob download doesn't save to Files app)
+    if (navigator.canShare) {
+        const file = new File([data], filename, { type: 'application/json' });
+        try {
+            if (navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file] });
+                return;
+            }
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+        }
+    }
+
+    // Fallback: traditional download
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'desu_pattern_' + Date.now() + '.json';
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
 }

@@ -125,14 +125,28 @@ export async function exportProject() {
         }
 
         const json = JSON.stringify(data);
+        const filename = 'desu_drawing_' + Date.now() + '.json';
+
+        // Use Web Share API on iOS Safari (Blob download doesn't save to Files app)
+        if (navigator.canShare) {
+            const file = new File([json], filename, { type: 'application/json' });
+            try {
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file] });
+                    return true;
+                }
+            } catch (e) {
+                if (e.name === 'AbortError') return true;
+            }
+        }
+
+        // Fallback: traditional download
         const blob = new Blob([json], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'desu_drawing_' + Date.now() + '.json';
+        a.download = filename;
         a.click();
-
         URL.revokeObjectURL(url);
         return true;
     } catch (e) {
