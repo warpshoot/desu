@@ -1124,7 +1124,7 @@ body.playing #credit-btn:hover {
         margin-right: 2px;
     }
 
-    .chain-arrow {
+    #chain-container .chain-arrow {
         display: none;
     }
 
