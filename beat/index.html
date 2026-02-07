@@ -165,10 +165,7 @@
     <!-- Controls -->
     <div id="controls">
         <div class="control-group">
-            <div class="control-stack">
-                <button id="rec-btn" class="control-btn-sm" title="Record">REC</button>
-                <button id="repeat-btn" class="control-btn-sm active" title="Repeat">RPT</button>
-            </div>
+            <button id="rec-btn" class="control-btn" title="Record">REC</button>
 
             <button id="play-pause-btn" class="control-btn" title="Play/Pause (Space)">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -183,7 +180,10 @@
                 </svg>
             </button>
 
-            <button id="swing-btn" class="control-btn">SWG</button>
+            <div class="control-stack">
+                <button id="swing-btn" class="control-btn-sm" title="Swing">SWG</button>
+                <button id="repeat-btn" class="control-btn-sm active" title="Repeat">RPT</button>
+            </div>
         </div>
 
         <!-- Animation Placeholder (Restored) -->

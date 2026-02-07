@@ -352,7 +352,7 @@ body.playing #credit-btn:hover {
 }
 
 .cell.active {
-    border-color: transparent;
+    border-color: rgba(255, 255, 255, 0.15);
 }
 
 #note-indicator {
@@ -430,8 +430,8 @@ body.playing #credit-btn:hover {
 }
 
 .cell.active {
-    background: #555;
-    border-color: transparent;
+    background: #666;
+    border-color: rgba(255, 255, 255, 0.15);
 }
 
 /* Playhead indicator */
@@ -593,6 +593,13 @@ body.playing #credit-btn:hover {
     color: #000;
     background: #fff;
     border-color: #fff;
+}
+
+/* REC button - full size, font styling */
+#rec-btn {
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
 }
 
 /* Stacked small buttons (REC + RPT) */
@@ -886,18 +893,23 @@ body.playing #credit-btn:hover {
         padding: 12px;
     }
 
-    #play-pause-btn {
+    #rec-btn {
         grid-column: 1;
         grid-row: 1;
     }
 
-    #stop-btn {
+    #play-pause-btn {
         grid-column: 2;
         grid-row: 1;
     }
 
-    #swing-btn {
+    #stop-btn {
         grid-column: 3;
+        grid-row: 1;
+    }
+
+    .control-stack {
+        grid-column: 4;
         grid-row: 1;
     }
 
@@ -1146,7 +1158,7 @@ body.playing #credit-btn:hover {
     }
 
     /* Row 1: transport controls */
-    .control-stack {
+    #rec-btn {
         grid-row: 1;
         grid-column: 1;
     }
@@ -1161,7 +1173,7 @@ body.playing #credit-btn:hover {
         grid-column: 3;
     }
 
-    #swing-btn {
+    .control-stack {
         grid-row: 1;
         grid-column: 4;
     }
@@ -1579,6 +1591,8 @@ body.playing #credit-btn:hover {
     z-index: 10;
     width: 48px;
     height: 48px;
+    aspect-ratio: 1 / 1;
+    flex-shrink: 0;
     border-radius: 50%;
     margin: 0 10px;
 
@@ -1682,7 +1696,7 @@ body.playing #credit-btn:hover {
     background: #000;
     color: #fff;
     font-weight: 900;
-    border-bottom-color: transparent;
+    border-bottom: 2px solid #fff;
 }
 
 .pattern-pad.queued {
