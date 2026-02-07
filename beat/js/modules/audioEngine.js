@@ -45,9 +45,9 @@ export class AudioEngine {
     }
 
     presetSettings(settings) {
-        if (settings.trackVolumes) this.trackVolumes = settings.trackVolumes;
-        if (settings.mutedTracks) this.mutedTracks = settings.mutedTracks;
-        if (settings.soloedTracks) this.soloedTracks = settings.soloedTracks;
+        if (settings.trackVolumes) this.trackVolumes = [...settings.trackVolumes];
+        if (settings.mutedTracks) this.mutedTracks = [...settings.mutedTracks];
+        if (settings.soloedTracks) this.soloedTracks = [...settings.soloedTracks];
     }
 
     async init() {
