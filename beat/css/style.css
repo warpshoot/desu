@@ -227,7 +227,15 @@ body.playing #credit-btn:hover {
     transition: all 0.1s ease;
 }
 
-.track-ctrls button:hover {
+@media (hover: hover) {
+    .track-ctrls button:hover {
+        background: #333;
+        color: #fff;
+        border-color: #666;
+    }
+}
+
+.track-ctrls button:active {
     background: #333;
     color: #fff;
     border-color: #666;
@@ -245,10 +253,12 @@ body.playing #credit-btn:hover {
     border: 1px solid #000;
 }
 
-.track-icon:hover {
-    border-color: #666;
-    transform: scale(1.05);
-    background: #222;
+@media (hover: hover) {
+    .track-icon:hover {
+        border-color: #666;
+        transform: scale(1.05);
+        background: #222;
+    }
 }
 
 .track-icon.active {
