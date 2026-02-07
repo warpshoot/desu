@@ -792,13 +792,16 @@ class Sequencer {
             soloBtn.parentNode.replaceChild(newSoloBtn, soloBtn);
 
             if (newMuteBtn && newSoloBtn) {
+                // Clear any previous state
+                newMuteBtn.classList.remove('active');
+                newSoloBtn.classList.remove('active');
+
+                // Set new state from pattern
                 if (pat.mutedTracks && pat.mutedTracks[i]) {
                     newMuteBtn.classList.add('active');
-                    this.audioEngine.setTrackMute(i, true);
                 }
                 if (pat.soloedTracks && pat.soloedTracks[i]) {
                     newSoloBtn.classList.add('active');
-                    this.audioEngine.setTrackSolo(i, true);
                 }
 
                 newMuteBtn.addEventListener('click', (e) => {
