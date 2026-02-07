@@ -4,6 +4,9 @@ import { Cell } from './modules/cell.js';
 import { Controls } from './modules/controls.js';
 import { TonePanel } from './modules/tonePanel.js';
 import { loadState, saveState, createDefaultState, createDefaultPattern, getCurrentPattern, exportProject, importProject } from './modules/storage.js';
+import { PatternBank } from './modules/patternBank.js';
+import { Chain } from './modules/chain.js';
+import { DJMode } from './modules/djMode.js';
 
 class Sequencer {
     constructor() {
@@ -12,8 +15,6 @@ class Sequencer {
         this.audioEngine = new AudioEngine();
 
         // Preset audio settings
-        // Sounds/BPM from Global State
-        // Mute/Solo from Pattern (Local)
         const pat = getCurrentPattern(this.state);
         const volumes = this.state.trackParams ? this.state.trackParams.map(p => p.vol) : undefined;
         this.audioEngine.presetSettings({
@@ -31,19 +32,10 @@ class Sequencer {
         this.danceFrame = 0;
         this.dancer = null;
 
-        // DJ Mode state
-        this.djModeActive = false;
-        this.djOverlay = null;
-        this.djCursor = null;
-        this.djFilterValue = null;
-        this.djResValue = null;
-
-        // Pattern copy buffer
-        this.patternCopyBuffer = null;
-
-        // Chain playback state (runtime only, not persisted)
-        this.chainPosition = -1; // -1 = not playing chain
-        this.chainSlots = [];
+        // Modules
+        this.patternBank = new PatternBank(this);
+        this.chain = new Chain(this);
+        this.djMode = new DJMode(this);
 
         this.init();
     }
@@ -78,25 +70,23 @@ class Sequencer {
                     this.dancer.classList.remove('paused');
                 }
                 // Start chain from first filled slot
-                if (this.isChainActive() && this.chainPosition === -1 && this.state.chainEnabled !== false) {
-                    this.chainPosition = this.getFirstChainPosition();
-                    const targetPattern = this.state.chain[this.chainPosition];
+                if (this.chain.isActive() && this.chain.chainPosition === -1 && this.state.chainEnabled !== false) {
+                    this.chain.chainPosition = this.chain.getFirstPosition();
+                    const targetPattern = this.state.chain[this.chain.chainPosition];
                     if (targetPattern !== this.state.currentPattern) {
                         this.state.currentPattern = targetPattern;
                         const gridContainer = document.getElementById('grid-container');
                         if (gridContainer) gridContainer.innerHTML = '';
                         this.createGrid();
-                        // Only partial sync (Mutes etc) - Global settings persist
                         this.syncAudioWithState();
 
-                        // Controls update
                         this.controls.setBPM(this.state.bpm);
                         this.controls.setSwing(this.pattern.swingEnabled);
                         this.controls.setScale(this.pattern.scale);
                         this.setupTrackControls();
-                        this.updatePatternPadUI();
+                        this.patternBank.updateUI();
                     }
-                    this.updateChainUI();
+                    this.chain.updateUI();
                 }
             },
             () => {
@@ -173,13 +163,13 @@ class Sequencer {
                 this.controls.resetUI();
             }
             this.resetDanceAnimation();
-            this.closeDJMode(true);
+            this.djMode.close(true);
 
             // Clear next pattern queue and chain position on stop
             this.state.nextPattern = null;
-            this.chainPosition = -1;
-            this.updatePatternPadUI();
-            this.updateChainUI();
+            this.chain.chainPosition = -1;
+            this.patternBank.updateUI();
+            this.chain.updateUI();
         });
 
         // Initialize dance animation
@@ -188,14 +178,10 @@ class Sequencer {
             this.danceFrame = 0;
         }
 
-        // Initialize DJ Mode
-        this.initDJMode();
-
-        // Initialize Pattern Bank UI
-        this.initPatternBank();
-
-        // Initialize Chain UI
-        this.initChainUI();
+        // Initialize modules
+        this.djMode.init();
+        this.patternBank.init();
+        this.chain.init();
 
         // Global two-finger detection for pan scrolling
         window.addEventListener('touchstart', (e) => {
@@ -249,433 +235,6 @@ class Sequencer {
     }
 
     // ========================
-    // Pattern Bank
-    // ========================
-
-    initPatternBank() {
-        this.patternPads = [];
-        const container = document.getElementById('pattern-bank');
-        if (!container) return;
-
-        for (let i = 0; i < MAX_PATTERNS; i++) {
-            const pad = document.createElement('button');
-            pad.className = 'pattern-pad';
-            pad.dataset.pattern = i;
-            pad.textContent = PATTERN_NAMES[i];
-
-            // Tap: switch pattern
-            pad.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.onPatternPadTap(i);
-            });
-
-            // Long press: context menu (copy/paste/clear)
-            let longPressTimer = null;
-            const startLongPress = (e) => {
-                longPressTimer = setTimeout(() => {
-                    e.preventDefault();
-                    this.showPatternContextMenu(i, pad);
-                }, 500);
-            };
-            const cancelLongPress = () => {
-                clearTimeout(longPressTimer);
-            };
-
-            pad.addEventListener('mousedown', startLongPress);
-            pad.addEventListener('mouseup', cancelLongPress);
-            pad.addEventListener('mouseleave', cancelLongPress);
-            pad.addEventListener('touchstart', (e) => {
-                startLongPress(e);
-            }, { passive: false });
-            pad.addEventListener('touchend', cancelLongPress);
-            pad.addEventListener('touchmove', cancelLongPress);
-
-            container.appendChild(pad);
-            this.patternPads.push(pad);
-        }
-
-        // Initialize context menu element
-        this.patternMenu = document.getElementById('pattern-menu');
-        if (this.patternMenu) {
-            document.getElementById('pattern-copy').addEventListener('click', () => {
-                this.copyPattern(this.patternMenuTarget);
-                this.hidePatternMenu();
-            });
-            document.getElementById('pattern-paste').addEventListener('click', () => {
-                this.pastePattern(this.patternMenuTarget);
-                this.hidePatternMenu();
-            });
-            document.getElementById('pattern-clear').addEventListener('click', () => {
-                this.clearPatternSlot(this.patternMenuTarget);
-                this.hidePatternMenu();
-            });
-
-            // Close on outside click
-            document.addEventListener('click', (e) => {
-                if (this.patternMenu && !this.patternMenu.contains(e.target)) {
-                    this.hidePatternMenu();
-                }
-            });
-        }
-
-        this.updatePatternPadUI();
-    }
-
-    onPatternPadTap(index) {
-        if (index === this.state.currentPattern && this.state.nextPattern === null) return;
-
-        if (this.audioEngine.playing) {
-            // Queue pattern switch at loop end
-            if (index === this.state.currentPattern) {
-                // Cancel queue
-                this.state.nextPattern = null;
-            } else {
-                this.state.nextPattern = index;
-            }
-            this.updatePatternPadUI();
-            saveState(this.state);
-        } else {
-            // Immediate switch when stopped
-            this.switchToPattern(index);
-        }
-    }
-
-    switchToPattern(index) {
-        if (index < 0 || index >= MAX_PATTERNS) return;
-
-        this.state.currentPattern = index;
-        this.state.nextPattern = null;
-
-        // Restore UI from new pattern
-        this.restoreState();
-
-        saveState(this.state);
-        this.updatePatternPadUI();
-    }
-
-    // Called from onStep when we reach loop end - performs the queued switch
-    performQueuedSwitch() {
-        if (this.state.nextPattern === null) return;
-
-        const nextIdx = this.state.nextPattern;
-        this.state.currentPattern = nextIdx;
-        this.state.nextPattern = null;
-
-        // Update grid UI
-        const gridContainer = document.getElementById('grid-container');
-        if (gridContainer) gridContainer.innerHTML = '';
-        this.createGrid();
-
-        // Sync audio params
-        this.syncAudioWithState();
-
-        // Update controls to reflect new pattern's settings (Local Only)
-        // BPM/Volume/TrackParams are global, so no update needed
-        this.controls.setSwing(this.pattern.swingEnabled);
-        this.controls.setScale(this.pattern.scale);
-
-        // Update track controls (mute/solo)
-        this.setupTrackControls();
-
-        this.updatePatternPadUI();
-        saveState(this.state);
-    }
-
-    updatePatternPadUI() {
-        if (!this.patternPads) return;
-
-        for (let i = 0; i < this.patternPads.length; i++) {
-            const pad = this.patternPads[i];
-            pad.classList.remove('active', 'queued', 'has-data');
-
-            if (i === this.state.currentPattern) {
-                pad.classList.add('active');
-            }
-            if (i === this.state.nextPattern) {
-                pad.classList.add('queued');
-            }
-            // Check if pattern has any active steps
-            if (this.isPatternNonEmpty(i)) {
-                pad.classList.add('has-data');
-            }
-        }
-    }
-
-    isPatternNonEmpty(index) {
-        const pat = this.state.patterns[index];
-        if (!pat || !pat.grid) return false;
-        for (let t = 0; t < pat.grid.length; t++) {
-            for (let s = 0; s < pat.grid[t].length; s++) {
-                if (pat.grid[t][s].active) return true;
-            }
-        }
-        return false;
-    }
-
-    showPatternContextMenu(index, padElement) {
-        this.patternMenuTarget = index;
-        if (!this.patternMenu) return;
-
-        // Enable/disable paste
-        const pasteBtn = document.getElementById('pattern-paste');
-        if (pasteBtn) {
-            pasteBtn.classList.toggle('disabled', !this.patternCopyBuffer);
-        }
-
-        const rect = padElement.getBoundingClientRect();
-        this.patternMenu.style.left = `${rect.left}px`;
-        this.patternMenu.style.top = `${rect.top - this.patternMenu.offsetHeight - 4}px`;
-        this.patternMenu.classList.remove('hidden');
-    }
-
-    hidePatternMenu() {
-        if (this.patternMenu) {
-            this.patternMenu.classList.add('hidden');
-        }
-    }
-
-    copyPattern(index) {
-        this.patternCopyBuffer = JSON.parse(JSON.stringify(this.state.patterns[index]));
-    }
-
-    pastePattern(index) {
-        if (!this.patternCopyBuffer) return;
-        this.state.patterns[index] = JSON.parse(JSON.stringify(this.patternCopyBuffer));
-
-        // If pasting to current pattern, refresh UI
-        if (index === this.state.currentPattern) {
-            this.restoreState();
-        }
-
-        saveState(this.state);
-        this.updatePatternPadUI();
-    }
-
-    clearPatternSlot(index) {
-        this.state.patterns[index] = createDefaultPattern();
-
-        if (index === this.state.currentPattern) {
-            this.restoreState();
-        }
-
-        saveState(this.state);
-        this.updatePatternPadUI();
-    }
-
-    // ========================
-    // Pattern Chain
-    // ========================
-
-    initChainUI() {
-        this.chainSlots = [];
-        const container = document.getElementById('chain-container');
-        if (!container) return;
-
-        // Ensure chain data exists
-        if (!this.state.chain) {
-            this.state.chain = new Array(CHAIN_LENGTH).fill(null);
-        }
-        if (this.state.chainEnabled === undefined) {
-            this.state.chainEnabled = true;
-        }
-
-        // CH toggle button
-        this.chainToggleBtn = document.createElement('button');
-        this.chainToggleBtn.id = 'chain-toggle';
-        this.chainToggleBtn.textContent = 'CHAIN';
-
-        let chPressTimer = null;
-        let chDidLongPress = false;
-
-        const chStartPress = () => {
-            chDidLongPress = false;
-            chPressTimer = setTimeout(() => {
-                chDidLongPress = true;
-                // Long press: clear all chain slots
-                this.state.chain = new Array(CHAIN_LENGTH).fill(null);
-                this.chainPosition = -1;
-                saveState(this.state);
-                this.updateChainUI();
-            }, 500);
-        };
-        const chEndPress = () => {
-            clearTimeout(chPressTimer);
-            if (!chDidLongPress) {
-                this.state.chainEnabled = !this.state.chainEnabled;
-                if (!this.state.chainEnabled) {
-                    this.chainPosition = -1;
-                }
-                saveState(this.state);
-                this.updateChainUI();
-            }
-        };
-        const chCancelPress = () => { clearTimeout(chPressTimer); };
-
-        this.chainToggleBtn.addEventListener('mousedown', chStartPress);
-        this.chainToggleBtn.addEventListener('mouseup', chEndPress);
-        this.chainToggleBtn.addEventListener('mouseleave', chCancelPress);
-        this.chainToggleBtn.addEventListener('touchstart', chStartPress, { passive: true });
-        this.chainToggleBtn.addEventListener('touchend', (e) => { e.preventDefault(); chEndPress(); });
-        this.chainToggleBtn.addEventListener('touchcancel', chCancelPress);
-
-        container.appendChild(this.chainToggleBtn);
-
-        for (let i = 0; i < CHAIN_LENGTH; i++) {
-            if (i > 0) {
-                const arrow = document.createElement('span');
-                arrow.className = 'chain-arrow';
-                arrow.textContent = '>';
-                container.appendChild(arrow);
-            }
-
-            const slot = document.createElement('button');
-            slot.className = 'chain-slot';
-            slot.dataset.index = i;
-
-            let pressTimer = null;
-            let didLongPress = false;
-
-            const startPress = (e) => {
-                didLongPress = false;
-                pressTimer = setTimeout(() => {
-                    didLongPress = true;
-                    this.onChainSlotClear(i);
-                }, 500);
-            };
-
-            const endPress = (e) => {
-                clearTimeout(pressTimer);
-                if (!didLongPress) {
-                    this.onChainSlotTap(i);
-                }
-            };
-
-            const cancelPress = () => {
-                clearTimeout(pressTimer);
-            };
-
-            slot.addEventListener('mousedown', startPress);
-            slot.addEventListener('mouseup', endPress);
-            slot.addEventListener('mouseleave', cancelPress);
-            slot.addEventListener('touchstart', startPress, { passive: true });
-            slot.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                endPress(e);
-            });
-            slot.addEventListener('touchcancel', cancelPress);
-
-            container.appendChild(slot);
-            this.chainSlots.push(slot);
-        }
-
-        this.updateChainUI();
-    }
-
-    onChainSlotClear(index) {
-        if (this.state.chain[index] !== null) {
-            this.state.chain[index] = null;
-            saveState(this.state);
-            this.updateChainUI();
-        }
-    }
-
-    onChainSlotTap(index) {
-        const current = this.state.chain[index];
-
-        if (current === null) {
-            // Empty → set to 0 (pattern 1)
-            this.state.chain[index] = 0;
-        } else if (current < MAX_PATTERNS - 1) {
-            // Cycle through patterns
-            this.state.chain[index] = current + 1;
-        } else {
-            // Last pattern → clear
-            this.state.chain[index] = null;
-        }
-
-        saveState(this.state);
-        this.updateChainUI();
-    }
-
-    isChainActive() {
-        return this.state.chainEnabled !== false && this.state.chain && this.state.chain.some(s => s !== null);
-    }
-
-    advanceChain() {
-        if (!this.isChainActive()) return;
-
-        // Find next filled slot
-        const nextPos = this.getNextChainPosition(this.chainPosition);
-        if (nextPos === -1) return; // No filled slots (shouldn't happen)
-
-        this.chainPosition = nextPos;
-        const targetPattern = this.state.chain[nextPos];
-
-        // Switch pattern if different
-        if (targetPattern !== this.state.currentPattern) {
-            this.state.currentPattern = targetPattern;
-            this.state.nextPattern = null;
-
-            // Rebuild UI for new pattern
-            const gridContainer = document.getElementById('grid-container');
-            if (gridContainer) gridContainer.innerHTML = '';
-            this.createGrid();
-
-            // Sync audio
-            this.syncAudioWithState();
-
-            // Update controls
-            this.controls.setBPM(this.pattern.bpm);
-            this.controls.setSwing(this.pattern.swingEnabled);
-            this.controls.setScale(this.pattern.scale);
-            this.setupTrackControls();
-        }
-
-        this.updatePatternPadUI();
-        this.updateChainUI();
-    }
-
-    getFirstChainPosition() {
-        for (let i = 0; i < CHAIN_LENGTH; i++) {
-            if (this.state.chain[i] !== null) return i;
-        }
-        return -1;
-    }
-
-    getNextChainPosition(currentPos) {
-        // Search from currentPos + 1, wrapping around
-        for (let offset = 1; offset <= CHAIN_LENGTH; offset++) {
-            const idx = (currentPos + offset) % CHAIN_LENGTH;
-            if (this.state.chain[idx] !== null) {
-                return idx;
-            }
-        }
-        return -1;
-    }
-
-    updateChainUI() {
-        if (!this.chainSlots.length) return;
-
-        const enabled = this.state.chainEnabled !== false;
-        const container = document.getElementById('chain-container');
-        if (container) {
-            container.classList.toggle('chain-disabled', !enabled);
-        }
-        if (this.chainToggleBtn) {
-            this.chainToggleBtn.classList.toggle('active', enabled);
-        }
-
-        for (let i = 0; i < CHAIN_LENGTH; i++) {
-            const slot = this.chainSlots[i];
-            const value = this.state.chain[i];
-
-            slot.classList.toggle('filled', value !== null);
-            slot.classList.toggle('playing', enabled && i === this.chainPosition && this.audioEngine.playing);
-            slot.textContent = value !== null ? PATTERN_NAMES[value] : '';
-        }
-    }
-
-    // ========================
     // File UI
     // ========================
 
@@ -715,7 +274,7 @@ class Sequencer {
                 this.state = createDefaultState();
                 this.audioEngine.stop();
                 this.restoreState();
-                this.updatePatternPadUI();
+                this.patternBank.updateUI();
                 saveState(this.state);
                 fileMenu.classList.add('hidden');
             }
@@ -739,7 +298,7 @@ class Sequencer {
                     this.state = newState;
                     this.audioEngine.stop();
                     this.restoreState();
-                    this.updatePatternPadUI();
+                    this.patternBank.updateUI();
                     fileInput.value = '';
                 } catch (err) {
                     alert('Failed to load project.');
@@ -844,7 +403,6 @@ class Sequencer {
 
         if (!this.clearMenuElement || !this.clearBtn) return;
 
-        // Menu button actions
         document.getElementById('clear-pattern-btn').addEventListener('click', () => {
             if (confirm('Clear current pattern steps and local settings?')) {
                 this.clearCurrentPattern();
@@ -859,7 +417,6 @@ class Sequencer {
             }
         });
 
-        // Close on outside click
         document.addEventListener('click', (e) => {
             if (!this.clearMenuElement.classList.contains('hidden') &&
                 !this.clearMenuElement.contains(e.target) &&
@@ -880,7 +437,6 @@ class Sequencer {
 
         this.clearMenuElement.classList.toggle('hidden');
 
-        // Close file menu if open
         const fileMenu = document.getElementById('file-menu');
         if (fileMenu && !fileMenu.classList.contains('hidden')) {
             fileMenu.classList.add('hidden');
@@ -891,8 +447,8 @@ class Sequencer {
         this.audioEngine.stop();
         this.state = createDefaultState();
         this.restoreState();
-        this.updatePatternPadUI();
-        this.updateChainUI(); // Also reset UI chain
+        this.patternBank.updateUI();
+        this.chain.updateUI();
         saveState(this.state);
 
         if (this.tonePanel && this.tonePanel.isOpen()) {
@@ -924,10 +480,6 @@ class Sequencer {
             });
         });
     }
-
-    // ========================
-    // Roll menu UI
-    // ========================
 
     showRollMenu(cell, x, y) {
         this.currentRollCell = cell;
@@ -1079,18 +631,13 @@ class Sequencer {
 
 
     clearCurrentPattern() {
-        // Stop playback first
         if (this.controls) {
             this.controls.stop();
         }
 
-        // Reset current pattern to defaults
         this.state.patterns[this.state.currentPattern] = createDefaultPattern();
-
-        // Rebuild UI
         this.restoreState();
 
-        // Update track controls
         document.querySelectorAll('.mute-btn, .solo-btn').forEach(btn => btn.classList.remove('active'));
         for (let i = 0; i < ROWS; i++) {
             this.audioEngine.setTrackMute(i, false);
@@ -1098,7 +645,7 @@ class Sequencer {
         }
 
         saveState(this.state);
-        this.updatePatternPadUI();
+        this.patternBank.updateUI();
 
         if (this.tonePanel && this.tonePanel.isOpen()) {
             this.tonePanel.close();
@@ -1117,7 +664,7 @@ class Sequencer {
             this.cells[trackIndex][step].updateVisuals();
         }
         saveState(this.state);
-        this.updatePatternPadUI();
+        this.patternBank.updateUI();
 
         // Flash feedback
         const icon = this.trackIcons[trackIndex];
@@ -1191,25 +738,22 @@ class Sequencer {
 
         // At end of bar: chain advance, queued pattern switch, or one-shot stop
         if (step === COLS - 1) {
-            if (this.isChainActive()) {
-                // Check if repeat is OFF and this is the last chain slot
+            if (this.chain.isActive()) {
                 const repeatEnabled = this.state.repeatEnabled !== false;
-                if (!repeatEnabled && this.getNextChainPosition(this.chainPosition) <= this.chainPosition) {
-                    // Reached end of chain — stop
+                if (!repeatEnabled && this.chain.getNextPosition(this.chain.chainPosition) <= this.chain.chainPosition) {
                     requestAnimationFrame(() => {
                         this.controls.stop();
                     });
                 } else {
                     requestAnimationFrame(() => {
-                        this.advanceChain();
+                        this.chain.advance();
                     });
                 }
             } else if (this.state.nextPattern !== null) {
                 requestAnimationFrame(() => {
-                    this.performQueuedSwitch();
+                    this.patternBank.performQueuedSwitch();
                 });
             } else if (this.state.repeatEnabled === false) {
-                // One-shot mode: stop after this bar
                 requestAnimationFrame(() => {
                     this.controls.stop();
                 });
@@ -1220,7 +764,7 @@ class Sequencer {
         this.updateDanceFrame();
 
         // DJ Standby Pulse
-        if (this.djState && this.djState.standby && this.dancer) {
+        if (this.djMode.djState && this.djMode.djState.standby && this.dancer) {
             if (step % 4 === 0) {
                 this.dancer.classList.add('pulse');
                 setTimeout(() => {
@@ -1323,208 +867,6 @@ class Sequencer {
         this.dancer.style.backgroundPosition = '0px 0px';
         this.dancer.classList.remove('playing');
         this.dancer.classList.remove('paused');
-    }
-
-    // ========================
-    // DJ Mode
-    // ========================
-
-    initDJMode() {
-        this.djOverlay = document.getElementById('dj-overlay');
-        this.djOrigin = document.getElementById('dj-origin');
-        this.djCurrent = document.getElementById('dj-current');
-        this.djLine = document.getElementById('dj-line');
-
-        if (!this.djOverlay || !this.dancer) return;
-
-        this.djState = {
-            mode: 0,
-            touching: false,
-            x: 0.5, y: 0.5,
-            startX: 0.5, startY: 0.5,
-            targetX: 0.5, targetY: 0.5
-        };
-
-        this.renderDJLoop = this.renderDJLoop.bind(this);
-        requestAnimationFrame(this.renderDJLoop);
-
-        this.dancer.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (this.audioEngine.playing) {
-                this.cycleDJMode();
-            }
-        });
-
-        const onStart = (e) => {
-            this.djState.touching = true;
-            const pos = this.getDJPosition(e);
-            this.djState.startX = pos.x;
-            this.djState.startY = pos.y;
-            this.djState.targetX = pos.x;
-            this.djState.targetY = pos.y;
-            this.djState.x = pos.x;
-            this.djState.y = pos.y;
-            this.djOrigin.classList.remove('hidden');
-            this.djCurrent.classList.remove('hidden');
-            this.djLine.classList.remove('hidden');
-            this.updateDJAudio(0, 0);
-        };
-
-        const onMove = (e) => {
-            if (!this.djState.touching) return;
-            e.preventDefault();
-            const pos = this.getDJPosition(e);
-            this.djState.targetX = pos.x;
-            this.djState.targetY = pos.y;
-        };
-
-        const onEnd = (e) => {
-            this.djState.touching = false;
-            this.djOrigin.classList.add('hidden');
-            this.djCurrent.classList.add('hidden');
-            this.djLine.classList.add('hidden');
-            this.audioEngine.resetDJFilter();
-            if (this.djState.mode === 1) {
-                this.closeDJMode(true);
-            }
-        };
-
-        this.djOverlay.addEventListener('mousedown', onStart);
-        this.djOverlay.addEventListener('mousemove', onMove);
-        this.djOverlay.addEventListener('mouseup', onEnd);
-        this.djOverlay.addEventListener('mouseleave', onEnd);
-
-        this.djOverlay.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1) {
-                e.preventDefault();
-                onStart(e);
-            }
-        }, { passive: false });
-
-        this.djOverlay.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 1) {
-                onMove(e);
-            }
-        }, { passive: false });
-
-        this.djOverlay.addEventListener('touchend', onEnd);
-    }
-
-    renderDJLoop() {
-        if (this.djState.mode > 0) {
-            const smoothing = 0.5;
-            this.djState.x += (this.djState.targetX - this.djState.x) * smoothing;
-            this.djState.y += (this.djState.targetY - this.djState.y) * smoothing;
-
-            if (this.djState.touching) {
-                const deltaX = this.djState.x - this.djState.startX;
-                const deltaY = this.djState.startY - this.djState.y;
-                this.updateDJAudio(deltaX, deltaY);
-                this.updateDJVisuals();
-            }
-        }
-        requestAnimationFrame(this.renderDJLoop);
-    }
-
-    getDJPosition(e) {
-        const rect = this.djOverlay.getBoundingClientRect();
-        let clientX, clientY;
-
-        if (e.touches && e.touches.length > 0) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-        } else {
-            clientX = e.clientX;
-            clientY = e.clientY;
-        }
-
-        const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-        const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
-
-        return { x, y };
-    }
-
-    updateDJVisuals() {
-        const { startX, startY, x, y } = this.djState;
-        const rect = this.djOverlay.getBoundingClientRect();
-
-        if (this.djOrigin) {
-            this.djOrigin.style.transform = `translate3d(${startX * rect.width}px, ${startY * rect.height}px, 0) translate(-50%, -50%)`;
-        }
-
-        if (this.djCurrent) {
-            this.djCurrent.style.transform = `translate3d(${x * rect.width}px, ${y * rect.height}px, 0) translate(-50%, -50%)`;
-        }
-
-        if (this.djLine) {
-            const p1 = { x: startX * rect.width, y: startY * rect.height };
-            const p2 = { x: x * rect.width, y: y * rect.height };
-
-            const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-
-            this.djLine.style.width = `${dist}px`;
-            this.djLine.style.transform = `translate3d(${p1.x}px, ${p1.y}px, 0) translateY(-50%) rotate(${angle}rad)`;
-        }
-    }
-
-    updateDJAudio(deltaX, deltaY) {
-        const absX = Math.abs(deltaX);
-        const absY = Math.abs(deltaY);
-
-        let lpfCutoff = 20000;
-        let hpfCutoff = 20;
-
-        if (deltaX > 0) {
-            const factor = Math.pow(0.001, Math.min(absX * 2, 1));
-            lpfCutoff = 20000 * factor;
-            lpfCutoff = Math.max(200, lpfCutoff);
-        } else if (deltaX < 0) {
-            const factor = Math.pow(300, Math.min(absX * 2, 1));
-            hpfCutoff = 20 * factor;
-            hpfCutoff = Math.min(6000, hpfCutoff);
-        }
-
-        let resonance = 1.0;
-        let delayWet = 0;
-
-        if (deltaY > 0) {
-            resonance = 1.0 + (absY * 28);
-            resonance = Math.min(15, resonance);
-            delayWet = Math.min(0.6, absY * 2);
-        }
-
-        this.audioEngine.setDJFilter(lpfCutoff, hpfCutoff, resonance, delayWet);
-    }
-
-    cycleDJMode() {
-        const nextMode = (this.djState.mode + 1) % 3;
-        this.djState.mode = nextMode;
-
-        this.dancer.classList.remove('standby');
-        this.dancer.classList.remove('dj-keep');
-
-        if (nextMode === 1) {
-            this.djOverlay.classList.remove('hidden');
-            this.dancer.classList.add('standby');
-        } else if (nextMode === 2) {
-            this.djOverlay.classList.remove('hidden');
-            this.dancer.classList.add('dj-keep');
-        } else {
-            this.closeDJMode(true);
-        }
-    }
-
-    closeDJMode(force = false) {
-        if (this.djState.mode === 2 && !force) return;
-
-        this.djState.mode = 0;
-        this.djOverlay.classList.add('hidden');
-        if (this.dancer) {
-            this.dancer.classList.remove('standby');
-            this.dancer.classList.remove('dj-keep');
-        }
-        this.audioEngine.resetDJFilter();
     }
 
     updateVisualizerSpeed(bpm) {
