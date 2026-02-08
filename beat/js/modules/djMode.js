@@ -202,9 +202,11 @@ export class DJMode {
 
         if (nextMode === 1) {
             this.djOverlay.classList.remove('hidden');
+            this.resizeRippleCanvas();
             dancer.classList.add('standby');
         } else if (nextMode === 2) {
             this.djOverlay.classList.remove('hidden');
+            this.resizeRippleCanvas();
             dancer.classList.add('dj-keep');
         } else {
             this.close(true);
