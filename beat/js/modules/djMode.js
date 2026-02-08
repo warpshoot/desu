@@ -6,6 +6,11 @@ export class DJMode {
         this.djCurrent = null;
         this.djLine = null;
         this.djState = null;
+
+        // Ripple effect
+        this.rippleCanvas = null;
+        this.rippleCtx = null;
+        this.ripples = [];
     }
 
     init() {
@@ -13,6 +18,14 @@ export class DJMode {
         this.djOrigin = document.getElementById('dj-origin');
         this.djCurrent = document.getElementById('dj-current');
         this.djLine = document.getElementById('dj-line');
+
+        // Ripple canvas
+        this.rippleCanvas = document.getElementById('dj-ripple-canvas');
+        if (this.rippleCanvas) {
+            this.rippleCtx = this.rippleCanvas.getContext('2d');
+            this.resizeRippleCanvas();
+            window.addEventListener('resize', () => this.resizeRippleCanvas());
+        }
 
         const dancer = this.seq.dancer;
         if (!this.djOverlay || !dancer) return;
@@ -102,6 +115,8 @@ export class DJMode {
                 this.updateAudio(deltaX, deltaY);
                 this.updateVisuals();
             }
+
+            this.renderRipples();
         }
         requestAnimationFrame(this.renderLoop);
     }
@@ -212,5 +227,66 @@ export class DJMode {
     /** Check if standby mode is active (used by onStep for beat pulse) */
     get isStandby() {
         return this.djState && this.djState.standby;
+    }
+
+    // --- Ripple Effect ---
+
+    resizeRippleCanvas() {
+        if (!this.rippleCanvas) return;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = this.djOverlay.getBoundingClientRect();
+        this.rippleCanvas.width = rect.width * dpr;
+        this.rippleCanvas.height = rect.height * dpr;
+        if (this.rippleCtx) {
+            this.rippleCtx.scale(dpr, dpr);
+        }
+    }
+
+    addRipple(intensity = 1.0) {
+        if (!this.djState || this.djState.mode === 0) return;
+        const rect = this.djOverlay.getBoundingClientRect();
+        this.ripples.push({
+            x: rect.width / 2,
+            y: rect.height / 2,
+            radius: 10,
+            maxRadius: Math.max(rect.width, rect.height) * 0.5 * intensity,
+            lineWidth: 2 + intensity * 3,
+            opacity: 0.6 * intensity,
+        });
+    }
+
+    renderRipples() {
+        if (!this.rippleCtx || this.ripples.length === 0) {
+            if (this.rippleCtx) {
+                const rect = this.djOverlay.getBoundingClientRect();
+                this.rippleCtx.clearRect(0, 0, rect.width, rect.height);
+            }
+            return;
+        }
+
+        const rect = this.djOverlay.getBoundingClientRect();
+        const ctx = this.rippleCtx;
+        ctx.clearRect(0, 0, rect.width, rect.height);
+
+        for (let i = this.ripples.length - 1; i >= 0; i--) {
+            const r = this.ripples[i];
+
+            // Expand
+            const speed = r.maxRadius * 0.04;
+            r.radius += speed;
+            r.opacity *= 0.96;
+            r.lineWidth *= 0.98;
+
+            if (r.opacity < 0.01 || r.radius > r.maxRadius) {
+                this.ripples.splice(i, 1);
+                continue;
+            }
+
+            ctx.beginPath();
+            ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255, 255, 255, ${r.opacity})`;
+            ctx.lineWidth = r.lineWidth;
+            ctx.stroke();
+        }
     }
 }

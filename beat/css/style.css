@@ -1544,6 +1544,16 @@ body.playing #credit-btn:hover {
     font-family: monospace;
 }
 
+/* DJ Ripple Canvas */
+#dj-ripple-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
 /* DJ Visuals */
 #dj-visuals {
     position: absolute;
