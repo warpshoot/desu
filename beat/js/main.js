@@ -732,6 +732,11 @@ class Sequencer {
 
                 if (shouldPulse) {
                     this.triggerTrackPulse(track);
+                    // Kick ripple in DJ mode
+                    if (track === 0) {
+                        const vol = this.state.trackParams?.[0]?.vol ?? 0.7;
+                        this.djMode.addRipple(vol);
+                    }
                 }
 
                 this.audioEngine.triggerNote(
