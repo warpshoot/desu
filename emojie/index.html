@@ -9,6 +9,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>DESU™ emojie</title>
+    <meta name="theme-color" content="#ffffff">
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="css/style.css">
     <script src="/desu/favicon.js"></script>
 </head>
@@ -177,6 +179,7 @@
 
     <script src="js/data/emojis.js"></script>
     <script type="module" src="js/app.js"></script>
+    <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');</script>
 </body>
 
 </html>
