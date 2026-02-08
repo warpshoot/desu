@@ -1,0 +1,16 @@
+{
+  "name": "DESU™ pattern",
+  "short_name": "pattern",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#4d4d4d",
+  "theme_color": "#4d4d4d",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
