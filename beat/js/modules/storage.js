@@ -131,6 +131,25 @@ function migratePatternGrid(pattern) {
             }
         }
     }
+
+    // Expand compact step formats (0 = default inactive, 1 = default active, partial object)
+    for (let track = 0; track < pattern.grid.length; track++) {
+        for (let step = 0; step < pattern.grid[track].length; step++) {
+            const cell = pattern.grid[track][step];
+            if (cell === 0 || cell === 1) {
+                pattern.grid[track][step] = {
+                    active: cell === 1, pitch: 0, duration: 0.5,
+                    rollMode: false, rollSubdivision: DEFAULT_ROLL_SUBDIVISION
+                };
+            } else if (typeof cell === 'object' && cell !== null) {
+                if (cell.active === undefined) cell.active = false;
+                if (cell.pitch === undefined) cell.pitch = 0;
+                if (cell.duration === undefined) cell.duration = 0.5;
+                if (cell.rollMode === undefined) cell.rollMode = false;
+                if (cell.rollSubdivision === undefined) cell.rollSubdivision = DEFAULT_ROLL_SUBDIVISION;
+            }
+        }
+    }
 }
 
 // Migrate pattern-level fields (Local settings)
@@ -286,9 +305,48 @@ export function getCurrentPattern(state) {
     return state.patterns[state.currentPattern];
 }
 
+// Compact state for minimal JSON export
+function compactState(state) {
+    const compact = {
+        bpm: state.bpm,
+        masterVolume: state.masterVolume,
+        currentPattern: state.currentPattern,
+        trackParams: state.trackParams,
+        patterns: state.patterns.map(pattern => {
+            const p = {
+                grid: pattern.grid.map(track =>
+                    track.map(step => {
+                        const isDefault = step.pitch === 0 && step.duration === 0.5 &&
+                            !step.rollMode && step.rollSubdivision === DEFAULT_ROLL_SUBDIVISION;
+                        if (!step.active && isDefault) return 0;
+                        if (step.active && isDefault) return 1;
+                        const s = { active: step.active };
+                        if (step.pitch !== 0) s.pitch = step.pitch;
+                        if (step.duration !== 0.5) s.duration = step.duration;
+                        if (step.rollMode) s.rollMode = true;
+                        if (step.rollSubdivision !== DEFAULT_ROLL_SUBDIVISION) s.rollSubdivision = step.rollSubdivision;
+                        return s;
+                    })
+                )
+            };
+            if (pattern.swingEnabled) p.swingEnabled = true;
+            if (pattern.scale && pattern.scale !== DEFAULT_SCALE) p.scale = pattern.scale;
+            if (pattern.trackOctaves && pattern.trackOctaves.some(v => v !== DEFAULT_OCTAVE)) p.trackOctaves = pattern.trackOctaves;
+            if (pattern.mutedTracks && pattern.mutedTracks.some(v => v)) p.mutedTracks = pattern.mutedTracks;
+            if (pattern.soloedTracks && pattern.soloedTracks.some(v => v)) p.soloedTracks = pattern.soloedTracks;
+            return p;
+        })
+    };
+    if (state.nextPattern !== null && state.nextPattern !== undefined) compact.nextPattern = state.nextPattern;
+    if (state.repeatEnabled === false) compact.repeatEnabled = false;
+    if (state.chainEnabled === false) compact.chainEnabled = false;
+    if (state.chain && state.chain.some(v => v !== null)) compact.chain = state.chain;
+    return compact;
+}
+
 // Export state as JSON file
 export async function exportProject(state) {
-    const data = JSON.stringify(state, null, 2);
+    const data = JSON.stringify(compactState(state));
     const timestamp = new Date().toISOString().replace(/:/g, '-').slice(0, 19);
     const filename = `beat_project_${timestamp}.json`;
 
