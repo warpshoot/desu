@@ -65,129 +65,44 @@ pitchの量子化に使われる。以下から選択：
 - パターンは最大8個
 - chainで再生順を指定可能
 
-## JSONの完全な構造
+## JSONの構造（コンパクト形式）
+
+ファイルサイズ削減のため、デフォルト値は省略される。インデントなし。
+
+### ステップの表記
+
+| 表記 | 意味 |
+|------|------|
+| `0` | 非アクティブ、全パラメータがデフォルト |
+| `1` | アクティブ、全パラメータがデフォルト（pitch=0, duration=0.5, rollMode=false, rollSubdivision=4） |
+| `{"active":true, ...}` | アクティブで一部パラメータがデフォルトと異なる。デフォルト値のプロパティは省略可 |
+
+### パターンレベルの省略ルール
+
+以下のフィールドはデフォルト値のとき省略可：
+- `swingEnabled`（デフォルト: false）
+- `scale`（デフォルト: "Chromatic"）
+- `trackOctaves`（デフォルト: [0,0,0,0,0]）
+- `mutedTracks`（デフォルト: [false,false,false,false,false]）
+- `soloedTracks`（デフォルト: [false,false,false,false,false]）
+
+### トップレベルの省略ルール
+
+以下のフィールドはデフォルト値のとき省略可：
+- `nextPattern`（デフォルト: null）
+- `repeatEnabled`（デフォルト: true）
+- `chainEnabled`（デフォルト: true）
+- `chain`（デフォルト: 全null）
+
+### 例
+
+「4つ打ちKick + 2拍4拍Snare + 8分Hi-hat」のMinorスケールパターン：
 
 ```json
-{
-  "bpm": 120,
-  "masterVolume": -12,
-  "currentPattern": 0,
-  "nextPattern": null,
-  "repeatEnabled": true,
-  "chainEnabled": true,
-  "trackParams": [
-    {"tune": -12, "cutoff": 1000, "resonance": 1, "drive": 10, "decay": 0.4, "vol": 0.9},
-    {"tune": 0, "cutoff": 8000, "resonance": 1, "drive": 0, "decay": 0.2, "vol": 0.7},
-    {"tune": 0, "cutoff": 10000, "resonance": 1, "drive": 0, "decay": 0.1, "vol": 0.6},
-    {"tune": -12, "cutoff": 4000, "resonance": 1, "drive": 15, "decay": 0.3, "vol": 1.1},
-    {"tune": 0, "cutoff": 4000, "resonance": 1, "drive": 0, "decay": 0.3, "vol": 0.7}
-  ],
-  "patterns": [
-    {
-      "swingEnabled": false,
-      "trackOctaves": [0, 0, 0, 0, 0],
-      "mutedTracks": [false, false, false, false, false],
-      "soloedTracks": [false, false, false, false, false],
-      "scale": "Minor",
-      "grid": [
-        [
-          {"active": true, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": true, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": true, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": true, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4}
-        ],
-        [
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": true, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": true, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4}
-        ],
-        [
-          {"active": true, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": true, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": true, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": true, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": true, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": true, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": true, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": true, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4}
-        ],
-        [
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4}
-        ],
-        [
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4},
-          {"active": false, "pitch": 0, "duration": 0.5, "rollMode": false, "rollSubdivision": 4}
-        ]
-      ]
-    }
-  ],
-  "chain": [0, null, null, null, null, null, null, null]
-}
+{"bpm":120,"masterVolume":-12,"currentPattern":0,"trackParams":[{"tune":-12,"cutoff":1000,"resonance":1,"drive":10,"decay":0.4,"vol":0.9},{"tune":0,"cutoff":8000,"resonance":1,"drive":0,"decay":0.2,"vol":0.7},{"tune":0,"cutoff":10000,"resonance":1,"drive":0,"decay":0.1,"vol":0.6},{"tune":-12,"cutoff":4000,"resonance":1,"drive":15,"decay":0.3,"vol":1.1},{"tune":0,"cutoff":4000,"resonance":1,"drive":0,"decay":0.3,"vol":0.7}],"patterns":[{"scale":"Minor","grid":[[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]},{"grid":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]},{"grid":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]},{"grid":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]},{"grid":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]},{"grid":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]},{"grid":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]},{"grid":[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]}]}
 ```
 
-上記の例は「4つ打ちKick + 2拍4拍Snare + 8分Hi-hat」の基本パターン。
+ピッチ付きステップの例: `{"active":true,"pitch":3}` （duration等はデフォルトなので省略）
 
 ## 音作りプリセット例
 
@@ -237,5 +152,6 @@ pitchの量子化に使われる。以下から選択：
 - pitchはスケール設定に関係なく半音単位で指定（再生時にスケールで量子化される）
 - Bass (track 3) のポリフォニーは最大2音、Lead (track 4) は最大6音
 - Kick/Snare/Hi-hatはモノフォニック（pitchは音色変化に使える）
-- activeがfalseのセルの他パラメータは無視される（が、省略せずデフォルト値を入れること）
-- 未使用パターンもデフォルト値で全8パターン分出力すること
+- 非アクティブでデフォルト値のセルは `0`、アクティブでデフォルト値のセルは `1` と表記する
+- パターンレベル・トップレベルのデフォルト値フィールドは省略する
+- 全8パターン分出力すること（未使用パターンは grid のみでよい）
