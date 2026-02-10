@@ -1990,6 +1990,11 @@ body.playing .pattern-pad.has-data {
     pointer-events: auto;
 }
 
+/* DJ Auto Menu: ensure it appears above dj-overlay (z-index: 900) */
+#auto-menu {
+    z-index: 9000;
+}
+
 .context-menu.hidden {
     display: none;
 }

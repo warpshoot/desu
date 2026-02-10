@@ -87,12 +87,6 @@
             <div class="menu-item" id="chain-clear-all">CLEAR ALL</div>
         </div>
 
-        <!-- DJ Auto Context Menu -->
-        <div id="auto-menu" class="context-menu hidden">
-            <div class="menu-item" id="auto-clear-pattern">CLEAR PATTERN</div>
-            <div class="menu-item" id="auto-clear-all">CLEAR ALL</div>
-        </div>
-
         <div id="sequencer-inner">
             <!-- Pattern Bank (tabs) -->
             <div id="pattern-bank"></div>
@@ -286,6 +280,12 @@
 
     </div>
 
+
+    <!-- DJ Auto Context Menu (placed outside sequencer-container to avoid stacking context issues) -->
+    <div id="auto-menu" class="context-menu hidden">
+        <div class="menu-item" id="auto-clear-pattern">CLEAR PATTERN</div>
+        <div class="menu-item" id="auto-clear-all">CLEAR ALL</div>
+    </div>
 
     <script src="../fish.js"></script>
     <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
