@@ -284,96 +284,99 @@ export class DJMode {
     setupXYPad() {
         if (!this.djXYPad) return;
 
-        const onStart = (e) => {
+        let activeTouchId = null;
+
+        const handleStart = (clientX, clientY) => {
+            const rect = this.djXYPad.getBoundingClientRect();
+            // Calculate normalized x/y
+            const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+            const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+
             this.xyState.touching = true;
-            const pos = this.getPosition(e);
-            this.xyState.startX = pos.x;
-            this.xyState.startY = pos.y;
-            this.xyState.targetX = pos.x;
-            this.xyState.targetY = pos.y;
-            this.xyState.x = pos.x;
-            this.xyState.y = pos.y;
+            this.xyState.startX = x;
+            this.xyState.startY = y;
+            this.xyState.targetX = x;
+            this.xyState.targetY = y;
+            this.xyState.x = x;
+            this.xyState.y = y;
+
             this.djOrigin.classList.remove('hidden');
             this.djCurrent.classList.remove('hidden');
             this.djLine.classList.remove('hidden');
-            this.updateAudio(0, 0);
+
+            // Calculate initial audio effect
+            const deltaX = x - this.xyState.startX;
+            const deltaY = this.xyState.startY - y;
+            this.updateAudio(deltaX, deltaY);
         };
 
-        const onMove = (e) => {
+        const handleMove = (clientX, clientY) => {
             if (!this.xyState.touching) return;
-            e.preventDefault();
-            const pos = this.getPosition(e);
-            this.xyState.targetX = pos.x;
-            this.xyState.targetY = pos.y;
+            const rect = this.djXYPad.getBoundingClientRect();
+            const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+            const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+
+            this.xyState.targetX = x;
+            this.xyState.targetY = y;
         };
 
-        const onEnd = () => {
+        const handleEnd = () => {
             this.xyState.touching = false;
+            activeTouchId = null;
+
             this.djOrigin.classList.add('hidden');
             this.djCurrent.classList.add('hidden');
             this.djLine.classList.add('hidden');
             this.seq.audioEngine.resetDJFilter();
         };
 
-        this.djXYPad.addEventListener('mousedown', onStart);
-        this.djXYPad.addEventListener('mousemove', onMove);
-        this.djXYPad.addEventListener('mouseup', onEnd);
-        this.djXYPad.addEventListener('mouseleave', onEnd);
+        // Mouse Listeners
+        this.djXYPad.addEventListener('mousedown', (e) => {
+            handleStart(e.clientX, e.clientY);
+        });
+        this.djXYPad.addEventListener('mousemove', (e) => {
+            // Only move if mouse button down
+            if (e.buttons === 1) handleMove(e.clientX, e.clientY);
+        });
+        this.djXYPad.addEventListener('mouseup', handleEnd);
+        this.djXYPad.addEventListener('mouseleave', handleEnd);
 
+        // Touch Listeners (Multi-touch support)
         this.djXYPad.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1) {
-                e.preventDefault();
-                onStart(e);
+            e.preventDefault();
+            if (activeTouchId !== null) return; // Already active
+
+            if (e.changedTouches.length > 0) {
+                const t = e.changedTouches[0];
+                activeTouchId = t.identifier;
+                handleStart(t.clientX, t.clientY);
             }
         }, { passive: false });
 
         this.djXYPad.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 1) {
-                onMove(e);
+            e.preventDefault();
+            if (activeTouchId === null) return;
+
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === activeTouchId) {
+                    const t = e.changedTouches[i];
+                    handleMove(t.clientX, t.clientY);
+                    break;
+                }
             }
         }, { passive: false });
 
-        this.djXYPad.addEventListener('touchend', onEnd);
-    }
-
-    // ========================
-    // Render Loop
-    // ========================
-
-    renderLoop() {
-        if (this.isOpen) {
-            const smoothing = 0.5;
-            this.xyState.x += (this.xyState.targetX - this.xyState.x) * smoothing;
-            this.xyState.y += (this.xyState.targetY - this.xyState.y) * smoothing;
-
-            if (this.xyState.touching) {
-                const deltaX = this.xyState.x - this.xyState.startX;
-                const deltaY = this.xyState.startY - this.xyState.y;
-                this.updateAudio(deltaX, deltaY);
-                this.updateVisuals();
+        const onTouchEnd = (e) => {
+            if (activeTouchId === null) return;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === activeTouchId) {
+                    handleEnd();
+                    break;
+                }
             }
-
-            this.renderRipples();
-        }
-        requestAnimationFrame(this.renderLoop);
-    }
-
-    getPosition(e) {
-        const rect = this.djXYPad.getBoundingClientRect();
-        let clientX, clientY;
-
-        if (e.touches && e.touches.length > 0) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-        } else {
-            clientX = e.clientX;
-            clientY = e.clientY;
-        }
-
-        const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-        const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
-
-        return { x, y };
+        };
+        this.djXYPad.addEventListener('touchend', onTouchEnd);
+        this.djXYPad.addEventListener('touchcancel', onTouchEnd);
     }
 
     updateVisuals() {
