@@ -157,6 +157,12 @@ export class DJMode {
             case 'slow':
                 engine.enableSlow();
                 break;
+            case 'stutter':
+                engine.enableStutter();
+                break;
+            case 'crush':
+                engine.enableCrush();
+                break;
         }
     }
 
@@ -171,6 +177,12 @@ export class DJMode {
                 break;
             case 'slow':
                 engine.disableSlow();
+                break;
+            case 'stutter':
+                engine.disableStutter();
+                break;
+            case 'crush':
+                engine.disableCrush();
                 break;
         }
     }

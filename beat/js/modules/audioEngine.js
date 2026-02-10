@@ -16,18 +16,28 @@ export class AudioEngine {
         this.compressor = null; // master bus compressor
         this.limiter = null; // safety limiter (0dB ceiling)
 
-        // DJ Mode (master filter chain: HPF → LPF → Delay)
+        // DJ Mode (master filter chain: HPF → LPF → Delay → Crusher → Gate)
         this.djLPF = null;
         this.djHPF = null;
         this.djDelay = null;
+        this.djCrusher = null; // Master WaveShaper for BitCrush
+        this.djGate = null;    // Master Gain for Stutter
+        this.stutterLFO = null; // LFO for Stutter
         this.djFilterEnabled = false;
 
         // DJ FX state
         this.djOctaveShift = 0;
         this.djSlowEnabled = false;
         this.djLoopEnabled = false;
+        this.djStutterEnabled = false;
+        this.djCrushEnabled = false;
+
         this.originalLoop = { start: 0, end: '1m', active: true };
         this.originalBPM = DEFAULT_BPM;
+
+        // Pre-calculate curves
+        this.crushCurve = this._makeBitCrushCurve(4); // 4-bit simulation
+        this.cleanCurve = new Float32Array([-1, 1]); // Linear bypass
 
         // Mute/Solo state
         this.mutedTracks = [false, false, false, false, false];
@@ -67,7 +77,7 @@ export class AudioEngine {
             Tone.Destination.volume.value = this.cachedMasterVolume;
         }
 
-        // Create master DJ effect chain: HPF → LPF → Delay → Limiter
+        // Create master DJ effect chain: HPF → LPF → Delay → Crusher → Gate → Limiter
         this.djHPF = new Tone.Filter({
             frequency: 20,
             type: 'highpass',
@@ -86,6 +96,31 @@ export class AudioEngine {
             wet: 0
         });
 
+        // 1. BitCrush (Fake) using WaveShaper
+        // Initially linear (transparent)
+        this.djCrusher = new Tone.WaveShaper(this.cleanCurve);
+        this.djCrusher.oversample = 'none'; // Keep it light
+
+        // 2. Stutter Gate using Gain + LFO
+        this.djGate = new Tone.Gain(1);
+
+        // Square LFO for hard gating (0 or 1)
+        // Frequency '16n' means it toggles every 16th note
+        this.stutterLFO = new Tone.LFO({
+            frequency: "16n",
+            min: 0,
+            max: 1,
+            type: "square"
+        });
+        // LFO controls the Gain
+        this.stutterLFO.connect(this.djGate.gain);
+        // Ensure LFO is stopped initially (gain stays at 1 because we disconnected? No, wait.)
+        // When LFO is stopped, we need to ensure Gain is 1. 
+        // Tone.LFO logic: when stopped, it holds valid. 
+        // Actually simpler: Connect LFO only when active? Or just Keep it stopped.
+        // If LFO is stopped, Gain value is what? 
+        // We will control this manually in enable/disableStutter.
+
         // Master bus compressor: smooth dynamics control
         // Prevents pumping that a brick-wall limiter causes when
         // noise (snare) peaks hit alongside kick/bass
@@ -100,10 +135,12 @@ export class AudioEngine {
         // Safety limiter at 0dB: only catches absolute peaks to prevent clipping
         this.limiter = new Tone.Limiter(0).toDestination();
 
-        // Connect chain: HPF → LPF → Delay → Compressor → Limiter
+        // Connect chain: HPF → LPF → Delay → Crusher → Gate → Compressor → Limiter
         this.djHPF.connect(this.djLPF);
         this.djLPF.connect(this.djDelay);
-        this.djDelay.connect(this.compressor);
+        this.djDelay.connect(this.djCrusher);
+        this.djCrusher.connect(this.djGate);
+        this.djGate.connect(this.compressor);
         this.compressor.connect(this.limiter);
 
         // Create recorder (default format - browser dependent)
@@ -484,6 +521,42 @@ export class AudioEngine {
         Tone.Transport.bpm.rampTo(this.originalBPM, 0.1);
     }
 
+    // DJ STUTTER effect (Gated tremolo)
+    enableStutter() {
+        if (this.djStutterEnabled || !this.initialized) return;
+        this.djStutterEnabled = true;
+
+        // Start LFO to oscillate gain
+        // Start immediately
+        this.stutterLFO.start();
+    }
+
+    disableStutter() {
+        if (!this.djStutterEnabled) return;
+        this.djStutterEnabled = false;
+
+        // Stop LFO and reset Gain to 1
+        this.stutterLFO.stop();
+        this.djGate.gain.value = 1;
+    }
+
+    // DJ CRUSH effect (Fake Bitcrush using Waveshaper)
+    enableCrush() {
+        if (this.djCrushEnabled || !this.initialized) return;
+        this.djCrushEnabled = true;
+
+        // Swap to stepped curve
+        this.djCrusher.curve = this.crushCurve;
+    }
+
+    disableCrush() {
+        if (!this.djCrushEnabled) return;
+        this.djCrushEnabled = false;
+
+        // Swap back to linear curve
+        this.djCrusher.curve = this.cleanCurve;
+    }
+
     // Generate normalized tanh soft-clip curve
     // amount: 0 (clean) to 1 (heavy saturation)
     // tanh gives warm, tube-like saturation without the harsh intermodulation
@@ -501,6 +574,19 @@ export class AudioEngine {
         return curve;
     }
 
+    // Generate stepped curve for bitcrush simulation
+    _makeBitCrushCurve(bits) {
+        const samples = 8192;
+        const curve = new Float32Array(samples);
+        const steps = Math.pow(2, bits);
+        for (let i = 0; i < samples; i++) {
+            const x = (i / (samples - 1)) * 2 - 1; // -1 to 1
+            // Quantize
+            curve[i] = Math.round(x * steps) / steps;
+        }
+        return curve;
+    }
+
     dispose() {
         this.stop();
         this.instruments.forEach(inst => inst.dispose());
@@ -514,10 +600,15 @@ export class AudioEngine {
         if (this.djLPF) this.djLPF.dispose();
         if (this.djHPF) this.djHPF.dispose();
         if (this.djDelay) this.djDelay.dispose();
+        if (this.djCrusher) this.djCrusher.dispose();
+        if (this.djGate) this.djGate.dispose();
+        if (this.stutterLFO) this.stutterLFO.dispose();
         if (this.compressor) this.compressor.dispose();
         if (this.limiter) this.limiter.dispose();
         this.disableSlow();
         this.disableLoop();
+        this.disableStutter();
+        this.disableCrush();
     }
 
     updateTrackGains(immediate = false) {
