@@ -1645,11 +1645,52 @@ body.playing #credit-btn:hover {
     box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
-/* AUTO button recording state */
+/* CIRCULAR SPECIAL BUTTONS (AUTO, CLR) */
+#dj-auto-rec,
+#dj-clr-btn {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    font-size: 11px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid #444;
+    color: #666;
+    font-family: monospace;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.08s ease;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#dj-auto-rec {
+    margin-left: 20px;
+    /* Space between FX and automation controls */
+}
+
+#dj-clr-btn {
+    margin-left: 10px;
+    /* Space between AUTO and CLR */
+}
+
 #dj-auto-rec.active {
     background: #f00 !important;
     color: #fff !important;
     border-color: #f00 !important;
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+}
+
+#dj-clr-btn:active {
+    background: #333;
+    border-color: #666;
+    color: #fff;
 }
 
 /* DJ XY Pad */
@@ -2138,3 +2179,4 @@ body.playing .chain-arrow {
         margin-right: 2px;
     }
 }
+.dj-fx-btn.disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); border-color: #222; }

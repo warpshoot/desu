@@ -28,7 +28,20 @@ export class DJMode {
 
         // Automation Recording
         this.isRecordingAuto = false;
+        this.hasStartedAny = false;
+        this.hasStartedXY = false;
+        this.hasStartedFX = {
+            loop: false,
+            slow: false,
+            stutter: false,
+            crush: false
+        };
+        this.hasStartedPitch = false;
         this.lastStep = -1;
+
+        // Ribbon state
+        this.pitchShift = 0;
+        this.ribbonTouching = false;
     }
 
     init() {
@@ -78,13 +91,56 @@ export class DJMode {
         // Setup XY pad interactions
         this.setupXYPad();
 
-        // Setup Auto Rec Button
+        // Setup Auto Rec Button (Simple Toggle)
         const autoRecBtn = document.getElementById('dj-auto-rec');
         if (autoRecBtn) {
             autoRecBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.isRecordingAuto = !this.isRecordingAuto;
+                // Reset granular recording flags when toggling AUTO
+                this.hasStartedAny = false;
+                this.hasStartedXY = false;
+                this.hasStartedFX = { loop: false, slow: false, stutter: false, crush: false };
+                this.hasStartedPitch = false;
                 autoRecBtn.classList.toggle('active', this.isRecordingAuto);
+
+                // Disable 1 BAR button during AUTO session
+                const loopBtn = document.querySelector('.dj-fx-btn[data-fx="loop"]');
+                if (loopBtn) {
+                    if (this.isRecordingAuto) {
+                        loopBtn.classList.add('disabled');
+                        // Ensure loop is disabled if it was active
+                        this.deactivateFX('loop');
+                        loopBtn.classList.remove('active');
+                    } else {
+                        loopBtn.classList.remove('disabled');
+                    }
+                }
+            });
+        }
+
+        // Setup CLR Button (Menu)
+        const clrBtn = document.getElementById('dj-clr-btn');
+        if (clrBtn) {
+            clrBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.showAutoMenu(clrBtn);
+            });
+        }
+
+        // Setup Auto Menu Items
+        const clearPatBtn = document.getElementById('auto-clear-pattern');
+        const clearAllBtn = document.getElementById('auto-clear-all');
+        if (clearPatBtn) {
+            clearPatBtn.addEventListener('click', () => {
+                this.clearPatternAutomation(this.seq.state.currentPattern);
+                document.getElementById('auto-menu').classList.add('hidden');
+            });
+        }
+        if (clearAllBtn) {
+            clearAllBtn.addEventListener('click', () => {
+                this.clearAllAutomation();
+                document.getElementById('auto-menu').classList.add('hidden');
             });
         }
     }
@@ -112,11 +168,21 @@ export class DJMode {
         this.isOpen = false;
         this.djOverlay.classList.add('hidden');
 
-        // Release all FX
+        // Release all FX (only actual FX buttons)
         this.releaseAllFX();
+
+        // Stops recording automation when closing the panel
+        this.isRecordingAuto = false;
+        const autoRecBtn = document.getElementById('dj-auto-rec');
+        if (autoRecBtn) autoRecBtn.classList.remove('active');
 
         // Reset filter
         this.seq.audioEngine.resetDJFilter();
+
+        // Also ensure automated button states are cleared from UI
+        document.querySelectorAll('.dj-fx-btn').forEach(btn => {
+            btn.classList.remove('automated');
+        });
 
         const dancer = this.seq.dancer;
         if (dancer) {
@@ -166,7 +232,7 @@ export class DJMode {
         const engine = this.seq.audioEngine;
         switch (fx) {
             case 'loop':
-                engine.enableLoop();
+                if (!this.isRecordingAuto) engine.enableLoop();
                 break;
             case 'slow':
                 engine.enableSlow();
@@ -202,7 +268,8 @@ export class DJMode {
     }
 
     releaseAllFX() {
-        const buttons = document.querySelectorAll('.dj-fx-btn');
+        // Only target buttons with data-fx (actual effects)
+        const buttons = document.querySelectorAll('.dj-fx-btn[data-fx]');
         buttons.forEach(btn => btn.classList.remove('active'));
 
         for (const fx of this.activeFX) {
@@ -215,91 +282,200 @@ export class DJMode {
     // Automation Logic
     // ========================
 
+    showAutoMenu(btn) {
+        this.autoMenu = document.getElementById('auto-menu');
+        if (!this.autoMenu) return;
+
+        this.seq.hideAllMenus();
+        this.seq._suppressClick = true;
+
+        const rect = btn.getBoundingClientRect();
+        this.autoMenu.style.left = `${rect.left}px`;
+        this.autoMenu.style.bottom = (window.innerHeight - rect.top + 5) + 'px';
+        this.autoMenu.style.top = 'auto';
+        this.autoMenu.classList.remove('hidden');
+    }
+
+    clearPatternAutomation(patIndex, part = 'all', shouldSave = true) {
+        const pat = this.seq.state.patterns[patIndex];
+        if (pat && pat.automation) {
+            if (part === 'all' || part === 'xy') {
+                pat.automation.x.fill(null);
+                pat.automation.y.fill(null);
+            }
+            if (part === 'all' || part === 'pitch') {
+                if (pat.automation.pitch) pat.automation.pitch.fill(null);
+            }
+            if (part === 'all' || part === 'fx') {
+                if (typeof part === 'string' && part !== 'all' && part !== 'fx') {
+                    // Clear specific FX channel
+                    if (pat.automation.fx[part]) pat.automation.fx[part].fill(null);
+                } else {
+                    // Clear all FX channels
+                    Object.keys(pat.automation.fx).forEach(k => {
+                        pat.automation.fx[k].fill(null);
+                    });
+                }
+            }
+            if (shouldSave) {
+                import('./storage.js').then(m => m.saveState(this.seq.state));
+            }
+        }
+    }
+
+    clearAllAutomation() {
+        this.seq.state.patterns.forEach(pat => {
+            if (pat.automation) {
+                pat.automation.x.fill(null);
+                pat.automation.y.fill(null);
+                if (pat.automation.pitch) pat.automation.pitch.fill(null);
+                if (pat.automation.fx && typeof pat.automation.fx === 'object') {
+                    Object.keys(pat.automation.fx).forEach(k => pat.automation.fx[k].fill(null));
+                }
+            }
+        });
+        import('./storage.js').then(m => m.saveState(this.seq.state));
+    }
+
     onStep(step) {
         if (!this.seq.audioEngine.playing) return;
 
         const pat = this.seq.pattern;
-        if (!pat.automation) return;
+        if (!pat.automation || !this.isOpen) return;
 
-        // 1. Record if active
-        if (this.isRecordingAuto) {
-            // Record XY pad (deltaX, deltaY calculated from current xyState)
-            if (this.xyState.touching) {
-                pat.automation.x[step] = this.xyState.x - this.xyState.startX;
-                pat.automation.y[step] = this.xyState.startY - this.xyState.y;
+        // Loop Boundary: Reset recording pass-flags so we can hear the result in the next loop
+        if (step <= this.lastStep) {
+            this.hasStartedXY = false;
+            if (typeof this.hasStartedFX === 'object') {
+                Object.keys(this.hasStartedFX).forEach(k => this.hasStartedFX[k] = false);
             } else {
-                pat.automation.x[step] = null;
-                pat.automation.y[step] = null;
+                this.hasStartedFX = false;
+            }
+            this.hasStartedPitch = false;
+        }
+
+
+        // 1. Handle Recording Logic (Granular)
+        if (this.isRecordingAuto) {
+            const hasInput = this.xyState.touching || this.activeFX.size > 0 || this.ribbonTouching;
+
+            if (hasInput && !this.hasStartedAny) {
+                // First interaction: Clear EVERYTHING in this pattern for a clean overwrite
+                this.clearPatternAutomation(this.seq.state.currentPattern, 'all', false);
+                this.hasStartedAny = true;
+                this.hasStartedXY = true;
+                Object.keys(this.hasStartedFX).forEach(k => this.hasStartedFX[k] = true);
+                this.hasStartedPitch = true;
             }
 
-            // Record active FX (just take the first one for simplicity, or we could handle multiple)
-            if (this.activeFX.size > 0) {
-                pat.automation.fx[step] = Array.from(this.activeFX)[0];
-            } else {
-                pat.automation.fx[step] = null;
+            if (this.hasStartedAny) {
+                // XY Pad Recording
+                if (this.xyState.touching) {
+                    this.hasStartedXY = true;
+                    pat.automation.x[step] = this.xyState.x - this.xyState.startX;
+                    pat.automation.y[step] = this.xyState.startY - this.xyState.y;
+                } else if (this.hasStartedXY) {
+                    pat.automation.x[step] = null;
+                    pat.automation.y[step] = null;
+                }
+
+                // FX Recording (Granular) - Skip loop
+                const fxTypes = ['slow', 'stutter', 'crush'];
+                fxTypes.forEach(fx => {
+                    if (this.activeFX.has(fx)) {
+                        this.hasStartedFX[fx] = true;
+                        pat.automation.fx[fx][step] = true;
+                    } else if (this.hasStartedFX[fx]) {
+                        pat.automation.fx[fx][step] = null;
+                    }
+                });
+
+                // Pitch Recording
+                if (this.ribbonTouching) {
+                    this.hasStartedPitch = true;
+                    pat.automation.pitch[step] = this.pitchShift;
+                } else if (this.hasStartedPitch) {
+                    pat.automation.pitch[step] = null;
+                }
             }
         }
 
-        // 2. Play if not manually overriding
-        this.applyAutomation(step);
-
-        this.lastStep = step;
-    }
-
-    applyAutomation(step) {
-        const pat = this.seq.pattern;
-        if (!pat.automation) return;
-
-        // Apply XY Automation if NOT touching
-        if (!this.xyState.touching) {
+        // 2. Playback Logic
+        // XY Playback if not currently recording/touching XY
+        if ((!this.isRecordingAuto || !this.hasStartedXY) && !this.xyState.touching) {
             const ax = pat.automation.x[step];
             const ay = pat.automation.y[step];
-
             if (ax !== null && ay !== null) {
                 this.updateAudio(ax, ay);
-                // Trigger ripples for automated kicks or just regularly
+                // Assume start point is 0.5 (center) for visual representation if not touching
+                this.updateVisuals(0.5 + ax, 0.5 - ay, 0.5, 0.5);
+                this.djOrigin.classList.remove('hidden');
+                this.djCurrent.classList.remove('hidden');
+                this.djLine.classList.remove('hidden');
+
                 if (step % 2 === 0) this.addRipple(0.3);
             } else {
-                // If no automation and no touch, ensure filter is reset (or stay at last state?)
-                // Usually reset is safer for now
                 this.seq.audioEngine.resetDJFilter();
+                this.djOrigin.classList.add('hidden');
+                this.djCurrent.classList.add('hidden');
+                this.djLine.classList.add('hidden');
             }
         }
 
-        // Apply FX Automation if NOT manually pressing FX buttons
-        if (this.activeFX.size === 0) {
-            const afx = pat.automation.fx[step];
+        // FX Playback (Granular) - Skip loop to maintain timeline stability
+        const fxPlaybackTypes = ['slow', 'stutter', 'crush'];
+        fxPlaybackTypes.forEach(fx => {
+            const engine = this.seq.audioEngine;
+            const isManual = this.activeFX.has(fx);
+            const isRecordingThis = (typeof this.hasStartedFX === 'object') ? this.hasStartedFX[fx] : this.hasStartedFX;
 
-            // Momentary activation logic: deactivate others, activate current
-            const fxTypes = ['loop', 'slow', 'stutter', 'crush'];
-            fxTypes.forEach(fx => {
-                const engine = this.seq.audioEngine;
-                const isCurrent = (fx === afx);
-
-                // Toggle engine states based on automation
-                // We use engine-internal flags so we don't pollute manual activeFX set
-                if (isCurrent) {
-                    if (fx === 'loop') engine.enableLoop();
+            // Apply automated FX only if not currently recording or manual-holding it
+            if (!isManual && (!this.isRecordingAuto || !isRecordingThis)) {
+                const isAutomated = pat.automation.fx[fx] && pat.automation.fx[fx][step];
+                if (isAutomated) {
                     if (fx === 'slow') engine.enableSlow();
                     if (fx === 'stutter') engine.enableStutter();
                     if (fx === 'crush') engine.enableCrush();
                 } else {
-                    // Only disable if we are the one who enabled it?
-                    // Simpler: if it's NOT the current automated one, disable it (if user isn't holding it)
-                    if (fx === 'loop') engine.disableLoop();
                     if (fx === 'slow') engine.disableSlow();
                     if (fx === 'stutter') engine.disableStutter();
                     if (fx === 'crush') engine.disableCrush();
                 }
-            });
+            }
+        });
 
-            // Update UI buttons to show automation
-            const buttons = document.querySelectorAll('.dj-fx-btn');
-            buttons.forEach(btn => {
-                btn.classList.toggle('automated', btn.dataset.fx === afx);
-            });
+        // Update UI buttons to show active status (either manual or automated)
+        const buttons = document.querySelectorAll('.dj-fx-btn[data-fx]');
+        buttons.forEach(btn => {
+            const fx = btn.dataset.fx;
+            const isManual = this.activeFX.has(fx);
+            const isAutomated = !isManual && pat.automation.fx[fx] && pat.automation.fx[fx][step];
+
+            btn.classList.toggle('active', isManual);
+            btn.classList.toggle('automated', !!isAutomated);
+        });
+
+        // Pitch Playback if not currently recording/touching Ribbon
+        if ((!this.isRecordingAuto || !this.hasStartedPitch) && !this.ribbonTouching) {
+            const apitch = pat.automation.pitch ? pat.automation.pitch[step] : null;
+            if (apitch !== null) {
+                this.seq.audioEngine.setOctaveShift(apitch);
+                if (this.djRibbonCursor) {
+                    // Map -2..+2 back to 0..80% (matching setupRibbon logic)
+                    const x = (apitch + 2) / 4;
+                    this.djRibbonCursor.style.left = `${x * 80}%`;
+                }
+            } else {
+                this.seq.audioEngine.setOctaveShift(0);
+                if (this.djRibbonCursor && !this.ribbonTouching) {
+                    this.djRibbonCursor.style.left = '40%';
+                }
+            }
         }
+
+        this.lastStep = step;
     }
+
 
     // ========================
     // Ribbon Controller
@@ -313,13 +489,8 @@ export class DJMode {
             const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
 
             // Map 0..1 to -2..+2 (5 steps)
-            // 0.0-0.2: -2
-            // 0.2-0.4: -1
-            // 0.4-0.6: 0
-            // 0.6-0.8: +1
-            // 0.8-1.0: +2
-            // Continuous: -2 to +2
             const shift = (x * 4) - 2;
+            this.pitchShift = shift;
 
             this.seq.audioEngine.setOctaveShift(shift);
 
@@ -334,6 +505,7 @@ export class DJMode {
         const onStart = (e) => {
             e.preventDefault();
             if (activeTouchId !== null) return;
+            this.ribbonTouching = true;
 
             if (e.changedTouches) {
                 const touch = e.changedTouches[0];
@@ -375,10 +547,14 @@ export class DJMode {
 
             if (shouldEnd) {
                 activeTouchId = null;
+                this.ribbonTouching = false;
+                this.pitchShift = 0;
                 this.seq.audioEngine.setOctaveShift(0);
                 if (this.djRibbonCursor) {
                     this.djRibbonCursor.style.left = '40%';
                 }
+                // Save after interaction
+                import('./storage.js').then(m => m.saveState(this.seq.state));
             }
         };
 
@@ -444,6 +620,9 @@ export class DJMode {
             this.djCurrent.classList.add('hidden');
             this.djLine.classList.add('hidden');
             this.seq.audioEngine.resetDJFilter();
+
+            // Save after interaction
+            import('./storage.js').then(m => m.saveState(this.seq.state));
         };
 
         // Mouse Listeners
@@ -517,8 +696,7 @@ export class DJMode {
         requestAnimationFrame(this.renderLoop);
     }
 
-    updateVisuals() {
-        const { startX, startY, x, y } = this.xyState;
+    updateVisuals(x = this.xyState.x, y = this.xyState.y, startX = this.xyState.startX, startY = this.xyState.startY) {
         const rect = this.djXYPad.getBoundingClientRect();
 
         if (this.djOrigin) {

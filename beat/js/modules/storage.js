@@ -97,7 +97,13 @@ export function createDefaultPattern() {
         automation: {
             x: new Array(COLS).fill(null),
             y: new Array(COLS).fill(null),
-            fx: new Array(COLS).fill(null) // 'stutter', 'crush', 'slow', 'loop'
+            pitch: new Array(COLS).fill(null),
+            fx: {
+                loop: new Array(COLS).fill(null),
+                slow: new Array(COLS).fill(null),
+                stutter: new Array(COLS).fill(null),
+                crush: new Array(COLS).fill(null)
+            }
         }
     };
 }
@@ -181,8 +187,37 @@ function migratePatternFields(pattern) {
         pattern.automation = {
             x: new Array(COLS).fill(null),
             y: new Array(COLS).fill(null),
-            fx: new Array(COLS).fill(null)
+            pitch: new Array(COLS).fill(null),
+            fx: {
+                loop: new Array(COLS).fill(null),
+                slow: new Array(COLS).fill(null),
+                stutter: new Array(COLS).fill(null),
+                crush: new Array(COLS).fill(null)
+            }
         };
+    } else {
+        // Ensure core fields exist
+        if (!pattern.automation.x) pattern.automation.x = new Array(COLS).fill(null);
+        if (!pattern.automation.y) pattern.automation.y = new Array(COLS).fill(null);
+        if (!pattern.automation.pitch) pattern.automation.pitch = new Array(COLS).fill(null);
+
+        // Handle FX object/array migration
+        if (!pattern.automation.fx || Array.isArray(pattern.automation.fx)) {
+            const oldFx = Array.isArray(pattern.automation.fx) ? pattern.automation.fx : new Array(COLS).fill(null);
+            pattern.automation.fx = {
+                loop: oldFx.map(v => v === 'loop' ? true : null),
+                slow: oldFx.map(v => v === 'slow' ? true : null),
+                stutter: oldFx.map(v => (v === 'stutter' || v === 'gate') ? true : null),
+                crush: oldFx.map(v => v === 'crush' ? true : null)
+            };
+        } else {
+            // Ensure all specific FX channels exist
+            const fxObj = pattern.automation.fx;
+            if (!fxObj.loop) fxObj.loop = new Array(COLS).fill(null);
+            if (!fxObj.slow) fxObj.slow = new Array(COLS).fill(null);
+            if (!fxObj.stutter) fxObj.stutter = new Array(COLS).fill(null);
+            if (!fxObj.crush) fxObj.crush = new Array(COLS).fill(null);
+        }
     }
 }
 
@@ -368,12 +403,21 @@ function compactState(state) {
             if (pattern.automation) {
                 const hasX = pattern.automation.x.some(v => v !== null);
                 const hasY = pattern.automation.y.some(v => v !== null);
-                const hasFx = pattern.automation.fx.some(v => v !== null);
-                if (hasX || hasY || hasFx) {
+                const hasPitch = pattern.automation.pitch && pattern.automation.pitch.some(v => v !== null);
+
+                const fxTracks = pattern.automation.fx || {};
+                const activeFxTracks = Object.keys(fxTracks).filter(k => fxTracks[k].some(v => v !== null));
+                const hasFx = activeFxTracks.length > 0;
+
+                if (hasX || hasY || hasPitch || hasFx) {
                     p.automation = {};
                     if (hasX) p.automation.x = pattern.automation.x;
                     if (hasY) p.automation.y = pattern.automation.y;
-                    if (hasFx) p.automation.fx = pattern.automation.fx;
+                    if (hasPitch) p.automation.pitch = pattern.automation.pitch;
+                    if (hasFx) {
+                        p.automation.fx = {};
+                        activeFxTracks.forEach(k => p.automation.fx[k] = fxTracks[k]);
+                    }
                 }
             }
             return p;

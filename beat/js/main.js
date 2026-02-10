@@ -965,10 +965,14 @@ class Sequencer {
         this.updateDanceFrame();
 
         // DJ Automation and Recording
-        this.djMode.onStep(step);
+        try {
+            this.djMode.onStep(step);
+        } catch (e) {
+            console.error('DJ Mode onStep error:', e);
+        }
 
         // DJ Standby Pulse
-        if (this.djMode.djState && this.djMode.djState.standby && this.dancer) {
+        if (this.djMode.isStandby && this.dancer) {
             if (step % 4 === 0) {
                 this.dancer.classList.add('pulse');
                 setTimeout(() => {

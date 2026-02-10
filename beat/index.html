@@ -87,6 +87,12 @@
             <div class="menu-item" id="chain-clear-all">CLEAR ALL</div>
         </div>
 
+        <!-- DJ Auto Context Menu -->
+        <div id="auto-menu" class="context-menu hidden">
+            <div class="menu-item" id="auto-clear-pattern">CLEAR PATTERN</div>
+            <div class="menu-item" id="auto-clear-all">CLEAR ALL</div>
+        </div>
+
         <div id="sequencer-inner">
             <!-- Pattern Bank (tabs) -->
             <div id="pattern-bank"></div>
@@ -254,7 +260,8 @@
             <button class="dj-fx-btn" data-fx="slow">SLOW</button>
             <button class="dj-fx-btn" data-fx="stutter">GATE</button>
             <button class="dj-fx-btn" data-fx="crush">CRUSH</button>
-            <button id="dj-auto-rec" class="dj-fx-btn rec-btn-style" title="Automation Record">AUTO</button>
+            <button id="dj-auto-rec" class="rec-btn-style" title="Automation Record">AUTO</button>
+            <button id="dj-clr-btn" title="Clear Automation">CLR</button>
         </div>
         <!-- Octave Ribbon -->
         <div id="dj-ribbon-container">
