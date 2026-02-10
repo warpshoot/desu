@@ -213,35 +213,68 @@ export class DJMode {
             }
         };
 
+        let activeTouchId = null;
+
         const onStart = (e) => {
             e.preventDefault();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            handleInput(clientX);
+            if (activeTouchId !== null) return;
+
+            if (e.changedTouches) {
+                const touch = e.changedTouches[0];
+                activeTouchId = touch.identifier;
+                handleInput(touch.clientX);
+            } else {
+                handleInput(e.clientX);
+            }
         };
 
         const onMove = (e) => {
             e.preventDefault();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            handleInput(clientX);
+            if (e.changedTouches) {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === activeTouchId) {
+                        handleInput(e.changedTouches[i].clientX);
+                        break;
+                    }
+                }
+            } else if (e.buttons === 1) {
+                handleInput(e.clientX);
+            }
         };
 
         const onEnd = (e) => {
             e.preventDefault();
-            // Reset to 0
-            this.seq.audioEngine.setOctaveShift(0);
-            if (this.djRibbonCursor) {
-                this.djRibbonCursor.style.left = '40%'; // Center
+            let shouldEnd = false;
+
+            if (e.changedTouches) {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === activeTouchId) {
+                        shouldEnd = true;
+                        break;
+                    }
+                }
+            } else {
+                shouldEnd = true;
+            }
+
+            if (shouldEnd) {
+                activeTouchId = null;
+                this.seq.audioEngine.setOctaveShift(0);
+                if (this.djRibbonCursor) {
+                    this.djRibbonCursor.style.left = '40%';
+                }
             }
         };
 
         this.djRibbon.addEventListener('mousedown', onStart);
-        this.djRibbon.addEventListener('mousemove', (e) => { if (e.buttons === 1) onMove(e); });
+        this.djRibbon.addEventListener('mousemove', onMove);
         this.djRibbon.addEventListener('mouseup', onEnd);
         this.djRibbon.addEventListener('mouseleave', onEnd);
 
         this.djRibbon.addEventListener('touchstart', onStart, { passive: false });
         this.djRibbon.addEventListener('touchmove', onMove, { passive: false });
         this.djRibbon.addEventListener('touchend', onEnd);
+        this.djRibbon.addEventListener('touchcancel', onEnd);
     }
 
     // ========================

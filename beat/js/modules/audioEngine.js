@@ -447,7 +447,7 @@ export class AudioEngine {
 
             // Check if instrument has detune signal (PolySynth, Monophonic)
             if (inst.detune && typeof inst.detune.rampTo === 'function') {
-                inst.detune.rampTo(detuneValue, 0.1);
+                inst.detune.rampTo(detuneValue, 0.01);
             } else if (inst.set) {
                 // Fallback for complex instruments
                 inst.set({ detune: detuneValue });
