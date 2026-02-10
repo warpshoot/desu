@@ -1375,7 +1375,7 @@ body.playing #credit-btn:hover {
 
     /* DJ overlay - match controls height */
     #dj-overlay {
-        bottom: 60px;
+        bottom: 76px;
     }
 
     /* Container adjustment */
@@ -1495,7 +1495,7 @@ body.playing #credit-btn:hover {
 
     /* DJ overlay - match controls height */
     #dj-overlay {
-        bottom: 52px;
+        bottom: 68px;
     }
 
     .dj-fx-btn {
@@ -1587,6 +1587,7 @@ body.playing #credit-btn:hover {
     gap: 6px;
     padding: 6px 8px;
     align-items: center;
+    justify-content: center;
     flex-shrink: 0;
 }
 
