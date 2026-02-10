@@ -85,6 +85,17 @@ pitchの量子化に使われる。以下から選択：
 - `trackOctaves`（デフォルト: [0,0,0,0,0]）
 - `mutedTracks`（デフォルト: [false,false,false,false,false]）
 - `soloedTracks`（デフォルト: [false,false,false,false,false]）
+- `automation`（デフォルト: なし）
+
+### オートメーション（`automation`）
+
+DJモードの操作をステップ単位で記録・再生するためのデータ項目です（DJモードパネル展開時のみ有効。人間が操作している間は人間の操作が優先されます）。
+
+- `x`: フィルターX軸 (横方向) の配列（-0.5〜0.5 / null はデータなし）
+- `y`: フィルターY軸 (縦方向) の配列（-0.5〜0.5 / null はデータなし）
+- `fx`: アクティブなFXの配列（"loop", "slow", "stutter", "crush" / null はエフェクトなし）
+
+※AIに動きのあるエフェクトを指示させる場合、この `automation` オブジェクトを構築させることで実現可能です。
 
 ### トップレベルの省略ルール
 

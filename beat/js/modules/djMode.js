@@ -25,6 +25,10 @@ export class DJMode {
 
         // Active FX
         this.activeFX = new Set();
+
+        // Automation Recording
+        this.isRecordingAuto = false;
+        this.lastStep = -1;
     }
 
     init() {
@@ -73,6 +77,16 @@ export class DJMode {
 
         // Setup XY pad interactions
         this.setupXYPad();
+
+        // Setup Auto Rec Button
+        const autoRecBtn = document.getElementById('dj-auto-rec');
+        if (autoRecBtn) {
+            autoRecBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.isRecordingAuto = !this.isRecordingAuto;
+                autoRecBtn.classList.toggle('active', this.isRecordingAuto);
+            });
+        }
     }
 
     toggle() {
@@ -195,6 +209,96 @@ export class DJMode {
             this.deactivateFX(fx);
         }
         this.activeFX.clear();
+    }
+
+    // ========================
+    // Automation Logic
+    // ========================
+
+    onStep(step) {
+        if (!this.seq.audioEngine.playing) return;
+
+        const pat = this.seq.pattern;
+        if (!pat.automation) return;
+
+        // 1. Record if active
+        if (this.isRecordingAuto) {
+            // Record XY pad (deltaX, deltaY calculated from current xyState)
+            if (this.xyState.touching) {
+                pat.automation.x[step] = this.xyState.x - this.xyState.startX;
+                pat.automation.y[step] = this.xyState.startY - this.xyState.y;
+            } else {
+                pat.automation.x[step] = null;
+                pat.automation.y[step] = null;
+            }
+
+            // Record active FX (just take the first one for simplicity, or we could handle multiple)
+            if (this.activeFX.size > 0) {
+                pat.automation.fx[step] = Array.from(this.activeFX)[0];
+            } else {
+                pat.automation.fx[step] = null;
+            }
+        }
+
+        // 2. Play if not manually overriding
+        this.applyAutomation(step);
+
+        this.lastStep = step;
+    }
+
+    applyAutomation(step) {
+        const pat = this.seq.pattern;
+        if (!pat.automation) return;
+
+        // Apply XY Automation if NOT touching
+        if (!this.xyState.touching) {
+            const ax = pat.automation.x[step];
+            const ay = pat.automation.y[step];
+
+            if (ax !== null && ay !== null) {
+                this.updateAudio(ax, ay);
+                // Trigger ripples for automated kicks or just regularly
+                if (step % 2 === 0) this.addRipple(0.3);
+            } else {
+                // If no automation and no touch, ensure filter is reset (or stay at last state?)
+                // Usually reset is safer for now
+                this.seq.audioEngine.resetDJFilter();
+            }
+        }
+
+        // Apply FX Automation if NOT manually pressing FX buttons
+        if (this.activeFX.size === 0) {
+            const afx = pat.automation.fx[step];
+
+            // Momentary activation logic: deactivate others, activate current
+            const fxTypes = ['loop', 'slow', 'stutter', 'crush'];
+            fxTypes.forEach(fx => {
+                const engine = this.seq.audioEngine;
+                const isCurrent = (fx === afx);
+
+                // Toggle engine states based on automation
+                // We use engine-internal flags so we don't pollute manual activeFX set
+                if (isCurrent) {
+                    if (fx === 'loop') engine.enableLoop();
+                    if (fx === 'slow') engine.enableSlow();
+                    if (fx === 'stutter') engine.enableStutter();
+                    if (fx === 'crush') engine.enableCrush();
+                } else {
+                    // Only disable if we are the one who enabled it?
+                    // Simpler: if it's NOT the current automated one, disable it (if user isn't holding it)
+                    if (fx === 'loop') engine.disableLoop();
+                    if (fx === 'slow') engine.disableSlow();
+                    if (fx === 'stutter') engine.disableStutter();
+                    if (fx === 'crush') engine.disableCrush();
+                }
+            });
+
+            // Update UI buttons to show automation
+            const buttons = document.querySelectorAll('.dj-fx-btn');
+            buttons.forEach(btn => {
+                btn.classList.toggle('automated', btn.dataset.fx === afx);
+            });
+        }
     }
 
     // ========================

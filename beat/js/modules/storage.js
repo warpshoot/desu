@@ -93,7 +93,12 @@ export function createDefaultPattern() {
         trackOctaves,
         mutedTracks,
         soloedTracks,
-        scale: DEFAULT_SCALE
+        scale: DEFAULT_SCALE,
+        automation: {
+            x: new Array(COLS).fill(null),
+            y: new Array(COLS).fill(null),
+            fx: new Array(COLS).fill(null) // 'stutter', 'crush', 'slow', 'loop'
+        }
     };
 }
 
@@ -171,6 +176,14 @@ function migratePatternFields(pattern) {
     if (!pattern.mutedTracks) pattern.mutedTracks = new Array(ROWS).fill(false);
     if (!pattern.soloedTracks) pattern.soloedTracks = new Array(ROWS).fill(false);
     if (!pattern.scale) pattern.scale = DEFAULT_SCALE;
+
+    if (!pattern.automation) {
+        pattern.automation = {
+            x: new Array(COLS).fill(null),
+            y: new Array(COLS).fill(null),
+            fx: new Array(COLS).fill(null)
+        };
+    }
 }
 
 // Load state from localStorage
@@ -351,6 +364,18 @@ function compactState(state) {
             if (pattern.trackOctaves && pattern.trackOctaves.some(v => v !== DEFAULT_OCTAVE)) p.trackOctaves = pattern.trackOctaves;
             if (pattern.mutedTracks && pattern.mutedTracks.some(v => v)) p.mutedTracks = pattern.mutedTracks;
             if (pattern.soloedTracks && pattern.soloedTracks.some(v => v)) p.soloedTracks = pattern.soloedTracks;
+
+            if (pattern.automation) {
+                const hasX = pattern.automation.x.some(v => v !== null);
+                const hasY = pattern.automation.y.some(v => v !== null);
+                const hasFx = pattern.automation.fx.some(v => v !== null);
+                if (hasX || hasY || hasFx) {
+                    p.automation = {};
+                    if (hasX) p.automation.x = pattern.automation.x;
+                    if (hasY) p.automation.y = pattern.automation.y;
+                    if (hasFx) p.automation.fx = pattern.automation.fx;
+                }
+            }
             return p;
         })
     };

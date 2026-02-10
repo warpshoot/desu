@@ -964,6 +964,9 @@ class Sequencer {
         // Update dance animation
         this.updateDanceFrame();
 
+        // DJ Automation and Recording
+        this.djMode.onStep(step);
+
         // DJ Standby Pulse
         if (this.djMode.djState && this.djMode.djState.standby && this.dancer) {
             if (step % 4 === 0) {
