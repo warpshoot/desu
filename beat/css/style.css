@@ -1601,9 +1601,17 @@ body.playing #credit-btn:hover {
     -webkit-user-select: none;
 }
 
-.dj-fx-btn:hover {
-    border-color: #888;
-    color: #aaa;
+@media (hover: hover) {
+    .dj-fx-btn:hover {
+        border-color: #888;
+        color: #aaa;
+    }
+}
+
+.dj-fx-btn:active {
+    background: #333;
+    border-color: #666;
+    color: #fff;
 }
 
 .dj-fx-btn.active {
