@@ -267,6 +267,16 @@ export function loadState() {
                 state.chain = new Array(CHAIN_LENGTH).fill(null);
             }
 
+            // Ensure userPresets exist
+            if (!state.userPresets) {
+                state.userPresets = { 0: {}, 1: {}, 2: {}, 3: {}, 4: {} };
+            }
+
+            // Ensure trackActivePresets exist
+            if (!state.trackActivePresets) {
+                state.trackActivePresets = [null, null, null, null, null];
+            }
+
             // Migrate each pattern (Grid + Local settings) and CLEANUP global props
             for (let i = 0; i < state.patterns.length; i++) {
                 migratePatternGrid(state.patterns[i]);
@@ -301,7 +311,9 @@ export function createDefaultState() {
         repeatEnabled: true,
         chainMode: 'chain',
         patterns,
-        chain: new Array(CHAIN_LENGTH).fill(null)
+        chain: new Array(CHAIN_LENGTH).fill(null),
+        userPresets: { 0: {}, 1: {}, 2: {}, 3: {}, 4: {} },
+        trackActivePresets: [null, null, null, null, null] // Index of active preset per track
     };
 }
 

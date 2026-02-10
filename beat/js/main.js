@@ -1,4 +1,4 @@
-import { ROWS, COLS, TAP_THRESHOLD, TRACKS, KNOB_PARAMS, DEFAULT_BPM, DEFAULT_SCALE, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, MAX_PATTERNS, PATTERN_NAMES, CHAIN_LENGTH } from './modules/constants.js';
+import { ROWS, COLS, TAP_THRESHOLD, TRACKS, KNOB_PARAMS, DEFAULT_BPM, DEFAULT_SCALE, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, MAX_PATTERNS, PATTERN_NAMES, CHAIN_LENGTH, TRACK_PRESETS } from './modules/constants.js';
 import { AudioEngine } from './modules/audioEngine.js';
 import { Cell } from './modules/cell.js';
 import { Controls } from './modules/controls.js';
@@ -137,9 +137,77 @@ class Sequencer {
             this.tonePanel = new TonePanel(
                 tonePanelEl,
                 this.audioEngine,
+                // onParamsChange
                 (track, param, value) => {
                     this.state.trackParams[track][param] = value;
+
+                    // Auto-save to active preset if exists
+                    const activePreset = this.state.trackActivePresets ? this.state.trackActivePresets[track] : null;
+                    if (activePreset) {
+                        if (!this.state.userPresets[track]) this.state.userPresets[track] = {};
+                        if (!this.state.userPresets[track][activePreset]) this.state.userPresets[track][activePreset] = {};
+                        this.state.userPresets[track][activePreset][param] = value;
+                    }
                     saveState(this.state);
+                },
+                // onPresetSelect
+                (track, presetName) => {
+                    this.state.trackActivePresets[track] = presetName;
+
+                    if (presetName) {
+                        // Load params: User modified > Factory default
+                        let params = null;
+
+                        // Check User Presets first
+                        if (this.state.userPresets[track] && this.state.userPresets[track][presetName]) {
+                            const factory = TRACK_PRESETS[track][presetName];
+                            const user = this.state.userPresets[track][presetName];
+                            params = Object.assign({}, factory, user);
+                        } else {
+                            // Factory only
+                            params = Object.assign({}, TRACK_PRESETS[track][presetName]);
+                        }
+
+                        if (params) {
+                            this.state.trackParams[track] = params;
+                            this.audioEngine.updateTrackParams(track, params);
+                            return params;
+                        }
+                    }
+                    saveState(this.state);
+                    return null;
+                },
+                // getActivePreset
+                (track) => this.state.trackActivePresets ? this.state.trackActivePresets[track] : null,
+                // onResetPreset
+                (track) => {
+                    const activePreset = this.state.trackActivePresets ? this.state.trackActivePresets[track] : null;
+                    if (activePreset) {
+                        // Clear user preset override
+                        if (this.state.userPresets[track] && this.state.userPresets[track][activePreset]) {
+                            delete this.state.userPresets[track][activePreset];
+                        }
+                        // Return original factory params
+                        const params = Object.assign({}, TRACK_PRESETS[track][activePreset]);
+                        this.state.trackParams[track] = params;
+                        this.audioEngine.updateTrackParams(track, params);
+                        saveState(this.state);
+                        return params;
+                    } else {
+                        // No preset active, reset to track default
+                        const defaults = TRACKS[track].defaultParams || {};
+                        const params = {};
+                        Object.keys(defaults).forEach(k => params[k] = defaults[k]);
+                        // Fill missing with KNOB defaults
+                        Object.keys(KNOB_PARAMS).forEach(k => {
+                            if (params[k] === undefined) params[k] = KNOB_PARAMS[k].default;
+                        });
+
+                        this.state.trackParams[track] = params;
+                        this.audioEngine.updateTrackParams(track, params);
+                        saveState(this.state);
+                        return params;
+                    }
                 }
             );
         }

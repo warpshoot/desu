@@ -2,10 +2,13 @@ import { Knob } from './knob.js';
 import { KNOB_PARAMS, TRACK_PRESETS, TRACKS } from './constants.js';
 
 export class TonePanel {
-    constructor(element, audioEngine, onParamsChange) {
+    constructor(element, audioEngine, onParamsChange, onPresetSelect, getActivePreset, onResetPreset) {
         this.element = element;
         this.audioEngine = audioEngine;
         this.onParamsChange = onParamsChange;
+        this.onPresetSelect = onPresetSelect;
+        this.getActivePreset = getActivePreset;
+        this.onResetPreset = onResetPreset;
         this.currentTrack = null;
         this.knobs = {};
 
@@ -18,7 +21,7 @@ export class TonePanel {
         if (this.presetSelect) {
             this.presetSelect.addEventListener('change', (e) => {
                 const presetName = e.target.value;
-                if (presetName && this.currentTrack !== null) {
+                if (this.currentTrack !== null) {
                     this.applyPreset(presetName);
                 }
             });
@@ -27,22 +30,28 @@ export class TonePanel {
 
     applyPreset(name) {
         if (this.currentTrack === null) return;
-        const presets = TRACK_PRESETS[this.currentTrack];
-        if (!presets || !presets[name]) return;
 
-        const presetParams = presets[name];
-
-        Object.keys(presetParams).forEach(param => {
-            // Update Knob UI if it exists
-            if (this.knobs[param]) {
-                this.knobs[param].setValue(presetParams[param]);
+        // Notify parent to load preset params (returns params object)
+        if (this.onPresetSelect) {
+            const params = this.onPresetSelect(this.currentTrack, name);
+            if (params) {
+                this.loadParams(params);
             }
-            // Trigger change
-            this.onKnobChange(param, presetParams[param]);
-        });
+        }
 
-        // Blur selector to prevent keyboard interference
+        // Blur selector
         if (this.presetSelect) this.presetSelect.blur();
+    }
+
+    loadParams(params) {
+        Object.keys(params).forEach(param => {
+            if (this.knobs[param]) {
+                const val = params[param];
+                if (val !== undefined) {
+                    this.knobs[param].setValue(val);
+                }
+            }
+        });
     }
 
     setupEvents() {
@@ -51,7 +60,7 @@ export class TonePanel {
             if (this.isOpen() &&
                 !this.element.contains(e.target) &&
                 !e.target.classList.contains('track-icon') &&
-                !e.target.classList.contains('knob-label')) { // Also ignore label clicks just in case
+                !e.target.classList.contains('knob-label')) {
                 this.close();
             }
         });
@@ -60,7 +69,11 @@ export class TonePanel {
         const resetBtn = this.element.querySelector('#tone-reset-btn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                if (confirm('Reset sound settings for this track?')) {
+                const msg = this.presetSelect && this.presetSelect.value
+                    ? 'Reset preset to factory default?'
+                    : 'Reset sound settings for this track?';
+
+                if (confirm(msg)) {
                     this.resetParams();
                 }
             });
@@ -70,24 +83,11 @@ export class TonePanel {
     resetParams() {
         if (this.currentTrack === null) return;
 
-        const defaults = TRACKS[this.currentTrack].defaultParams || {};
-
-        Object.keys(this.knobs).forEach(param => {
-            let defaultValue = defaults[param];
-            if (defaultValue === undefined) {
-                defaultValue = KNOB_PARAMS[param].default;
+        if (this.onResetPreset) {
+            const params = this.onResetPreset(this.currentTrack);
+            if (params) {
+                this.loadParams(params);
             }
-
-            // Update Knob UI
-            this.knobs[param].setValue(defaultValue);
-
-            // Trigger change logic
-            this.onKnobChange(param, defaultValue);
-        });
-
-        // Also reset preset selector to default state
-        if (this.presetSelect) {
-            this.presetSelect.value = "";
         }
     }
 
@@ -95,17 +95,16 @@ export class TonePanel {
         this.currentTrack = track;
         this.element.classList.remove('hidden');
 
-        // Properly destroy existing knobs
+        // Destroy existing knobs
         Object.values(this.knobs).forEach(knob => {
             knob.destroy();
         });
         this.knobs = {};
 
-        // Create new knobs with current params
+        // Create new knobs
         const knobElements = this.element.querySelectorAll('.knob');
         knobElements.forEach(canvas => {
             const param = canvas.dataset.param;
-            // Ensure canvas has proper dimensions
             if (!canvas.width || !canvas.height) {
                 canvas.width = 80;
                 canvas.height = 80;
@@ -128,10 +127,6 @@ export class TonePanel {
             const activeIcon = activeItem.querySelector('.track-icon');
             if (activeIcon) activeIcon.classList.add('active');
         }
-        if (activeItem) {
-            const activeIcon = activeItem.querySelector('.track-icon');
-            if (activeIcon) activeIcon.classList.add('active');
-        }
 
         this.updatePresetSelector(track);
     }
@@ -139,7 +134,7 @@ export class TonePanel {
     updatePresetSelector(track) {
         if (!this.presetSelect) return;
 
-        this.presetSelect.innerHTML = '<option value="">Select Preset...</option>';
+        this.presetSelect.innerHTML = '<option value="">Custom</option>';
 
         const presets = TRACK_PRESETS[track];
         if (presets) {
@@ -153,13 +148,18 @@ export class TonePanel {
         } else {
             this.presetSelect.disabled = true;
         }
+
+        // Set current value based on stored active preset
+        if (this.getActivePreset) {
+            const active = this.getActivePreset(track);
+            this.presetSelect.value = active || "";
+        }
     }
 
     close() {
         this.element.classList.add('hidden');
         this.currentTrack = null;
 
-        // Remove active state from all track icons
         document.querySelectorAll('.track-icon').forEach(icon => {
             icon.classList.remove('active');
         });
@@ -180,12 +180,12 @@ export class TonePanel {
     onKnobChange(param, value) {
         if (this.currentTrack === null) return;
 
-        // Update audio engine immediately
+        // Update audio engine
         const params = {};
         params[param] = value;
         this.audioEngine.updateTrackParams(this.currentTrack, params);
 
-        // Notify parent to save state
+        // Notify parent
         if (this.onParamsChange) {
             this.onParamsChange(this.currentTrack, param, value);
         }
