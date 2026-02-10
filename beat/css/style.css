@@ -1373,6 +1373,11 @@ body.playing #credit-btn:hover {
         font-size: 16px;
     }
 
+    /* DJ overlay - match controls height */
+    #dj-overlay {
+        bottom: 60px;
+    }
+
     /* Container adjustment */
     #sequencer-container {
         padding: 32px 8px 70px;
@@ -1488,6 +1493,37 @@ body.playing #credit-btn:hover {
         height: 40px !important;
     }
 
+    /* DJ overlay - match controls height */
+    #dj-overlay {
+        bottom: 52px;
+    }
+
+    .dj-fx-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 9px;
+    }
+
+    #dj-auto-rec,
+    #dj-clr-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 9px;
+    }
+
+    #dj-ribbon {
+        height: 40px;
+    }
+
+    #dj-fx-buttons {
+        gap: 4px;
+        padding: 4px 6px;
+    }
+
+    .ribbon-marks span {
+        font-size: 10px;
+    }
+
     /* Credit modal - extra compact for small screens */
     #credit-content {
         width: 240px;
@@ -1548,8 +1584,8 @@ body.playing #credit-btn:hover {
 /* DJ Effect Buttons + Ribbon (single row) */
 #dj-fx-buttons {
     display: flex;
-    gap: 8px;
-    padding: 8px 12px;
+    gap: 6px;
+    padding: 6px 8px;
     align-items: center;
     flex-shrink: 0;
 }
@@ -1562,7 +1598,7 @@ body.playing #credit-btn:hover {
 
 #dj-ribbon {
     position: relative;
-    height: 56px;
+    height: 48px;
     background: transparent;
     border: 1px solid #444;
     border-radius: 4px;
@@ -1603,8 +1639,8 @@ body.playing #credit-btn:hover {
 
 .dj-fx-btn {
     flex: none;
-    width: 56px;
-    height: 56px;
+    width: 48px;
+    height: 48px;
     background: transparent;
     border: 1px solid #444;
     color: #666;
@@ -1649,10 +1685,10 @@ body.playing #credit-btn:hover {
 #dj-auto-rec,
 #dj-clr-btn {
     flex: none;
-    width: 56px;
-    height: 56px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
-    font-size: 11px;
+    font-size: 10px;
     padding: 0;
     display: flex;
     align-items: center;
