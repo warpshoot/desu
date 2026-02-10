@@ -1592,7 +1592,7 @@ body.playing #credit-btn:hover {
 
 /* Ribbon Controller (inline within FX row) */
 #dj-ribbon-container {
-    flex: 1;
+    flex: 0.5;
     min-width: 0;
 }
 
