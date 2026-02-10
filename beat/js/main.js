@@ -273,6 +273,7 @@ class Sequencer {
             fileMenu.style.bottom = (window.innerHeight - rect.top + 5) + 'px';
             fileMenu.style.left = (rect.left - 20) + 'px';
             fileMenu.style.top = 'auto';
+            fileMenu.style.zIndex = '2500';
             fileMenu.classList.toggle('hidden');
 
             // Close clear menu if open

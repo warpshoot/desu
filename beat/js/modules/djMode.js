@@ -379,6 +379,28 @@ export class DJMode {
         this.djXYPad.addEventListener('touchcancel', onTouchEnd);
     }
 
+    // ========================
+    // Render Loop
+    // ========================
+
+    renderLoop() {
+        if (this.isOpen) {
+            const smoothing = 0.5;
+            this.xyState.x += (this.xyState.targetX - this.xyState.x) * smoothing;
+            this.xyState.y += (this.xyState.targetY - this.xyState.y) * smoothing;
+
+            if (this.xyState.touching) {
+                const deltaX = this.xyState.x - this.xyState.startX;
+                const deltaY = this.xyState.startY - this.xyState.y;
+                this.updateAudio(deltaX, deltaY);
+                this.updateVisuals();
+            }
+
+            this.renderRipples();
+        }
+        requestAnimationFrame(this.renderLoop);
+    }
+
     updateVisuals() {
         const { startX, startY, x, y } = this.xyState;
         const rect = this.djXYPad.getBoundingClientRect();
