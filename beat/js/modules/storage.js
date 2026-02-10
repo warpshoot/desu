@@ -214,7 +214,7 @@ export function loadState() {
                     nextPattern: null,
                     masterVolume: state.masterVolume !== undefined ? state.masterVolume : -12,
                     repeatEnabled: true,
-                    chainEnabled: true,
+                    chainMode: 'chain',
                     patterns,
                     chain: new Array(CHAIN_LENGTH).fill(null)
                 };
@@ -229,7 +229,12 @@ export function loadState() {
             if (state.nextPattern === undefined) state.nextPattern = null;
             if (state.masterVolume === undefined) state.masterVolume = -12;
             if (state.repeatEnabled === undefined) state.repeatEnabled = true;
-            if (state.chainEnabled === undefined) state.chainEnabled = true;
+            // Migrate chainEnabled → chainMode
+            if (state.chainEnabled !== undefined) {
+                state.chainMode = state.chainEnabled ? 'chain' : 'live';
+                delete state.chainEnabled;
+            }
+            if (!state.chainMode) state.chainMode = 'chain';
 
             // Ensure we have MAX_PATTERNS patterns
             if (!state.patterns) state.patterns = [];
@@ -294,7 +299,7 @@ export function createDefaultState() {
         masterVolume: -12,
         trackParams: createDefaultTrackParams(),
         repeatEnabled: true,
-        chainEnabled: true,
+        chainMode: 'chain',
         patterns,
         chain: new Array(CHAIN_LENGTH).fill(null)
     };
@@ -339,7 +344,7 @@ function compactState(state) {
     };
     if (state.nextPattern !== null && state.nextPattern !== undefined) compact.nextPattern = state.nextPattern;
     if (state.repeatEnabled === false) compact.repeatEnabled = false;
-    if (state.chainEnabled === false) compact.chainEnabled = false;
+    if (state.chainMode && state.chainMode !== 'chain') compact.chainMode = state.chainMode;
     if (state.chain && state.chain.some(v => v !== null)) compact.chain = state.chain;
     return compact;
 }

@@ -2,19 +2,36 @@ export class DJMode {
     constructor(sequencer) {
         this.seq = sequencer;
         this.djOverlay = null;
+        this.djXYPad = null;
+        this.djRibbon = null;
+        this.djRibbonCursor = null;
         this.djOrigin = null;
         this.djCurrent = null;
         this.djLine = null;
-        this.djState = null;
+        this.isOpen = false;
+
+        // XY pad state
+        this.xyState = {
+            touching: false,
+            x: 0.5, y: 0.5,
+            startX: 0.5, startY: 0.5,
+            targetX: 0.5, targetY: 0.5
+        };
 
         // Ripple effect
         this.rippleCanvas = null;
         this.rippleCtx = null;
         this.ripples = [];
+
+        // Active FX
+        this.activeFX = new Set();
     }
 
     init() {
         this.djOverlay = document.getElementById('dj-overlay');
+        this.djXYPad = document.getElementById('dj-xy-pad');
+        this.djRibbon = document.getElementById('dj-ribbon');
+        this.djRibbonCursor = document.getElementById('dj-ribbon-cursor');
         this.djOrigin = document.getElementById('dj-origin');
         this.djCurrent = document.getElementById('dj-current');
         this.djLine = document.getElementById('dj-line');
@@ -24,39 +41,225 @@ export class DJMode {
         if (this.rippleCanvas) {
             this.rippleCtx = this.rippleCanvas.getContext('2d');
             this.resizeRippleCanvas();
-            window.addEventListener('resize', () => this.resizeRippleCanvas());
+            window.addEventListener('resize', () => {
+                this.resizeRippleCanvas();
+                // Auto-close on small screens (portrait/mobile) to match CSS
+                if (window.innerWidth <= 600 && this.isOpen) {
+                    this.close();
+                }
+            });
         }
 
         const dancer = this.seq.dancer;
         if (!this.djOverlay || !dancer) return;
 
-        this.djState = {
-            mode: 0,
-            touching: false,
-            x: 0.5, y: 0.5,
-            startX: 0.5, startY: 0.5,
-            targetX: 0.5, targetY: 0.5
-        };
-
+        // Start render loop
         this.renderLoop = this.renderLoop.bind(this);
         requestAnimationFrame(this.renderLoop);
 
+        // Dancer click: simple toggle
         dancer.addEventListener('click', (e) => {
             e.stopPropagation();
             if (this.seq.audioEngine.playing) {
-                this.cycleMode();
+                this.toggle();
             }
         });
 
+        // Setup FX buttons (hold to activate)
+        this.setupFXButtons();
+
+        // Setup Ribbon
+        this.setupRibbon();
+
+        // Setup XY pad interactions
+        this.setupXYPad();
+    }
+
+    toggle() {
+        if (this.isOpen) {
+            this.close();
+        } else {
+            this.open();
+        }
+    }
+
+    open() {
+        this.isOpen = true;
+        this.djOverlay.classList.remove('hidden');
+        this.resizeRippleCanvas();
+
+        const dancer = this.seq.dancer;
+        if (dancer) {
+            dancer.classList.add('dj-keep');
+        }
+    }
+
+    close() {
+        this.isOpen = false;
+        this.djOverlay.classList.add('hidden');
+
+        // Release all FX
+        this.releaseAllFX();
+
+        // Reset filter
+        this.seq.audioEngine.resetDJFilter();
+
+        const dancer = this.seq.dancer;
+        if (dancer) {
+            dancer.classList.remove('standby');
+            dancer.classList.remove('dj-keep');
+        }
+    }
+
+    // ========================
+    // FX Buttons
+    // ========================
+
+    setupFXButtons() {
+        const buttons = document.querySelectorAll('.dj-fx-btn');
+        buttons.forEach(btn => {
+            const fx = btn.dataset.fx;
+
+            const activate = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.activateFX(fx);
+                btn.classList.add('active');
+            };
+
+            const deactivate = (e) => {
+                e.preventDefault();
+                this.deactivateFX(fx);
+                btn.classList.remove('active');
+            };
+
+            // Mouse
+            btn.addEventListener('mousedown', activate);
+            btn.addEventListener('mouseup', deactivate);
+            btn.addEventListener('mouseleave', deactivate);
+
+            // Touch
+            btn.addEventListener('touchstart', activate, { passive: false });
+            btn.addEventListener('touchend', deactivate);
+            btn.addEventListener('touchcancel', deactivate);
+        });
+    }
+
+    activateFX(fx) {
+        if (this.activeFX.has(fx)) return;
+        this.activeFX.add(fx);
+
+        const engine = this.seq.audioEngine;
+        switch (fx) {
+            case 'loop':
+                engine.enableLoop();
+                break;
+            case 'slow':
+                engine.enableSlow();
+                break;
+        }
+    }
+
+    deactivateFX(fx) {
+        if (!this.activeFX.has(fx)) return;
+        this.activeFX.delete(fx);
+
+        const engine = this.seq.audioEngine;
+        switch (fx) {
+            case 'loop':
+                engine.disableLoop();
+                break;
+            case 'slow':
+                engine.disableSlow();
+                break;
+        }
+    }
+
+    releaseAllFX() {
+        const buttons = document.querySelectorAll('.dj-fx-btn');
+        buttons.forEach(btn => btn.classList.remove('active'));
+
+        for (const fx of this.activeFX) {
+            this.deactivateFX(fx);
+        }
+        this.activeFX.clear();
+    }
+
+    // ========================
+    // Ribbon Controller
+    // ========================
+
+    setupRibbon() {
+        if (!this.djRibbon) return;
+
+        const handleInput = (clientX) => {
+            const rect = this.djRibbon.getBoundingClientRect();
+            const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+
+            // Map 0..1 to -2..+2 (5 steps)
+            // 0.0-0.2: -2
+            // 0.2-0.4: -1
+            // 0.4-0.6: 0
+            // 0.6-0.8: +1
+            // 0.8-1.0: +2
+            // Continuous: -2 to +2
+            const shift = (x * 4) - 2;
+
+            this.seq.audioEngine.setOctaveShift(shift);
+
+            // Update cursor
+            if (this.djRibbonCursor) {
+                this.djRibbonCursor.style.left = `${x * 80}%`;
+            }
+        };
+
         const onStart = (e) => {
-            this.djState.touching = true;
+            e.preventDefault();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            handleInput(clientX);
+        };
+
+        const onMove = (e) => {
+            e.preventDefault();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            handleInput(clientX);
+        };
+
+        const onEnd = (e) => {
+            e.preventDefault();
+            // Reset to 0
+            this.seq.audioEngine.setOctaveShift(0);
+            if (this.djRibbonCursor) {
+                this.djRibbonCursor.style.left = '40%'; // Center
+            }
+        };
+
+        this.djRibbon.addEventListener('mousedown', onStart);
+        this.djRibbon.addEventListener('mousemove', (e) => { if (e.buttons === 1) onMove(e); });
+        this.djRibbon.addEventListener('mouseup', onEnd);
+        this.djRibbon.addEventListener('mouseleave', onEnd);
+
+        this.djRibbon.addEventListener('touchstart', onStart, { passive: false });
+        this.djRibbon.addEventListener('touchmove', onMove, { passive: false });
+        this.djRibbon.addEventListener('touchend', onEnd);
+    }
+
+    // ========================
+    // XY Pad
+    // ========================
+
+    setupXYPad() {
+        if (!this.djXYPad) return;
+
+        const onStart = (e) => {
+            this.xyState.touching = true;
             const pos = this.getPosition(e);
-            this.djState.startX = pos.x;
-            this.djState.startY = pos.y;
-            this.djState.targetX = pos.x;
-            this.djState.targetY = pos.y;
-            this.djState.x = pos.x;
-            this.djState.y = pos.y;
+            this.xyState.startX = pos.x;
+            this.xyState.startY = pos.y;
+            this.xyState.targetX = pos.x;
+            this.xyState.targetY = pos.y;
+            this.xyState.x = pos.x;
+            this.xyState.y = pos.y;
             this.djOrigin.classList.remove('hidden');
             this.djCurrent.classList.remove('hidden');
             this.djLine.classList.remove('hidden');
@@ -64,54 +267,55 @@ export class DJMode {
         };
 
         const onMove = (e) => {
-            if (!this.djState.touching) return;
+            if (!this.xyState.touching) return;
             e.preventDefault();
             const pos = this.getPosition(e);
-            this.djState.targetX = pos.x;
-            this.djState.targetY = pos.y;
+            this.xyState.targetX = pos.x;
+            this.xyState.targetY = pos.y;
         };
 
         const onEnd = () => {
-            this.djState.touching = false;
+            this.xyState.touching = false;
             this.djOrigin.classList.add('hidden');
             this.djCurrent.classList.add('hidden');
             this.djLine.classList.add('hidden');
             this.seq.audioEngine.resetDJFilter();
-            if (this.djState.mode === 1) {
-                this.close(true);
-            }
         };
 
-        this.djOverlay.addEventListener('mousedown', onStart);
-        this.djOverlay.addEventListener('mousemove', onMove);
-        this.djOverlay.addEventListener('mouseup', onEnd);
-        this.djOverlay.addEventListener('mouseleave', onEnd);
+        this.djXYPad.addEventListener('mousedown', onStart);
+        this.djXYPad.addEventListener('mousemove', onMove);
+        this.djXYPad.addEventListener('mouseup', onEnd);
+        this.djXYPad.addEventListener('mouseleave', onEnd);
 
-        this.djOverlay.addEventListener('touchstart', (e) => {
+        this.djXYPad.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) {
                 e.preventDefault();
                 onStart(e);
             }
         }, { passive: false });
 
-        this.djOverlay.addEventListener('touchmove', (e) => {
+        this.djXYPad.addEventListener('touchmove', (e) => {
             if (e.touches.length === 1) {
                 onMove(e);
             }
         }, { passive: false });
 
-        this.djOverlay.addEventListener('touchend', onEnd);
+        this.djXYPad.addEventListener('touchend', onEnd);
     }
 
-    renderLoop() {
-        if (this.djState.mode > 0) {
-            const smoothing = 0.5;
-            this.djState.x += (this.djState.targetX - this.djState.x) * smoothing;
-            this.djState.y += (this.djState.targetY - this.djState.y) * smoothing;
+    // ========================
+    // Render Loop
+    // ========================
 
-            if (this.djState.touching) {
-                const deltaX = this.djState.x - this.djState.startX;
-                const deltaY = this.djState.startY - this.djState.y;
+    renderLoop() {
+        if (this.isOpen) {
+            const smoothing = 0.5;
+            this.xyState.x += (this.xyState.targetX - this.xyState.x) * smoothing;
+            this.xyState.y += (this.xyState.targetY - this.xyState.y) * smoothing;
+
+            if (this.xyState.touching) {
+                const deltaX = this.xyState.x - this.xyState.startX;
+                const deltaY = this.xyState.startY - this.xyState.y;
                 this.updateAudio(deltaX, deltaY);
                 this.updateVisuals();
             }
@@ -122,7 +326,7 @@ export class DJMode {
     }
 
     getPosition(e) {
-        const rect = this.djOverlay.getBoundingClientRect();
+        const rect = this.djXYPad.getBoundingClientRect();
         let clientX, clientY;
 
         if (e.touches && e.touches.length > 0) {
@@ -140,8 +344,8 @@ export class DJMode {
     }
 
     updateVisuals() {
-        const { startX, startY, x, y } = this.djState;
-        const rect = this.djOverlay.getBoundingClientRect();
+        const { startX, startY, x, y } = this.xyState;
+        const rect = this.djXYPad.getBoundingClientRect();
 
         if (this.djOrigin) {
             this.djOrigin.style.transform = `translate3d(${startX * rect.width}px, ${startY * rect.height}px, 0) translate(-50%, -50%)`;
@@ -192,51 +396,17 @@ export class DJMode {
         this.seq.audioEngine.setDJFilter(lpfCutoff, hpfCutoff, resonance, delayWet);
     }
 
-    cycleMode() {
-        const dancer = this.seq.dancer;
-        const nextMode = (this.djState.mode + 1) % 3;
-        this.djState.mode = nextMode;
-
-        dancer.classList.remove('standby');
-        dancer.classList.remove('dj-keep');
-
-        if (nextMode === 1) {
-            this.djOverlay.classList.remove('hidden');
-            this.resizeRippleCanvas();
-            dancer.classList.add('standby');
-        } else if (nextMode === 2) {
-            this.djOverlay.classList.remove('hidden');
-            this.resizeRippleCanvas();
-            dancer.classList.add('dj-keep');
-        } else {
-            this.close(true);
-        }
-    }
-
-    close(force = false) {
-        if (this.djState.mode === 2 && !force) return;
-
-        this.djState.mode = 0;
-        this.djOverlay.classList.add('hidden');
-        const dancer = this.seq.dancer;
-        if (dancer) {
-            dancer.classList.remove('standby');
-            dancer.classList.remove('dj-keep');
-        }
-        this.seq.audioEngine.resetDJFilter();
-    }
-
     /** Check if standby mode is active (used by onStep for beat pulse) */
     get isStandby() {
-        return this.djState && this.djState.standby;
+        return false;
     }
 
     // --- Ripple Effect ---
 
     resizeRippleCanvas() {
-        if (!this.rippleCanvas) return;
+        if (!this.rippleCanvas || !this.djXYPad) return;
         const dpr = window.devicePixelRatio || 1;
-        const rect = this.djOverlay.getBoundingClientRect();
+        const rect = this.djXYPad.getBoundingClientRect();
         this.rippleCanvas.width = rect.width * dpr;
         this.rippleCanvas.height = rect.height * dpr;
         if (this.rippleCtx) {
@@ -245,8 +415,8 @@ export class DJMode {
     }
 
     addRipple(intensity = 1.0) {
-        if (!this.djState || this.djState.mode === 0) return;
-        const rect = this.djOverlay.getBoundingClientRect();
+        if (!this.isOpen || !this.djXYPad) return;
+        const rect = this.djXYPad.getBoundingClientRect();
         this.ripples.push({
             x: rect.width / 2,
             y: rect.height / 2,
@@ -258,22 +428,20 @@ export class DJMode {
     }
 
     renderRipples() {
-        if (!this.rippleCtx || this.ripples.length === 0) {
-            if (this.rippleCtx) {
-                const rect = this.djOverlay.getBoundingClientRect();
-                this.rippleCtx.clearRect(0, 0, rect.width, rect.height);
-            }
+        if (!this.rippleCtx || !this.djXYPad) return;
+        const rect = this.djXYPad.getBoundingClientRect();
+
+        if (this.ripples.length === 0) {
+            this.rippleCtx.clearRect(0, 0, rect.width, rect.height);
             return;
         }
 
-        const rect = this.djOverlay.getBoundingClientRect();
         const ctx = this.rippleCtx;
         ctx.clearRect(0, 0, rect.width, rect.height);
 
         for (let i = this.ripples.length - 1; i >= 0; i--) {
             const r = this.ripples[i];
 
-            // Expand
             const speed = r.maxRadius * 0.04;
             r.radius += speed;
             r.opacity *= 0.96;

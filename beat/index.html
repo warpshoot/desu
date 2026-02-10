@@ -82,6 +82,7 @@
 
         <!-- Chain Context Menu -->
         <div id="chain-menu" class="context-menu hidden">
+            <div class="menu-item" id="chain-clear-slot">CLEAR</div>
             <div class="menu-item" id="chain-clear-all">CLEAR ALL</div>
         </div>
 
@@ -220,9 +221,7 @@
         </div>
 
         <!-- File Button -->
-        <button id="file-btn" class="control-btn" title="File Management">
-            <img src="icons/file.svg" alt="File" style="width: 20px; height: 20px;">
-        </button>
+        <button id="file-btn" class="control-btn" title="Project">PRJ</button>
 
         <!-- File Menu -->
         <div id="file-menu" class="popup-menu hidden">
@@ -232,13 +231,7 @@
             <input type="file" id="file-input" accept=".json" style="display:none;">
         </div>
 
-        <button id="clear-btn" class="control-btn">CLR</button>
-
-        <!-- Clear Menu -->
-        <div id="clear-menu" class="popup-menu hidden">
-            <div class="menu-item" id="clear-pattern-btn">Clear Pattern</div>
-            <div class="menu-item" id="clear-all-btn">ALL Reset</div>
-        </div>
+    </div>
     </div>
 
     <!-- Roll Menu -->
@@ -252,14 +245,31 @@
     <!-- Note Indicator -->
     <div id="note-indicator" class="hidden"></div>
 
-    <!-- DJ Mode XY Pad Overlay -->
+    <!-- DJ Mode Overlay -->
     <div id="dj-overlay" class="hidden">
-        <!-- Params removed -->
-        <canvas id="dj-ripple-canvas"></canvas>
-        <div id="dj-visuals">
-            <div id="dj-line" class="hidden"></div>
-            <div id="dj-origin" class="dj-marker hidden"></div>
-            <div id="dj-current" class="dj-marker hidden"></div>
+        <!-- Effect Buttons (top) -->
+        <div id="dj-fx-buttons">
+            <button class="dj-fx-btn" data-fx="loop">LOOP</button>
+            <button class="dj-fx-btn" data-fx="slow">SLOW</button>
+        </div>
+        <!-- Octave Ribbon -->
+        <div id="dj-ribbon-container">
+            <div id="dj-ribbon">
+                <div id="dj-ribbon-cursor"></div>
+                <div class="ribbon-marks">
+                    <span>-2</span><span>-1</span><span>0</span><span>+1</span><span>+2</span>
+                </div>
+            </div>
+        </div>
+        <!-- XY Pad (bottom) -->
+        <div id="dj-xy-pad">
+            <div id="dj-xy-label">FILTER</div>
+            <canvas id="dj-ripple-canvas"></canvas>
+            <div id="dj-visuals">
+                <div id="dj-line" class="hidden"></div>
+                <div id="dj-origin" class="dj-marker hidden"></div>
+                <div id="dj-current" class="dj-marker hidden"></div>
+            </div>
         </div>
     </div>
 

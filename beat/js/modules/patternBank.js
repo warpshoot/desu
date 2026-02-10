@@ -20,15 +20,16 @@ export class PatternBank {
             pad.dataset.pattern = i;
             pad.textContent = PATTERN_NAMES[i];
 
-            pad.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.onPadTap(i);
-            });
-
             let longPressTimer = null;
+            let isTouch = false;
+            let didLongPress = false;
+
             const startLongPress = (e) => {
+                didLongPress = false;
                 longPressTimer = setTimeout(() => {
+                    didLongPress = true;
                     e.preventDefault();
+                    this.seq._suppressClick = true;
                     this.showContextMenu(i, pad);
                 }, 500);
             };
@@ -36,13 +37,23 @@ export class PatternBank {
                 clearTimeout(longPressTimer);
             };
 
-            pad.addEventListener('mousedown', startLongPress);
-            pad.addEventListener('mouseup', cancelLongPress);
+            pad.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (didLongPress) {
+                    didLongPress = false;
+                    return;
+                }
+                this.onPadTap(i);
+            });
+
+            pad.addEventListener('mousedown', (e) => { if (!isTouch) startLongPress(e); });
+            pad.addEventListener('mouseup', () => { if (!isTouch) cancelLongPress(); });
             pad.addEventListener('mouseleave', cancelLongPress);
             pad.addEventListener('touchstart', (e) => {
+                isTouch = true;
                 startLongPress(e);
             }, { passive: false });
-            pad.addEventListener('touchend', cancelLongPress);
+            pad.addEventListener('touchend', () => { cancelLongPress(); setTimeout(() => { isTouch = false; }, 300); });
             pad.addEventListener('touchmove', cancelLongPress);
 
             container.appendChild(pad);
@@ -63,12 +74,6 @@ export class PatternBank {
                 this.clearSlot(this.patternMenuTarget);
                 this.hideMenu();
             });
-
-            document.addEventListener('click', (e) => {
-                if (this.patternMenu && !this.patternMenu.contains(e.target)) {
-                    this.hideMenu();
-                }
-            });
         }
 
         this.updateUI();
@@ -85,6 +90,7 @@ export class PatternBank {
                 state.nextPattern = index;
             }
             this.updateUI();
+            this.seq.chain.updateUI();
             saveState(state);
         } else {
             this.switchTo(index);
@@ -101,6 +107,7 @@ export class PatternBank {
         this.seq.restoreState();
         saveState(state);
         this.updateUI();
+        this.seq.chain.updateUI();
     }
 
     performQueuedSwitch() {
@@ -122,6 +129,7 @@ export class PatternBank {
         this.seq.setupTrackControls();
 
         this.updateUI();
+        this.seq.chain.updateUI();
         saveState(state);
     }
 
@@ -169,6 +177,7 @@ export class PatternBank {
         this.patternMenu.style.left = `${rect.left}px`;
         this.patternMenu.style.top = `${rect.top - this.patternMenu.offsetHeight - 4}px`;
         this.patternMenu.classList.remove('hidden');
+        this._menuOpenTime = Date.now();
     }
 
     hideMenu() {

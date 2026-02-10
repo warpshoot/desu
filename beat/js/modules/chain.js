@@ -11,64 +11,32 @@ export class Chain {
 
     init() {
         this.chainSlots = [];
+        this.arrows = [];
         const container = document.getElementById('chain-container');
         if (!container) return;
 
         if (!this.seq.state.chain) {
             this.seq.state.chain = new Array(CHAIN_LENGTH).fill(null);
         }
-        if (this.seq.state.chainEnabled === undefined) {
-            this.seq.state.chainEnabled = true;
+        if (!this.seq.state.chainMode) {
+            this.seq.state.chainMode = 'chain';
         }
 
-        // CH toggle button
+        // Mode toggle button: CHAIN / LIVE (simple click, no long-press)
         this.chainToggleBtn = document.createElement('button');
         this.chainToggleBtn.id = 'chain-toggle';
-        this.chainToggleBtn.textContent = 'CHAIN';
 
-        let chPressTimer = null;
-        let chDidLongPress = false;
-        let chIsTouch = false;
-
-        const chStartPress = () => {
-            chDidLongPress = false;
-            chPressTimer = setTimeout(() => {
-                chDidLongPress = true;
-                // Show chain context menu
-                const chainMenu = document.getElementById('chain-menu');
-                if (chainMenu) {
-                    // Hide other menus
-                    document.querySelectorAll('.context-menu').forEach(m => m.classList.add('hidden'));
-                    document.querySelectorAll('.popup-menu').forEach(m => m.classList.add('hidden'));
-
-                    const rect = this.chainToggleBtn.getBoundingClientRect();
-                    chainMenu.style.left = `${rect.left}px`;
-                    chainMenu.style.top = `${rect.top - chainMenu.offsetHeight - 4}px`;
-                    chainMenu.classList.remove('hidden');
-                }
-            }, 500);
-        };
-        const chEndPress = () => {
-            clearTimeout(chPressTimer);
-            if (!chDidLongPress) {
-                this.seq.state.chainEnabled = !this.seq.state.chainEnabled;
-                if (!this.seq.state.chainEnabled) {
-                    this.chainPosition = -1;
-                }
-                saveState(this.seq.state);
-                this.updateUI();
-            }
-        };
-        const chCancelPress = () => { clearTimeout(chPressTimer); };
-
-        this.chainToggleBtn.addEventListener('mousedown', () => { if (!chIsTouch) chStartPress(); });
-        this.chainToggleBtn.addEventListener('mouseup', () => { if (!chIsTouch) chEndPress(); });
-        this.chainToggleBtn.addEventListener('mouseleave', chCancelPress);
-        this.chainToggleBtn.addEventListener('touchstart', () => { chIsTouch = true; chStartPress(); }, { passive: true });
-        this.chainToggleBtn.addEventListener('touchend', (e) => { e.preventDefault(); chEndPress(); setTimeout(() => { chIsTouch = false; }, 300); });
-        this.chainToggleBtn.addEventListener('touchcancel', () => { chCancelPress(); setTimeout(() => { chIsTouch = false; }, 300); });
+        this.chainToggleBtn.addEventListener('click', () => {
+            this.seq.state.chainMode = this.seq.state.chainMode === 'chain' ? 'live' : 'chain';
+            this.chainPosition = -1;
+            saveState(this.seq.state);
+            this.updateUI();
+        });
 
         container.appendChild(this.chainToggleBtn);
+
+        // Create slots (used for both CHAIN and LIVE modes)
+        this._chainMenuTarget = null;
 
         for (let i = 0; i < CHAIN_LENGTH; i++) {
             if (i > 0) {
@@ -76,6 +44,7 @@ export class Chain {
                 arrow.className = 'chain-arrow';
                 arrow.textContent = '>';
                 container.appendChild(arrow);
+                this.arrows.push(arrow);
             }
 
             const slot = document.createElement('button');
@@ -90,7 +59,10 @@ export class Chain {
                 didLongPress = false;
                 pressTimer = setTimeout(() => {
                     didLongPress = true;
-                    this.onSlotClear(i);
+                    if (this.seq.state.chainMode === 'chain') {
+                        this.showChainSlotMenu(i, slot);
+                    }
+                    // No long-press action in LIVE mode
                 }, 500);
             };
 
@@ -123,6 +95,22 @@ export class Chain {
         this.updateUI();
     }
 
+    showChainSlotMenu(index, slotElement) {
+        this._chainMenuTarget = index;
+        const chainMenu = document.getElementById('chain-menu');
+        if (!chainMenu) return;
+
+        document.querySelectorAll('.context-menu').forEach(m => m.classList.add('hidden'));
+        document.querySelectorAll('.popup-menu').forEach(m => m.classList.add('hidden'));
+
+        this.seq._suppressClick = true;
+
+        const rect = slotElement.getBoundingClientRect();
+        chainMenu.style.left = `${rect.left}px`;
+        chainMenu.style.top = `${rect.top - chainMenu.offsetHeight - 4}px`;
+        chainMenu.classList.remove('hidden');
+    }
+
     onSlotClear(index) {
         if (this.seq.state.chain[index] !== null) {
             this.seq.state.chain[index] = null;
@@ -132,6 +120,17 @@ export class Chain {
     }
 
     onSlotTap(index) {
+        const mode = this.seq.state.chainMode;
+
+        if (mode === 'live') {
+            // LIVE mode: queue pattern switch at bar end (same as pattern bank)
+            if (index >= MAX_PATTERNS) return;
+            this.seq.patternBank.onPadTap(index);
+            this.updateUI();
+            return;
+        }
+
+        // CHAIN mode: cycle pattern assignment
         const current = this.seq.state.chain[index];
 
         if (current === null) {
@@ -148,7 +147,11 @@ export class Chain {
 
     isActive() {
         const state = this.seq.state;
-        return state.chainEnabled !== false && state.chain && state.chain.some(s => s !== null);
+        return state.chainMode === 'chain' && state.chain && state.chain.some(s => s !== null);
+    }
+
+    isLive() {
+        return this.seq.state.chainMode === 'live';
     }
 
     advance() {
@@ -201,22 +204,52 @@ export class Chain {
         if (!this.chainSlots.length) return;
 
         const state = this.seq.state;
-        const enabled = state.chainEnabled !== false;
+        const mode = state.chainMode || 'chain';
+        const isChainMode = mode === 'chain';
+        const isLiveMode = mode === 'live';
         const container = document.getElementById('chain-container');
-        if (container) {
-            container.classList.toggle('chain-disabled', !enabled);
-        }
+
+        // Toggle button label
         if (this.chainToggleBtn) {
-            this.chainToggleBtn.classList.toggle('active', enabled);
+            this.chainToggleBtn.textContent = isChainMode ? 'CHAIN' : 'LIVE';
+            this.chainToggleBtn.classList.toggle('active', true);
         }
+
+        // Container mode class
+        if (container) {
+            container.classList.remove('chain-disabled');
+            container.classList.toggle('mode-live', isLiveMode);
+            container.classList.toggle('mode-chain', isChainMode);
+        }
+
+        // Hide arrows in LIVE mode
+        this.arrows.forEach(arrow => {
+            arrow.style.display = isLiveMode ? 'none' : '';
+        });
 
         for (let i = 0; i < CHAIN_LENGTH; i++) {
             const slot = this.chainSlots[i];
-            const value = state.chain[i];
 
-            slot.classList.toggle('filled', value !== null);
-            slot.classList.toggle('playing', enabled && i === this.chainPosition && this.seq.audioEngine.playing);
-            slot.textContent = value !== null ? PATTERN_NAMES[value] : '';
+            if (isLiveMode) {
+                // LIVE mode: show pattern numbers, highlight current, blink queued
+                if (i < MAX_PATTERNS) {
+                    slot.style.display = '';
+                    slot.textContent = PATTERN_NAMES[i];
+                    slot.classList.remove('filled', 'playing');
+                    slot.classList.toggle('live-active', i === state.currentPattern);
+                    slot.classList.toggle('queued', state.nextPattern !== null && i === state.nextPattern);
+                } else {
+                    slot.style.display = 'none';
+                }
+            } else {
+                // CHAIN mode: existing behavior
+                slot.style.display = '';
+                slot.classList.remove('live-active', 'queued');
+                const value = state.chain[i];
+                slot.classList.toggle('filled', value !== null);
+                slot.classList.toggle('playing', i === this.chainPosition && this.seq.audioEngine.playing);
+                slot.textContent = value !== null ? PATTERN_NAMES[value] : '';
+            }
         }
     }
 }

@@ -22,6 +22,13 @@ export class AudioEngine {
         this.djDelay = null;
         this.djFilterEnabled = false;
 
+        // DJ FX state
+        this.djOctaveShift = 0;
+        this.djSlowEnabled = false;
+        this.djLoopEnabled = false;
+        this.originalLoop = { start: 0, end: '1m', active: true };
+        this.originalBPM = DEFAULT_BPM;
+
         // Mute/Solo state
         this.mutedTracks = [false, false, false, false, false];
         this.soloedTracks = [false, false, false, false, false];
@@ -242,8 +249,14 @@ export class AudioEngine {
             this.onStepCallback(this.currentStep, adjustedTime);
         }
 
-        // Calculate next step (always loop 0 → COLS-1)
-        this.currentStep = (this.currentStep + 1) % COLS;
+        // Calculate next step
+        if (this.djLoopEnabled) {
+            // Loop first 4 steps
+            this.currentStep = (this.currentStep + 1) % 4;
+        } else {
+            // Normal loop 0 → COLS-1
+            this.currentStep = (this.currentStep + 1) % COLS;
+        }
     }
 
     setStepCallback(callback) {
@@ -292,8 +305,19 @@ export class AudioEngine {
 
     triggerNote(track, pitch, duration, time, rollMode = false, rollSubdivision = 1, octaveShift = 0) {
         if (!this.initialized || !this.instruments[track]) return;
+
+        // Ensure time is valid
+        if (time === undefined || time === null) {
+            time = Tone.now();
+        }
+
         const instrument = this.instruments[track];
         const trackConfig = this.activeTrackConfigs[track];
+
+        // Apply DJ octave shift on top of per-cell shift?
+        // No, djOctaveShift is now handled via global detune (setOctaveShift)
+        // so we only use the cell's octaveShift here.
+        const totalOctaveShift = octaveShift;
 
         // Calculate number of triggers
         const triggers = rollMode ? rollSubdivision : 1;
@@ -309,22 +333,22 @@ export class AudioEngine {
             const triggerTime = time + (i * triggerInterval);
 
             if (trackConfig.type === 'membrane') {
-                const totalPitch = pitch + (octaveShift * 12);
+                const totalPitch = pitch + (totalOctaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch);
                 // Longer gate time lets the envelope release naturally without clipping
                 instrument.triggerAttackRelease(freq, noteDuration * 0.6, triggerTime);
             } else if (trackConfig.type === 'noise') {
                 // Snare: trigger with duration and time
-                const totalPitch = pitch + (octaveShift * 12);
+                const totalPitch = pitch + (totalOctaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch);
                 instrument.triggerAttackRelease(noteDuration * 0.3, triggerTime);
             } else if (trackConfig.type === 'metal') {
                 // Hi-hat (MetalSynth): (frequency, duration, time)
-                const totalPitch = pitch + (octaveShift * 12);
+                const totalPitch = pitch + (totalOctaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch).toFrequency();
                 instrument.triggerAttackRelease(freq, noteDuration * 0.3, triggerTime);
             } else if (trackConfig.type === 'fm') {
-                const totalPitch = pitch + (octaveShift * 12);
+                const totalPitch = pitch + (totalOctaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch).toFrequency();
                 // Longer gate for bass/lead prevents release clipping with drive
                 instrument.triggerAttackRelease(freq, noteDuration * 0.7, triggerTime);
@@ -409,6 +433,57 @@ export class AudioEngine {
         this.djDelay.wet.rampTo(0, 0.15);
     }
 
+    // DJ OCTAVE effect (variable pitch bend)
+    setOctaveShift(shift) {
+        this.djOctaveShift = shift;
+        if (!this.initialized) return;
+
+        // Apply detune to all instruments for smooth pitch bend
+        // 1 octave = 1200 cents
+        const detuneValue = shift * 1200;
+
+        this.instruments.forEach(inst => {
+            if (!inst) return;
+
+            // Check if instrument has detune signal (PolySynth, Monophonic)
+            if (inst.detune && typeof inst.detune.rampTo === 'function') {
+                inst.detune.rampTo(detuneValue, 0.1);
+            } else if (inst.set) {
+                // Fallback for complex instruments
+                inst.set({ detune: detuneValue });
+            }
+        });
+    }
+
+    // DJ LOOP effect (Short Loop 4 steps)
+    enableLoop() {
+        if (this.djLoopEnabled) return;
+        this.djLoopEnabled = true;
+
+        // Force jump to start for instant effect
+        this.currentStep = 0;
+    }
+
+    disableLoop() {
+        this.djLoopEnabled = false;
+    }
+
+    // DJ SLOW effect (Tape Stop style)
+    enableSlow() {
+        if (this.djSlowEnabled) return;
+        this.djSlowEnabled = true;
+        this.originalBPM = Tone.Transport.bpm.value;
+        // Ramp BPM down to 30 over 2.0 seconds (smoother tape stop)
+        Tone.Transport.bpm.rampTo(30, 2.0);
+    }
+
+    disableSlow() {
+        if (!this.djSlowEnabled) return;
+        this.djSlowEnabled = false;
+        // Restore BPM instantly or ramp up fast
+        Tone.Transport.bpm.rampTo(this.originalBPM, 0.1);
+    }
+
     // Generate normalized tanh soft-clip curve
     // amount: 0 (clean) to 1 (heavy saturation)
     // tanh gives warm, tube-like saturation without the harsh intermodulation
@@ -441,6 +516,8 @@ export class AudioEngine {
         if (this.djDelay) this.djDelay.dispose();
         if (this.compressor) this.compressor.dispose();
         if (this.limiter) this.limiter.dispose();
+        this.disableSlow();
+        this.disableLoop();
     }
 
     updateTrackGains(immediate = false) {

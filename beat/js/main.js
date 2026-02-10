@@ -61,7 +61,7 @@ class Sequencer {
             },
 
             () => {
-                this.onClearBtnClick();
+                // onClear - removed (CLR button eliminated)
             },
             () => {
                 // onPlay
@@ -70,7 +70,7 @@ class Sequencer {
                     this.dancer.classList.remove('paused');
                 }
                 // Start chain from first filled slot
-                if (this.chain.isActive() && this.chain.chainPosition === -1 && this.state.chainEnabled !== false) {
+                if (this.chain.isActive() && this.chain.chainPosition === -1 && this.state.chainMode === 'chain') {
                     this.chain.chainPosition = this.chain.getFirstPosition();
                     const targetPattern = this.state.chain[this.chain.chainPosition];
                     if (targetPattern !== this.state.currentPattern) {
@@ -145,9 +145,9 @@ class Sequencer {
         }
 
         this.initRollMenu();
-        this.initClearMenu();
         this.initTrackMenu();
         this.initChainMenu();
+        this.initMenuCloseHandler();
 
         this.setupTrackIcons();
         this.setupTrackControls();
@@ -239,6 +239,14 @@ class Sequencer {
                 }
             }
         }, { passive: false });
+
+        // Keyboard: number keys 1-8 for pattern switch
+        document.addEventListener('keydown', (e) => {
+            const num = parseInt(e.key);
+            if (num >= 1 && num <= MAX_PATTERNS) {
+                this.patternBank.onPadTap(num - 1);
+            }
+        });
 
         this.initCreditModal();
         this.setupFileUI();
@@ -406,54 +414,8 @@ class Sequencer {
     }
 
     // ========================
-    // Clear Menu
+    // Clear (called from File > New or other places)
     // ========================
-
-    initClearMenu() {
-        this.clearMenuElement = document.getElementById('clear-menu');
-        this.clearBtn = document.getElementById('clear-btn');
-
-        if (!this.clearMenuElement || !this.clearBtn) return;
-
-        document.getElementById('clear-pattern-btn').addEventListener('click', () => {
-            if (confirm('Clear current pattern steps and local settings?')) {
-                this.clearCurrentPattern();
-                this.clearMenuElement.classList.add('hidden');
-            }
-        });
-
-        document.getElementById('clear-all-btn').addEventListener('click', () => {
-            if (confirm('RESET ALL? This will clear all patterns and reset all sounds.')) {
-                this.resetAll();
-                this.clearMenuElement.classList.add('hidden');
-            }
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!this.clearMenuElement.classList.contains('hidden') &&
-                !this.clearMenuElement.contains(e.target) &&
-                !this.clearBtn.contains(e.target)) {
-                this.clearMenuElement.classList.add('hidden');
-            }
-        });
-    }
-
-    onClearBtnClick() {
-        if (!this.clearMenuElement || !this.clearBtn) return;
-
-        const rect = this.clearBtn.getBoundingClientRect();
-        this.clearMenuElement.style.position = 'fixed';
-        this.clearMenuElement.style.bottom = (window.innerHeight - rect.top + 5) + 'px';
-        this.clearMenuElement.style.left = (rect.left - 20) + 'px';
-        this.clearMenuElement.style.top = 'auto';
-
-        this.clearMenuElement.classList.toggle('hidden');
-
-        const fileMenu = document.getElementById('file-menu');
-        if (fileMenu && !fileMenu.classList.contains('hidden')) {
-            fileMenu.classList.add('hidden');
-        }
-    }
 
     resetAll() {
         this.audioEngine.stop();
@@ -666,12 +628,6 @@ class Sequencer {
             this.clearTrack(this.trackMenuTarget);
             this.trackMenu.classList.add('hidden');
         });
-
-        document.addEventListener('click', (e) => {
-            if (this.trackMenu && !this.trackMenu.contains(e.target)) {
-                this.trackMenu.classList.add('hidden');
-            }
-        });
     }
 
     showTrackMenu(trackIndex, iconElement) {
@@ -679,6 +635,7 @@ class Sequencer {
         if (!this.trackMenu) return;
 
         this.hideAllMenus();
+        this._suppressClick = true;
 
         const pasteBtn = document.getElementById('track-paste');
         if (pasteBtn) {
@@ -721,19 +678,28 @@ class Sequencer {
         this.chainMenu = document.getElementById('chain-menu');
         if (!this.chainMenu) return;
 
-        document.getElementById('chain-clear-all').addEventListener('click', () => {
-            this.state.chain = new Array(CHAIN_LENGTH).fill(null);
-            this.chain.chainPosition = -1;
-            saveState(this.state);
-            this.chain.updateUI();
-            this.chainMenu.classList.add('hidden');
-        });
+        const clearSlotBtn = document.getElementById('chain-clear-slot');
+        const clearAllBtn = document.getElementById('chain-clear-all');
 
-        document.addEventListener('click', (e) => {
-            if (this.chainMenu && !this.chainMenu.contains(e.target)) {
+        if (clearSlotBtn) {
+            clearSlotBtn.addEventListener('click', () => {
+                const target = this.chain._chainMenuTarget;
+                if (target !== null) {
+                    this.chain.onSlotClear(target);
+                }
                 this.chainMenu.classList.add('hidden');
-            }
-        });
+            });
+        }
+
+        if (clearAllBtn) {
+            clearAllBtn.addEventListener('click', () => {
+                this.state.chain = new Array(CHAIN_LENGTH).fill(null);
+                this.chain.chainPosition = -1;
+                saveState(this.state);
+                this.chain.updateUI();
+                this.chainMenu.classList.add('hidden');
+            });
+        }
     }
 
     // ========================
@@ -742,8 +708,22 @@ class Sequencer {
 
     hideAllMenus() {
         document.querySelectorAll('.context-menu').forEach(m => m.classList.add('hidden'));
-        // Also hide popup menus
         document.querySelectorAll('.popup-menu').forEach(m => m.classList.add('hidden'));
+    }
+
+    initMenuCloseHandler() {
+        document.addEventListener('click', (e) => {
+            if (this._suppressClick) {
+                this._suppressClick = false;
+                return;
+            }
+            // Close any open context menus on outside click
+            document.querySelectorAll('.context-menu:not(.hidden)').forEach(menu => {
+                if (!menu.contains(e.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
+        });
     }
 
 
@@ -797,6 +777,36 @@ class Sequencer {
                 this.cells[track][step].setPlayhead(false);
             }
         }
+    }
+
+    // ========================
+    // Instant pattern switch (LIVE mode)
+    // ========================
+
+    instantSwitch(patternIndex) {
+        if (patternIndex < 0 || patternIndex >= MAX_PATTERNS) return;
+        if (patternIndex === this.state.currentPattern) return;
+
+        this.state.currentPattern = patternIndex;
+        this.state.nextPattern = null;
+
+        // Reset step position to 0 for instant restart
+        this.audioEngine.currentStep = 0;
+
+        // Rebuild grid
+        const gridContainer = document.getElementById('grid-container');
+        if (gridContainer) gridContainer.innerHTML = '';
+        this.createGrid();
+
+        this.syncAudioWithState();
+        this.controls.setSwing(this.pattern.swingEnabled);
+        this.controls.setScale(this.pattern.scale);
+        this.setupTrackControls();
+
+        this.clearPlayheads();
+
+        saveState(this.state);
+        this.patternBank.updateUI();
     }
 
     triggerTrackPulse(trackIndex) {
