@@ -146,6 +146,8 @@ class Sequencer {
 
         this.initRollMenu();
         this.initClearMenu();
+        this.initTrackMenu();
+        this.initChainMenu();
 
         this.setupTrackIcons();
         this.setupTrackControls();
@@ -585,29 +587,29 @@ class Sequencer {
 
         const tapState = [];
         for (let i = 0; i < TRACKS.length; i++) {
-            tapState[i] = { count: 0, lastTapTime: 0, timer: null, longPressTimer: null, didLongPress: false };
+            tapState[i] = { count: 0, lastTapTime: 0, timer: null, longPressTimer: null, didLongPress: false, isTouch: false };
         }
 
         this.trackIcons.forEach((icon, track) => {
             const state = tapState[track];
 
-            // Long-press to clear track
+            // Long-press to show track context menu
             const startLongPress = () => {
                 state.didLongPress = false;
                 state.longPressTimer = setTimeout(() => {
                     state.didLongPress = true;
-                    this.clearTrack(track);
+                    this.showTrackMenu(track, icon);
                 }, 500);
             };
             const cancelLongPress = () => {
                 clearTimeout(state.longPressTimer);
             };
 
-            icon.addEventListener('mousedown', startLongPress);
-            icon.addEventListener('mouseup', cancelLongPress);
+            icon.addEventListener('mousedown', () => { if (!state.isTouch) startLongPress(); });
+            icon.addEventListener('mouseup', () => { if (!state.isTouch) cancelLongPress(); });
             icon.addEventListener('mouseleave', cancelLongPress);
-            icon.addEventListener('touchstart', startLongPress, { passive: true });
-            icon.addEventListener('touchend', cancelLongPress);
+            icon.addEventListener('touchstart', () => { state.isTouch = true; startLongPress(); }, { passive: true });
+            icon.addEventListener('touchend', () => { cancelLongPress(); setTimeout(() => { state.isTouch = false; }, 300); });
             icon.addEventListener('touchmove', cancelLongPress, { passive: true });
 
             icon.addEventListener('click', (e) => {
@@ -637,6 +639,111 @@ class Sequencer {
                 }, TAP_THRESHOLD);
             });
         });
+    }
+
+    // ========================
+    // Track Context Menu
+    // ========================
+
+    initTrackMenu() {
+        this.trackMenu = document.getElementById('track-menu');
+        this.trackMenuTarget = null;
+        this.trackCopyBuffer = null;
+
+        if (!this.trackMenu) return;
+
+        document.getElementById('track-copy').addEventListener('click', () => {
+            this.copyTrack(this.trackMenuTarget);
+            this.trackMenu.classList.add('hidden');
+        });
+
+        document.getElementById('track-paste').addEventListener('click', () => {
+            this.pasteTrack(this.trackMenuTarget);
+            this.trackMenu.classList.add('hidden');
+        });
+
+        document.getElementById('track-clear').addEventListener('click', () => {
+            this.clearTrack(this.trackMenuTarget);
+            this.trackMenu.classList.add('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (this.trackMenu && !this.trackMenu.contains(e.target)) {
+                this.trackMenu.classList.add('hidden');
+            }
+        });
+    }
+
+    showTrackMenu(trackIndex, iconElement) {
+        this.trackMenuTarget = trackIndex;
+        if (!this.trackMenu) return;
+
+        this.hideAllMenus();
+
+        const pasteBtn = document.getElementById('track-paste');
+        if (pasteBtn) {
+            pasteBtn.classList.toggle('disabled', !this.trackCopyBuffer);
+        }
+
+        const rect = iconElement.getBoundingClientRect();
+        this.trackMenu.style.left = `${rect.right + 4}px`;
+        this.trackMenu.style.top = `${rect.top}px`;
+        this.trackMenu.classList.remove('hidden');
+    }
+
+    copyTrack(trackIndex) {
+        const pat = this.pattern;
+        this.trackCopyBuffer = [];
+        for (let step = 0; step < COLS; step++) {
+            this.trackCopyBuffer.push(JSON.parse(JSON.stringify(pat.grid[trackIndex][step])));
+        }
+    }
+
+    pasteTrack(trackIndex) {
+        if (!this.trackCopyBuffer) return;
+        const pat = this.pattern;
+        for (let step = 0; step < COLS; step++) {
+            Object.assign(pat.grid[trackIndex][step], JSON.parse(JSON.stringify(this.trackCopyBuffer[step])));
+            const el = this.cells[trackIndex][step].element;
+            el.classList.toggle('active', pat.grid[trackIndex][step].active);
+            el.classList.toggle('roll', pat.grid[trackIndex][step].rollMode);
+            this.cells[trackIndex][step].updateVisuals();
+        }
+        saveState(this.state);
+        this.patternBank.updateUI();
+    }
+
+    // ========================
+    // Chain Context Menu
+    // ========================
+
+    initChainMenu() {
+        this.chainMenu = document.getElementById('chain-menu');
+        if (!this.chainMenu) return;
+
+        document.getElementById('chain-clear-all').addEventListener('click', () => {
+            this.state.chain = new Array(CHAIN_LENGTH).fill(null);
+            this.chain.chainPosition = -1;
+            saveState(this.state);
+            this.chain.updateUI();
+            this.chainMenu.classList.add('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (this.chainMenu && !this.chainMenu.contains(e.target)) {
+                this.chainMenu.classList.add('hidden');
+            }
+        });
+    }
+
+    // ========================
+    // Menu Helpers
+    // ========================
+
+    hideAllMenus() {
+        document.querySelectorAll('.context-menu').forEach(m => m.classList.add('hidden'));
+        // Also hide popup menus
+        document.querySelectorAll('.popup-menu').forEach(m => m.classList.add('hidden'));
     }
 
 

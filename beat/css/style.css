@@ -297,9 +297,18 @@ body.playing #credit-btn:hover {
 }
 
 @keyframes trackCleared {
-    0% { background: #333; }
-    50% { background: #ff4444; opacity: 0.6; }
-    100% { background: #333; }
+    0% {
+        background: #333;
+    }
+
+    50% {
+        background: #ff4444;
+        opacity: 0.6;
+    }
+
+    100% {
+        background: #333;
+    }
 }
 
 #grid-wrapper {
@@ -1744,8 +1753,8 @@ body.playing .pattern-pad.has-data {
     color: #999;
 }
 
-/* Pattern Context Menu */
-#pattern-menu {
+/* Context Menu (shared) */
+.context-menu {
     position: fixed;
     background: #1a1a1a;
     border: 2px solid #fff;
@@ -1754,11 +1763,11 @@ body.playing .pattern-pad.has-data {
     pointer-events: auto;
 }
 
-#pattern-menu.hidden {
+.context-menu.hidden {
     display: none;
 }
 
-#pattern-menu .menu-item {
+.context-menu .menu-item {
     padding: 8px 14px;
     color: #fff;
     cursor: pointer;
@@ -1769,15 +1778,15 @@ body.playing .pattern-pad.has-data {
     transition: background 0.1s ease;
 }
 
-#pattern-menu .menu-item:last-child {
+.context-menu .menu-item:last-child {
     border-right: none;
 }
 
-#pattern-menu .menu-item:hover {
+.context-menu .menu-item:hover {
     background: #333;
 }
 
-#pattern-menu .menu-item.disabled {
+.context-menu .menu-item.disabled {
     color: #444;
     pointer-events: none;
 }

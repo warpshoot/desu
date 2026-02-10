@@ -67,10 +67,22 @@
 
     <div id="sequencer-container">
         <!-- Pattern Context Menu -->
-        <div id="pattern-menu" class="hidden">
+        <div id="pattern-menu" class="context-menu hidden">
             <div class="menu-item" id="pattern-copy">COPY</div>
             <div class="menu-item" id="pattern-paste">PASTE</div>
             <div class="menu-item" id="pattern-clear">CLEAR</div>
+        </div>
+
+        <!-- Track Context Menu -->
+        <div id="track-menu" class="context-menu hidden">
+            <div class="menu-item" id="track-copy">COPY</div>
+            <div class="menu-item" id="track-paste">PASTE</div>
+            <div class="menu-item" id="track-clear">CLEAR</div>
+        </div>
+
+        <!-- Chain Context Menu -->
+        <div id="chain-menu" class="context-menu hidden">
+            <div class="menu-item" id="chain-clear-all">CLEAR ALL</div>
         </div>
 
         <div id="sequencer-inner">
@@ -258,7 +270,7 @@
     <script src="../fish.js"></script>
     <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
     <script type="module" src="js/main.js"></script>
-    <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');</script>
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>
 </body>
 
 </html>

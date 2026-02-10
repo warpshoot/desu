@@ -28,15 +28,24 @@ export class Chain {
 
         let chPressTimer = null;
         let chDidLongPress = false;
+        let chIsTouch = false;
 
         const chStartPress = () => {
             chDidLongPress = false;
             chPressTimer = setTimeout(() => {
                 chDidLongPress = true;
-                this.seq.state.chain = new Array(CHAIN_LENGTH).fill(null);
-                this.chainPosition = -1;
-                saveState(this.seq.state);
-                this.updateUI();
+                // Show chain context menu
+                const chainMenu = document.getElementById('chain-menu');
+                if (chainMenu) {
+                    // Hide other menus
+                    document.querySelectorAll('.context-menu').forEach(m => m.classList.add('hidden'));
+                    document.querySelectorAll('.popup-menu').forEach(m => m.classList.add('hidden'));
+
+                    const rect = this.chainToggleBtn.getBoundingClientRect();
+                    chainMenu.style.left = `${rect.left}px`;
+                    chainMenu.style.top = `${rect.top - chainMenu.offsetHeight - 4}px`;
+                    chainMenu.classList.remove('hidden');
+                }
             }, 500);
         };
         const chEndPress = () => {
@@ -52,12 +61,12 @@ export class Chain {
         };
         const chCancelPress = () => { clearTimeout(chPressTimer); };
 
-        this.chainToggleBtn.addEventListener('mousedown', chStartPress);
-        this.chainToggleBtn.addEventListener('mouseup', chEndPress);
+        this.chainToggleBtn.addEventListener('mousedown', () => { if (!chIsTouch) chStartPress(); });
+        this.chainToggleBtn.addEventListener('mouseup', () => { if (!chIsTouch) chEndPress(); });
         this.chainToggleBtn.addEventListener('mouseleave', chCancelPress);
-        this.chainToggleBtn.addEventListener('touchstart', chStartPress, { passive: true });
-        this.chainToggleBtn.addEventListener('touchend', (e) => { e.preventDefault(); chEndPress(); });
-        this.chainToggleBtn.addEventListener('touchcancel', chCancelPress);
+        this.chainToggleBtn.addEventListener('touchstart', () => { chIsTouch = true; chStartPress(); }, { passive: true });
+        this.chainToggleBtn.addEventListener('touchend', (e) => { e.preventDefault(); chEndPress(); setTimeout(() => { chIsTouch = false; }, 300); });
+        this.chainToggleBtn.addEventListener('touchcancel', () => { chCancelPress(); setTimeout(() => { chIsTouch = false; }, 300); });
 
         container.appendChild(this.chainToggleBtn);
 
@@ -75,6 +84,7 @@ export class Chain {
 
             let pressTimer = null;
             let didLongPress = false;
+            let isTouch = false;
 
             const startPress = () => {
                 didLongPress = false;
@@ -95,15 +105,16 @@ export class Chain {
                 clearTimeout(pressTimer);
             };
 
-            slot.addEventListener('mousedown', startPress);
-            slot.addEventListener('mouseup', endPress);
+            slot.addEventListener('mousedown', () => { if (!isTouch) startPress(); });
+            slot.addEventListener('mouseup', () => { if (!isTouch) endPress(); });
             slot.addEventListener('mouseleave', cancelPress);
-            slot.addEventListener('touchstart', startPress, { passive: true });
+            slot.addEventListener('touchstart', () => { isTouch = true; startPress(); }, { passive: true });
             slot.addEventListener('touchend', (e) => {
                 e.preventDefault();
                 endPress();
+                setTimeout(() => { isTouch = false; }, 300);
             });
-            slot.addEventListener('touchcancel', cancelPress);
+            slot.addEventListener('touchcancel', () => { cancelPress(); setTimeout(() => { isTouch = false; }, 300); });
 
             container.appendChild(slot);
             this.chainSlots.push(slot);
