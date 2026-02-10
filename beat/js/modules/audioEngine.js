@@ -36,7 +36,7 @@ export class AudioEngine {
         this.originalBPM = DEFAULT_BPM;
 
         // Pre-calculate curves
-        this.crushCurve = this._makeBitCrushCurve(4); // 4-bit simulation
+        this.crushCurve = this._makeBitCrushCurve(2); // 2-bit simulation (very harsh)
         this.cleanCurve = new Float32Array([-1, 1]); // Linear bypass
 
         // Mute/Solo state
@@ -527,7 +527,7 @@ export class AudioEngine {
         this.djStutterEnabled = true;
 
         // Start LFO to oscillate gain
-        // Start immediately
+        this.stutterLFO.connect(this.djGate.gain);
         this.stutterLFO.start();
     }
 
@@ -537,6 +537,7 @@ export class AudioEngine {
 
         // Stop LFO and reset Gain to 1
         this.stutterLFO.stop();
+        this.stutterLFO.disconnect();
         this.djGate.gain.value = 1;
     }
 
