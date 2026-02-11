@@ -1291,6 +1291,7 @@ body.playing #credit-btn:hover {
         width: 50px !important;
         height: 50px !important;
     }
+
 }
 
 /* Landscape mobile - primary mobile experience */
@@ -1371,11 +1372,6 @@ body.playing #credit-btn:hover {
 
     #bpm-drag-value {
         font-size: 16px;
-    }
-
-    /* DJ overlay - match controls height */
-    #dj-overlay {
-        bottom: 76px;
     }
 
     /* Container adjustment */
@@ -1570,7 +1566,7 @@ body.playing #credit-btn:hover {
     top: 0;
     left: 0;
     right: 0;
-    bottom: 80px;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
     background: rgba(0, 0, 0, 0.5);
     z-index: 900;
     display: flex;
@@ -1579,6 +1575,28 @@ body.playing #credit-btn:hover {
 
 #dj-overlay.hidden {
     display: none;
+}
+
+/* DJ overlay bottom adjustments per breakpoint (must come after default rule) */
+/* Portrait ≤768px: controls become 2-row grid (~100px tall) */
+@media (orientation: portrait) and (max-width: 768px) {
+    #dj-overlay {
+        bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/* Landscape ≤932px: controls min-height 60px */
+@media (max-width: 932px) and (orientation: landscape) {
+    #dj-overlay {
+        bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/* Landscape ≤700px: DJ overlay hidden */
+@media (max-width: 700px) and (orientation: landscape) {
+    #dj-overlay {
+        display: none !important;
+    }
 }
 
 /* DJ Effect Buttons + Ribbon (single row) */
