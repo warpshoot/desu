@@ -1,6 +1,8 @@
-# DESU™ beat ユーザーガイド
+# DESU™ beat ユーザーガイド (User Manual)
 
 シンプルかつ強力なWebベースのビートメイク・パフォーマンスツール。
+
+[AI向けマニュアル (For AI)](./MANUAL_for_AI.md)
 
 ## 🎹 メイングリッド (Sequencer)
 5つのトラック × 16ステップのグリッドシーケンサー。
