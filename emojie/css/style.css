@@ -695,6 +695,24 @@ body.help-mode .tool-tooltip {
     text-decoration: underline;
 }
 
+.credit-manual-link {
+    display: inline-block;
+    margin-top: 24px;
+    font-size: 13px;
+    color: #999;
+    text-decoration: none;
+    border: 1px solid #ddd;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.credit-manual-link:hover {
+    background: #f5f5f5;
+    color: #333;
+    border-color: #bbb;
+}
+
 /* モバイル対応 */
 @media (max-width: 600px) {
     #edit-panel {
