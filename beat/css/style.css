@@ -2277,3 +2277,57 @@ body.playing .chain-arrow {
     filter: grayscale(1);
     border-color: #222;
 }
+
+/* Large Screen Landscape Optimization (padd/PC) */
+@media (min-width: 960px) {
+    .cell {
+        width: 48px;
+        height: 84px;
+        /* Taller rows */
+    }
+
+    .track-icon {
+        width: 48px;
+        height: 84px;
+        /* Match cell height */
+    }
+
+    #grid-container {
+        grid-template-rows: repeat(5, 84px);
+        /* Match cell height */
+    }
+
+    /* Mute/Solo Buttons: Wider and Taller */
+    .track-ctrls button {
+        width: 40px;
+        height: 41px;
+        /* (84px - 2px gap) / 2 */
+        font-size: 11px;
+        /* Slightly larger text */
+    }
+
+    /* Adjust chain slot size too? */
+    .chain-slot {
+        width: 48px;
+        height: 48px;
+        font-size: 16px;
+    }
+
+    #chain-mode-switch {
+        height: 48px;
+    }
+
+    /* Adjust beat spacing margin */
+    .cell[data-step="3"],
+    .cell[data-step="7"],
+    .cell[data-step="11"] {
+        margin-right: 12px;
+        /* Double margin */
+    }
+
+    /* Ensure container allows width */
+    #sequencer-container {
+        max-width: none;
+        width: 100%;
+    }
+}
