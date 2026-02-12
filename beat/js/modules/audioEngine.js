@@ -287,9 +287,18 @@ export class AudioEngine {
         }
 
         // Calculate next step
+        // Calculate next step
         if (this.djLoopEnabled) {
-            // Loop first 4 steps
-            this.currentStep = (this.currentStep + 1) % 4;
+            // Loop captured 4 steps (this.loopStart to this.loopStart + 3)
+            const loopEnd = this.loopStart + 4;
+            this.currentStep++;
+            if (this.currentStep >= loopEnd) {
+                this.currentStep = this.loopStart;
+            }
+            // Handle edge case if we somehow jumped far out
+            if (this.currentStep < this.loopStart) {
+                this.currentStep = this.loopStart;
+            }
         } else {
             // Normal loop 0 → COLS-1
             this.currentStep = (this.currentStep + 1) % COLS;
@@ -492,17 +501,33 @@ export class AudioEngine {
         });
     }
 
-    // DJ LOOP effect (Short Loop 4 steps)
+    // DJ LOOP effect (Short Loop 4 steps - "STUTTER")
     enableLoop() {
         if (this.djLoopEnabled) return;
         this.djLoopEnabled = true;
 
-        // Force jump to start for instant effect
-        this.currentStep = 0;
+        // Capture current 4-step block (beat)
+        // e.g. step 5 -> 4, step 15 -> 12
+        this.loopStart = Math.floor(this.currentStep / 4) * 4;
+
+        // If we are currently "past" the start in a way that feels wrong, maybe just jump to start of loop?
+        // Standard behavior: continue playing, but wrap at loopStart+4.
+        // Or jump immediately to loopStart? 
+        // User said "stutter", which implies immediate retrigger often, but "loop curret beat" implies allow phrasing.
+        // Let's keep current phase but constrain. 
+        // Actually, if I press at step 6, and loop is 4-7. 
+        // If I jump to 4, it's a "beat repeat" from start.
+        // If I keep playing, I play 6, 7, then 4, 5.
+        // "Stutter" often implies immediate retrigger. 
+        // "Loop" implies capturing the segment.
+        // Let's try: Jump to loopStart for immediate "Stutter" feel, or just wrap?
+        // User said "loop the *current* beat".
+        // Let's just constrain the loop range.
     }
 
     disableLoop() {
         this.djLoopEnabled = false;
+        // loopStart is irrelevant when disabled
     }
 
     // DJ SLOW effect (Tape Stop style)

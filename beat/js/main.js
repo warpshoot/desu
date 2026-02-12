@@ -704,7 +704,7 @@ class Sequencer {
         if (!this.trackMenu) return;
 
         this.hideAllMenus();
-        this._suppressClick = true;
+        // this._suppressClick = true; // Removed
 
         const pasteBtn = document.getElementById('track-paste');
         if (pasteBtn) {
@@ -782,10 +782,6 @@ class Sequencer {
 
     initMenuCloseHandler() {
         document.addEventListener('click', (e) => {
-            if (this._suppressClick) {
-                this._suppressClick = false;
-                return;
-            }
             // Close any open context menus on outside click
             document.querySelectorAll('.context-menu:not(.hidden)').forEach(menu => {
                 if (!menu.contains(e.target)) {

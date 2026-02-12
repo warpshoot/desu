@@ -102,7 +102,9 @@ export class DJMode {
                 this.hasStartedXY = false;
                 this.hasStartedFX = { loop: false, slow: false, stutter: false, crush: false };
                 this.hasStartedPitch = false;
-                autoRecBtn.classList.toggle('active', this.isRecordingAuto);
+                this.hasStartedPitch = false;
+
+                this.updateAutoButtonState();
 
                 // Disable 1 BAR button during AUTO session
                 const loopBtn = document.querySelector('.dj-fx-btn[data-fx="loop"]');
@@ -162,6 +164,7 @@ export class DJMode {
         if (dancer) {
             dancer.classList.add('dj-keep');
         }
+        this.updateAutoButtonState();
     }
 
     close() {
@@ -320,6 +323,7 @@ export class DJMode {
             if (shouldSave) {
                 import('./storage.js').then(m => m.saveState(this.seq.state));
             }
+            this.updateAutoButtonState();
         }
     }
 
@@ -335,6 +339,7 @@ export class DJMode {
             }
         });
         import('./storage.js').then(m => m.saveState(this.seq.state));
+        this.updateAutoButtonState();
     }
 
     onStep(step) {
@@ -474,6 +479,41 @@ export class DJMode {
         }
 
         this.lastStep = step;
+
+        this.updateAutoButtonState();
+    }
+
+    updateAutoButtonState() {
+        const autoBtn = document.getElementById('dj-auto-rec');
+        if (autoBtn) {
+            if (this.isRecordingAuto) {
+                autoBtn.classList.add('active');
+                autoBtn.classList.remove('playing');
+            } else {
+                autoBtn.classList.remove('active');
+                if (this.checkAutomationData()) {
+                    autoBtn.classList.add('playing');
+                } else {
+                    autoBtn.classList.remove('playing');
+                }
+            }
+        }
+    }
+
+    checkAutomationData() {
+        // Use the current pattern being played
+        const pat = this.seq.pattern;
+        if (!pat || !pat.automation) return false;
+
+        const hasX = pat.automation.x.some(v => v !== null);
+        const hasY = pat.automation.y.some(v => v !== null);
+        const hasPitch = pat.automation.pitch && pat.automation.pitch.some(v => v !== null);
+        let hasFX = false;
+        if (pat.automation.fx) {
+            hasFX = Object.keys(pat.automation.fx).some(k => pat.automation.fx[k].some(v => v !== null));
+        }
+
+        return hasX || hasY || hasPitch || hasFX;
     }
 
 

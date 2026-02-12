@@ -22,18 +22,29 @@ export class Chain {
             this.seq.state.chainMode = 'chain';
         }
 
-        // Mode toggle button: CHAIN / LIVE (simple click, no long-press)
-        this.chainToggleBtn = document.createElement('button');
-        this.chainToggleBtn.id = 'chain-toggle';
+        // Mode toggle switch: CHAIN / LIVE (vertical stack)
+        this.chainSwitch = document.createElement('div');
+        this.chainSwitch.id = 'chain-mode-switch';
 
-        this.chainToggleBtn.addEventListener('click', () => {
-            this.seq.state.chainMode = this.seq.state.chainMode === 'chain' ? 'live' : 'chain';
-            this.chainPosition = -1;
-            saveState(this.seq.state);
-            this.updateUI();
+        const chainOption = document.createElement('div');
+        chainOption.className = 'mode-option';
+        chainOption.textContent = 'CHAIN';
+        chainOption.dataset.mode = 'chain';
+
+        const liveOption = document.createElement('div');
+        liveOption.className = 'mode-option';
+        liveOption.textContent = 'LIVE';
+        liveOption.dataset.mode = 'live';
+
+        this.chainSwitch.addEventListener('click', () => {
+            const currentMode = this.seq.state.chainMode || 'chain';
+            this.setChainMode(currentMode === 'chain' ? 'live' : 'chain');
         });
 
-        container.appendChild(this.chainToggleBtn);
+        this.chainSwitch.appendChild(chainOption);
+        this.chainSwitch.appendChild(liveOption);
+
+        container.appendChild(this.chainSwitch);
 
         // Create slots (used for both CHAIN and LIVE modes)
         this._chainMenuTarget = null;
@@ -55,7 +66,8 @@ export class Chain {
             let didLongPress = false;
             let isTouch = false;
 
-            const startPress = () => {
+            const startPress = (e) => {
+                if (e) e.stopPropagation();
                 didLongPress = false;
                 pressTimer = setTimeout(() => {
                     didLongPress = true;
@@ -66,7 +78,8 @@ export class Chain {
                 }, 500);
             };
 
-            const endPress = () => {
+            const endPress = (e) => {
+                if (e) e.stopPropagation();
                 clearTimeout(pressTimer);
                 if (!didLongPress) {
                     this.onSlotTap(i);
@@ -77,13 +90,13 @@ export class Chain {
                 clearTimeout(pressTimer);
             };
 
-            slot.addEventListener('mousedown', () => { if (!isTouch) startPress(); });
-            slot.addEventListener('mouseup', () => { if (!isTouch) endPress(); });
+            slot.addEventListener('mousedown', (e) => { if (!isTouch) startPress(e); });
+            slot.addEventListener('mouseup', (e) => { if (!isTouch) endPress(e); });
             slot.addEventListener('mouseleave', cancelPress);
-            slot.addEventListener('touchstart', () => { isTouch = true; startPress(); }, { passive: true });
+            slot.addEventListener('touchstart', (e) => { isTouch = true; startPress(e); }, { passive: true });
             slot.addEventListener('touchend', (e) => {
                 e.preventDefault();
-                endPress();
+                endPress(e);
                 setTimeout(() => { isTouch = false; }, 300);
             });
             slot.addEventListener('touchcancel', () => { cancelPress(); setTimeout(() => { isTouch = false; }, 300); });
@@ -103,12 +116,22 @@ export class Chain {
         document.querySelectorAll('.context-menu').forEach(m => m.classList.add('hidden'));
         document.querySelectorAll('.popup-menu').forEach(m => m.classList.add('hidden'));
 
-        this.seq._suppressClick = true;
+        // this.seq._suppressClick = true; // Removed
+
+        // Show first to get dimensions
+        chainMenu.classList.remove('hidden');
 
         const rect = slotElement.getBoundingClientRect();
-        chainMenu.style.left = `${rect.left}px`;
-        chainMenu.style.top = `${rect.top - chainMenu.offsetHeight - 4}px`;
-        chainMenu.classList.remove('hidden');
+        const menuWidth = chainMenu.offsetWidth;
+        const menuHeight = chainMenu.offsetHeight;
+
+        // Center horizontally
+        const left = rect.left + (rect.width / 2) - (menuWidth / 2);
+        // Position above
+        const top = rect.top - menuHeight - 10; // 10px spacing
+
+        chainMenu.style.left = `${left}px`;
+        chainMenu.style.top = `${top}px`;
     }
 
     onSlotClear(index) {
@@ -200,6 +223,18 @@ export class Chain {
         return -1;
     }
 
+    setChainMode(mode) {
+        if (this.seq.state.chainMode !== mode) {
+            this.seq.state.chainMode = mode;
+            // Reset playhead when switching? Maybe not required, but good practice
+            if (mode === 'live') {
+                this.chainPosition = -1;
+            }
+            saveState(this.seq.state);
+            this.updateUI();
+        }
+    }
+
     updateUI() {
         if (!this.chainSlots.length) return;
 
@@ -209,10 +244,12 @@ export class Chain {
         const isLiveMode = mode === 'live';
         const container = document.getElementById('chain-container');
 
-        // Toggle button label
-        if (this.chainToggleBtn) {
-            this.chainToggleBtn.textContent = isChainMode ? 'CHAIN' : 'LIVE';
-            this.chainToggleBtn.classList.toggle('active', true);
+        // Update Toggle Switch
+        if (this.chainSwitch) {
+            const options = this.chainSwitch.querySelectorAll('.mode-option');
+            options.forEach(opt => {
+                opt.classList.toggle('active', opt.dataset.mode === mode);
+            });
         }
 
         // Container mode class

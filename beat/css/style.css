@@ -1304,7 +1304,7 @@ body.playing #credit-btn:hover {
     }
 
     #grid-container {
-        grid-template-columns: repeat(16, 28px);
+        grid-template-columns: repeat(16, auto);
         grid-template-rows: repeat(5, 42px);
     }
 
@@ -1323,7 +1323,8 @@ body.playing #credit-btn:hover {
     }
 
     .track-ctrls button {
-        width: 20px;
+        width: 28px;
+        /* Match track icon width */
         height: 20px;
         font-size: 9px;
     }
@@ -1438,7 +1439,7 @@ body.playing #credit-btn:hover {
     }
 
     #grid-container {
-        grid-template-columns: repeat(16, 24px);
+        grid-template-columns: repeat(16, auto);
         grid-template-rows: repeat(5, 36px);
     }
 
@@ -1449,7 +1450,8 @@ body.playing #credit-btn:hover {
     }
 
     .track-ctrls button {
-        width: 18px;
+        width: 22px;
+        /* Match track icon width */
         height: 17px;
         font-size: 8px;
     }
@@ -1618,7 +1620,7 @@ body.playing #credit-btn:hover {
 #dj-ribbon {
     position: relative;
     height: 48px;
-    background: transparent;
+    background: rgba(0, 0, 0, 0.8);
     border: 1px solid #444;
     border-radius: 4px;
     cursor: crosshair;
@@ -1660,7 +1662,7 @@ body.playing #credit-btn:hover {
     flex: none;
     width: 48px;
     height: 48px;
-    background: transparent;
+    background: rgba(0, 0, 0, 0.8);
     border: 1px solid #444;
     color: #666;
     font-family: monospace;
@@ -1712,7 +1714,7 @@ body.playing #credit-btn:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: transparent;
+    background: rgba(0, 0, 0, 0.8);
     border: 1px solid #444;
     color: #666;
     font-family: monospace;
@@ -1738,6 +1740,13 @@ body.playing #credit-btn:hover {
     color: #fff !important;
     border-color: #f00 !important;
     box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+}
+
+#dj-auto-rec.playing {
+    background: rgba(255, 255, 255, 0.8);
+    color: #000;
+    border-color: #fff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
 #dj-clr-btn:active {
@@ -2101,34 +2110,54 @@ body.playing .chain-slot.playing {
     background: #444;
 }
 
-/* Chain toggle button */
-#chain-toggle {
-    width: auto;
+/* Chain toggle switch (vertical stack) */
+#chain-mode-switch {
+    display: flex;
+    flex-direction: column;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 0;
+    overflow: hidden;
+    margin-right: 6px;
     height: 36px;
-    background: transparent;
-    border: 2px solid #333;
-    color: #555;
-    font-family: monospace;
-    font-size: 11px;
-    font-weight: bold;
     cursor: pointer;
-    transition: all 0.1s ease;
+}
+
+.mode-option {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0 6px;
-    margin-right: 4px;
+    font-size: 9px;
+    font-weight: bold;
+    color: #666;
+    transition: all 0.2s;
+    background: #1a1a1a;
+    line-height: normal;
 }
 
-#chain-toggle:hover {
-    border-color: #666;
-    color: #888;
+.mode-option:first-child {
+    border-bottom: 1px solid #333;
 }
 
-#chain-toggle.active {
+.mode-option:hover {
+    color: #999;
+    background: #222;
+}
+
+.mode-option.active {
     background: #fff;
     color: #000;
-    border-color: #fff;
+}
+
+/* Container modifications */
+.mode-chain #chain-container {
+    border-color: #666;
+}
+
+.mode-live #chain-container {
+    border-color: #333;
 }
 
 /* LIVE mode: slots become pattern selectors */
@@ -2198,12 +2227,14 @@ body.playing .chain-arrow {
         font-size: 11px;
     }
 
-    #chain-toggle {
-        width: auto;
+    #chain-mode-switch {
+        margin-right: 4px;
         height: 28px;
+    }
+
+    .mode-option {
+        font-size: 8px;
         padding: 0 4px;
-        font-size: 9px;
-        margin-right: 2px;
     }
 
     .chain-arrow {
@@ -2229,12 +2260,20 @@ body.playing .chain-arrow {
         font-size: 10px;
     }
 
-    #chain-toggle {
-        width: auto;
-        height: 24px;
+    .mode-option {
+        font-size: 7px;
         padding: 0 3px;
-        font-size: 8px;
+    }
+
+    #chain-mode-switch {
         margin-right: 2px;
+        height: 24px;
     }
 }
-.dj-fx-btn.disabled { opacity: 0.3; pointer-events: none; filter: grayscale(1); border-color: #222; }
+
+.dj-fx-btn.disabled {
+    opacity: 0.3;
+    pointer-events: none;
+    filter: grayscale(1);
+    border-color: #222;
+}
