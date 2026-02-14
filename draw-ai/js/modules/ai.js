@@ -255,6 +255,12 @@ function buildAnthropicMessages(imageBase64) {
     }
 
     // Add current image
+    let promptText = '描いてる途中の絵を見てコメントして。';
+    const lastAiMsg = conversationHistory.slice().reverse().find(c => c.role === 'assistant');
+    if (lastAiMsg) {
+        promptText += `\n(直前のあなたのコメント: "${lastAiMsg.content}")\n※これと似た内容や表現は絶対に避けてください。語彙を変えるか、思いつかなければ「PASS」してください。`;
+    }
+
     messages.push({
         role: 'user',
         content: [
@@ -268,7 +274,7 @@ function buildAnthropicMessages(imageBase64) {
             },
             {
                 type: 'text',
-                text: '描いてる途中の絵を見てコメントして。'
+                text: promptText
             }
         ]
     });
@@ -317,6 +323,12 @@ function buildGeminiContents(imageBase64) {
     }
 
     // Add current image
+    let promptText = '描いてる途中の絵を見てコメントして。';
+    const lastAiMsg = conversationHistory.slice().reverse().find(c => c.role === 'assistant');
+    if (lastAiMsg) {
+        promptText += `\n(直前のあなたのコメント: "${lastAiMsg.content}")\n※これと似た内容や表現は絶対に避けてください。語彙を変えるか、思いつかなければ「PASS」してください。`;
+    }
+
     contents.push({
         role: 'user',
         parts: [
@@ -326,7 +338,7 @@ function buildGeminiContents(imageBase64) {
                     data: imageBase64
                 }
             },
-            { text: '描いてる途中の絵を見てコメントして。' }
+            { text: promptText }
         ]
     });
 
@@ -375,6 +387,12 @@ function buildOpenAIMessages(imageBase64) {
     }
 
     // Add current image
+    let promptText = '描いてる途中の絵を見てコメントして。';
+    const lastAiMsg = conversationHistory.slice().reverse().find(c => c.role === 'assistant');
+    if (lastAiMsg) {
+        promptText += `\n(直前のあなたのコメント: "${lastAiMsg.content}")\n※これと似た内容や表現は絶対に避けてください。語彙を変えるか、思いつかなければ「PASS」してください。`;
+    }
+
     messages.push({
         role: 'user',
         content: [
@@ -387,7 +405,7 @@ function buildOpenAIMessages(imageBase64) {
             },
             {
                 type: 'text',
-                text: '描いてる途中の絵を見てコメントして。'
+                text: promptText
             }
         ]
     });
