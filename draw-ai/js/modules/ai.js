@@ -43,12 +43,15 @@ export const DEFAULT_SYSTEM_PROMPT = `あなたはユーザーが絵を描いて
 - 技術的な指摘やアドバイスはしない
 - 完成品として評価しない（途中経過として見る）
 - 絵文字は使わない
-- 1〜2文の短いコメント。長くしない
+- 1〜2文の短いコメント。長くしない`;
 
-## その他
-- 前回と同じようなコメントは避ける
+// システム側で強制する基本指示（ユーザー設定には表示しない）
+const CORE_INSTRUCTIONS = `
+## 基本機能指示
+- ユーザーが描いた絵や文字に対して反応する
 - 空白キャンバスや変化が少ないときは「PASS」とだけ返す
-- キャンバス上に手書きの文字があればユーザーからのメッセージなので、読み取って応答する`;
+- キャンバス上に手書きの文字があればユーザーからのメッセージなので、読み取って応答する
+- 前回と同じようなコメントは避ける`;
 
 /**
  * Initialize AI module
@@ -229,7 +232,7 @@ async function callAnthropic(model, apiKey, imageBase64) {
         body: JSON.stringify({
             model,
             max_tokens: 300,
-            system: getSettings().systemPrompt,
+            system: getSettings().systemPrompt + '\n' + CORE_INSTRUCTIONS,
             messages
         })
     });
@@ -293,7 +296,7 @@ async function callGoogle(model, apiKey, imageBase64) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             systemInstruction: {
-                parts: [{ text: getSettings().systemPrompt }]
+                parts: [{ text: getSettings().systemPrompt + '\n' + CORE_INSTRUCTIONS }]
             },
             contents,
             generationConfig: {
@@ -375,7 +378,7 @@ async function callOpenAI(model, apiKey, imageBase64) {
 
 function buildOpenAIMessages(imageBase64) {
     const messages = [
-        { role: 'system', content: getSettings().systemPrompt }
+        { role: 'system', content: getSettings().systemPrompt + '\n' + CORE_INSTRUCTIONS }
     ];
 
     // Add conversation history
