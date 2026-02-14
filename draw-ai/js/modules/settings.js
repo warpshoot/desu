@@ -54,7 +54,7 @@ let settings = {
     ttsEnabled: false,
     aiEnabled: false,
     systemPrompt: '',
-    displayName: 'Fano'
+    displayName: 'トモ'
 };
 
 /**
@@ -68,7 +68,7 @@ export function loadSettings() {
     settings.ttsEnabled = localStorage.getItem(STORAGE_PREFIX + 'tts_enabled') === 'true';
     settings.aiEnabled = localStorage.getItem(STORAGE_PREFIX + 'ai_enabled') === 'true'; // Default false
     settings.systemPrompt = localStorage.getItem(STORAGE_PREFIX + 'system_prompt') || DEFAULT_SYSTEM_PROMPT;
-    settings.displayName = localStorage.getItem(STORAGE_PREFIX + 'display_name') || 'Fano';
+    settings.displayName = localStorage.getItem(STORAGE_PREFIX + 'display_name') || 'トモ';
     setTTSEnabled(settings.ttsEnabled);
 }
 
@@ -222,7 +222,7 @@ export function initSettingsUI() {
     // Display name
     if (displayNameInput) {
         displayNameInput.addEventListener('input', () => {
-            settings.displayName = displayNameInput.value.trim() || 'Fano';
+            settings.displayName = displayNameInput.value.trim() || 'トモ';
             const titleEl = document.getElementById('ai-chat-title');
             if (titleEl) titleEl.textContent = settings.displayName;
             saveSettings();
