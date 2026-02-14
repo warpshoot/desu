@@ -1,0 +1,1484 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
+    background: #808080;
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+}
+
+/* ============================================
+   Dynamic Layer Container
+   ============================================ */
+#layer-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Dynamic drawing layers */
+.drawing-layer {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    image-rendering: pixelated;
+    image-rendering: -webkit-optimize-contrast;
+    touch-action: none;
+    transform-origin: 0 0;
+    pointer-events: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Global Reset for Solid Design */
+* {
+    border-radius: 0 !important;
+}
+
+/* キャンバス白背景 */
+#canvas-background {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: #ffffff;
+    transform-origin: 0 0;
+    z-index: 0;
+}
+
+/* 投げ縄用オーバーレイキャンバス */
+#lasso-canvas {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    transform-origin: 0 0;
+    z-index: 100;
+}
+
+/* 保存範囲選択用オーバーレイキャンバス */
+#selection-canvas {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 450;
+}
+
+/* イベントキャプチャ用の透明キャンバス (常に最上位) */
+#event-canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    touch-action: none;
+    transform-origin: 0 0;
+    z-index: 200;
+    pointer-events: auto;
+}
+
+/* ============================================
+   Left Toolbar (Layer Panel + Tool Panel)
+   ============================================ */
+#toolbar-left {
+    position: fixed;
+    left: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    /* gap: 12px; Removed to control spacing individually */
+    z-index: 300;
+}
+
+/* Layer Panel */
+#layer-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+    /* Space to tool panel */
+}
+
+#layer-buttons {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 4px;
+}
+
+.layer-btn {
+    width: 48px;
+    height: 32px;
+    border-radius: 4px;
+    border: 1px solid #999;
+    /* Gray inactive border */
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.15s;
+    overflow: visible;
+    /* Extended indicator */
+}
+
+.layer-btn:active {
+    transform: scale(0.92);
+}
+
+.layer-btn.active {
+    border: 1px solid #000;
+    /* Unified active border */
+    background: #fff;
+    border-radius: 4px;
+    transform: translateX(-5px);
+    /* Move left */
+}
+
+.layer-btn.active::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    /* Align with border top */
+    right: 100%;
+    bottom: -1px;
+    /* Align with border bottom */
+    width: 20px;
+    /* Extend to screen edge (12px padding + extra) */
+    background: #000;
+    border-top-left-radius: 2px;
+    border-bottom-left-radius: 2px;
+}
+
+.layer-btn.hidden-layer {
+    opacity: 0.6 !important;
+    text-decoration: line-through;
+    background-image: repeating-linear-gradient(45deg,
+            transparent,
+            transparent 4px,
+            rgba(0, 0, 0, 0.1) 4px,
+            rgba(0, 0, 0, 0.1) 8px);
+}
+
+
+
+.layer-add-btn {
+    width: 48px;
+    height: 32px;
+    border-radius: 8px;
+    border: 2px dashed #999;
+    /* Gray inactive border */
+    /* Light blue */
+    background: rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: #666;
+    /* Gray text */
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.layer-add-btn:hover {
+    border-color: #666;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.layer-add-btn:active {
+    transform: scale(0.92);
+}
+
+
+
+/* Tool Panel */
+#tool-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    /* Reduced gap between tools */
+    margin-bottom: 4px;
+    /* Small gap to slider */
+}
+
+/* ============================================
+   Tool Buttons
+   ============================================ */
+.tool-btn {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid #999;
+    /* Gray inactive border */
+    background: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.1s, border-width 0.1s;
+    color: #333;
+    overflow: visible;
+    /* Extended indicator */
+}
+
+.tool-btn svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.tool-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+#eraserToolBtn .tool-icon {
+    filter: brightness(0);
+}
+
+
+
+.tool-btn:active {
+    transform: scale(0.92);
+}
+
+.tool-btn.active {
+    border: 1px solid #000;
+    /* Keep border, remove thick left */
+    background: #fff;
+    border-radius: 4px;
+    transform: translateX(-5px);
+    /* Move left */
+}
+
+.tool-btn.active::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    right: 100%;
+    bottom: -1px;
+    width: 20px;
+    background: #000;
+    border-top-left-radius: 2px;
+    border-bottom-left-radius: 2px;
+}
+
+
+
+/* Eraser button blue accent */
+#eraserToolBtn {
+    border-color: #999;
+    /* Gray inactive border */
+}
+
+#eraserToolBtn.active {
+    border-color: #000;
+}
+
+#eraserToolBtn.active::before {
+    background: #000;
+}
+
+/* ============================================
+   Tool Menus (Long Press Popovers)
+   ============================================ */
+.tool-menu {
+    position: fixed;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    padding: 8px;
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    z-index: 500;
+}
+
+.tool-menu.hidden {
+    display: none;
+}
+
+
+
+.tool-menu .menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.tool-menu .menu-item:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.tool-menu .menu-item:active {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+
+
+.tool-menu .menu-item img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+}
+
+.tool-menu .menu-item svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+}
+
+/* Active tool in menu */
+.tool-menu .menu-item.active {
+    border: 1px solid #333;
+    border-radius: 6px;
+}
+
+
+
+/* Layer clear icon - blue stroke like eraser */
+.layer-clear-icon {
+    stroke: #4a90e2 !important;
+    fill: none !important;
+}
+
+/* Horizontal Layer Menu */
+.layer-menu-horizontal {
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 10px;
+    gap: 8px;
+}
+
+.layer-menu-horizontal #layerOpacitySlider {
+    width: 80px;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #ddd;
+    border-radius: 2px;
+}
+
+.layer-menu-horizontal #layerOpacitySlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #333;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+
+
+
+
+.layer-menu-horizontal .menu-item {
+    padding: 6px;
+}
+
+.layer-menu-horizontal .menu-item svg {
+    width: 20px;
+    height: 20px;
+}
+
+.layer-visible-toggle.hidden-state svg {
+    opacity: 0.3;
+}
+
+.layer-delete.danger {
+    color: #e74c3c;
+}
+
+.layer-delete.danger svg {
+    stroke: #e74c3c;
+}
+
+.layer-delete.disabled {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* Eraser clear button in menu - no separator since horizontal layout */
+.eraser-clear {
+    margin-left: 4px;
+}
+
+/* ============================================
+   Right Toolbar
+   ============================================ */
+#toolbar-right {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top));
+    right: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    /* Center align items vertically */
+    z-index: 300;
+}
+
+/* Color Picker */
+#bgColorBtnWrapper {
+    width: 48px !important;
+    height: 32px !important;
+    padding: 0;
+    /* Remove padding for full bleed */
+    border-radius: 0 !important;
+    /* Solid rectangle */
+    border: 1px solid #000 !important;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 12px;
+    /* Add margin to separate from slider */
+}
+
+#bgColorBtn {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    appearance: none;
+    border-radius: 0 !important;
+    /* Solid rectangle */
+}
+
+#bgColorBtn::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+#bgColorBtn::-webkit-color-swatch {
+    border: none;
+    border-radius: 0;
+    /* Square corners */
+}
+
+/* ============================================
+   Brush Size Slider
+   ============================================ */
+#size-slider-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    align-items: center;
+    gap: 4px;
+    margin-top: 0;
+    width: 48px;
+    transition: opacity 0.2s;
+}
+
+#size-slider-container.disabled {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+#size-slider-container.disabled #brushSize {
+    background: #999;
+    /* Inactive track color */
+}
+
+#size-slider-container.disabled #brushSize::-webkit-slider-thumb {
+    background: #999;
+    /* Inactive thumb color */
+}
+
+#brushSize {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 120px;
+    height: 3px;
+    /* Track width 3px */
+    background: #000;
+    /* Track color Black */
+    border-radius: 0;
+    /* No radius */
+    transform: rotate(-90deg);
+    transform-origin: center center;
+    margin: 57px 0;
+}
+
+#brushSize::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    /* Rotated: CSS width = Visual Height (8px), CSS height = Visual Width (24px) */
+    width: 8px;
+    /* Visual Height */
+    height: 24px;
+    /* Visual Width */
+    background: #000;
+    /* Thumb color Black */
+    border-radius: 0;
+    /* Rectangular */
+    border: none;
+    /* No border */
+}
+
+
+
+#sizeDisplay {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    color: #333;
+    background: transparent;
+    /* Remove background */
+    padding: 0;
+    /* Remove padding */
+    border-radius: 0;
+    min-width: unset;
+    /* Allow fit content */
+    text-align: center;
+}
+
+
+
+/* ============================================
+   Zoom Reset Button
+   ============================================ */
+#resetZoomBtn {
+    display: none;
+    position: fixed;
+    bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
+    right: max(20px, calc(env(safe-area-inset-right) + 12px));
+    width: 48px;
+    height: 48px;
+    border-radius: 50% !important;
+    border: 2px solid #666;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #333;
+}
+
+#resetZoomBtn svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+
+
+#resetZoomBtn.visible {
+    display: flex;
+}
+
+/* ============================================
+   Save UI
+   ============================================ */
+#save-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 400;
+}
+
+#save-ui {
+    display: none;
+    position: fixed;
+    top: max(20px, env(safe-area-inset-top));
+    left: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 16px 24px;
+    border-radius: 12px;
+    z-index: 401;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    transition: opacity 0.2s;
+}
+
+#save-ui.hidden-during-selection {
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+
+#save-ui h3 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    font-weight: normal;
+    color: #666;
+}
+
+
+
+#save-ui label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+#save-ui input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+.option-group {
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.option-group-label {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 4px;
+}
+
+.option-buttons {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+.option-btn {
+    padding: 4px 10px;
+    border: 1px solid #999;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.1s;
+}
+
+
+
+.option-btn.active {
+    background: #333;
+    color: #fff;
+    border-color: #333;
+}
+
+
+
+.save-btn {
+    padding: 10px 20px;
+    margin: 0 4px;
+    border: 1px solid #333;
+    background: #fff;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+
+
+.save-btn:active {
+    transform: scale(0.96);
+}
+
+.save-btn.primary {
+    background: #333;
+    color: #fff;
+}
+
+
+
+/* Selection Canvas */
+#selection-canvas {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 399;
+}
+
+
+
+
+
+/* ============================================
+   Debug Log (Removed)
+   ============================================ */
+
+
+/* ============================================
+   Credit Button & Modal
+   ============================================ */
+#credit-btn {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top));
+    left: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50% !important;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.1);
+    color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 300;
+    transition: all 0.2s;
+}
+
+#credit-btn:hover {
+    background: rgba(0, 0, 0, 0.2);
+    color: rgba(0, 0, 0, 0.8);
+}
+
+
+
+#credit-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    z-index: 700;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+#credit-modal.visible {
+    display: flex;
+}
+
+#credit-content {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 32px;
+    border-radius: 16px;
+    text-align: center;
+    width: 400px;
+    max-width: calc(100vw - 40px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+
+
+#credit-content h2 {
+    font-size: 24px;
+    margin-bottom: 16px;
+}
+
+#credit-logo {
+    margin: 16px auto;
+    cursor: pointer;
+}
+
+#credit-logo img {
+    max-width: 100%;
+    height: auto;
+}
+
+#credit-author {
+    font-size: 16px;
+    margin-top: 16px;
+}
+
+#credit-author a {
+    color: #333;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.credit-manual-link {
+    display: inline-block;
+    margin-top: 24px;
+    font-size: 13px;
+    color: #999;
+    text-decoration: none;
+    border: 1px solid #ddd;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.credit-manual-link:hover {
+    background: #f5f5f5;
+    color: #333;
+    border-color: #bbb;
+}
+
+/* ============================================
+   Tooltips
+   ============================================ */
+.tool-tooltip {
+    display: none;
+    position: absolute;
+    left: 60px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.95);
+    color: #333;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border: 1px solid #ddd;
+    z-index: 600;
+    pointer-events: none;
+}
+
+
+
+.tool-tooltip::before {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-right-color: #ddd;
+}
+
+.tool-tooltip::after {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: rgba(255, 255, 255, 0.95);
+}
+
+.tool-tooltip-bottom {
+    left: 50%;
+    top: 60px;
+    transform: translateX(-50%);
+}
+
+.tool-tooltip-bottom::before {
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-bottom-color: #ddd;
+    right: auto;
+    top: auto;
+}
+
+.tool-tooltip-bottom::after {
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-bottom-color: rgba(255, 255, 255, 0.95);
+    right: auto;
+    top: auto;
+}
+
+body.help-mode .tool-tooltip {
+    display: block;
+    z-index: 800;
+    pointer-events: auto;
+}
+
+body.help-mode #toolbar-left,
+body.help-mode #toolbar-right,
+body.help-mode #layer-panel,
+body.help-mode #tool-panel {
+    z-index: 750;
+}
+
+/* Right toolbar tooltip offsets to prevent overlap */
+.tooltip-offset-1 {
+    top: 60px;
+}
+
+.tooltip-offset-2 {
+    top: 105px;
+}
+
+.tooltip-offset-3 {
+    top: 150px;
+}
+
+/* Relative position for tooltip containers */
+.layer-add-btn {
+    position: relative;
+}
+
+#size-slider-container {
+    position: relative;
+}
+
+/* ============================================
+   Tone Menu
+   ============================================ */
+.tone-menu {
+    position: fixed;
+    left: 70px;
+    /* Right of the toolbar */
+    bottom: 80px;
+    /* Above bottom area, aligned with tool buttons approx */
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 0;
+    /* Remove global padding so tone-items can control width precisely */
+    display: flex;
+    flex-direction: column;
+    width: 234px;
+    /* 4 columns: (50 * 4) + (6 * 3) + (8 * 2) = 234px */
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    z-index: 290;
+    max-height: 55vh;
+    transition: opacity 0.2s;
+}
+
+.tone-menu-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 8px 4px 8px;
+    /* Match horizontal padding of items */
+    margin-bottom: 4px;
+}
+
+.tone-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    overflow-y: auto;
+    padding: 4px 8px 12px 8px;
+    /* 8px horizontal padding creates 218px internal width for 4 items */
+}
+
+.tone-menu-pin {
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border: 1px solid #999;
+    border-radius: 50% !important;
+    /* Circle - override global reset */
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tone-menu-pin.active {
+    background: #333;
+    /* Dark circle when active */
+}
+
+.tone-menu-pin:hover {
+    transform: scale(1.2);
+}
+
+.tone-menu.hidden {
+    display: none;
+}
+
+.tone-item {
+    width: 48px;
+    height: 48px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    background: #fff;
+    color: #333;
+    transition: all 0.1s;
+}
+
+.tone-item:hover {
+    background: #f5f5f5;
+    border-color: #999;
+}
+
+.tone-item:active {
+    transform: scale(0.95);
+}
+
+.tone-item.active {
+    border: 2px solid #000;
+    background: #fff;
+}
+
+/* ============================================
+   Confirm Modal
+   ============================================ */
+#confirm-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+#confirm-modal.hidden {
+    display: none;
+}
+
+#confirm-content {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 24px;
+    border-radius: 12px;
+    width: 320px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+#confirm-message {
+    font-size: 15px;
+    color: #333;
+    margin-bottom: 20px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.confirm-checkbox-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 24px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.confirm-checkbox-label input {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.confirm-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.confirm-buttons button {
+    padding: 10px 24px;
+    border: 1px solid #333;
+    background: #fff;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    min-width: 100px;
+    transition: transform 0.1s;
+}
+
+.confirm-buttons button.primary {
+    background: #333;
+    color: #fff;
+}
+
+.confirm-buttons button:active {
+    transform: scale(0.96);
+}
+
+/* ============================================
+   AI Chat Panel
+   ============================================ */
+#ai-chat-panel {
+    position: fixed;
+    top: 50%;
+    right: max(12px, env(safe-area-inset-right));
+    transform: translateY(-50%);
+    width: 240px;
+    max-height: 320px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid #000;
+    border-radius: 12px !important;
+    display: flex;
+    flex-direction: column;
+    z-index: 350;
+    overflow: hidden;
+    pointer-events: auto;
+    transition: border-color 0.5s;
+}
+
+#ai-chat-panel.monitoring {
+    animation: pulse-border 3s infinite;
+}
+
+@keyframes pulse-border {
+    0% {
+        border-color: #000;
+        box-shadow: 0 0 0 rgba(76, 209, 55, 0);
+    }
+
+    50% {
+        border-color: #4cd137;
+        box-shadow: 0 0 8px rgba(76, 209, 55, 0.3);
+    }
+
+    100% {
+        border-color: #000;
+        box-shadow: 0 0 0 rgba(76, 209, 55, 0);
+    }
+}
+
+#ai-chat-panel.hidden {
+    display: none;
+}
+
+#ai-chat-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #ddd;
+    flex-shrink: 0;
+}
+
+#ai-chat-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+    letter-spacing: 0.5px;
+    flex: 1;
+}
+
+#ai-chat-status {
+    font-size: 11px;
+    margin-right: 8px;
+    color: #999;
+}
+
+#ai-chat-status.status-sending {
+    color: #7ecfff;
+    animation: pulse-status 1s infinite;
+}
+
+#ai-chat-status.status-error {
+    color: #ff6b6b;
+}
+
+#ai-chat-status.status-nokey {
+    color: #ffa94d;
+}
+
+@keyframes pulse-status {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+#ai-chat-toggle,
+#ai-power-toggle {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+#ai-chat-toggle:hover,
+#ai-power-toggle:hover {
+    color: #333;
+}
+
+#ai-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Scrollbar */
+#ai-chat-messages::-webkit-scrollbar {
+    width: 4px;
+}
+
+#ai-chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#ai-chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+}
+
+/* Message Bubbles */
+.ai-bubble {
+    background: #f5f5f5;
+    color: #333;
+    padding: 8px 12px;
+    border-radius: 8px !important;
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 100%;
+    word-wrap: break-word;
+    animation: bubble-in 0.25s ease-out;
+}
+
+@keyframes bubble-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================
+   AI Chat Collapsed Icon
+   ============================================ */
+#ai-chat-collapsed {
+    position: fixed;
+    top: 50%;
+    right: max(12px, env(safe-area-inset-right));
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid #000;
+    border-radius: 50% !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 350;
+    color: #666;
+    transition: background 0.2s;
+}
+
+#ai-chat-collapsed.hidden {
+    display: none;
+}
+
+#ai-chat-collapsed:hover {
+    background: #fff;
+    color: #333;
+}
+
+#ai-chat-collapsed.has-new {
+    animation: icon-flash 0.5s ease-in-out 3;
+}
+
+@keyframes icon-flash {
+
+    0%,
+    100% {
+        background: rgba(255, 255, 255, 0.92);
+    }
+
+    50% {
+        background: #e0f0ff;
+    }
+}
+
+/* ============================================
+   Settings Modal
+   ============================================ */
+#settings-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#settings-modal.hidden {
+    display: none;
+}
+
+#settings-content {
+    background: #fff;
+    padding: 24px 28px;
+    width: 340px;
+    max-width: calc(100vw - 40px);
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+}
+
+#settings-content h3 {
+    font-size: 16px;
+    margin-bottom: 20px;
+    font-weight: 700;
+    color: #222;
+    letter-spacing: 0.5px;
+}
+
+.settings-group {
+    margin-bottom: 16px;
+}
+
+.settings-group label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.settings-group select,
+.settings-group input[type="text"],
+.settings-group input[type="password"],
+.settings-group input[type="number"] {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    background: #fafafa;
+    color: #333;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.settings-group select:focus,
+.settings-group input[type="text"]:focus,
+.settings-group input[type="password"]:focus,
+.settings-group input[type="number"]:focus {
+    border-color: #333;
+}
+
+.settings-toggle-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.settings-toggle-group label {
+    margin-bottom: 0;
+}
+
+.settings-toggle-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+.settings-prompt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.settings-prompt-header label {
+    margin-bottom: 0 !important;
+}
+
+.settings-reset-btn {
+    padding: 2px 10px;
+    border: 1px solid #aaa;
+    background: #f5f5f5;
+    font-size: 11px;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.settings-reset-btn:hover {
+    border-color: #666;
+    color: #333;
+}
+
+.settings-reset-btn:active {
+    transform: scale(0.95);
+}
+
+#settings-prompt {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    font-size: 12px;
+    font-family: inherit;
+    line-height: 1.6;
+    background: #fafafa;
+    color: #333;
+    resize: vertical;
+    min-height: 120px;
+    max-height: 300px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+#settings-prompt:focus {
+    border-color: #333;
+}
+
+#settings-close-btn {
+    width: 100%;
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid #333;
+    background: #333;
+    color: #fff;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+#settings-close-btn:active {
+    transform: scale(0.96);
+}
