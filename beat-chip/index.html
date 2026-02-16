@@ -280,11 +280,14 @@
             box-sizing: border-box !important;
         }
 
-        .chain-slot.active {
-            background: var(--unicorn-text) !important;
+        .chain-slot.active,
+        .chain-slot.playing,
+        .chain-slot.live-active {
+            background: var(--unicorn-active) !important;
             color: #fff !important;
             border-color: #fff !important;
             transform: translateY(2px);
+            box-shadow: 0 0 10px var(--unicorn-active) !important;
         }
 
         /* --- BPM Buttons --- */
