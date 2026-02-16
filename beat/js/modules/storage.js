@@ -1,4 +1,4 @@
-import { STORAGE_KEY, DEFAULT_BPM, KNOB_PARAMS, DEFAULT_ROLL_SUBDIVISION, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, ROWS, DEFAULT_SCALE, TRACKS, MAX_PATTERNS, COLS, CHAIN_LENGTH } from './constants.js';
+import { STORAGE_KEY, DEFAULT_BPM, KNOB_PARAMS, DEFAULT_ROLL_SUBDIVISION, DEFAULT_SWING_LEVEL, DEFAULT_OCTAVE, ROWS, DEFAULT_SCALE, TRACKS, MAX_PATTERNS, COLS, CHAIN_LENGTH } from './constants.js';
 
 let saveTimeout = null;
 
@@ -78,7 +78,8 @@ export function createDefaultPattern() {
                 pitch: 0,
                 duration: 0.5,
                 rollMode: false,
-                rollSubdivision: DEFAULT_ROLL_SUBDIVISION
+                rollSubdivision: DEFAULT_ROLL_SUBDIVISION,
+                velocity: 1.0
             };
         }
     }
@@ -89,7 +90,6 @@ export function createDefaultPattern() {
 
     return {
         grid,
-        swingEnabled: DEFAULT_SWING_ENABLED,
         trackOctaves,
         mutedTracks,
         soloedTracks,
@@ -158,6 +158,7 @@ function migratePatternGrid(pattern) {
                 if (cell.duration === undefined) cell.duration = 0.5;
                 if (cell.rollMode === undefined) cell.rollMode = false;
                 if (cell.rollSubdivision === undefined) cell.rollSubdivision = DEFAULT_ROLL_SUBDIVISION;
+                if (cell.velocity === undefined) cell.velocity = 1.0;
             }
         }
     }
@@ -165,8 +166,6 @@ function migratePatternGrid(pattern) {
 
 // Migrate pattern-level fields (Local settings)
 function migratePatternFields(pattern) {
-    if (pattern.swingEnabled === undefined) pattern.swingEnabled = DEFAULT_SWING_ENABLED;
-
     // Remove legacy loop range fields
     delete pattern.loopEnabled;
     delete pattern.loopStart;
@@ -310,6 +309,12 @@ export function loadState() {
                 }
             }
 
+            // Migrate swingEnabled (per-pattern) → swingLevel (global)
+            if (state.swingLevel === undefined) {
+                const hadSwing = state.patterns.some(p => p.swingEnabled);
+                state.swingLevel = hadSwing ? 'LIGHT' : DEFAULT_SWING_LEVEL;
+            }
+
             // Ensure chain exists
             if (!state.chain) {
                 state.chain = new Array(CHAIN_LENGTH).fill(null);
@@ -355,6 +360,7 @@ export function createDefaultState() {
         nextPattern: null,
         bpm: DEFAULT_BPM,
         masterVolume: -12,
+        swingLevel: DEFAULT_SWING_LEVEL,
         trackParams: createDefaultTrackParams(),
         repeatEnabled: true,
         chainMode: 'chain',
@@ -375,14 +381,17 @@ function compactState(state) {
     const compact = {
         bpm: state.bpm,
         masterVolume: state.masterVolume,
+        swingLevel: state.swingLevel || DEFAULT_SWING_LEVEL,
         currentPattern: state.currentPattern,
         trackParams: state.trackParams,
         patterns: state.patterns.map(pattern => {
             const p = {
                 grid: pattern.grid.map(track =>
                     track.map(step => {
+                        const velocity = step.velocity !== undefined ? step.velocity : 1.0;
                         const isDefault = step.pitch === 0 && step.duration === 0.5 &&
-                            !step.rollMode && step.rollSubdivision === DEFAULT_ROLL_SUBDIVISION;
+                            !step.rollMode && step.rollSubdivision === DEFAULT_ROLL_SUBDIVISION &&
+                            velocity === 1.0;
                         if (!step.active && isDefault) return 0;
                         if (step.active && isDefault) return 1;
                         const s = { active: step.active };
@@ -390,11 +399,11 @@ function compactState(state) {
                         if (step.duration !== 0.5) s.duration = step.duration;
                         if (step.rollMode) s.rollMode = true;
                         if (step.rollSubdivision !== DEFAULT_ROLL_SUBDIVISION) s.rollSubdivision = step.rollSubdivision;
+                        if (velocity !== 1.0) s.velocity = velocity;
                         return s;
                     })
                 )
             };
-            if (pattern.swingEnabled) p.swingEnabled = true;
             if (pattern.scale && pattern.scale !== DEFAULT_SCALE) p.scale = pattern.scale;
             if (pattern.trackOctaves && pattern.trackOctaves.some(v => v !== DEFAULT_OCTAVE)) p.trackOctaves = pattern.trackOctaves;
             if (pattern.mutedTracks && pattern.mutedTracks.some(v => v)) p.mutedTracks = pattern.mutedTracks;

@@ -1,4 +1,4 @@
-import { ROWS, COLS, TAP_THRESHOLD, TRACKS, KNOB_PARAMS, DEFAULT_BPM, DEFAULT_SCALE, DEFAULT_SWING_ENABLED, DEFAULT_OCTAVE, MAX_PATTERNS, PATTERN_NAMES, CHAIN_LENGTH, TRACK_PRESETS } from './modules/constants.js';
+import { ROWS, COLS, TAP_THRESHOLD, TRACKS, KNOB_PARAMS, DEFAULT_BPM, DEFAULT_SCALE, DEFAULT_SWING_LEVEL, DEFAULT_OCTAVE, MAX_PATTERNS, PATTERN_NAMES, CHAIN_LENGTH, TRACK_PRESETS } from './modules/constants.js';
 import { AudioEngine } from './modules/audioEngine.js';
 import { Cell } from './modules/cell.js';
 import { Controls } from './modules/controls.js';
@@ -55,8 +55,8 @@ class Sequencer {
                 this.updateVisualizerSpeed(bpm);
                 saveState(this.state);
             },
-            (swingEnabled) => {
-                this.pattern.swingEnabled = swingEnabled;
+            (swingLevel) => {
+                this.state.swingLevel = swingLevel;
                 saveState(this.state);
             },
 
@@ -81,7 +81,7 @@ class Sequencer {
                         this.syncAudioWithState();
 
                         this.controls.setBPM(this.state.bpm);
-                        this.controls.setSwing(this.pattern.swingEnabled);
+                        this.controls.setSwing(this.state.swingLevel || DEFAULT_SWING_LEVEL);
                         this.controls.setScale(this.pattern.scale);
                         this.setupTrackControls();
                         this.patternBank.updateUI();
@@ -127,7 +127,7 @@ class Sequencer {
         };
 
         this.controls.setBPM(this.state.bpm);
-        this.controls.setSwing(this.pattern.swingEnabled || false);
+        this.controls.setSwing(this.state.swingLevel || DEFAULT_SWING_LEVEL);
         this.controls.setRepeat(this.state.repeatEnabled !== false);
         this.controls.setVolume(this.state.masterVolume || -12);
         this.controls.setScale(this.pattern.scale || 'Chromatic');
@@ -405,7 +405,7 @@ class Sequencer {
 
         // 1. Controls UI
         this.controls.setBPM(this.state.bpm); // Global
-        this.controls.setSwing(pat.swingEnabled); // Local
+        this.controls.setSwing(this.state.swingLevel || DEFAULT_SWING_LEVEL); // Global
         this.controls.setRepeat(this.state.repeatEnabled !== false);
         this.controls.setVolume(this.state.masterVolume);
         this.controls.setScale(pat.scale); // Local
@@ -432,7 +432,7 @@ class Sequencer {
         // Global Params
         this.audioEngine.setBPM(this.state.bpm);
         this.audioEngine.setMasterVolume(this.state.masterVolume);
-        this.audioEngine.setSwing(pat.swingEnabled); // Swing is local
+        this.audioEngine.setSwingLevel(this.state.swingLevel || DEFAULT_SWING_LEVEL); // Global
 
         // Track Params (Global)
         for (let i = 0; i < ROWS; i++) {
@@ -584,7 +584,8 @@ class Sequencer {
                                 Tone.now() + 0.05,
                                 d.rollMode,
                                 d.rollSubdivision,
-                                pat.trackOctaves[t]
+                                pat.trackOctaves[t],
+                                d.velocity !== undefined ? d.velocity : 1.0
                             );
                         }
                     },
@@ -864,7 +865,6 @@ class Sequencer {
         this.createGrid();
 
         this.syncAudioWithState();
-        this.controls.setSwing(this.pattern.swingEnabled);
         this.controls.setScale(this.pattern.scale);
         this.setupTrackControls();
 
@@ -928,7 +928,8 @@ class Sequencer {
                     time,
                     cell.data.rollMode,
                     cell.data.rollSubdivision,
-                    pat.trackOctaves[track]
+                    pat.trackOctaves[track],
+                    cell.data.velocity !== undefined ? cell.data.velocity : 1.0
                 );
             }
         }

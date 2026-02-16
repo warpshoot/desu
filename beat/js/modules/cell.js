@@ -1,4 +1,8 @@
-import { PITCH_RANGE, DURATION_RANGE, BRIGHTNESS_RANGE, SCALE_RANGE, LONG_PRESS_DURATION, DRAG_THRESHOLD, TAP_THRESHOLD, ROLL_SUBDIVISIONS, SCALES } from './constants.js';
+import { PITCH_RANGE, DURATION_RANGE, SCALE_RANGE, LONG_PRESS_DURATION, DRAG_THRESHOLD, TAP_THRESHOLD, ROLL_SUBDIVISIONS, SCALES } from './constants.js';
+
+// Per-track weak velocity (track index 0-4: Kick, Snare, Hi-hat, Bass, Lead)
+// Tuned per instrument type: membrane needs bigger drop, noise stays audible, metal is delicate
+const WEAK_VELOCITY = [0.42, 0.65, 0.55, 0.5, 0.58];
 
 export class Cell {
     constructor(element, track, step, data, onChange, onLongPress, onPaintChange, getGlobalIsPainting, baseFreq, noteIndicator, getIsTwoFingerTouch, getScale) {
@@ -256,12 +260,18 @@ export class Cell {
     }
 
     toggle() {
-        if (this.data.active) {
-            this.deactivate();
-        } else {
+        if (!this.data.active) {
             this.data.active = true;
+            this.data.velocity = 1.0;
             this.element.classList.add('active');
+            this.element.classList.remove('weak');
             this.updateVisuals();
+        } else if (this.data.velocity === 1.0) {
+            this.data.velocity = WEAK_VELOCITY[this.track] ?? 0.5;
+            this.element.classList.add('weak');
+            this.updateVisuals();
+        } else {
+            this.deactivate();
         }
         if (this.onChange) {
             this.onChange(this.track, this.step, this.data, this.data.active);
@@ -271,10 +281,11 @@ export class Cell {
     deactivate() {
         if (!this.data.active) return;
         this.data.active = false;
+        this.data.velocity = 1.0;
         this.data.rollMode = false;
         this.data.pitch = PITCH_RANGE.default;
         this.data.duration = DURATION_RANGE.default;
-        this.element.classList.remove('active', 'roll', 'playhead');
+        this.element.classList.remove('active', 'roll', 'playhead', 'weak');
         this.updateVisuals();
         if (this.onChange) {
             this.onChange(this.track, this.step, this.data, false);
@@ -284,7 +295,9 @@ export class Cell {
     paintActivate() {
         if (!this.data.active) {
             this.data.active = true;
+            this.data.velocity = 1.0;
             this.element.classList.add('active');
+            this.element.classList.remove('weak');
             this.updateVisuals();
             if (this.onChange) {
                 this.onChange(this.track, this.step, this.data, true);
@@ -325,16 +338,20 @@ export class Cell {
             this.element.style.filter = '';
             this.element.style.transform = '';
             this.element.dataset.rollSubdivision = '';
-            this.element.classList.remove('octave-low');
-            this.pitchIndicator.style.display = 'none'; // ADDED HERE
+            this.element.classList.remove('octave-low', 'weak');
+            this.pitchIndicator.style.display = 'none';
             return;
         }
 
-        // Brightness based on effective pitch (scale-snapped)
+        // Velocity: weak class for low velocity
+        if (this.data.velocity === 0.5) {
+            this.element.classList.add('weak');
+        } else {
+            this.element.classList.remove('weak');
+        }
+
         const effectivePitch = this.getEffectivePitch ? this.getEffectivePitch() : this.data.pitch;
-        const pitchNormalized = (effectivePitch - PITCH_RANGE.min) / (PITCH_RANGE.max - PITCH_RANGE.min);
-        const brightness = BRIGHTNESS_RANGE.min + pitchNormalized * (BRIGHTNESS_RANGE.max - BRIGHTNESS_RANGE.min);
-        this.element.style.filter = `brightness(${brightness})`;
+        this.element.style.filter = '';
 
         // Scale based on duration
         const durationNormalized = (this.data.duration - DURATION_RANGE.min) / (DURATION_RANGE.max - DURATION_RANGE.min);
@@ -397,7 +414,7 @@ export class Cell {
         let closestPitch = roundedPitch;
 
         // Search range around the rounded pitch to find nearest valid note
-        for (let i = -12; i <= 12; i++) {
+        for (let i = -36; i <= 36; i++) {
             const checkPitch = roundedPitch + i;
             if (checkPitch < PITCH_RANGE.min || checkPitch > PITCH_RANGE.max) continue;
 

@@ -52,7 +52,7 @@ export const MIN_BPM = 60;
 export const MAX_BPM = 180;
 
 // Cell parameter ranges
-export const PITCH_RANGE = { min: -12, max: 12, default: 0 };
+export const PITCH_RANGE = { min: -36, max: 36, default: 0 };
 export const DURATION_RANGE = { min: 0.1, max: 1.0, default: 0.5 };
 export const ROLL_SUBDIVISIONS = [1, 2, 4, 8]; // Available roll speeds
 export const DEFAULT_ROLL_SUBDIVISION = 4;
@@ -81,8 +81,8 @@ export const DRAG_THRESHOLD = 8;
 export const TAP_THRESHOLD = 350; // Max time between taps for multi-tap detection
 
 // Swing settings
-export const SWING_AMOUNT = 0.15; // Delay even steps by 15% of step duration
-export const DEFAULT_SWING_ENABLED = false;
+export const SWING_LEVELS = { 'OFF': 0, 'LIGHT': 0.16, 'HEAVY': 0.34 };
+export const DEFAULT_SWING_LEVEL = 'OFF';
 
 // Octave settings
 export const OCTAVE_RANGE = [-2, -1, 0, 1, 2]; // Available octave shifts
