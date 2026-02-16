@@ -388,8 +388,10 @@ function compactState(state) {
             const p = {
                 grid: pattern.grid.map(track =>
                     track.map(step => {
+                        const velocity = step.velocity !== undefined ? step.velocity : 1.0;
                         const isDefault = step.pitch === 0 && step.duration === 0.5 &&
-                            !step.rollMode && step.rollSubdivision === DEFAULT_ROLL_SUBDIVISION;
+                            !step.rollMode && step.rollSubdivision === DEFAULT_ROLL_SUBDIVISION &&
+                            velocity === 1.0;
                         if (!step.active && isDefault) return 0;
                         if (step.active && isDefault) return 1;
                         const s = { active: step.active };
@@ -397,6 +399,7 @@ function compactState(state) {
                         if (step.duration !== 0.5) s.duration = step.duration;
                         if (step.rollMode) s.rollMode = true;
                         if (step.rollSubdivision !== DEFAULT_ROLL_SUBDIVISION) s.rollSubdivision = step.rollSubdivision;
+                        if (velocity !== 1.0) s.velocity = velocity;
                         return s;
                     })
                 )

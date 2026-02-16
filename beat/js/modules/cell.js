@@ -256,12 +256,18 @@ export class Cell {
     }
 
     toggle() {
-        if (this.data.active) {
-            this.deactivate();
-        } else {
+        if (!this.data.active) {
             this.data.active = true;
+            this.data.velocity = 1.0;
             this.element.classList.add('active');
+            this.element.classList.remove('weak');
             this.updateVisuals();
+        } else if (this.data.velocity === 1.0) {
+            this.data.velocity = 0.5;
+            this.element.classList.add('weak');
+            this.updateVisuals();
+        } else {
+            this.deactivate();
         }
         if (this.onChange) {
             this.onChange(this.track, this.step, this.data, this.data.active);
@@ -271,10 +277,11 @@ export class Cell {
     deactivate() {
         if (!this.data.active) return;
         this.data.active = false;
+        this.data.velocity = 1.0;
         this.data.rollMode = false;
         this.data.pitch = PITCH_RANGE.default;
         this.data.duration = DURATION_RANGE.default;
-        this.element.classList.remove('active', 'roll', 'playhead');
+        this.element.classList.remove('active', 'roll', 'playhead', 'weak');
         this.updateVisuals();
         if (this.onChange) {
             this.onChange(this.track, this.step, this.data, false);
@@ -284,7 +291,9 @@ export class Cell {
     paintActivate() {
         if (!this.data.active) {
             this.data.active = true;
+            this.data.velocity = 1.0;
             this.element.classList.add('active');
+            this.element.classList.remove('weak');
             this.updateVisuals();
             if (this.onChange) {
                 this.onChange(this.track, this.step, this.data, true);
@@ -325,12 +334,18 @@ export class Cell {
             this.element.style.filter = '';
             this.element.style.transform = '';
             this.element.dataset.rollSubdivision = '';
-            this.element.classList.remove('octave-low');
-            this.pitchIndicator.style.display = 'none'; // ADDED HERE
+            this.element.classList.remove('octave-low', 'weak');
+            this.pitchIndicator.style.display = 'none';
             return;
         }
 
-        // (no brightness adjustment per pitch)
+        // Velocity: weak class for low velocity
+        if (this.data.velocity === 0.5) {
+            this.element.classList.add('weak');
+        } else {
+            this.element.classList.remove('weak');
+        }
+
         const effectivePitch = this.getEffectivePitch ? this.getEffectivePitch() : this.data.pitch;
         this.element.style.filter = '';
 
