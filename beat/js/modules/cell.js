@@ -344,7 +344,7 @@ export class Cell {
         }
 
         // Velocity: weak class for low velocity
-        if (this.data.velocity === 0.5) {
+        if (this.data.velocity < 1.0) {
             this.element.classList.add('weak');
         } else {
             this.element.classList.remove('weak');
