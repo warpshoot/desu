@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>BEAT-CHIP v1.5 - DESU™</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#e1bee7">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Inlined Unicorn CSS for Immediate Loading -->
+    <style>
+        /* --- Unicorn Theme Clean Rewrite v14 --- */
+        :root {
+            --unicorn-bg: #e0f7fa;
+            --unicorn-border: #b39ddb;
+            --unicorn-text: #5e35b1;
+            --unicorn-btn-bg: #ffffff;
+            --unicorn-btn-hover: #f3e5f5;
+            --unicorn-active: #ff80ab;
+            --unicorn-shadow: rgba(149, 117, 205, 0.2);
+            --pastel-pink: #f8bbd0;
+            --pastel-blue: #b3e5fc;
+            --pastel-green: #b9f6ca;
+            --pastel-yellow: #fff9c4;
+            --pastel-purple: #d1c4e9;
+        }
+
+        /* Background & Body */
+        body,
+        button,
+        input,
+        select,
+        textarea {
+            background: transparent !important;
+            color: var(--unicorn-text) !important;
+            font-family: monospace, sans-serif !important;
+            margin: 0;
+        }
+
+        body {
+            min-height: 100vh;
+        }
+
+        /* Stop Gradient (Fixed Base) */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #e1bee7 0%, #b3e5fc 100%) !important;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        /* Play Gradient (Smooth Overlay) */
+        body::after {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #f8bbd0 0%, #d1c4e9 100%) !important;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out !important;
+            pointer-events: none;
+        }
+
+        body.playing::after {
+            opacity: 1;
+        }
+
+        #sequencer-container {
+            background: transparent !important;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Main Sequencer Box */
+        #sequencer-inner {
+            background: rgba(255, 255, 255, 0.4) !important;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1) !important;
+            backdrop-filter: blur(4px) !important;
+            border-radius: 20px !important;
+            border: 3px solid rgba(255, 255, 255, 0.6) !important;
+            padding: 10px !important;
+        }
+
+        /* --- Top Pattern Bank (Original issue: Black bar) --- */
+        #pattern-bank {
+            display: flex !important;
+            background: #fff !important;
+            border: 2px solid var(--unicorn-border) !important;
+            border-radius: 12px !important;
+            overflow: hidden !important;
+            margin-bottom: 8px !important;
+            height: 34px !important;
+            gap: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+        }
+
+        /* CORRECTED SELECTOR: .pattern-pad */
+        .pattern-pad {
+            flex: 1 !important;
+            background: #fff !important;
+            border-right: 1px solid var(--unicorn-border) !important;
+            color: var(--unicorn-border) !important;
+            font-weight: bold !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 14px !important;
+            height: 100% !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            cursor: pointer !important;
+            transition: all 0.2s !important;
+        }
+
+        .pattern-pad:last-child {
+            border-right: none !important;
+        }
+
+        .pattern-pad.active {
+            background: var(--unicorn-active) !important;
+            color: #fff !important;
+        }
+
+        .pattern-pad:hover {
+            background: #fdf5e6 !important;
+        }
+
+        /* --- Grid & Cells --- */
+        #grid-container {
+            display: grid !important;
+            row-gap: 4px !important;
+            column-gap: 2px !important;
+            grid-template-rows: repeat(5, auto) !important;
+            grid-template-columns: repeat(16, auto) !important;
+            width: fit-content !important;
+            margin: 0 auto !important;
+        }
+
+        .cell {
+            width: 28px !important;
+            height: 72px !important;
+            background: rgba(255, 255, 255, 0.6) !important;
+            border: 2px solid #e1bee7 !important;
+            border-radius: 12px !important;
+            filter: none !important;
+            box-sizing: border-box !important;
+        }
+
+        @media (min-width: 960px) {
+            .cell {
+                width: 48px !important;
+                height: 84px !important;
+            }
+
+            #grid-container {
+                row-gap: 6px !important;
+            }
+        }
+
+        .cell[data-step="3"],
+        .cell[data-step="7"],
+        .cell[data-step="11"] {
+            margin-right: 12px !important;
+        }
+
+        .cell:hover {
+            border-color: var(--unicorn-active) !important;
+            transform: scale(0.95);
+        }
+
+        /* Grid ON State - Force Color */
+        .cell.active {
+            background-color: var(--unicorn-active) !important;
+            /* Force Pink */
+            border: 2px solid #fff !important;
+            box-shadow: 0 0 10px var(--unicorn-active) !important;
+            opacity: 1 !important;
+        }
+
+        /* --- Track Icons (Left side) --- */
+        .track-icon {
+            background: rgba(255, 255, 255, 0.8) !important;
+            border: 2px solid var(--unicorn-border) !important;
+            border-radius: 12px !important;
+            color: var(--unicorn-text) !important;
+            box-shadow: 4px 4px 0 var(--unicorn-shadow) !important;
+            font-weight: bold !important;
+        }
+
+        .track-icon.active {
+            background: var(--unicorn-text) !important;
+            color: #fff !important;
+            border-color: #fff !important;
+        }
+
+        /* --- Chain / Live Toggle (Vertical Stack to match Slots) --- */
+        #chain-mode-switch {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            height: 40px !important;
+            /* Match Slot Height */
+            padding: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            /* VERTICAL */
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 2px !important;
+            width: 40px !important;
+            /* Match Slot Width */
+            overflow: visible !important;
+            margin: 0 4px !important;
+        }
+
+        .mode-option {
+            height: 18px !important;
+            width: 100% !important;
+            padding: 0 !important;
+            font-size: 8px !important;
+            border-radius: 99px !important;
+            font-weight: bold !important;
+            color: var(--unicorn-text) !important;
+            background: #fff !important;
+            border: 2px solid var(--unicorn-border) !important;
+            box-shadow: 1px 1px 0 var(--unicorn-shadow) !important;
+            cursor: pointer !important;
+            transition: all 0.1s !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            line-height: 1 !important;
+        }
+
+        .mode-option:active {
+            transform: translateY(1px) !important;
+            box-shadow: none !important;
+        }
+
+        .mode-option.active {
+            background: var(--unicorn-active) !important;
+            color: #fff !important;
+            border-color: #fff !important;
+            box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        /* --- Chain Slots (Right side numbers) --- */
+        .chain-slot {
+            width: 40px !important;
+            height: 40px !important;
+            min-width: 40px !important;
+            min-height: 40px !important;
+            border-radius: 50% !important;
+            border: 2px solid var(--unicorn-border) !important;
+            background: #fff !important;
+            color: var(--unicorn-text) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 14px !important;
+            font-weight: bold !important;
+            box-shadow: 3px 3px 0 var(--unicorn-shadow) !important;
+            margin: 0 4px !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+        }
+
+        .chain-slot.active {
+            background: var(--unicorn-text) !important;
+            color: #fff !important;
+            border-color: #fff !important;
+            transform: translateY(2px);
+        }
+
+        /* --- BPM Buttons --- */
+        .bpm-step-btn {
+            background: #fff !important;
+            border: 2px solid var(--unicorn-border) !important;
+            border-radius: 50% !important;
+            width: 30px !important;
+            height: 30px !important;
+            min-width: 30px !important;
+            color: var(--unicorn-text) !important;
+            font-weight: bold !important;
+            box-shadow: 2px 2px 0 var(--unicorn-shadow) !important;
+            margin: 0 4px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+        }
+
+        .bpm-step-btn:active {
+            transform: translateY(2px) !important;
+            box-shadow: none !important;
+        }
+
+        #bpm-drag-value {
+            background: #fff !important;
+            color: var(--unicorn-text) !important;
+            border: 2px solid var(--unicorn-border) !important;
+            border-radius: 12px !important;
+        }
+
+        /* --- Scale Select --- */
+        #scale-select {
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            border: 2px solid var(--unicorn-border) !important;
+            border-radius: 20px !important;
+            color: #5e35b1 !important;
+            /* Force Purple text */
+            padding: 4px 28px 4px 10px !important;
+            font-family: inherit !important;
+            font-weight: bold !important;
+            box-shadow: 3px 3px 0 var(--unicorn-shadow) !important;
+            cursor: pointer !important;
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235e35b1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 8px center !important;
+            background-size: 14px !important;
+        }
+
+        #scale-select option {
+            background: #ffffff !important;
+            color: #5e35b1 !important;
+        }
+
+        .ctrl-label {
+            color: var(--unicorn-text) !important;
+            font-weight: bold !important;
+            opacity: 0.8 !important;
+        }
+
+        /* --- Tone Panel --- */
+        #tone-panel {
+            background: rgba(255, 255, 255, 0.95) !important;
+            border: 3px solid var(--unicorn-border) !important;
+            border-radius: 20px !important;
+            box-shadow: 0 10px 40px rgba(100, 50, 200, 0.2) !important;
+        }
+
+        .knob-container .knob-label {
+            color: var(--unicorn-text) !important;
+            font-weight: 800 !important;
+        }
+
+        /* --- Global Controls --- */
+        .control-btn,
+        .control-btn-sm {
+            background: var(--unicorn-btn-bg) !important;
+            border: 2px solid var(--unicorn-border) !important;
+            border-radius: 50px !important;
+            color: var(--unicorn-text) !important;
+            box-shadow: 4px 4px 0 var(--unicorn-shadow) !important;
+        }
+
+        .control-btn.active,
+        .control-btn-sm.active {
+            background: var(--unicorn-active) !important;
+            color: #fff !important;
+            border-color: #fff !important;
+        }
+
+        /* Swing Specific: Light state override */
+        #swing-btn.active {
+            background: var(--pastel-pink) !important;
+            color: var(--unicorn-text) !important;
+            border-color: var(--unicorn-border) !important;
+        }
+
+        /* Swing Specific: Heavy state restore default active + glow */
+        #swing-btn.active.heavy {
+            background: var(--unicorn-active) !important;
+            color: #fff !important;
+            border-color: #fff !important;
+            box-shadow: 0 0 10px var(--unicorn-active) !important;
+        }
+
+        /* REC Button States */
+        #rec-btn.armed {
+            animation: blink-pink 0.6s ease-in-out infinite alternate !important;
+            background: var(--pastel-pink) !important;
+            color: #fff !important;
+            border-color: #fff !important;
+        }
+
+        #rec-btn.recording {
+            background: var(--unicorn-active) !important;
+            color: #fff !important;
+            border-color: #fff !important;
+            box-shadow: 0 0 15px var(--unicorn-active) !important;
+        }
+
+        @keyframes blink-pink {
+            0% {
+                background: #fff;
+                color: var(--unicorn-active);
+                box-shadow: 4px 4px 0 var(--unicorn-shadow);
+            }
+
+            100% {
+                background: var(--unicorn-active);
+                color: #fff;
+                box-shadow: 0 0 10px var(--unicorn-active);
+            }
+        }
+
+        /* --- DJ Mode Unicorn Refinement --- */
+        #dj-overlay {
+            background: rgba(224, 247, 250, 0.4) !important;
+            /* Glassy teal-white */
+            backdrop-filter: blur(10px) !important;
+            border-top: 3px solid var(--unicorn-border) !important;
+        }
+
+        #dj-fx-buttons {
+            background: rgba(255, 255, 255, 0.6) !important;
+            border-bottom: 2px solid var(--unicorn-border) !important;
+        }
+
+        .dj-fx-btn {
+            background: #fff !important;
+            border: 2px solid var(--unicorn-border) !important;
+            border-radius: 12px !important;
+            color: var(--unicorn-text) !important;
+            box-shadow: 2px 2px 0 var(--unicorn-shadow) !important;
+            font-family: inherit !important;
+        }
+
+        .dj-fx-btn.active {
+            background: var(--unicorn-active) !important;
+            color: #fff !important;
+            border-color: #fff !important;
+            box-shadow: 0 0 10px var(--unicorn-active) !important;
+        }
+
+        .dj-fx-btn.automated {
+            border-color: var(--unicorn-active) !important;
+            color: var(--unicorn-active) !important;
+            background: #fff !important;
+            box-shadow: inset 0 0 8px var(--pastel-pink) !important;
+        }
+
+        #dj-ribbon {
+            background: #fff !important;
+            border: 2px solid var(--unicorn-border) !important;
+            border-radius: 12px !important;
+        }
+
+        #dj-ribbon-cursor {
+            background: var(--pastel-purple) !important;
+            border: 2px solid #fff !important;
+            border-radius: 6px !important;
+            opacity: 0.8 !important;
+        }
+
+        .ribbon-marks span {
+            color: var(--unicorn-text) !important;
+            font-weight: bold !important;
+            opacity: 0.6 !important;
+        }
+
+        #dj-auto-rec,
+        #dj-clr-btn {
+            background: #fff !important;
+            border: 2px solid var(--unicorn-border) !important;
+            color: var(--unicorn-text) !important;
+            box-shadow: 3px 3px 0 var(--unicorn-shadow) !important;
+        }
+
+        #dj-auto-rec.active {
+            background: var(--unicorn-active) !important;
+            color: #fff !important;
+            border-color: #fff !important;
+            animation: blink-pink 0.6s ease-in-out infinite alternate !important;
+        }
+
+        #dj-auto-rec.playing {
+            background: var(--pastel-blue) !important;
+            color: var(--unicorn-text) !important;
+            border-color: var(--unicorn-text) !important;
+        }
+
+        #dj-xy-label {
+            color: var(--unicorn-text) !important;
+            font-weight: bold !important;
+            opacity: 0.3 !important;
+            letter-spacing: 0.5em !important;
+        }
+
+        .dj-marker {
+            border: 3px solid #fff !important;
+        }
+
+        #dj-current {
+            background: var(--unicorn-active) !important;
+            border-color: #fff !important;
+            box-shadow: 0 0 20px var(--unicorn-active) !important;
+        }
+
+        #dj-line {
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.4), var(--unicorn-active)) !important;
+        }
+
+        /* Fix Mute/Solo active states & Roundness */
+        .track-ctrls button {
+            border-radius: 8px !important;
+            /* Rounded corners */
+            border: 1px solid var(--unicorn-border) !important;
+            background: #fff !important;
+            color: var(--unicorn-text) !important;
+            margin-bottom: 2px !important;
+        }
+
+        .track-ctrls button.active.mute-btn {
+            background: var(--pastel-pink) !important;
+            color: #c2185b !important;
+            border-color: #c2185b !important;
+        }
+
+        .track-ctrls button.active.solo-btn {
+            background: var(--pastel-blue) !important;
+            color: #0288d1 !important;
+            border-color: #0288d1 !important;
+        }
+
+        /* Grid Animation Restoration */
+        .cell {
+            transform: scaleX(var(--base-scale-x, 1));
+            transition: transform 0.1s ease !important;
+        }
+
+        /* Ensure pulse animation works */
+        .cell.playing {
+            animation: pulse 0.1s ease-out !important;
+            z-index: 10;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scaleX(var(--base-scale-x, 1));
+            }
+
+            50% {
+                transform: scaleX(calc(var(--base-scale-x, 1) * 1.25)) scaleY(1.1);
+            }
+
+            100% {
+                transform: scaleX(var(--base-scale-x, 1));
+            }
+        }
+
+        /* Remove black borders from everything else */
+        * {
+            border-color: var(--unicorn-border) !important;
+        }
+    </style>
+    <script src="../favicon.js"></script>
+    <style>
+        .popup-menu {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 5px 0;
+            z-index: 1000;
+            min-width: 100px;
+        }
+
+        .popup-menu.hidden {
+            display: none;
+        }
+
+        .popup-menu .menu-item {
+            padding: 8px 16px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .popup-menu .menu-item:hover {
+            background: #444;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Portrait Orientation Blocker -->
+    <div id="rotate-prompt">
+        <div class="rotate-icon">📱↻</div>
+        <div class="rotate-text">横画面推奨</div>
+    </div>
+
+    <!-- Credit Button -->
+    <div id="credit-btn">?</div>
+
+    <!-- Credit Modal -->
+    <div id="credit-modal">
+        <div id="credit-content">
+            <h2>DESU™ beat</h2>
+            <a href="https://warpshoot.github.io/desu/" target="_blank" id="credit-logo">
+                <img src="../images/logo.gif" alt="DESU™ Logo">
+            </a>
+            <div id="credit-author">
+                by <a href="https://warpshoot.github.io/" target="_blank">wpy</a>
+            </div>
+            <a href="MANUAL.md" target="_blank" class="credit-manual-link">Manual for Human</a>
+            <a href="MANUAL_for_AI.md" target="_blank" class="credit-manual-link" style="margin-top: 8px;">Manual for
+                AI</a>
+        </div>
+    </div>
+
+    <div id="sequencer-container">
+        <!-- Pattern Context Menu -->
+        <div id="pattern-menu" class="context-menu hidden">
+            <div class="menu-item" id="pattern-copy">COPY</div>
+            <div class="menu-item" id="pattern-paste">PASTE</div>
+            <div class="menu-item" id="pattern-clear">CLEAR</div>
+        </div>
+
+        <!-- Track Context Menu -->
+        <div id="track-menu" class="context-menu hidden">
+            <div class="menu-item" id="track-copy">COPY</div>
+            <div class="menu-item" id="track-paste">PASTE</div>
+            <div class="menu-item" id="track-clear">CLEAR</div>
+        </div>
+
+        <!-- Chain Context Menu -->
+        <div id="chain-menu" class="context-menu hidden">
+            <div class="menu-item" id="chain-clear-slot">CLEAR</div>
+            <div class="menu-item" id="chain-clear-all">CLEAR ALL</div>
+        </div>
+
+        <div id="sequencer-inner">
+            <!-- Pattern Bank (tabs) -->
+            <div id="pattern-bank"></div>
+
+            <div id="sequencer-main">
+                <div id="track-icons">
+                    <div class="track-item" data-track="0">
+                        <div class="track-icon" title="Kick">K</div>
+                        <div class="track-ctrls">
+                            <button class="mute-btn" title="Mute">M</button>
+                            <button class="solo-btn" title="Solo">S</button>
+                        </div>
+                    </div>
+                    <div class="track-item" data-track="1">
+                        <div class="track-icon" title="Snare">S</div>
+                        <div class="track-ctrls">
+                            <button class="mute-btn" title="Mute">M</button>
+                            <button class="solo-btn" title="Solo">S</button>
+                        </div>
+                    </div>
+                    <div class="track-item" data-track="2">
+                        <div class="track-icon" title="Hi-hat">H</div>
+                        <div class="track-ctrls">
+                            <button class="mute-btn" title="Mute">M</button>
+                            <button class="solo-btn" title="Solo">S</button>
+                        </div>
+                    </div>
+                    <div class="track-item" data-track="3">
+                        <div class="track-icon" title="Bass">B</div>
+                        <div class="track-ctrls">
+                            <button class="mute-btn" title="Mute">M</button>
+                            <button class="solo-btn" title="Solo">S</button>
+                        </div>
+                    </div>
+                    <div class="track-item" data-track="4">
+                        <div class="track-icon" title="Lead">L</div>
+                        <div class="track-ctrls">
+                            <button class="mute-btn" title="Mute">M</button>
+                            <button class="solo-btn" title="Solo">S</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main grid -->
+                <div id="grid-wrapper">
+                    <div id="grid-container"></div>
+                </div>
+            </div><!-- /sequencer-main -->
+        </div>
+
+        <!-- Pattern Chain -->
+        <div id="chain-container"></div>
+    </div>
+
+    <!-- Tone panel (hidden by default) -->
+    <div id="tone-panel" class="hidden">
+        <div id="tone-panel-content">
+            <div id="preset-selector-container">
+                <select id="tone-preset-select">
+                    <option value="">Select Preset...</option>
+                </select>
+            </div>
+            <div class="knob-row">
+                <div class="knob-container">
+                    <canvas class="knob" data-param="tune" width="80" height="80"></canvas>
+                    <div class="knob-label">TUNE</div>
+                </div>
+                <div class="knob-container">
+                    <canvas class="knob" data-param="cutoff" width="80" height="80"></canvas>
+                    <div class="knob-label">CUT</div>
+                </div>
+                <div class="knob-container">
+                    <canvas class="knob" data-param="resonance" width="80" height="80"></canvas>
+                    <div class="knob-label">RES</div>
+                </div>
+            </div>
+            <div class="knob-row">
+                <div class="knob-container">
+                    <canvas class="knob" data-param="drive" width="80" height="80"></canvas>
+                    <div class="knob-label">DRIVE</div>
+                </div>
+                <div class="knob-container">
+                    <canvas class="knob" data-param="decay" width="80" height="80"></canvas>
+                    <div class="knob-label">DEC</div>
+                </div>
+                <div class="knob-container">
+                    <canvas class="knob" data-param="vol" width="80" height="80"></canvas>
+                    <div class="knob-label">VOL</div>
+                </div>
+            </div>
+            <button id="tone-reset-btn" class="reset-btn">RESET</button>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div id="controls">
+        <div class="control-group">
+            <button id="rec-btn" class="control-btn" title="Record">REC</button>
+
+            <button id="play-pause-btn" class="control-btn" title="Play/Pause (Space)">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z" class="play-icon" />
+                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" class="pause-icon hidden" />
+                </svg>
+            </button>
+
+            <button id="stop-btn" class="control-btn" title="Stop">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="6" width="12" height="12" />
+                </svg>
+            </button>
+
+            <div class="control-stack">
+                <button id="swing-btn" class="control-btn-sm" title="Swing">SWG</button>
+                <button id="repeat-btn" class="control-btn-sm active" title="Repeat">RPT</button>
+            </div>
+        </div>
+
+        <!-- Animation Placeholder (Restored) -->
+        <div id="visualizer-display" class="control-btn" title="Visualizer"></div>
+
+        <div id="bpm-ctrl">
+            <div id="bpm-drag-value">120</div>
+            <div id="bpm-buttons">
+                <button class="bpm-step-btn" id="bpm-dec">◀</button>
+                <button class="bpm-step-btn" id="bpm-inc">▶</button>
+            </div>
+        </div>
+
+        <div id="volume-ctrl">
+            <div class="ctrl-label">VOL</div>
+            <input type="range" id="volume-slider" min="-60" max="0" value="-12">
+        </div>
+
+        <!-- File Button -->
+        <button id="file-btn" class="control-btn" title="Project">PRJ</button>
+
+        <!-- File Menu -->
+        <div id="file-menu" class="popup-menu hidden">
+            <div class="menu-item" id="new-btn">NEW</div>
+            <div class="menu-item" id="save-btn">SAVE</div>
+            <div class="menu-item" id="load-btn">LOAD</div>
+            <input type="file" id="file-input" accept=".json" style="display:none;">
+        </div>
+
+    </div>
+    </div>
+
+    <!-- Roll Menu -->
+    <div id="roll-menu" class="hidden">
+        <div class="roll-option" data-roll="1">1</div>
+        <div class="roll-option" data-roll="2">2</div>
+        <div class="roll-option" data-roll="4">4</div>
+        <div class="roll-option" data-roll="8">8</div>
+    </div>
+
+    <!-- Note Indicator -->
+    <div id="note-indicator" class="hidden"></div>
+
+    <!-- DJ Mode Overlay -->
+    <div id="dj-overlay" class="hidden">
+        <!-- Effect Buttons + Ribbon (single row) -->
+        <div id="dj-fx-buttons">
+            <button class="dj-fx-btn" data-fx="loop">STUT</button>
+            <button class="dj-fx-btn" data-fx="slow">SLOW</button>
+            <button class="dj-fx-btn" data-fx="stutter">GATE</button>
+            <button class="dj-fx-btn" data-fx="crush">CRSH</button>
+            <div id="dj-ribbon-container">
+                <div id="dj-ribbon">
+                    <div id="dj-ribbon-cursor"></div>
+                    <div class="ribbon-marks">
+                        <span>-2</span><span>-1</span><span>PITCH</span><span>+1</span><span>+2</span>
+                    </div>
+                </div>
+            </div>
+            <button id="dj-auto-rec" class="rec-btn-style" title="Automation Record">AUTO</button>
+            <button id="dj-clr-btn" title="Clear Automation">CLR</button>
+        </div>
+        <!-- XY Pad (bottom) -->
+        <div id="dj-xy-pad">
+            <div id="dj-xy-label">FILTER + DLY</div>
+            <canvas id="dj-ripple-canvas"></canvas>
+            <div id="dj-visuals">
+                <div id="dj-line" class="hidden"></div>
+                <div id="dj-origin" class="dj-marker hidden"></div>
+                <div id="dj-current" class="dj-marker hidden"></div>
+            </div>
+        </div>
+    </div>
+
+
+    </div>
+
+
+    <!-- DJ Auto Context Menu (placed outside sequencer-container to avoid stacking context issues) -->
+    <div id="auto-menu" class="context-menu hidden">
+        <div class="menu-item" id="auto-clear-pattern">CLEAR PATTERN</div>
+        <div class="menu-item" id="auto-clear-all">CLEAR ALL</div>
+    </div>
+
+    <script src="../fish.js"></script>
+    <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+    <script type="module" src="js/main.js"></script>
+    <script src="js/force_unicorn.js"></script>
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>
+</body>
+
+</html>

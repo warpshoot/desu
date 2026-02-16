@@ -1,0 +1,271 @@
+/* --- Unicorn Theme Clean Rewrite v14 --- */
+
+:root {
+    --unicorn-bg: #e0f7fa;
+    --unicorn-border: #b39ddb;
+    --unicorn-text: #5e35b1;
+    --unicorn-btn-bg: #ffffff;
+    --unicorn-btn-hover: #f3e5f5;
+    --unicorn-active: #ff80ab;
+    --unicorn-shadow: rgba(149, 117, 205, 0.2);
+    --pastel-pink: #f8bbd0;
+    --pastel-blue: #b3e5fc;
+    --pastel-green: #b9f6ca;
+    --pastel-yellow: #fff9c4;
+    --pastel-purple: #d1c4e9;
+}
+
+/* Background & Body */
+body,
+body.playing {
+    background: linear-gradient(135deg, #e1bee7 0%, #b3e5fc 100%) !important;
+    color: var(--unicorn-text) !important;
+    font-family: 'Kiwi Maru', 'Varela Round', sans-serif !important;
+}
+
+#sequencer-container,
+body.playing #sequencer-container {
+    background: transparent !important;
+}
+
+/* Main Sequencer Box */
+#sequencer-inner {
+    background: rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1) !important;
+    backdrop-filter: blur(4px) !important;
+    border-radius: 20px !important;
+    border: 3px solid rgba(255, 255, 255, 0.6) !important;
+    padding: 10px !important;
+}
+
+/* --- Top Pattern Bank (Original issue: Black bar) --- */
+/* The ID check confirmed it is #pattern-bank */
+#pattern-bank {
+    display: flex !important;
+    background: #fff !important;
+    border: 2px solid var(--unicorn-border) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    margin-bottom: 8px !important;
+    height: 34px !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+}
+
+.pattern-btn {
+    flex: 1 !important;
+    background: #fff !important;
+    border-right: 1px solid var(--unicorn-border) !important;
+    color: var(--unicorn-border) !important;
+    font-weight: bold !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 14px !important;
+    height: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+}
+
+.pattern-btn:last-child {
+    border-right: none !important;
+}
+
+.pattern-btn.active {
+    background: var(--pastel-yellow) !important;
+    color: #f57f17 !important;
+}
+
+.pattern-btn:hover {
+    background: #fdf5e6 !important;
+}
+
+/* --- Grid & Cells --- */
+#grid-container {
+    gap: 6px !important;
+}
+
+.cell {
+    background: rgba(255, 255, 255, 0.6) !important;
+    border: 2px solid #e1bee7 !important;
+    border-radius: 12px !important;
+    /* Remove any filter from JS if it persists */
+    filter: none !important;
+    transform: none !important;
+}
+
+.cell:hover {
+    border-color: var(--unicorn-active) !important;
+    transform: scale(0.95);
+}
+
+/* Grid ON State - Force Color */
+.cell.active {
+    background-color: var(--unicorn-active) !important;
+    /* Force Pink */
+    border: 2px solid #fff !important;
+    box-shadow: 0 0 10px var(--unicorn-active) !important;
+    opacity: 1 !important;
+}
+
+/* --- Track Icons (Left side) --- */
+.track-icon {
+    background: rgba(255, 255, 255, 0.8) !important;
+    border: 2px solid var(--unicorn-border) !important;
+    border-radius: 12px !important;
+    color: var(--unicorn-text) !important;
+    box-shadow: 4px 4px 0 var(--unicorn-shadow) !important;
+    font-weight: bold !important;
+}
+
+.track-icon.active {
+    background: var(--unicorn-text) !important;
+    color: #fff !important;
+    border-color: #fff !important;
+}
+
+/* --- Chain / Live Toggle --- */
+#chain-mode-btn {
+    background: #fff !important;
+    color: var(--unicorn-text) !important;
+    border: 2px solid var(--unicorn-border) !important;
+    border-radius: 9999px !important;
+    /* Pill Shape */
+    height: 40px !important;
+    padding: 0 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 4px 4px 0 var(--unicorn-shadow) !important;
+    font-size: 13px !important;
+    width: auto !important;
+}
+
+#chain-mode-btn.active {
+    background: var(--unicorn-active) !important;
+    color: #fff !important;
+    border-color: #fff !important;
+    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* --- Chain Slots (Right side numbers) --- */
+.chain-slot {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    border-radius: 50% !important;
+    border: 2px solid var(--unicorn-border) !important;
+    background: #fff !important;
+    color: var(--unicorn-text) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    box-shadow: 3px 3px 0 var(--unicorn-shadow) !important;
+    margin: 0 4px !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.chain-slot.active {
+    background: var(--unicorn-text) !important;
+    color: #fff !important;
+    border-color: #fff !important;
+    transform: translateY(2px);
+}
+
+/* --- BPM Buttons --- */
+.bpm-step-btn {
+    background: #fff !important;
+    border: 2px solid var(--unicorn-border) !important;
+    border-radius: 50% !important;
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    color: var(--unicorn-text) !important;
+    font-weight: bold !important;
+    box-shadow: 2px 2px 0 var(--unicorn-shadow) !important;
+    margin: 0 4px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+}
+
+.bpm-step-btn:active {
+    transform: translateY(2px) !important;
+    box-shadow: none !important;
+}
+
+#bpm-drag-value {
+    background: #fff !important;
+    color: var(--unicorn-text) !important;
+    border: 2px solid var(--unicorn-border) !important;
+    border-radius: 12px !important;
+}
+
+/* --- Scale Select --- */
+#scale-select {
+    background: #fff !important;
+    border: 2px solid var(--unicorn-border) !important;
+    border-radius: 20px !important;
+    color: var(--unicorn-text) !important;
+    padding: 6px 12px !important;
+    font-family: inherit !important;
+    font-weight: bold !important;
+    box-shadow: 3px 3px 0 var(--unicorn-shadow) !important;
+    cursor: pointer !important;
+}
+
+/* --- Tone Panel --- */
+#tone-panel {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border: 3px solid var(--unicorn-border) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 10px 40px rgba(100, 50, 200, 0.2) !important;
+}
+
+.knob-container .knob-label {
+    color: var(--unicorn-text) !important;
+    font-weight: 800 !important;
+}
+
+/* --- Global Controls --- */
+.control-btn,
+.control-btn-sm {
+    background: var(--unicorn-btn-bg) !important;
+    border: 2px solid var(--unicorn-border) !important;
+    border-radius: 50px !important;
+    color: var(--unicorn-text) !important;
+    box-shadow: 4px 4px 0 var(--unicorn-shadow) !important;
+}
+
+.control-btn.active,
+.control-btn-sm.active {
+    background: var(--unicorn-active) !important;
+    color: #fff !important;
+    border-color: #fff !important;
+}
+
+/* Fix Mute/Solo active states */
+.track-ctrls button.active.mute-btn {
+    background: var(--pastel-pink) !important;
+    color: #c2185b !important;
+    border-color: #c2185b !important;
+}
+
+.track-ctrls button.active.solo-btn {
+    background: var(--pastel-blue) !important;
+    color: #0288d1 !important;
+    border-color: #0288d1 !important;
+}
+
+/* Remove black borders from everything else */
+* {
+    border-color: var(--unicorn-border) !important;
+}

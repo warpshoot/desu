@@ -1,0 +1,1477 @@
+html,
+body {
+    background: #fff;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+body.playing {
+    background: #000 !important;
+    color: #fff !important;
+}
+
+body.playing #sequencer-container {
+    background: #000 !important;
+}
+
+/* ... (skipping unchanged properties) ... */
+
+.loop-handle {
+    position: absolute;
+    top: -44px;
+    /* Adjusted for larger touch target */
+    width: 44px;
+    height: 44px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: grab;
+    z-index: 500;
+    font-size: 20px;
+    color: #000;
+    /* Pure black */
+    user-select: none;
+    transition: transform 0.1s ease;
+    background: none;
+    /* No background */
+    border-radius: 0;
+    /* touch-action removed - controlled by JavaScript to allow two-finger pan */
+}
+
+body.playing .loop-handle {
+    color: #fff;
+}
+
+/* ... (skipping unchanged properties) ... */
+
+.control-btn.active#play-pause-btn {
+    background: #fff;
+    color: #0a0a0a;
+    border-color: #fff;
+}
+
+body.playing .control-btn.active#play-pause-btn {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+}
+
+/* Credit Button */
+#credit-btn {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top));
+    left: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.1);
+    color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.2s;
+}
+
+#credit-btn:hover {
+    background: rgba(0, 0, 0, 0.2);
+    color: rgba(0, 0, 0, 0.8);
+    border-color: rgba(0, 0, 0, 0.5);
+}
+
+body.playing #credit-btn {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+}
+
+body.playing #credit-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+#credit-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Credit Modal */
+#credit-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    z-index: 1001;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+#credit-modal.visible {
+    display: flex;
+}
+
+#credit-content {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 32px;
+    border-radius: 0;
+    text-align: center;
+    width: 400px;
+    max-width: calc(100vw - 40px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+#credit-content h2 {
+    font-size: 24px;
+    margin-bottom: 16px;
+    font-weight: bold;
+    color: #333;
+}
+
+#credit-logo {
+    margin: 16px auto;
+    cursor: pointer;
+    display: block;
+}
+
+#credit-logo img {
+    max-width: 100%;
+    height: auto;
+}
+
+#credit-author {
+    font-size: 16px;
+    margin-top: 16px;
+    color: #333;
+}
+
+#credit-author a {
+    color: #333;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+#credit-author a:hover {
+    text-decoration: underline;
+}
+
+#sequencer-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    /* Top aligned */
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
+    padding: 60px 20px 40px;
+    position: relative;
+    background: #fff;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+#sequencer-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    /* 2px gap + 6px spacing to match beat markers */
+    background: #000;
+    padding: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    /* Remove width 100% to hug content */
+    justify-content: center;
+}
+
+/* Track Icons & Controls */
+#track-icons {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0;
+}
+
+.track-item {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+}
+
+.track-icon {
+    width: 28px;
+    height: 72px;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: monospace;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+}
+
+.track-ctrls {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.track-ctrls button {
+    width: 20px;
+    height: 35px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #666;
+    font-size: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.1s ease;
+}
+
+.track-ctrls button:hover {
+    background: #333;
+    color: #fff;
+    border-color: #666;
+}
+
+.track-ctrls button.active.mute-btn {
+    background: #000;
+    color: #fff;
+    border-color: #000;
+}
+
+.track-ctrls button.active.solo-btn {
+    background: #fff;
+    color: #000;
+    border: 1px solid #000;
+}
+
+.track-icon:hover {
+    border-color: #666;
+    transform: scale(1.05);
+    background: #222;
+}
+
+.track-icon.active {
+    border-color: #fff;
+    color: #fff;
+    background: #333;
+}
+
+.track-icon.playing {
+    animation: trackPulse 0.15s ease-out;
+}
+
+@keyframes trackPulse {
+    0% {
+        transform: scale(1);
+        background: #333;
+        color: #fff;
+    }
+
+    50% {
+        transform: scale(1.1);
+        background: #666;
+        color: #fff;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+    }
+
+    100% {
+        transform: scale(1);
+        background: #333;
+        color: #fff;
+    }
+}
+
+#grid-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    /* Remove gap */
+    position: relative;
+    /* CRITICAL for absolute handles */
+}
+
+#timeline-container {
+    display: flex;
+    gap: 2px;
+    padding: 0 4px;
+    /* Match grid padding */
+    position: relative;
+    height: 0;
+    /* Collapse height */
+    z-index: 100;
+}
+
+.loop-handle {
+    position: absolute;
+    top: -44px;
+    /* Adjusted for larger touch target */
+    width: 44px;
+    height: 44px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: grab;
+    z-index: 500;
+    font-size: 20px;
+    color: #000;
+    /* Black for light bg (default) */
+    user-select: none;
+    transition: transform 0.1s ease;
+    background: none;
+    /* No background */
+    border-radius: 0;
+    /* touch-action removed - controlled by JavaScript to allow two-finger pan */
+}
+
+body.playing .loop-handle {
+    color: #fff;
+}
+
+.loop-handle:active {
+    cursor: grabbing;
+    transform: scale(1.2);
+}
+
+#loop-start-handle {
+    left: 0;
+}
+
+#loop-end-handle {
+    right: 0;
+}
+
+.timeline-beat {
+    width: 102px;
+    /* 4*24 (cells) + 3*2 (gaps) */
+    height: 8px;
+    background: transparent;
+    /* Hide background */
+    border: none;
+    /* Hide border */
+    box-sizing: border-box;
+    cursor: grab;
+    transition: all 0.2s ease;
+    margin-right: 8px;
+    /* 2px gap + 6px margin */
+}
+
+.timeline-beat:last-child {
+    margin-right: 0;
+}
+
+.timeline-beat:hover {
+    border-color: #666;
+}
+
+.timeline-beat.in-range {
+    background: transparent;
+    border-color: transparent;
+}
+
+/* Markers removed */
+
+/* Grid */
+#grid-container {
+    display: grid;
+    grid-template-columns: repeat(32, auto);
+    grid-template-rows: repeat(5, 72px);
+    /* Taller rows */
+    gap: 2px;
+    background: transparent;
+    padding: 0;
+}
+
+.cell {
+    width: 24px;
+    height: 72px;
+    /* 3:1 ratio */
+    background: #1a1a1a;
+    border: 1px solid #333;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    position: relative;
+    /* touch-action removed - controlled by JavaScript to allow two-finger pan */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.pitch-indicator {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.9);
+    pointer-events: none;
+    transition: top 0.1s ease;
+    border-radius: 2px;
+    border: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+/* Beat spacing: Add margin every 4 cells */
+.cell[data-step="3"],
+.cell[data-step="7"],
+.cell[data-step="11"],
+.cell[data-step="15"],
+.cell[data-step="19"],
+.cell[data-step="23"],
+.cell[data-step="27"] {
+    margin-right: 6px;
+}
+
+.cell:hover {
+    border-color: #666;
+}
+
+.cell.active {
+    border-color: transparent;
+}
+
+#note-indicator {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    padding: 4px 8px;
+    font-size: 14px;
+    font-weight: bold;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 4px;
+    z-index: 3000;
+    transform: translate(-50%, -120%);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    text-align: center;
+}
+
+/* Roll mode stripes */
+.cell.roll::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(45deg,
+            transparent,
+            transparent 2px,
+            rgba(0, 0, 0, 0.3) 2px,
+            rgba(0, 0, 0, 0.3) 4px);
+    pointer-events: none;
+}
+
+/* Adjust stripe density based on roll subdivision */
+.cell.roll[data-roll-subdivision="2"]::after {
+    background: repeating-linear-gradient(45deg,
+            transparent,
+            transparent 3px,
+            rgba(0, 0, 0, 0.3) 3px,
+            rgba(0, 0, 0, 0.3) 6px);
+}
+
+.cell.roll[data-roll-subdivision="4"]::after {
+    background: repeating-linear-gradient(45deg,
+            transparent,
+            transparent 2px,
+            rgba(0, 0, 0, 0.3) 2px,
+            rgba(0, 0, 0, 0.3) 4px);
+}
+
+.cell.roll[data-roll-subdivision="8"]::after {
+    background: repeating-linear-gradient(45deg,
+            transparent,
+            transparent 1px,
+            rgba(0, 0, 0, 0.3) 1px,
+            rgba(0, 0, 0, 0.3) 2px);
+}
+
+.cell.playing {
+    animation: pulse 0.1s ease-out;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+    }
+}
+
+.cell.active {
+    background: #555;
+    border-color: transparent;
+}
+
+/* Playhead indicator */
+.cell.playhead {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+/* Tone Panel */
+#tone-panel {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: #1a1a1a;
+    border: 2px solid #333;
+    padding: 24px;
+    z-index: 1000;
+    transition: opacity 0.2s ease;
+}
+
+#tone-panel.hidden {
+    display: none;
+}
+
+#tone-panel-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.knob-row {
+    display: flex;
+    gap: 24px;
+}
+
+.knob-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.knob {
+    cursor: pointer;
+    /* touch-action removed - controlled by JavaScript to allow two-finger pan */
+}
+
+.reset-btn {
+    background: transparent;
+    border: 1px solid #333;
+    color: #666;
+    padding: 6px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.1s;
+    margin-top: 4px;
+}
+
+.reset-btn:hover {
+    border-color: #666;
+    color: #fff;
+    background: #222;
+}
+
+.knob-label {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: #999;
+    text-transform: uppercase;
+}
+
+/* Controls */
+#controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+    padding: 0 20px;
+    z-index: 1000;
+}
+
+.control-group {
+    display: flex;
+    gap: 8px;
+    /* Tighter spacing for buttons */
+}
+
+.control-btn {
+    width: 64px;
+    height: 64px;
+    background: #1a1a1a;
+    border: 2px solid #333;
+    border-radius: 0;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Animation Placeholder specific */
+#visualizer-display {
+    cursor: default;
+    /* Not clickable yet */
+    position: relative;
+    overflow: hidden;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    /* Circle shape */
+    background-color: #000;
+    /* Black when stopped */
+    background-image: none;
+    /* No image when stopped */
+    background-size: 384px 48px;
+    /* 8 frames ??48px */
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    transition: none !important;
+    /* Instant frame switching, no smooth transition */
+}
+
+#visualizer-display.playing {
+    /* Show animation only during playback */
+    background-image: url('../assets/danceA.png');
+    filter: invert(1);
+    /* Invert colors (black/white swap) */
+}
+
+.control-btn:hover {
+    border-color: #666;
+    background: #222;
+}
+
+.control-btn:active {
+    transform: scale(0.95);
+}
+
+.control-btn svg {
+    pointer-events: none;
+}
+
+.control-btn.active#play-pause-btn {
+    background: #fff;
+    color: #0a0a0a;
+    border-color: #fff;
+}
+
+#loop-btn.active,
+#swing-btn.active {
+    color: #000;
+    background: #fff;
+    border-color: #fff;
+}
+
+/* Recording button states */
+#rec-btn.armed {
+    color: #fff;
+    background: #c00;
+    border-color: #c00;
+}
+
+#rec-btn.recording {
+    color: #fff;
+    background: #c00;
+    border-color: #c00;
+    animation: recordingPulse 1s ease-in-out infinite;
+}
+
+@keyframes recordingPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+#bpm-ctrl {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 60px;
+}
+
+#bpm-drag-value {
+    font-family: monospace;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: ns-resize;
+    user-select: none;
+    color: #fff;
+    padding: 2px 4px;
+    background: #222;
+    border: 1px solid #333;
+}
+
+#bpm-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+.bpm-step-btn {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #888;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-size: 10px;
+    transition: all 0.1s ease;
+}
+
+.bpm-step-btn:hover {
+    color: #fff;
+    border-color: #666;
+}
+
+#volume-ctrl {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 120px;
+}
+
+.ctrl-label {
+    font-size: 10px;
+    color: #666;
+    letter-spacing: 0.1em;
+}
+
+#volume-slider {
+    width: 100%;
+    height: 4px;
+    background: #222;
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+    cursor: pointer;
+}
+
+#volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border-radius: 0;
+}
+
+#bpm-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    cursor: pointer;
+    border: none;
+}
+
+#bpm-display {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    border: 1px solid #fff;
+    padding: 4px 12px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+    white-space: nowrap;
+}
+
+
+#roll-menu {
+    position: fixed;
+    background: #1a1a1a;
+    border: 2px solid #fff;
+    display: flex;
+    z-index: 2000;
+    pointer-events: auto;
+}
+
+#roll-menu.hidden {
+    display: none;
+}
+
+.roll-option {
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    border-right: 1px solid #333;
+    min-width: 32px;
+    text-align: center;
+    transition: background 0.1s ease;
+}
+
+.roll-option:last-child {
+    border-right: none;
+}
+
+.roll-option:hover {
+    background: #333;
+}
+
+.roll-option.active {
+    background: #fff;
+    color: #000;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    #sequencer-container {
+        flex-direction: column;
+        gap: 8px;
+        padding: 70px 10px 140px;
+    }
+
+    #sequencer-inner {
+        /* Allow horizontal scrolling for grid */
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #track-icons {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .track-item {
+        flex-direction: row;
+        gap: 2px;
+    }
+
+    .track-icon {
+        width: 32px;
+        height: 80px;
+        font-size: 20px;
+        font-weight: 900;
+    }
+
+    .track-ctrls {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .track-ctrls button {
+        width: 32px;
+        height: 26px;
+        font-size: 11px;
+    }
+
+    #grid-container {
+        grid-template-columns: repeat(32, 24px);
+        grid-template-rows: repeat(5, 80px);
+        gap: 2px;
+    }
+
+    .cell {
+        width: 24px;
+        height: 80px;
+    }
+
+    .pitch-indicator {
+        height: 3px;
+    }
+
+    /* Beat spacing for mobile */
+    .cell[data-step="3"],
+    .cell[data-step="7"],
+    .cell[data-step="11"],
+    .cell[data-step="15"],
+    .cell[data-step="19"],
+    .cell[data-step="23"],
+    .cell[data-step="27"] {
+        margin-right: 6px;
+    }
+
+    .timeline-beat {
+        width: 102px;
+        /* 4*24 + 3*2 */
+    }
+
+    #tone-panel {
+        padding: 16px;
+        width: 90%;
+        max-width: 300px;
+    }
+
+    .knob-row {
+        gap: 16px;
+    }
+
+    .knob {
+        width: 60px !important;
+        height: 60px !important;
+    }
+
+    #controls {
+        height: 120px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: auto auto;
+        gap: 8px;
+        padding: 12px;
+    }
+
+    #play-pause-btn {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    #stop-btn {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    #loop-btn {
+        grid-column: 3;
+        grid-row: 1;
+    }
+
+    #swing-btn {
+        grid-column: 4;
+        grid-row: 1;
+    }
+
+    #bpm-ctrl {
+        grid-column: 1 / 3;
+        grid-row: 2;
+    }
+
+    #volume-ctrl {
+        grid-column: 3 / 5;
+        grid-row: 2;
+    }
+
+    #clear-btn {
+        display: none;
+        /* Hide on mobile to save space */
+    }
+
+    .control-btn {
+        width: 100%;
+        height: 48px;
+        min-width: 48px;
+    }
+}
+
+/* Smaller mobile */
+@media (max-width: 480px) {
+    #sequencer-container {
+        padding: 60px 5px 140px;
+    }
+
+    h1 {
+        font-size: 18px;
+        margin-bottom: 12px;
+    }
+
+    .track-icon {
+        width: 28px;
+        height: 70px;
+        font-size: 18px;
+        font-weight: 900;
+    }
+
+    .track-ctrls button {
+        width: 28px;
+        height: 23px;
+        font-size: 10px;
+    }
+
+    #grid-container {
+        grid-template-columns: repeat(32, 20px);
+        grid-template-rows: repeat(5, 70px);
+        gap: 2px;
+    }
+
+    .cell {
+        width: 20px;
+        height: 70px;
+    }
+
+    .pitch-indicator {
+        height: 2px;
+    }
+
+    .timeline-beat {
+        width: 86px;
+        /* 4*20 + 3*2 */
+    }
+
+    .loop-handle {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+        top: -36px;
+    }
+
+    #controls {
+        height: 120px;
+        gap: 6px;
+        padding: 8px;
+    }
+
+    .control-btn {
+        height: 44px;
+    }
+}
+
+/* Landscape mode optimization */
+@media (max-height: 500px) and (orientation: landscape) {
+    #sequencer-container {
+        padding: 40px 10px 100px;
+        justify-content: flex-start;
+    }
+
+    h1 {
+        font-size: 18px;
+        margin-bottom: 8px;
+    }
+
+    #controls {
+        height: 80px;
+        gap: 6px;
+        padding: 8px;
+    }
+
+    .control-btn {
+        height: 36px;
+    }
+
+    #bpm-ctrl {
+        gap: 2px;
+    }
+
+    #volume-ctrl {
+        width: 100px;
+    }
+}
+
+/* Portrait orientation blocker */
+#rotate-prompt {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 9999;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+}
+
+#rotate-prompt .rotate-icon {
+    font-size: 48px;
+    animation: rotateHint 2s ease-in-out infinite;
+}
+
+#rotate-prompt .rotate-text {
+    font-size: 18px;
+    color: #fff;
+}
+
+@keyframes rotateHint {
+
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    50% {
+        transform: rotate(90deg);
+    }
+}
+
+@media (orientation: portrait) and (max-width: 768px) {
+    #rotate-prompt {
+        display: flex;
+    }
+}
+
+/* Landscape mobile - primary mobile experience */
+@media (max-width: 932px) and (orientation: landscape) {
+
+    /* Cell size reduction */
+    .cell {
+        width: 18px;
+        height: 42px;
+    }
+
+    #grid-container {
+        grid-template-columns: repeat(32, auto);
+        grid-template-rows: repeat(5, 42px);
+    }
+
+    /* Beat spacing adjustment */
+    .cell[data-step="3"],
+    .cell[data-step="7"],
+    .cell[data-step="11"],
+    .cell[data-step="15"],
+    .cell[data-step="19"],
+    .cell[data-step="23"],
+    .cell[data-step="27"] {
+        margin-right: 4px;
+    }
+
+    .timeline-beat {
+        width: 82px;
+        /* 4*18 (cells) + 3*2 (gaps) + 4 (margin-right) */
+        margin-right: 6px;
+    }
+
+    /* Track icons compact */
+    .track-icon {
+        width: 24px;
+        height: 42px;
+        font-size: 14px;
+    }
+
+    .track-ctrls button {
+        width: 18px;
+        height: 20px;
+        font-size: 9px;
+    }
+
+    /* Control bar horizontal layout */
+    #controls {
+        height: 60px;
+        gap: 12px;
+        padding: 0 12px;
+        display: flex;
+        flex-direction: row;
+    }
+
+    .control-group {
+        gap: 6px;
+    }
+
+    .control-btn {
+        width: 48px;
+        height: 48px;
+    }
+
+    #visualizer-display {
+        width: 36px;
+        height: 36px;
+        background-size: 288px 36px;
+        /* 8 frames ??36px */
+        transition: none !important;
+        /* No sliding animation */
+    }
+
+    #volume-ctrl {
+        width: 80px;
+    }
+
+    #bpm-ctrl {
+        min-width: 50px;
+    }
+
+    #bpm-drag-value {
+        font-size: 16px;
+    }
+
+    /* Container adjustment */
+    #sequencer-container {
+        padding: 32px 8px 70px;
+    }
+
+    /* Sequencer inner - reduce padding */
+    #sequencer-inner {
+        padding: 4px;
+        gap: 6px;
+        width: fit-content;
+    }
+
+    /* Tone panel */
+    #tone-panel {
+        padding: 12px;
+    }
+
+    .knob-row {
+        gap: 12px;
+    }
+
+    .knob {
+        width: 50px !important;
+        height: 50px !important;
+    }
+
+    /* Credit modal - compact for mobile */
+    #credit-content {
+        width: 280px;
+        max-width: calc(100vw - 40px);
+        max-height: calc(100vh - 40px);
+        padding: 20px;
+        overflow-y: auto;
+    }
+
+    #credit-content h2 {
+        font-size: 18px;
+        margin-bottom: 12px;
+    }
+
+    #credit-logo {
+        margin: 12px auto;
+    }
+
+    #credit-logo img {
+        max-width: 180px;
+        max-height: 120px;
+    }
+
+    #credit-author {
+        font-size: 14px;
+        margin-top: 12px;
+    }
+
+    /* Loop handles */
+    .loop-handle {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+        top: -36px;
+    }
+}
+
+/* Very small landscape (iPhone SE etc) */
+@media (max-width: 700px) and (orientation: landscape) {
+    .cell {
+        width: 16px;
+        height: 36px;
+    }
+
+    #grid-container {
+        grid-template-columns: repeat(32, auto);
+        grid-template-rows: repeat(5, 36px);
+    }
+
+    .timeline-beat {
+        width: 74px;
+        /* 4*16 (cells) + 3*2 (gaps) + 4 (margin-right) */
+    }
+
+    .track-icon {
+        width: 20px;
+        height: 36px;
+        font-size: 12px;
+    }
+
+    .track-ctrls button {
+        width: 16px;
+        height: 17px;
+        font-size: 8px;
+    }
+
+    #controls {
+        height: 52px;
+        gap: 8px;
+    }
+
+    .control-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    #visualizer-display {
+        width: 32px;
+        height: 32px;
+        background-size: 256px 32px;
+        /* 8 frames ??32px */
+        transition: none !important;
+        /* No sliding animation */
+    }
+
+    #volume-ctrl {
+        width: 60px;
+    }
+
+    .knob {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    /* Credit modal - extra compact for small screens */
+    #credit-content {
+        width: 240px;
+        max-width: calc(100vw - 30px);
+        max-height: calc(100vh - 30px);
+        padding: 16px;
+    }
+
+    #credit-content h2 {
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+
+    #credit-logo {
+        margin: 10px auto;
+    }
+
+    #credit-logo img {
+        max-width: 150px;
+        max-height: 100px;
+    }
+
+    #credit-author {
+        font-size: 12px;
+        margin-top: 10px;
+    }
+
+    .loop-handle {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+        top: -32px;
+    }
+
+    /* Sequencer inner - reduce padding */
+    #sequencer-inner {
+        padding: 4px;
+        gap: 5px;
+        width: fit-content;
+    }
+}
+
+/* DJ Mode Overlay */
+#dj-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 80px;
+    /* Above controls */
+    background: rgba(0, 0, 0, 0.75);
+    z-index: 900;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+#dj-overlay.hidden {
+    display: none;
+}
+
+#dj-params {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 48px;
+    pointer-events: none;
+}
+
+.dj-param {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.dj-param-label {
+    font-size: 12px;
+    color: #666;
+    letter-spacing: 0.2em;
+}
+
+.dj-param-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: #fff;
+    font-family: monospace;
+}
+
+#dj-crosshair {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+#dj-cursor {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    left: 50%;
+    top: 50%;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+#dj-cursor::before,
+#dj-cursor::after {
+    content: '';
+    position: absolute;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+#dj-cursor::before {
+    /* Vertical line */
+    width: 1px;
+    height: 100vh;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#dj-cursor::after {
+    /* Horizontal line */
+    width: 100vw;
+    height: 1px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Make visualizer clickable during playback */
+#visualizer-display.playing {
+    cursor: pointer;
+}

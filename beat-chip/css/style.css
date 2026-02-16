@@ -1,0 +1,2610 @@
+html,
+body {
+    background: transparent;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    min-height: 100vh;
+    font-family: monospace, sans-serif;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+    font-family: monospace, sans-serif;
+}
+
+body.playing {
+    /* Background handled by Theme (Unicorn) */
+    color: #fff !important;
+}
+
+body.playing #sequencer-container {
+    background: transparent !important;
+}
+
+.control-btn.active#play-pause-btn {
+    background: #fff;
+    color: #0a0a0a;
+    border-color: #fff;
+}
+
+body.playing .control-btn.active#play-pause-btn {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+}
+
+/* Credit Button */
+#credit-btn {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top));
+    left: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.1);
+    color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.2s;
+}
+
+#credit-btn:hover {
+    background: rgba(0, 0, 0, 0.2);
+    color: rgba(0, 0, 0, 0.8);
+    border-color: rgba(0, 0, 0, 0.5);
+}
+
+body.playing #credit-btn {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+}
+
+body.playing #credit-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+#credit-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Credit Modal */
+#credit-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    z-index: 1001;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+#credit-modal.visible {
+    display: flex;
+}
+
+#credit-content {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 32px;
+    border-radius: 0;
+    text-align: center;
+    width: 400px;
+    max-width: calc(100vw - 40px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+#credit-content h2 {
+    font-size: 24px;
+    margin-bottom: 16px;
+    font-weight: bold;
+    color: #333;
+}
+
+#credit-logo {
+    margin: 16px auto;
+    cursor: pointer;
+    display: block;
+}
+
+#credit-logo img {
+    max-width: 100%;
+    height: auto;
+}
+
+#credit-author {
+    font-size: 16px;
+    margin-top: 16px;
+    color: #333;
+}
+
+#credit-author a {
+    color: #333;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+#credit-author a:hover {
+    text-decoration: underline;
+}
+
+.credit-manual-link {
+    display: inline-block;
+    margin-top: 24px;
+    font-size: 13px;
+    color: #999;
+    text-decoration: none;
+    border: 1px solid #ddd;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.credit-manual-link:hover {
+    background: #f5f5f5;
+    color: #333;
+    border-color: #bbb;
+}
+
+#sequencer-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    /* Top aligned */
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
+    padding: 60px 20px 40px;
+    position: relative;
+    background: #fff;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+#sequencer-inner {
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    padding: 0;
+}
+
+#sequencer-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 4px;
+    justify-content: center;
+}
+
+/* Track Icons & Controls */
+#track-icons {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0;
+}
+
+.track-item {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+}
+
+.track-icon {
+    width: 28px;
+    height: 72px;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+}
+
+.track-ctrls {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.track-ctrls button {
+    width: 20px;
+    height: 35px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #666;
+    font-size: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.1s ease;
+}
+
+@media (hover: hover) {
+    .track-ctrls button:hover {
+        background: #333;
+        color: #fff;
+        border-color: #666;
+    }
+}
+
+.track-ctrls button:active {
+    background: #333;
+    color: #fff;
+    border-color: #666;
+}
+
+.track-ctrls button.active.mute-btn {
+    background: #000;
+    color: #fff;
+    border-color: #000;
+}
+
+.track-ctrls button.active.solo-btn {
+    background: #fff;
+    color: #000;
+    border: 1px solid #000;
+}
+
+@media (hover: hover) {
+    .track-icon:hover {
+        border-color: #666;
+        transform: scale(1.05);
+        background: #222;
+    }
+}
+
+.track-icon.active {
+    border-color: #fff;
+    color: #fff;
+    background: #333;
+}
+
+.track-icon.playing {
+    animation: trackPulse 0.15s ease-out;
+}
+
+@keyframes trackPulse {
+    0% {
+        transform: scale(1);
+        background: #333;
+        color: #fff;
+    }
+
+    50% {
+        transform: scale(1.1);
+        background: #666;
+        color: #fff;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+    }
+
+    100% {
+        transform: scale(1);
+        background: #333;
+        color: #fff;
+    }
+}
+
+.track-icon.cleared {
+    animation: trackCleared 0.3s ease-out;
+}
+
+@keyframes trackCleared {
+    0% {
+        background: #333;
+    }
+
+    50% {
+        background: #ff4444;
+        opacity: 0.6;
+    }
+
+    100% {
+        background: #333;
+    }
+}
+
+#grid-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    /* Remove gap */
+    position: relative;
+    /* CRITICAL for absolute handles */
+}
+
+/* Grid */
+#grid-container {
+    display: grid;
+    grid-template-columns: repeat(16, auto);
+    grid-template-rows: repeat(5, 72px);
+    /* Taller rows */
+    gap: 2px;
+    background: transparent;
+    padding: 0;
+}
+
+.cell {
+    width: 24px;
+    height: 72px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    cursor: pointer;
+    transition: background 0.1s ease, border-color 0.1s ease, box-shadow 0.1s ease;
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.cell.adjusting {
+    transition: none !important;
+    border-color: #fff !important;
+    z-index: 10;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+}
+
+.pitch-indicator {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.9);
+    pointer-events: none;
+    transition: top 0.1s ease;
+    border-radius: 2px;
+    border: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+/* Beat spacing: Add margin every 4 cells (16 steps = 4 beats) */
+.cell[data-step="3"],
+.cell[data-step="7"],
+.cell[data-step="11"] {
+    margin-right: 6px;
+}
+
+.cell:hover {
+    border-color: #666;
+}
+
+.cell.active {
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+#note-indicator {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    padding: 4px 8px;
+    font-size: 14px;
+    font-weight: bold;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 4px;
+    z-index: 3000;
+    transform: translate(-50%, -120%);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    text-align: center;
+}
+
+/* Roll mode stripes */
+.cell.roll::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(45deg,
+            transparent,
+            transparent 4px,
+            rgba(255, 255, 255, 0.5) 4px,
+            rgba(255, 255, 255, 0.5) 8px);
+    pointer-events: none;
+}
+
+/* Adjust stripe density based on roll subdivision */
+.cell.roll[data-roll-subdivision="2"]::after {
+    background: repeating-linear-gradient(45deg,
+            transparent,
+            transparent 6px,
+            rgba(255, 255, 255, 0.5) 6px,
+            rgba(255, 255, 255, 0.5) 12px);
+}
+
+.cell.roll[data-roll-subdivision="4"]::after {
+    background: repeating-linear-gradient(45deg,
+            transparent,
+            transparent 4px,
+            rgba(255, 255, 255, 0.5) 4px,
+            rgba(255, 255, 255, 0.5) 8px);
+}
+
+.cell.roll[data-roll-subdivision="8"]::after {
+    background: repeating-linear-gradient(45deg,
+            transparent,
+            transparent 2px,
+            rgba(255, 255, 255, 0.5) 2px,
+            rgba(255, 255, 255, 0.5) 4px);
+}
+
+.cell.playing {
+    animation: pulse 0.15s ease-out;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scaleX(var(--base-scale-x, 1));
+    }
+
+    50% {
+        transform: scaleX(calc(var(--base-scale-x, 1) * 1.25)) scaleY(1.1);
+    }
+
+    100% {
+        transform: scaleX(var(--base-scale-x, 1));
+    }
+}
+
+.cell.active {
+    background: #666;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.cell.active.weak {
+    opacity: 0.7 !important;
+}
+
+/* Playhead indicator */
+.cell.playhead {
+    border-color: #fff !important;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+    z-index: 5;
+}
+
+/* Tone Panel */
+#tone-panel {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: #1a1a1a;
+    border: 2px solid #333;
+    padding: 24px;
+    z-index: 1000;
+    transition: opacity 0.2s ease;
+}
+
+#tone-panel.hidden {
+    display: none;
+}
+
+#tone-panel-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.knob-row {
+    display: flex;
+    gap: 24px;
+}
+
+.knob-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.knob {
+    cursor: pointer;
+    /* touch-action removed - controlled by JavaScript to allow two-finger pan */
+}
+
+.reset-btn {
+    background: transparent;
+    border: 1px solid #333;
+    color: #666;
+    padding: 6px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.1s;
+    margin-top: 4px;
+}
+
+.reset-btn:hover {
+    border-color: #666;
+    color: #fff;
+    background: #222;
+}
+
+.knob-label {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: #999;
+    text-transform: uppercase;
+}
+
+/* Controls */
+#controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    min-height: 80px;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+    padding: 0 20px env(safe-area-inset-bottom, 0px);
+    z-index: 1000;
+    box-sizing: content-box;
+}
+
+.control-group {
+    display: flex;
+    gap: 8px;
+    /* Tighter spacing for buttons */
+}
+
+.control-btn {
+    width: 64px;
+    height: 64px;
+    background: #1a1a1a;
+    border: 2px solid #333;
+    border-radius: 0;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Animation Placeholder specific */
+#visualizer-display {
+    cursor: default;
+    /* Not clickable yet */
+    position: relative;
+    overflow: hidden;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    /* Circle shape */
+    background-color: #000;
+    /* Black when stopped */
+    background-image: none;
+    /* No image when stopped */
+    background-size: 384px 48px;
+    /* 8 frames × 48px */
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    transition: none !important;
+    /* Instant frame switching, no smooth transition */
+}
+
+#visualizer-display.playing {
+    /* Show animation only during playback */
+    background-image: url('../assets/danceA.png');
+    filter: invert(1);
+    /* Invert colors (black/white swap) */
+}
+
+.control-btn:hover {
+    border-color: #666;
+    background: #222;
+}
+
+.control-btn:active {
+    transform: scale(0.95);
+}
+
+.control-btn svg {
+    pointer-events: none;
+}
+
+.control-btn.active#play-pause-btn {
+    background: #fff;
+    color: #0a0a0a;
+    border-color: #fff;
+}
+
+#swing-btn.active {
+    color: #000;
+    background: #fff;
+    border-color: #fff;
+}
+
+/* REC button - full size, font styling */
+#rec-btn {
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+}
+
+/* Stacked small buttons (REC + RPT) */
+.control-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.control-btn-sm {
+    width: 64px;
+    height: 30px;
+    background: #1a1a1a;
+    border: 2px solid #333;
+    border-radius: 0;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    padding: 0;
+}
+
+.control-btn-sm:hover {
+    border-color: #666;
+    background: #222;
+}
+
+.control-btn-sm:active {
+    transform: scale(0.95);
+}
+
+#repeat-btn.active {
+    color: #000;
+    background: #fff;
+    border-color: #fff;
+}
+
+/* Recording button states */
+#rec-btn.armed {
+    color: #fff;
+    background: #c00;
+    border-color: #c00;
+}
+
+#rec-btn.recording {
+    color: #fff;
+    background: #c00;
+    border-color: #c00;
+    animation: recordingPulse 1s ease-in-out infinite;
+}
+
+@keyframes recordingPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+#bpm-ctrl {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 60px;
+}
+
+#bpm-drag-value {
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: ns-resize;
+    user-select: none;
+    color: #fff;
+    padding: 0;
+    background: #1a1a1a;
+    border: 2px solid #333;
+    height: 30px;
+    width: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.05em;
+}
+
+#bpm-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+.bpm-step-btn {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #888;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-size: 10px;
+    transition: all 0.1s ease;
+}
+
+.bpm-step-btn:hover {
+    color: #fff;
+    border-color: #666;
+}
+
+#volume-ctrl {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 120px;
+}
+
+.ctrl-label {
+    font-size: 10px;
+    color: #666;
+    letter-spacing: 0.1em;
+}
+
+#volume-slider {
+    width: 100%;
+    height: 4px;
+    background: #222;
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+    cursor: pointer;
+}
+
+#volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border-radius: 0;
+}
+
+#bpm-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    cursor: pointer;
+    border: none;
+}
+
+#bpm-display {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    border: 1px solid #fff;
+    padding: 4px 12px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+    white-space: nowrap;
+}
+
+
+#roll-menu {
+    position: fixed;
+    background: #1a1a1a;
+    border: 2px solid #fff;
+    display: flex;
+    z-index: 2000;
+    pointer-events: auto;
+}
+
+#roll-menu.hidden {
+    display: none;
+}
+
+.roll-option {
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    border-right: 1px solid #333;
+    min-width: 32px;
+    text-align: center;
+    transition: background 0.1s ease;
+}
+
+.roll-option:last-child {
+    border-right: none;
+}
+
+.roll-option:hover {
+    background: #333;
+}
+
+.roll-option.active {
+    background: #fff;
+    color: #000;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    #sequencer-container {
+        flex-direction: column;
+        gap: 8px;
+        padding: 70px 10px 140px;
+    }
+
+    #sequencer-main {
+        /* Allow horizontal scrolling for grid */
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #track-icons {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .track-item {
+        flex-direction: row;
+        gap: 2px;
+    }
+
+    .track-icon {
+        width: 32px;
+        height: 80px;
+        font-size: 20px;
+        font-weight: 900;
+    }
+
+    .track-ctrls {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .track-ctrls button {
+        width: 32px;
+        height: 26px;
+        font-size: 11px;
+    }
+
+    #grid-container {
+        grid-template-columns: repeat(16, 24px);
+        grid-template-rows: repeat(5, 80px);
+        gap: 2px;
+    }
+
+    .cell {
+        width: 24px;
+        height: 80px;
+    }
+
+    .pitch-indicator {
+        height: 3px;
+    }
+
+    /* Beat spacing for mobile */
+    .cell[data-step="3"],
+    .cell[data-step="7"],
+    .cell[data-step="11"] {
+        margin-right: 6px;
+    }
+
+    #tone-panel {
+        padding: 16px;
+        width: 90%;
+        max-width: 300px;
+    }
+
+    .knob-row {
+        gap: 16px;
+    }
+
+    .knob {
+        width: 60px !important;
+        height: 60px !important;
+    }
+
+    #controls {
+        min-height: 120px;
+        height: auto;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: auto auto;
+        gap: 8px;
+        padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+
+    #rec-btn {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    #play-pause-btn {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    #stop-btn {
+        grid-column: 3;
+        grid-row: 1;
+    }
+
+    .control-stack {
+        grid-column: 4;
+        grid-row: 1;
+    }
+
+    #bpm-ctrl {
+        grid-column: 1 / 3;
+        grid-row: 2;
+    }
+
+    #volume-ctrl {
+        grid-column: 3 / 5;
+        grid-row: 2;
+    }
+
+    #clear-btn {
+        display: none;
+        /* Hide on mobile to save space */
+    }
+
+    .control-btn {
+        width: 100%;
+        height: 48px;
+        min-width: 48px;
+    }
+}
+
+/* Smaller mobile */
+@media (max-width: 480px) {
+    #sequencer-container {
+        padding: 60px 5px 140px;
+    }
+
+    h1 {
+        font-size: 18px;
+        margin-bottom: 12px;
+    }
+
+    .track-icon {
+        width: 28px;
+        height: 70px;
+        font-size: 18px;
+        font-weight: 900;
+    }
+
+    .track-ctrls button {
+        width: 28px;
+        height: 23px;
+        font-size: 10px;
+    }
+
+    #grid-container {
+        grid-template-columns: repeat(16, 20px);
+        grid-template-rows: repeat(5, 70px);
+        gap: 2px;
+    }
+
+    .cell {
+        width: 20px;
+        height: 70px;
+    }
+
+    .pitch-indicator {
+        height: 2px;
+    }
+
+    #controls {
+        min-height: 120px;
+        height: auto;
+        gap: 6px;
+        padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .control-btn {
+        height: 44px;
+    }
+}
+
+/* Landscape mode optimization */
+@media (max-height: 500px) and (orientation: landscape) {
+    #sequencer-container {
+        padding: 40px 10px 100px;
+        justify-content: flex-start;
+    }
+
+    h1 {
+        font-size: 18px;
+        margin-bottom: 8px;
+    }
+
+    #controls {
+        min-height: 80px;
+        height: auto;
+        gap: 6px;
+        padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .control-btn {
+        height: 36px;
+    }
+
+    #bpm-ctrl {
+        gap: 2px;
+    }
+
+    #volume-ctrl {
+        width: 100px;
+    }
+}
+
+/* Portrait orientation blocker */
+#rotate-prompt {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 9999;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+}
+
+#rotate-prompt .rotate-icon {
+    font-size: 48px;
+    animation: rotateHint 2s ease-in-out infinite;
+}
+
+#rotate-prompt .rotate-text {
+    font-size: 18px;
+    color: #fff;
+}
+
+@keyframes rotateHint {
+
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    50% {
+        transform: rotate(90deg);
+    }
+}
+
+@media (orientation: portrait) and (max-width: 768px) {
+
+    /* Remove portrait blocker - portrait is now supported */
+    #rotate-prompt {
+        display: none !important;
+    }
+
+    /* Container */
+    #sequencer-container {
+        padding: 40px 4px 140px;
+        gap: 4px;
+        overflow-x: auto;
+        overflow-y: auto;
+    }
+
+    /* Sequencer main */
+    #sequencer-main {
+        padding: 3px;
+        gap: 3px;
+    }
+
+    /* Track icons - compact for portrait width */
+    .track-icon {
+        width: 20px;
+        height: 50px;
+        font-size: 11px;
+    }
+
+    /* Hide mute/solo buttons to save width */
+    .track-ctrls {
+        display: none;
+    }
+
+    /* Grid - compact cells to fit portrait width */
+    #grid-container {
+        grid-template-columns: repeat(16, 18px);
+        grid-template-rows: repeat(5, 50px);
+        gap: 1px;
+    }
+
+    .cell {
+        width: 18px;
+        height: 50px;
+    }
+
+    /* No beat spacing in portrait - save horizontal space */
+    .cell[data-step="3"],
+    .cell[data-step="7"],
+    .cell[data-step="11"] {
+        margin-right: 0;
+    }
+
+    .pitch-indicator {
+        height: 2px;
+    }
+
+    /* Pattern bank compact */
+    .pattern-pad {
+        height: 22px;
+        font-size: 10px;
+    }
+
+    /* Chain compact */
+    .chain-slot {
+        width: 24px;
+        height: 24px;
+        font-size: 10px;
+    }
+
+    #chain-container {
+        gap: 3px;
+        padding: 2px 0 0;
+        min-height: 24px;
+        flex-wrap: nowrap;
+        justify-content: center;
+    }
+
+    #chain-toggle {
+        width: auto;
+        height: 24px;
+        padding: 0 4px;
+        font-size: 8px;
+        margin-right: 2px;
+    }
+
+    #chain-container .chain-arrow {
+        display: none;
+    }
+
+    /* Controls - 2 row grid layout */
+    #controls {
+        height: auto;
+        display: grid;
+        grid-template-columns: auto auto auto auto;
+        grid-template-rows: auto auto;
+        gap: 4px 6px;
+        padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Flatten control-group so children participate in grid */
+    .control-group {
+        display: contents;
+    }
+
+    /* Row 1: transport controls */
+    #rec-btn {
+        grid-row: 1;
+        grid-column: 1;
+    }
+
+    #play-pause-btn {
+        grid-row: 1;
+        grid-column: 2;
+    }
+
+    #stop-btn {
+        grid-row: 1;
+        grid-column: 3;
+    }
+
+    .control-stack {
+        grid-row: 1;
+        grid-column: 4;
+    }
+
+    /* Row 2: BPM, Volume, File */
+    #bpm-ctrl {
+        grid-row: 2;
+        grid-column: 1;
+        min-width: auto;
+    }
+
+    #volume-ctrl {
+        grid-row: 2;
+        grid-column: 2 / 4;
+        width: auto;
+    }
+
+    #file-btn {
+        grid-row: 2;
+        grid-column: 4;
+        width: 36px;
+        height: 36px;
+    }
+
+    /* Hide non-essential controls on portrait */
+    #visualizer-display {
+        display: none;
+    }
+
+    #clear-btn {
+        display: none;
+    }
+
+    #scale-ctrl {
+        display: none !important;
+    }
+
+    /* Control button sizes */
+    .control-btn {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+    }
+
+    .control-btn-sm {
+        width: 44px;
+        height: 20px;
+        font-size: 9px;
+    }
+
+    #bpm-drag-value {
+        font-size: 14px;
+    }
+
+    /* Credit button */
+    #credit-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+    }
+
+    /* Tone panel */
+    #tone-panel {
+        padding: 12px;
+        width: 90%;
+        max-width: 300px;
+    }
+
+    .knob-row {
+        gap: 12px;
+    }
+
+    .knob {
+        width: 50px !important;
+        height: 50px !important;
+    }
+
+}
+
+/* Landscape mobile - primary mobile experience */
+@media (max-width: 932px) and (orientation: landscape) {
+
+    /* Cell size - wider for better touch targets */
+    .cell {
+        width: 28px;
+        height: 42px;
+    }
+
+    #grid-container {
+        grid-template-columns: repeat(16, auto);
+        grid-template-rows: repeat(5, 42px);
+    }
+
+    /* Beat spacing */
+    .cell[data-step="3"],
+    .cell[data-step="7"],
+    .cell[data-step="11"] {
+        margin-right: 6px;
+    }
+
+    /* Track icons */
+    .track-icon {
+        width: 28px;
+        height: 42px;
+        font-size: 14px;
+    }
+
+    .track-ctrls button {
+        width: 28px;
+        /* Match track icon width */
+        height: 20px;
+        font-size: 9px;
+    }
+
+    /* Control bar horizontal layout */
+    #controls {
+        min-height: 60px;
+        height: auto;
+        gap: 12px;
+        padding: 0 12px env(safe-area-inset-bottom, 0px);
+        display: flex;
+        flex-direction: row;
+    }
+
+    .control-group {
+        gap: 6px;
+    }
+
+    .control-btn {
+        width: 48px;
+        height: 48px;
+    }
+
+    .control-btn-sm {
+        width: 48px;
+        height: 23px;
+        font-size: 10px;
+    }
+
+    #visualizer-display {
+        width: 36px;
+        height: 36px;
+        background-size: 288px 36px;
+        /* 8 frames × 36px */
+        transition: none !important;
+        /* No sliding animation */
+    }
+
+    #volume-ctrl {
+        width: 80px;
+    }
+
+    #bpm-ctrl {
+        min-width: 50px;
+    }
+
+    #bpm-drag-value {
+        font-size: 16px;
+    }
+
+    /* Container adjustment */
+    #sequencer-container {
+        padding: 32px 8px 70px;
+    }
+
+    /* Sequencer main - reduce padding */
+    #sequencer-main {
+        padding: 4px;
+        gap: 6px;
+        width: fit-content;
+    }
+
+    /* Tone panel */
+    #tone-panel {
+        padding: 12px;
+    }
+
+    .knob-row {
+        gap: 12px;
+    }
+
+    .knob {
+        width: 50px !important;
+        height: 50px !important;
+    }
+
+    /* Credit modal - compact for mobile */
+    #credit-content {
+        width: 280px;
+        max-width: calc(100vw - 40px);
+        max-height: calc(100vh - 40px);
+        padding: 20px;
+        overflow-y: auto;
+    }
+
+    #credit-content h2 {
+        font-size: 18px;
+        margin-bottom: 12px;
+    }
+
+    #credit-logo {
+        margin: 12px auto;
+    }
+
+    #credit-logo img {
+        max-width: 180px;
+        max-height: 120px;
+    }
+
+    #credit-author {
+        font-size: 14px;
+        margin-top: 12px;
+    }
+
+}
+
+/* Very small landscape (iPhone SE etc) */
+@media (max-width: 700px) and (orientation: landscape) {
+    .cell {
+        width: 24px;
+        height: 36px;
+    }
+
+    #grid-container {
+        grid-template-columns: repeat(16, auto);
+        grid-template-rows: repeat(5, 36px);
+    }
+
+    .track-icon {
+        width: 22px;
+        height: 36px;
+        font-size: 12px;
+    }
+
+    .track-ctrls button {
+        width: 22px;
+        /* Match track icon width */
+        height: 17px;
+        font-size: 8px;
+    }
+
+    #controls {
+        min-height: 52px;
+        height: auto;
+        gap: 8px;
+    }
+
+    .control-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .control-btn-sm {
+        width: 40px;
+        height: 19px;
+        font-size: 9px;
+    }
+
+    #visualizer-display {
+        width: 32px;
+        height: 32px;
+        background-size: 256px 32px;
+        /* 8 frames × 32px */
+        transition: none !important;
+        /* No sliding animation */
+    }
+
+    #volume-ctrl {
+        width: 60px;
+    }
+
+    .knob {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    /* DJ overlay - match controls height */
+    #dj-overlay {
+        bottom: 68px;
+    }
+
+    .dj-fx-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 9px;
+    }
+
+    #dj-auto-rec,
+    #dj-clr-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 9px;
+    }
+
+    #dj-ribbon {
+        height: 40px;
+    }
+
+    #dj-fx-buttons {
+        gap: 4px;
+        padding: 4px 6px;
+    }
+
+    .ribbon-marks span {
+        font-size: 10px;
+    }
+
+    /* Credit modal - extra compact for small screens */
+    #credit-content {
+        width: 240px;
+        max-width: calc(100vw - 30px);
+        max-height: calc(100vh - 30px);
+        padding: 16px;
+    }
+
+    #credit-content h2 {
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+
+    #credit-logo {
+        margin: 10px auto;
+    }
+
+    #credit-logo img {
+        max-width: 150px;
+        max-height: 100px;
+    }
+
+    #credit-author {
+        font-size: 12px;
+        margin-top: 10px;
+    }
+
+    /* Sequencer main - reduce padding */
+    #sequencer-main {
+        padding: 4px;
+        gap: 5px;
+        width: fit-content;
+    }
+
+    /* DJ Mode for Mobile - Hide in portrait/small screens to avoid overlap */
+    #dj-overlay {
+        display: none !important;
+    }
+}
+
+/* DJ Mode Overlay */
+#dj-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 900;
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+#dj-overlay.hidden {
+    display: none;
+}
+
+/* DJ overlay bottom adjustments per breakpoint (must come after default rule) */
+/* Portrait ≤768px: controls become 2-row grid (~100px tall) */
+@media (orientation: portrait) and (max-width: 768px) {
+    #dj-overlay {
+        bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/* Landscape ≤932px: controls min-height 60px */
+@media (max-width: 932px) and (orientation: landscape) {
+    #dj-overlay {
+        bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/* Landscape ≤700px: DJ overlay hidden */
+@media (max-width: 700px) and (orientation: landscape) {
+    #dj-overlay {
+        display: none !important;
+    }
+}
+
+/* DJ Effect Buttons + Ribbon (single row) */
+#dj-fx-buttons {
+    display: flex;
+    gap: 6px;
+    padding: 6px 8px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Ribbon Controller (inline within FX row) */
+#dj-ribbon-container {
+    flex: 0.5;
+    min-width: 0;
+}
+
+#dj-ribbon {
+    position: relative;
+    height: 48px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #444;
+    border-radius: 4px;
+    cursor: crosshair;
+    touch-action: none;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#dj-ribbon-cursor {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20%;
+    /* 5 steps (-2..+2), so 20% width per step */
+    left: 40%;
+    /* Start at 0 (center) */
+    background: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    pointer-events: none;
+}
+
+.ribbon-marks {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    justify-content: space-around;
+    pointer-events: none;
+}
+
+.ribbon-marks span {
+    font-family: monospace;
+    font-size: 12px;
+    color: #888;
+    z-index: 1;
+}
+
+.dj-fx-btn {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #444;
+    color: #666;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.08s ease;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+@media (hover: hover) {
+    .dj-fx-btn:hover {
+        border-color: #888;
+        color: #aaa;
+    }
+}
+
+.dj-fx-btn:active {
+    background: #333;
+    border-color: #666;
+    color: #fff;
+}
+
+.dj-fx-btn.active {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+}
+
+/* Automated state (outline only) */
+.dj-fx-btn.automated {
+    border-color: #fff;
+    color: #fff;
+    box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+/* CIRCULAR SPECIAL BUTTONS (AUTO, CLR) */
+#dj-auto-rec,
+#dj-clr-btn {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    font-size: 10px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #444;
+    color: #666;
+    font-family: monospace;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.08s ease;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#dj-auto-rec {
+    margin-left: 4px;
+}
+
+#dj-clr-btn {
+    margin-left: 0;
+}
+
+#dj-auto-rec.active {
+    background: #f00 !important;
+    color: #fff !important;
+    border-color: #f00 !important;
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+}
+
+#dj-auto-rec.playing {
+    background: rgba(255, 255, 255, 0.8);
+    color: #000;
+    border-color: #fff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+#dj-clr-btn:active {
+    background: #333;
+    border-color: #666;
+    color: #fff;
+}
+
+/* DJ XY Pad */
+#dj-xy-pad {
+    flex: 1;
+    position: relative;
+    cursor: crosshair;
+    touch-action: none;
+    overflow: hidden;
+}
+
+#dj-xy-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: monospace;
+    font-size: 14px;
+    letter-spacing: 0.3em;
+    color: #333;
+    pointer-events: none;
+    z-index: 1;
+}
+
+#dj-params {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 48px;
+    pointer-events: none;
+}
+
+.dj-param {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.dj-param-label {
+    font-size: 12px;
+    color: #666;
+    letter-spacing: 0.2em;
+}
+
+.dj-param-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: #fff;
+    font-family: monospace;
+}
+
+/* DJ Ripple Canvas */
+#dj-ripple-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* DJ Visuals */
+#dj-visuals {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.dj-marker {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    top: 0;
+    left: 0;
+    /* Centering handled by transform in JS */
+    will-change: transform;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.dj-marker.hidden,
+#dj-line.hidden {
+    opacity: 0;
+}
+
+#dj-origin {
+    opacity: 0.5;
+    border-style: dashed;
+}
+
+#dj-current {
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+}
+
+#dj-line {
+    position: absolute;
+    height: 4px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.8));
+    transform-origin: 0 50%;
+    top: 0;
+    left: 0;
+    border-radius: 2px;
+    will-change: transform;
+}
+
+/* Make visualizer clickable during playback */
+#visualizer-display.playing {
+    cursor: pointer;
+}
+
+/* Basic Visualizer Style */
+/* Invert is active: Black border -> White border */
+/* Basic Visualizer Style */
+/* Matches historical log: Black bg by default */
+#visualizer-display {
+    position: relative;
+    z-index: 10;
+    width: 48px;
+    height: 48px;
+    aspect-ratio: 1 / 1;
+    flex-shrink: 0;
+    border-radius: 50%;
+    margin: 0 10px;
+
+    background-color: #000;
+    background-image: none;
+    background-repeat: no-repeat;
+    overflow: hidden;
+    cursor: default;
+
+    border: 1px solid #fff;
+    /* White border for visibility on black bg */
+    box-shadow: none;
+    transition: border-width 0.1s;
+}
+
+/* Sprite Animation Keyframes */
+@keyframes play-sprite {
+    0% {
+        background-position: 0 0;
+    }
+
+    100% {
+        background-position: -384px 0;
+    }
+
+    /* 48px * 8 frames */
+}
+
+/* Playing state: Show dancer with sprite animation */
+#visualizer-display.playing {
+    background: url('../assets/danceA.png') no-repeat 0 0;
+    background-size: 384px 48px;
+    filter: invert(1);
+    border-color: #000;
+    /* Black border inverts to White */
+    animation: play-sprite 0.8s steps(8) infinite;
+    cursor: pointer;
+}
+
+/* Paused: freeze animation in place */
+#visualizer-display.paused {
+    animation-play-state: paused;
+}
+
+/* Standby (Momentary): 2px border */
+#visualizer-display.standby {
+    border-width: 2px !important;
+    animation: none;
+}
+
+/* Keep Mode: 3px border */
+#visualizer-display.dj-keep {
+    border-width: 3px !important;
+    animation: none;
+}
+
+/* Beat Pulse: Scale effect only */
+#visualizer-display.pulse {
+    transform: scale(1.02);
+    transition: transform 0.05s ease-out;
+}
+
+/* ======================== */
+/* Pattern Bank (tabs)      */
+/* ======================== */
+
+#pattern-bank {
+    display: flex;
+    gap: 0;
+    padding: 4px 4px 0;
+}
+
+.pattern-pad {
+    flex: 1;
+    height: 28px;
+    background: #111;
+    border: none;
+    border-bottom: 2px solid #333;
+    color: #555;
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.pattern-pad:hover {
+    background: #1a1a1a;
+    color: #aaa;
+}
+
+.pattern-pad.has-data {
+    color: #888;
+}
+
+.pattern-pad.active {
+    background: #000;
+    color: #fff;
+    font-weight: 900;
+    border-bottom: 2px solid #fff;
+}
+
+.pattern-pad.queued {
+    color: #fff;
+    animation: patternBlink 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes patternBlink {
+    0% {
+        opacity: 0.4;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+body.playing .pattern-pad.has-data {
+    color: #999;
+}
+
+/* Context Menu (shared) */
+.context-menu {
+    position: fixed;
+    background: #1a1a1a;
+    border: 2px solid #fff;
+    display: flex;
+    z-index: 2000;
+    pointer-events: auto;
+}
+
+/* DJ Auto Menu: ensure it appears above dj-overlay (z-index: 900) */
+#auto-menu {
+    z-index: 9000;
+}
+
+.context-menu.hidden {
+    display: none;
+}
+
+.context-menu .menu-item {
+    padding: 8px 14px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    border-right: 1px solid #333;
+    transition: background 0.1s ease;
+}
+
+.context-menu .menu-item:last-child {
+    border-right: none;
+}
+
+.context-menu .menu-item:hover {
+    background: #333;
+}
+
+.context-menu .menu-item.disabled {
+    color: #444;
+    pointer-events: none;
+}
+
+/* ======================== */
+/* Pattern Chain            */
+/* ======================== */
+
+#chain-container {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    padding: 8px 0 0;
+    min-height: 36px;
+}
+
+.chain-slot {
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: 1px dashed #333;
+    color: #444;
+    font-family: monospace;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.chain-slot:hover {
+    border-color: #666;
+    color: #888;
+}
+
+.chain-slot.filled {
+    border-style: solid;
+    border-color: #555;
+    color: #ccc;
+    background: #1a1a1a;
+}
+
+.chain-slot.playing {
+    border-color: #fff;
+    color: #fff;
+    background: #333;
+}
+
+body.playing .chain-slot {
+    border-color: #444;
+}
+
+body.playing .chain-slot.filled {
+    border-color: #666;
+}
+
+body.playing .chain-slot.playing {
+    border-color: #fff;
+    background: #444;
+}
+
+/* Chain toggle switch (vertical stack) */
+#chain-mode-switch {
+    display: flex;
+    flex-direction: column;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 0;
+    overflow: hidden;
+    margin-right: 6px;
+    height: 36px;
+    cursor: pointer;
+}
+
+.mode-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    font-size: 9px;
+    font-weight: bold;
+    color: #666;
+    transition: all 0.2s;
+    background: #1a1a1a;
+    line-height: normal;
+}
+
+.mode-option:first-child {
+    border-bottom: 1px solid #333;
+}
+
+.mode-option:hover {
+    color: #999;
+    background: #222;
+}
+
+.mode-option.active {
+    background: #fff;
+    color: #000;
+}
+
+/* Container modifications */
+.mode-chain #chain-container {
+    border-color: #666;
+}
+
+.mode-live #chain-container {
+    border-color: #333;
+}
+
+/* LIVE mode: slots become pattern selectors */
+.chain-slot.live-active {
+    border: 1px solid #fff;
+    color: #fff;
+    background: #444;
+}
+
+.chain-slot.queued {
+    animation: slot-blink 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes slot-blink {
+    0% {
+        opacity: 0.4;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+#chain-container.mode-live .chain-slot {
+    border: 1px solid #444;
+    color: #888;
+}
+
+#chain-container.mode-live .chain-slot:hover {
+    border-color: #888;
+    color: #fff;
+}
+
+/* Chain disabled: gray out slots (unused now but kept for safety) */
+#chain-container.chain-disabled .chain-slot {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+#chain-container.chain-disabled .chain-arrow {
+    opacity: 0.3;
+}
+
+/* Chain arrow indicators */
+.chain-arrow {
+    display: flex;
+    align-items: center;
+    color: #333;
+    font-size: 10px;
+    user-select: none;
+}
+
+body.playing .chain-arrow {
+    color: #555;
+}
+
+/* Landscape mobile pattern bank + chain */
+@media (max-width: 932px) and (orientation: landscape) {
+    .pattern-pad {
+        height: 24px;
+        font-size: 11px;
+    }
+
+    .chain-slot {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+    }
+
+    #chain-mode-switch {
+        margin-right: 4px;
+        height: 28px;
+    }
+
+    .mode-option {
+        font-size: 8px;
+        padding: 0 4px;
+    }
+
+    .chain-arrow {
+        font-size: 8px;
+    }
+
+    #chain-container {
+        gap: 2px;
+        padding: 4px 0 0;
+    }
+}
+
+/* Very small landscape */
+@media (max-width: 700px) and (orientation: landscape) {
+    .pattern-pad {
+        height: 22px;
+        font-size: 10px;
+    }
+
+    .chain-slot {
+        width: 24px;
+        height: 24px;
+        font-size: 10px;
+    }
+
+    .mode-option {
+        font-size: 7px;
+        padding: 0 3px;
+    }
+
+    #chain-mode-switch {
+        margin-right: 2px;
+        height: 24px;
+    }
+}
+
+.dj-fx-btn.disabled {
+    opacity: 0.3;
+    pointer-events: none;
+    filter: grayscale(1);
+    border-color: #222;
+}
+
+/* Large Screen Landscape Optimization (padd/PC) */
+@media (min-width: 960px) {
+    .cell {
+        width: 48px;
+        height: 84px;
+        /* Taller rows */
+    }
+
+    .track-icon {
+        width: 48px;
+        height: 84px;
+        /* Match cell height */
+    }
+
+    #grid-container {
+        grid-template-rows: repeat(5, 84px);
+        /* Match cell height */
+    }
+
+    /* Mute/Solo Buttons: Wider and Taller */
+    .track-ctrls button {
+        width: 40px;
+        height: 41px;
+        /* (84px - 2px gap) / 2 */
+        font-size: 11px;
+        /* Slightly larger text */
+    }
+
+    /* Adjust chain slot size too? */
+    .chain-slot {
+        width: 48px;
+        height: 48px;
+        font-size: 16px;
+    }
+
+    #chain-mode-switch {
+        height: 48px;
+    }
+
+    /* Adjust beat spacing margin */
+    .cell[data-step="3"],
+    .cell[data-step="7"],
+    .cell[data-step="11"] {
+        margin-right: 12px;
+        /* Double margin */
+    }
+
+    /* Ensure container allows width */
+    #sequencer-container {
+        max-width: none;
+        width: 100%;
+    }
+}
+
+/* --- Chiptune Theme Overrides Removed --- */
+
+#grid-container {
+    gap: 4px;
+    /* More gap for retro feel */
+}
+
+.cell {
+    background: #eef;
+    border: 2px solid #8ac;
+    /* Pop border */
+    border-radius: 4px;
+}
+
+.cell.active {
+    border-color: #000 !important;
+    box-shadow: inset 0 0 0 2px #fff;
+}
+
+/* Active cell background color is handled by JS logic but border/shadow here helps Pop feel */
+
+/* Tone Panel Pop style */
+#tone-panel {
+    background: #fff;
+    border: 4px solid #333;
+    border-radius: 8px;
+    box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.2);
+}
+
+.knob-container .knob-label {
+    color: #333;
+    font-weight: bold;
+}
+
+.reset-btn {
+    color: #333;
+    border: 2px solid #333;
+    font-weight: bold;
+}
+
+/* Controls Pop style */
+#controls {
+    background: #a8eccc;
+    /* Darker Mint */
+    border-top: 4px solid #fff;
+}
+
+.control-btn,
+.control-btn-sm {
+    background: #fff;
+    border: 3px solid #333;
+    border-radius: 8px;
+    /* Rounded retro */
+    color: #333;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.control-btn:hover,
+.control-btn-sm:hover {
+    background: #ffe;
+    border-color: #000;
+}
+
+.control-btn:active,
+.control-btn-sm:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.control-btn.active,
+.control-btn-sm.active {
+    background: #ffec85;
+    /* Pop Yellow */
+    color: #000;
+    border-color: #000;
+}
+
+/* Text colors */
+.ctrl-label,
+.bpm-step-btn {
+    color: #333;
+    font-weight: bold;
+}
+
+#bpm-drag-value {
+    background: #fff;
+    color: #333;
+    border: 2px solid #333;
+    border-radius: 4px;
+}
+
+#volume-slider {
+    background: #fff;
+    border: 1px solid #333;
+    height: 8px;
+    border-radius: 4px;
+}
+
+.track-icon {
+    border: 2px solid #333;
+    background: #fff;
+    color: #333;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+}
+
+
+/* --- Chiptune Overrides Removed for Unicorn Theme --- */
+
+/* Top Step Indicator Bar */
+#step-indicators {
+    display: flex;
+    background: #fff;
+    border: 3px solid #333;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    height: 24px;
+}
+
+.step-indicator {
+    flex: 1;
+    text-align: center;
+    font-size: 10px;
+    font-weight: bold;
+    color: #888;
+    background: transparent;
+    border-right: 1px solid #eee;
+    line-height: 24px;
+}
+
+.step-indicator:last-child {
+    border-right: none;
+}
+
+.step-indicator.active {
+    background: #ffcc00;
+    /* Pop Yellow */
+    color: #000;
+}
+
+.step-indicator.playhead {
+    background: #ff66cc;
+    /* Pop Pink */
+    color: #fff;
+}
+
+/* Pattern Selector Buttons */
+.pattern-btn {
+    background: #fff !important;
+    color: #333 !important;
+    border: 3px solid #333 !important;
+    border-radius: 4px !important;
+    font-weight: bold !important;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+    width: 30px !important;
+    height: 30px !important;
+    line-height: 26px !important;
+}
+
+.pattern-btn:hover {
+    background: #f0f0f0 !important;
+    transform: translate(-1px, -1px);
+}
+
+.pattern-btn.active {
+    background: #333 !important;
+    color: #fff !important;
+    border-color: #333 !important;
+    box-shadow: none !important;
+    transform: translate(1px, 1px);
+}
+
+.pattern-btn.chained {
+    border-color: #66ccff !important;
+    /* Pop Blue */
+    color: #66ccff !important;
+}
+
+/* Chain Control */
+#chain-mode-btn {
+    background: #fff !important;
+    color: #333 !important;
+    border: 3px solid #333 !important;
+    border-radius: 4px !important;
+    padding: 0 8px !important;
+    height: 30px !important;
+    font-weight: bold !important;
+}
+
+#chain-mode-btn.active {
+    background: #66ccff !important;
+    color: #fff !important;
+    border-color: #333 !important;
+}
+
+/* Track Mute/Solo Buttons */
+.track-ctrls button {
+    background: #eef !important;
+    border: 1px solid #ccc !important;
+    color: #888 !important;
+    border-radius: 2px;
+}
+
+.track-ctrls button:hover {
+    border-color: #333 !important;
+    color: #333 !important;
+}
+
+.track-ctrls button.active.mute-btn {
+    background: #ffcccc !important;
+    /* Light Red */
+    color: #cc0000 !important;
+    border-color: #cc0000 !important;
+    font-weight: bold;
+}
+
+.track-ctrls button.active.solo-btn {
+    background: #ccffff !important;
+    /* Light Cyan */
+    color: #0066cc !important;
+    border-color: #0066cc !important;
+    font-weight: bold;
+}
+
+/* Track Icons - Ensure pop style */
+.track-icon {
+    border: 3px solid #333 !important;
+    border-radius: 6px !important;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+    font-weight: 900 !important;
+}
+
+/* BPM Display Box style */
+#bpm-drag-value {
+    background: #fff !important;
+    color: #333 !important;
+    border: 3px solid #333 !important;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+/* Project Menu Button (if visible) */
+#project-menu-btn {
+    background: #fff !important;
+    border: 3px solid #333 !important;
+    border-radius: 8px !important;
+    color: #333 !important;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.1);
+}
