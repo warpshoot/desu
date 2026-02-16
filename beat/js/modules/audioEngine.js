@@ -365,17 +365,8 @@ export class AudioEngine {
         // so we only use the cell's octaveShift here.
         const totalOctaveShift = octaveShift;
 
-        // Calculate actual velocity based on track type if weak (velocity < 1.0)
-        let actualVelocity = velocity;
-        if (velocity < 1.0) {
-            if (trackConfig.type === 'noise') {
-                actualVelocity = 0.7;
-            } else if (['fm', 'membrane'].includes(trackConfig.type)) {
-                actualVelocity = 0.5;
-            } else {
-                actualVelocity = 0.65;
-            }
-        }
+        // Use velocity as-is (per-track calibrated values stored in cell data)
+        const actualVelocity = velocity;
 
         // Calculate number of triggers
         const triggers = rollMode ? rollSubdivision : 1;

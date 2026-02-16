@@ -1,5 +1,9 @@
 import { PITCH_RANGE, DURATION_RANGE, SCALE_RANGE, LONG_PRESS_DURATION, DRAG_THRESHOLD, TAP_THRESHOLD, ROLL_SUBDIVISIONS, SCALES } from './constants.js';
 
+// Per-track weak velocity (track index 0-4: Kick, Snare, Hi-hat, Bass, Lead)
+// Tuned per instrument type: membrane needs bigger drop, noise stays audible, metal is delicate
+const WEAK_VELOCITY = [0.42, 0.65, 0.55, 0.5, 0.58];
+
 export class Cell {
     constructor(element, track, step, data, onChange, onLongPress, onPaintChange, getGlobalIsPainting, baseFreq, noteIndicator, getIsTwoFingerTouch, getScale) {
         this.element = element;
@@ -263,7 +267,7 @@ export class Cell {
             this.element.classList.remove('weak');
             this.updateVisuals();
         } else if (this.data.velocity === 1.0) {
-            this.data.velocity = 0.5;
+            this.data.velocity = WEAK_VELOCITY[this.track] ?? 0.5;
             this.element.classList.add('weak');
             this.updateVisuals();
         } else {
