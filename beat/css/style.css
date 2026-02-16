@@ -472,7 +472,7 @@ body.playing #credit-btn:hover {
 }
 
 .cell.active.weak {
-    opacity: 0.45;
+    opacity: 0.7;
 }
 
 /* Playhead indicator */
