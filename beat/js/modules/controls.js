@@ -12,7 +12,7 @@ export class Controls {
         this.onScaleChange = onScaleChange;
         this.onInit = onInit;
         this.isPlaying = false;
-        this.swingEnabled = false;
+        this.swingLevel = 'OFF';
         this.repeatEnabled = true;
         this.isRecordingArmed = false;
 
@@ -343,25 +343,28 @@ export class Controls {
     }
 
     toggleSwing() {
-        this.swingEnabled = !this.swingEnabled;
-        this.audioEngine.setSwing(this.swingEnabled);
-        if (this.swingEnabled) {
-            this.swingBtn.classList.add('active');
-        } else {
-            this.swingBtn.classList.remove('active');
-        }
+        const levels = ['OFF', 'LIGHT', 'HEAVY'];
+        let idx = levels.indexOf(this.swingLevel);
+        idx = (idx + 1) % levels.length;
+        this.setSwing(levels[idx]);
         if (this.onSwingChange) {
-            this.onSwingChange(this.swingEnabled);
+            this.onSwingChange(this.swingLevel);
         }
     }
 
-    setSwing(enabled) {
-        this.swingEnabled = enabled;
-        this.audioEngine.setSwing(enabled);
-        if (enabled) {
-            this.swingBtn.classList.add('active');
-        } else {
-            this.swingBtn.classList.remove('active');
+    setSwing(level) {
+        this.swingLevel = level || 'OFF';
+        this.audioEngine.setSwingLevel(this.swingLevel);
+
+        if (this.swingBtn) {
+            this.swingBtn.classList.toggle('active', this.swingLevel !== 'OFF');
+            this.swingBtn.classList.toggle('heavy', this.swingLevel === 'HEAVY');
+
+            if (this.swingLevel === 'HEAVY') {
+                this.swingBtn.textContent = 'SWG!';
+            } else {
+                this.swingBtn.textContent = 'SWG';
+            }
         }
     }
 

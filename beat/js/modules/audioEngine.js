@@ -1,11 +1,11 @@
-import { TRACKS, DEFAULT_BPM, COLS, SWING_AMOUNT } from './constants.js';
+import { TRACKS, DEFAULT_BPM, COLS, SWING_LEVELS } from './constants.js';
 
 export class AudioEngine {
     constructor() {
         this.initialized = false;
         this.playing = false;
         this.currentStep = 0;
-        this.swingEnabled = false;
+        this.swingAmount = 0;
 
         // Audio chain components
         this.instruments = [];
@@ -277,9 +277,9 @@ export class AudioEngine {
     onStep(time) {
         // Apply swing: delay even steps
         let adjustedTime = time;
-        if (this.swingEnabled && this.currentStep % 2 === 1) {
+        if (this.swingAmount > 0 && this.currentStep % 2 === 1) {
             const stepDuration = Tone.Time('16n').toSeconds();
-            adjustedTime += stepDuration * SWING_AMOUNT;
+            adjustedTime += stepDuration * this.swingAmount;
         }
 
         if (this.onStepCallback) {
@@ -345,11 +345,11 @@ export class AudioEngine {
         Tone.Destination.volume.value = db;
     }
 
-    setSwing(enabled) {
-        this.swingEnabled = enabled;
+    setSwingLevel(level) {
+        this.swingAmount = SWING_LEVELS[level] || 0;
     }
 
-    triggerNote(track, pitch, duration, time, rollMode = false, rollSubdivision = 1, octaveShift = 0) {
+    triggerNote(track, pitch, duration, time, rollMode = false, rollSubdivision = 1, octaveShift = 0, velocity = 1.0) {
         if (!this.initialized || !this.instruments[track]) return;
 
         // Ensure time is valid
@@ -364,6 +364,18 @@ export class AudioEngine {
         // No, djOctaveShift is now handled via global detune (setOctaveShift)
         // so we only use the cell's octaveShift here.
         const totalOctaveShift = octaveShift;
+
+        // Calculate actual velocity based on track type if weak (velocity < 1.0)
+        let actualVelocity = velocity;
+        if (velocity < 1.0) {
+            if (trackConfig.type === 'noise') {
+                actualVelocity = 0.7;
+            } else if (['fm', 'membrane'].includes(trackConfig.type)) {
+                actualVelocity = 0.5;
+            } else {
+                actualVelocity = 0.65;
+            }
+        }
 
         // Calculate number of triggers
         const triggers = rollMode ? rollSubdivision : 1;
@@ -382,22 +394,22 @@ export class AudioEngine {
                 const totalPitch = pitch + (totalOctaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch);
                 // Longer gate time lets the envelope release naturally without clipping
-                instrument.triggerAttackRelease(freq, noteDuration * 0.6, triggerTime);
+                instrument.triggerAttackRelease(freq, noteDuration * 0.6, triggerTime, actualVelocity);
             } else if (trackConfig.type === 'noise') {
                 // Snare: trigger with duration and time
                 const totalPitch = pitch + (totalOctaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch);
-                instrument.triggerAttackRelease(noteDuration * 0.3, triggerTime);
+                instrument.triggerAttackRelease(noteDuration * 0.3, triggerTime, actualVelocity);
             } else if (trackConfig.type === 'metal') {
-                // Hi-hat (MetalSynth): (frequency, duration, time)
+                // Hi-hat (MetalSynth): (frequency, duration, time, velocity)
                 const totalPitch = pitch + (totalOctaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch).toFrequency();
-                instrument.triggerAttackRelease(freq, noteDuration * 0.3, triggerTime);
+                instrument.triggerAttackRelease(freq, noteDuration * 0.3, triggerTime, actualVelocity);
             } else if (trackConfig.type === 'fm') {
                 const totalPitch = pitch + (totalOctaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch).toFrequency();
                 // Longer gate for bass/lead prevents release clipping with drive
-                instrument.triggerAttackRelease(freq, noteDuration * 0.7, triggerTime);
+                instrument.triggerAttackRelease(freq, noteDuration * 0.7, triggerTime, actualVelocity);
             }
         }
     }

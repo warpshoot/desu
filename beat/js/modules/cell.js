@@ -1,4 +1,4 @@
-import { PITCH_RANGE, DURATION_RANGE, BRIGHTNESS_RANGE, SCALE_RANGE, LONG_PRESS_DURATION, DRAG_THRESHOLD, TAP_THRESHOLD, ROLL_SUBDIVISIONS, SCALES } from './constants.js';
+import { PITCH_RANGE, DURATION_RANGE, SCALE_RANGE, LONG_PRESS_DURATION, DRAG_THRESHOLD, TAP_THRESHOLD, ROLL_SUBDIVISIONS, SCALES } from './constants.js';
 
 export class Cell {
     constructor(element, track, step, data, onChange, onLongPress, onPaintChange, getGlobalIsPainting, baseFreq, noteIndicator, getIsTwoFingerTouch, getScale) {
@@ -330,11 +330,9 @@ export class Cell {
             return;
         }
 
-        // Brightness based on effective pitch (scale-snapped)
+        // (no brightness adjustment per pitch)
         const effectivePitch = this.getEffectivePitch ? this.getEffectivePitch() : this.data.pitch;
-        const pitchNormalized = (effectivePitch - PITCH_RANGE.min) / (PITCH_RANGE.max - PITCH_RANGE.min);
-        const brightness = BRIGHTNESS_RANGE.min + pitchNormalized * (BRIGHTNESS_RANGE.max - BRIGHTNESS_RANGE.min);
-        this.element.style.filter = `brightness(${brightness})`;
+        this.element.style.filter = '';
 
         // Scale based on duration
         const durationNormalized = (this.data.duration - DURATION_RANGE.min) / (DURATION_RANGE.max - DURATION_RANGE.min);
@@ -397,7 +395,7 @@ export class Cell {
         let closestPitch = roundedPitch;
 
         // Search range around the rounded pitch to find nearest valid note
-        for (let i = -12; i <= 12; i++) {
+        for (let i = -36; i <= 36; i++) {
             const checkPitch = roundedPitch + i;
             if (checkPitch < PITCH_RANGE.min || checkPitch > PITCH_RANGE.max) continue;
 
