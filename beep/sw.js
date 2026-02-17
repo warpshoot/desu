@@ -1,4 +1,4 @@
-const CACHE_NAME = 'desu-beep-v20';
+const CACHE_NAME = 'desu-beep-v21';
 const ASSETS = [
   './',
   './css/style.css',
