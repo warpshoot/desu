@@ -92,10 +92,10 @@ export class Controls {
         const applyAllBtn = document.createElement('button');
         applyAllBtn.textContent = 'ALL';
         applyAllBtn.title = 'Apply scale to all patterns';
-        applyAllBtn.style.setProperty('background', '#fff', 'important');
-        applyAllBtn.style.setProperty('color', '#000', 'important');
-        applyAllBtn.style.setProperty('border', '1px solid #666', 'important');
-        applyAllBtn.style.setProperty('border-radius', '4px', 'important');
+        applyAllBtn.style.setProperty('background', '#1a1a1a', 'important');
+        applyAllBtn.style.setProperty('color', '#fff', 'important');
+        applyAllBtn.style.setProperty('border', '1px solid #333', 'important');
+        applyAllBtn.style.setProperty('border-radius', '0px', 'important');
         applyAllBtn.style.setProperty('padding', '2px 6px', 'important');
         applyAllBtn.style.setProperty('font-size', '10px', 'important');
         applyAllBtn.style.setProperty('cursor', 'pointer', 'important');
@@ -106,17 +106,15 @@ export class Controls {
 
                 // Visual feedback
                 const originalText = applyAllBtn.textContent;
-                const originalColor = applyAllBtn.style.color;
-                const originalBg = applyAllBtn.style.background;
 
                 applyAllBtn.textContent = 'OK';
-                applyAllBtn.style.setProperty('background', '#ff69b4', 'important');
-                applyAllBtn.style.setProperty('color', '#fff', 'important');
+                applyAllBtn.style.setProperty('background', '#fff', 'important');
+                applyAllBtn.style.setProperty('color', '#000', 'important');
 
                 setTimeout(() => {
                     applyAllBtn.textContent = originalText;
-                    applyAllBtn.style.setProperty('background', '#fff', 'important');
-                    applyAllBtn.style.setProperty('color', '#000', 'important');
+                    applyAllBtn.style.setProperty('background', '#1a1a1a', 'important');
+                    applyAllBtn.style.setProperty('color', '#fff', 'important');
                 }, 1000);
             }
         });

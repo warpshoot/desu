@@ -582,27 +582,23 @@ body.playing #credit-btn:hover {
     justify-content: center;
 }
 
-/* Animation Placeholder specific */
 #visualizer-display {
     cursor: default;
-    /* Not clickable yet */
     position: relative;
+    z-index: 10;
     overflow: hidden;
     width: 48px;
     height: 48px;
+    aspect-ratio: 1 / 1;
+    flex-shrink: 0;
     border-radius: 50%;
-    /* Circle shape */
+    margin: 0 10px;
     background-color: #000;
-    /* Black when stopped */
     background-image: none;
-    /* No image when stopped */
-    background-size: 384px 48px;
-    /* 8 frames × 48px */
-    background-position: 0 0;
     background-repeat: no-repeat;
     image-rendering: pixelated;
-    transition: none !important;
-    /* Instant frame switching, no smooth transition */
+    border: 2px solid #333;
+    transition: border-width 0.1s, border-color 0.1s;
 }
 
 #visualizer-display.playing {
@@ -1875,52 +1871,13 @@ body.playing #credit-btn:hover {
     cursor: pointer;
 }
 
-/* Basic Visualizer Style */
-/* Invert is active: Black border -> White border */
-/* Basic Visualizer Style */
-/* Matches historical log: Black bg by default */
-#visualizer-display {
-    position: relative;
-    z-index: 10;
-    width: 48px;
-    height: 48px;
-    aspect-ratio: 1 / 1;
-    flex-shrink: 0;
-    border-radius: 50%;
-    margin: 0 10px;
-
-    background-color: #000;
-    background-image: none;
-    background-repeat: no-repeat;
-    overflow: hidden;
-    cursor: default;
-
-    border: 1px solid #fff;
-    /* White border for visibility on black bg */
-    box-shadow: none;
-    transition: border-width 0.1s;
-}
-
-/* Sprite Animation Keyframes */
-@keyframes play-sprite {
-    0% {
-        background-position: 0 0;
-    }
-
-    100% {
-        background-position: -384px 0;
-    }
-
-    /* 48px * 8 frames */
-}
-
-/* Playing state: Show dancer with sprite animation */
+/* Basic Visualizer Style (Consolidated to top) */
 #visualizer-display.playing {
     background: url('../assets/danceA.png') no-repeat 0 0;
     background-size: 384px 48px;
     filter: invert(1);
     border-color: #000;
-    /* Black border inverts to White */
+    /* Inverts to white */
     animation: play-sprite 0.8s steps(8) infinite;
     cursor: pointer;
 }
@@ -1932,14 +1889,26 @@ body.playing #credit-btn:hover {
 
 /* Standby (Momentary): 2px border */
 #visualizer-display.standby {
+    border-color: #fff !important;
     border-width: 2px !important;
     animation: none;
 }
 
+#visualizer-display.playing.standby {
+    border-color: #000 !important;
+    /* Inverts to white */
+}
+
 /* Keep Mode: 3px border */
 #visualizer-display.dj-keep {
+    border-color: #fff !important;
     border-width: 3px !important;
     animation: none;
+}
+
+#visualizer-display.playing.dj-keep {
+    border-color: #000 !important;
+    /* Inverts to white */
 }
 
 /* Beat Pulse: Scale effect only */
