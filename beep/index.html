@@ -622,6 +622,638 @@
             background: #444;
         }
     </style>
+    <style>
+        /* --- Mobile Optimization (iPhone XR Target) --- */
+
+        /* 1. Remove Rotate Prompt */
+        #rotate-prompt {
+            display: none !important;
+        }
+
+        /* 2. Landscape Mode (Ported from Beat & Optimized) */
+        @media (max-width: 932px) and (orientation: landscape) {
+            body {
+                overflow: hidden !important;
+            }
+
+            #sequencer-container {
+                padding: 4px 20px 0 !important;
+                /* Reduced top padding */
+                height: 100vh !important;
+                overflow: hidden !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: flex-start !important;
+                /* Align top to avoid cutting off bottom */
+                gap: 4px !important;
+            }
+
+            #sequencer-inner {
+                padding: 2px !important;
+                margin-bottom: 0 !important;
+                flex-shrink: 1 !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+
+            #pattern-bank {
+                height: 24px !important;
+                min-height: 24px !important;
+                margin-bottom: 2px !important;
+            }
+
+            .pattern-pad {
+                font-size: 10px !important;
+                height: 24px !important;
+            }
+
+            #sequencer-main {
+                gap: 4px !important;
+                align-items: flex-start !important;
+            }
+
+            /* Track Icons & Controls - Match Grid Spacing */
+            #track-icons {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 2px !important;
+                /* Match grid row-gap */
+            }
+
+            .track-item {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                height: 44px !important;
+                margin-bottom: 0 !important;
+                /* Remove margin, use gap instead */
+                box-sizing: border-box !important;
+            }
+
+            .track-icon {
+                width: 36px !important;
+                height: 44px !important;
+                font-size: 11px !important;
+                border: 2px solid #b39ddb !important;
+                box-sizing: border-box !important;
+                margin: 0 !important;
+            }
+
+            .track-ctrls {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 0 !important;
+                justify-content: space-between !important;
+                height: 44px !important;
+                margin-left: 2px !important;
+            }
+
+            .track-ctrls button {
+                width: 24px !important;
+                height: 21px !important;
+                font-size: 8px !important;
+                margin: 0 !important;
+            }
+
+            /* Cells */
+            .cell {
+                width: 32px !important;
+                height: 44px !important;
+                border: 1px solid #e1bee7 !important;
+                border-radius: 4px !important;
+                box-sizing: border-box !important;
+            }
+
+            #grid-container {
+                grid-template-rows: repeat(5, 44px) !important;
+                grid-template-columns: repeat(16, auto) !important;
+                column-gap: 2px !important;
+                row-gap: 2px !important;
+            }
+
+            /* Spacing optimization */
+            .cell[data-step="3"],
+            .cell[data-step="7"],
+            .cell[data-step="11"] {
+                margin-right: 4px !important;
+            }
+
+            /* Chain Container - Make sure it's visible */
+            #chain-container {
+                min-height: 28px !important;
+                height: 28px !important;
+                padding-top: 0 !important;
+                margin-top: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                z-index: 10 !important;
+            }
+
+            .chain-slot {
+                width: 24px !important;
+                height: 24px !important;
+                min-width: 24px !important;
+                min-height: 24px !important;
+                font-size: 10px !important;
+                border-width: 1px !important;
+            }
+
+            #chain-mode-switch {
+                height: 24px !important;
+                width: 24px !important;
+            }
+
+            .mode-option {
+                font-size: 6px !important;
+            }
+
+            /* Controls - Compact styles */
+            #controls {
+                min-height: 55px !important;
+                height: 55px !important;
+                padding: 0 10px 0 !important;
+                padding-bottom: env(safe-area-inset-bottom, 0) !important;
+                gap: 8px !important;
+                background: var(--pastel-green) !important;
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                z-index: 100 !important;
+            }
+
+            .control-group {
+                gap: 4px !important;
+            }
+
+            .control-btn {
+                width: 36px !important;
+                height: 36px !important;
+                font-size: 10px !important;
+                border-width: 2px !important;
+            }
+
+            .control-btn-sm {
+                width: 36px !important;
+                height: 17px !important;
+                font-size: 8px !important;
+                border-width: 1px !important;
+            }
+
+            #bpm-ctrl,
+            #volume-ctrl {
+                transform: scale(0.75);
+            }
+
+            #visualizer-display {
+                width: 36px !important;
+                height: 36px !important;
+                background-size: 288px 36px !important;
+                border-width: 2px !important;
+                margin: 0 !important;
+            }
+
+            /* File button adjustment if needed */
+            #file-btn {
+                width: 36px !important;
+                height: 36px !important;
+                font-size: 10px !important;
+            }
+
+            /* Credit button - prevent overflow */
+            #credit-btn {
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 16px !important;
+                top: 8px !important;
+                left: 8px !important;
+            }
+        }
+
+        /* 3. Portrait Mode (Force Fit - No Scroll) */
+        @media (orientation: portrait) {
+            body {
+                overflow: hidden !important;
+            }
+
+            #sequencer-container {
+                padding: 42px 2px 70px !important;
+                width: 100vw !important;
+                overflow: hidden !important;
+                align-items: stretch !important;
+                box-sizing: border-box !important;
+            }
+
+            #sequencer-inner {
+                padding: 2px !important;
+                border-width: 2px !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                overflow: hidden !important;
+            }
+
+            #sequencer-main {
+                flex-direction: row !important;
+                gap: 1px !important;
+                width: 100% !important;
+                justify-content: flex-start !important;
+            }
+
+            /* Track Icons */
+            #track-icons {
+                width: 26px !important;
+                min-width: 26px !important;
+                flex-shrink: 0 !important;
+            }
+
+            .track-item {
+                flex-direction: column !important;
+                height: 80px !important;
+                margin-bottom: 4px !important;
+                gap: 2px !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+            }
+
+            .track-icon {
+                width: 26px !important;
+                height: 60px !important;
+                font-size: 10px !important;
+                border-radius: 4px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+
+            .track-ctrls {
+                flex-direction: row !important;
+                width: 26px !important;
+            }
+
+            .track-ctrls button {
+                width: 13px !important;
+                height: 14px !important;
+                font-size: 7px !important;
+                padding: 0 !important;
+                line-height: 14px !important;
+            }
+
+            /* Grid */
+            #grid-wrapper {
+                flex: 1 !important;
+                min-width: 0 !important;
+                overflow: hidden !important;
+            }
+
+            #grid-container {
+                grid-template-rows: repeat(5, 80px) !important;
+                width: 100% !important;
+                display: grid !important;
+                grid-template-columns: repeat(16, 1fr) !important;
+                column-gap: 0px !important;
+                row-gap: 4px !important;
+                box-sizing: border-box !important;
+            }
+
+            .cell {
+                width: auto !important;
+                height: 80px !important;
+                min-width: 0 !important;
+                border: 1px solid #e1bee7 !important;
+                border-radius: 4px !important;
+                box-sizing: border-box !important;
+            }
+
+            .cell[data-step="3"],
+            .cell[data-step="7"],
+            .cell[data-step="11"] {
+                margin-right: 0px !important;
+            }
+
+            /* Pattern Bank */
+            #pattern-bank {
+                height: 30px !important;
+            }
+
+            /* Chain - circular slots */
+            #chain-container {
+                display: flex !important;
+                height: auto !important;
+                padding: 4px 0 !important;
+                margin: 4px 0 !important;
+                flex-wrap: nowrap !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 2px !important;
+                overflow: visible !important;
+            }
+
+            /* (slots and switch skipped for brevity in Instruction, but included in ReplacementContent if needed... no, I should include them if they are between the lines) */
+            .chain-slot {
+                flex: none !important;
+                width: 32px !important;
+                height: 32px !important;
+                min-width: 32px !important;
+                max-width: 32px !important;
+                min-height: 32px !important;
+                max-height: 32px !important;
+                font-size: 11px !important;
+                border-radius: 50% !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+                line-height: 1 !important;
+                overflow: hidden !important;
+            }
+
+            #chain-mode-switch {
+                flex: none !important;
+                width: 32px !important;
+                height: 32px !important;
+                min-width: 32px !important;
+                max-width: 32px !important;
+                min-height: 32px !important;
+                max-height: 32px !important;
+                border-radius: 50% !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                overflow: visible !important;
+            }
+
+            .mode-option {
+                font-size: 5px !important;
+            }
+
+            .chain-arrow {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                font-size: 8px !important;
+                color: var(--unicorn-border) !important;
+                opacity: 0.6 !important;
+                width: 2px !important;
+                height: 32px !important;
+                margin: 0 !important;
+            }
+
+            #chain-container.mode-live .chain-arrow {
+                display: none !important;
+            }
+
+            /* Controls - 2-row flex centered */
+            #controls {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+                align-items: center !important;
+                padding: 4px 16px calc(env(safe-area-inset-bottom) + 4px) !important;
+                height: auto !important;
+                min-height: unset !important;
+                gap: 4px 6px !important;
+            }
+
+            /* Row 1 items */
+            .control-group {
+                display: flex !important;
+                gap: 3px !important;
+                align-items: center !important;
+                order: 1 !important;
+            }
+
+            .control-btn {
+                width: 34px !important;
+                height: 34px !important;
+                font-size: 10px !important;
+            }
+
+            .control-stack {
+                gap: 1px !important;
+            }
+
+            .control-btn-sm {
+                width: 36px !important;
+                height: 17px !important;
+                font-size: 8px !important;
+            }
+
+            #visualizer-display {
+                width: 34px !important;
+                height: 34px !important;
+                background-size: 272px 34px !important;
+                display: block !important;
+                order: 2 !important;
+            }
+
+            /* Line break between row 1 and row 2 */
+            #controls::before {
+                content: "" !important;
+                flex-basis: 100% !important;
+                height: 0 !important;
+                order: 3 !important;
+            }
+
+            /* Row 2 items */
+            #bpm-ctrl {
+                transform: none !important;
+                order: 4 !important;
+            }
+
+            #bpm-buttons {
+                display: none !important;
+            }
+
+            #bpm-drag-value {
+                font-size: 14px !important;
+            }
+
+            #volume-ctrl {
+                display: flex !important;
+                align-items: center !important;
+                gap: 4px !important;
+                transform: none !important;
+                order: 5 !important;
+            }
+
+            #volume-ctrl .ctrl-label {
+                font-size: 10px !important;
+            }
+
+            #volume-slider {
+                width: 90px !important;
+            }
+
+            #file-btn {
+                order: 6 !important;
+            }
+
+            /* Tone Panel */
+            #tone-panel {
+                width: 90% !important;
+                max-width: 320px !important;
+                padding: 10px !important;
+            }
+
+            .knob {
+                zoom: 0.7;
+            }
+
+            /* --- Tablet Portrait Overrides (iPad etc.) --- */
+            @media (min-width: 768px) {
+                #sequencer-container {
+                    padding: 50px 12px 90px !important;
+                }
+
+                #sequencer-inner {
+                    padding: 6px !important;
+                    border-width: 3px !important;
+                }
+
+                /* Track Icons - bigger for tablet */
+                #track-icons {
+                    width: 48px !important;
+                    min-width: 48px !important;
+                }
+
+                .track-item {
+                    height: 120px !important;
+                    gap: 3px !important;
+                }
+
+                .track-icon {
+                    width: 48px !important;
+                    height: 90px !important;
+                    font-size: 14px !important;
+                    border-radius: 6px !important;
+                }
+
+                .track-ctrls {
+                    width: 48px !important;
+                }
+
+                .track-ctrls button {
+                    width: 20px !important;
+                    height: 20px !important;
+                    font-size: 10px !important;
+                    line-height: 20px !important;
+                }
+
+                /* Grid - tall cells to fill dead space */
+                #grid-container {
+                    grid-template-rows: repeat(5, 120px) !important;
+                    column-gap: 2px !important;
+                    row-gap: 6px !important;
+                }
+
+                .cell {
+                    height: 120px !important;
+                    border-radius: 6px !important;
+                    border-width: 2px !important;
+                }
+
+                /* Pattern Bank */
+                #pattern-bank {
+                    height: 40px !important;
+                }
+
+                /* Chain - bigger slots */
+                .chain-slot {
+                    width: 42px !important;
+                    height: 42px !important;
+                    min-width: 42px !important;
+                    font-size: 14px !important;
+                }
+
+                #chain-mode-switch {
+                    width: 42px !important;
+                    height: 42px !important;
+                    min-width: 42px !important;
+                }
+
+                .mode-option {
+                    font-size: 8px !important;
+                }
+
+                /* Controls - match PC order (DOM order), 1 row */
+                #controls {
+                    flex-wrap: nowrap !important;
+                    padding: 8px 20px calc(env(safe-area-inset-bottom) + 8px) !important;
+                    gap: 12px !important;
+                    min-height: 60px !important;
+                }
+
+                #controls::before {
+                    display: none !important;
+                }
+
+                .control-group {
+                    order: 0 !important;
+                }
+
+                .control-btn {
+                    width: 60px !important;
+                    height: 60px !important;
+                    font-size: 14px !important;
+                }
+
+                .control-btn-sm {
+                    width: 60px !important;
+                    height: 28px !important;
+                    font-size: 11px !important;
+                }
+
+                #visualizer-display {
+                    width: 60px !important;
+                    height: 60px !important;
+                    background-size: 480px 60px !important;
+                    order: 0 !important;
+                }
+
+                #bpm-ctrl {
+                    order: 0 !important;
+                    transform: none !important;
+                }
+
+                #bpm-buttons {
+                    display: flex !important;
+                }
+
+                #volume-ctrl {
+                    order: 0 !important;
+                    gap: 6px !important;
+                }
+
+                #volume-ctrl .ctrl-label {
+                    font-size: 12px !important;
+                }
+
+                #volume-slider {
+                    width: 120px !important;
+                }
+
+                #file-btn {
+                    order: 0 !important;
+                }
+
+                /* Tone Panel */
+                #tone-panel {
+                    max-width: 500px !important;
+                    padding: 16px !important;
+                }
+
+                .knob {
+                    zoom: 0.9;
+                }
+            }
+        }
+    </style>
 </head>
 
 <body>
