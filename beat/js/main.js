@@ -111,6 +111,21 @@ class Sequencer {
                 }
                 saveState(this.state);
             },
+            (scaleName) => { // onScaleApplyAll
+                this.state.patterns.forEach(pat => {
+                    if (pat) pat.scale = scaleName;
+                });
+
+                // Update visuals for active cells in current view
+                for (let track = 0; track < ROWS; track++) {
+                    for (let step = 0; step < COLS; step++) {
+                        if (this.cells[track] && this.cells[track][step]) {
+                            this.cells[track][step].updateVisuals();
+                        }
+                    }
+                }
+                saveState(this.state);
+            },
             () => { // onInit (called when audioEngine is first initialized)
                 this.syncAudioWithState();
             }

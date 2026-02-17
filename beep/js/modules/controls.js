@@ -1,7 +1,7 @@
 import { SCALES } from './constants.js';
 
 export class Controls {
-    constructor(audioEngine, onBPMChange, onSwingChange, onClear, onPlay, onStop, onRepeatToggle, onScaleChange, onInit) {
+    constructor(audioEngine, onBPMChange, onSwingChange, onClear, onPlay, onStop, onRepeatToggle, onScaleChange, onScaleApplyAll, onInit) {
         this.audioEngine = audioEngine;
         this.onBPMChange = onBPMChange;
         this.onSwingChange = onSwingChange;
@@ -10,6 +10,7 @@ export class Controls {
         this.onStop = onStop;
         this.onRepeatToggle = onRepeatToggle;
         this.onScaleChange = onScaleChange;
+        this.onScaleApplyAll = onScaleApplyAll;
         this.onInit = onInit;
         this.isPlaying = false;
         this.swingLevel = 'OFF';
@@ -58,6 +59,11 @@ export class Controls {
         label.style.marginBottom = '2px';
         label.style.color = '#666'; // Default, will be overridden by Unicorn CSS
 
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.gap = '4px';
+
         this.scaleSelect = document.createElement('select');
         this.scaleSelect.id = 'scale-select'; // ADDED ID
         this.scaleSelect.style.background = '#333';
@@ -83,8 +89,38 @@ export class Controls {
             }
         });
 
+        // Apply All Button
+        const applyAllBtn = document.createElement('button');
+        applyAllBtn.textContent = 'ALL';
+        applyAllBtn.title = 'Apply scale to all patterns';
+        applyAllBtn.className = 'control-btn-sm';
+        applyAllBtn.style.width = 'auto';
+        applyAllBtn.style.padding = '0 8px';
+        applyAllBtn.style.marginLeft = '4px';
+        applyAllBtn.style.height = '28px';
+
+        applyAllBtn.addEventListener('click', () => {
+            if (this.onScaleApplyAll) {
+                this.onScaleApplyAll(this.scaleSelect.value);
+
+                // Visual feedback
+                const originalText = applyAllBtn.textContent;
+
+                applyAllBtn.textContent = 'OK';
+                applyAllBtn.classList.add('active');
+
+                setTimeout(() => {
+                    applyAllBtn.textContent = originalText;
+                    applyAllBtn.classList.remove('active');
+                }, 1000);
+            }
+        });
+
+        row.appendChild(this.scaleSelect);
+        row.appendChild(applyAllBtn);
+
         container.appendChild(label);
-        container.appendChild(this.scaleSelect);
+        container.appendChild(row);
 
         // Insert before volume control or at specific position
         const volCtrl = document.getElementById('volume-ctrl');

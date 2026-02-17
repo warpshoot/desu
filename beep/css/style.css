@@ -601,31 +601,29 @@ body.playing #credit-btn:hover {
 /* Animation Placeholder specific */
 #visualizer-display {
     cursor: default;
-    /* Not clickable yet */
     position: relative;
     overflow: hidden;
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    /* Circle shape */
-    background-color: #000;
-    /* Black when stopped */
+    /* Match .control-btn border & shadow */
+    border: 2px solid #333;
+    background-color: #fff;
     background-image: none;
-    /* No image when stopped */
     background-size: 384px 48px;
-    /* 8 frames × 48px */
     background-position: 0 0;
     background-repeat: no-repeat;
     image-rendering: pixelated;
     transition: none !important;
-    /* Instant frame switching, no smooth transition */
 }
 
 #visualizer-display.playing {
-    /* Show animation only during playback */
-    background-image: url('../assets/danceA.png');
-    filter: invert(1);
-    /* Invert colors (black/white swap) */
+    background-image: url('../assets/jump.png?v=12');
+    background-color: #fff;
+    background-size: 384px 48px;
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    filter: none;
 }
 
 .control-btn:hover {
@@ -1897,10 +1895,7 @@ body.playing #credit-btn:hover {
     cursor: pointer;
 }
 
-/* Basic Visualizer Style */
-/* Invert is active: Black border -> White border */
-/* Basic Visualizer Style */
-/* Matches historical log: Black bg by default */
+/* Basic Visualizer Style (duplicate - kept for layout props) */
 #visualizer-display {
     position: relative;
     z-index: 10;
@@ -1910,15 +1905,13 @@ body.playing #credit-btn:hover {
     flex-shrink: 0;
     border-radius: 50%;
     margin: 0 10px;
-
-    background-color: #000;
+    background-color: #fff;
     background-image: none;
     background-repeat: no-repeat;
     overflow: hidden;
     cursor: default;
-
-    border: 1px solid #fff;
-    /* White border for visibility on black bg */
+    /* Match .control-btn border */
+    border: 2px solid #333;
     box-shadow: none;
     transition: border-width 0.1s;
 }
@@ -1937,15 +1930,15 @@ body.playing #credit-btn:hover {
 }
 
 /* Playing state: Show dancer with sprite animation */
-#visualizer-display.playing {
+/* DUPLICATE RULE REMOVED - See line 624 */
+/* #visualizer-display.playing {
     background: url('../assets/danceA.png') no-repeat 0 0;
     background-size: 384px 48px;
     filter: invert(1);
     border-color: #000;
-    /* Black border inverts to White */
     animation: play-sprite 0.8s steps(8) infinite;
     cursor: pointer;
-}
+} */
 
 /* Paused: freeze animation in place */
 #visualizer-display.paused {
@@ -1958,9 +1951,9 @@ body.playing #credit-btn:hover {
     animation: none;
 }
 
-/* Keep Mode: 3px border */
+/* DJ Keep Mode: thick border */
 #visualizer-display.dj-keep {
-    border-width: 3px !important;
+    border: 4px solid #b39ddb;
     animation: none;
 }
 

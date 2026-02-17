@@ -1,6 +1,6 @@
 {
-  "name": "beat-chip",
-  "short_name": "beat-chip",
+  "name": "beep",
+  "short_name": "beep",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",

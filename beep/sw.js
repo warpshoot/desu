@@ -1,4 +1,4 @@
-const CACHE_NAME = 'desu-beat-chip-v37';
+const CACHE_NAME = 'desu-beep-v20';
 const ASSETS = [
   './',
   './css/style.css',
@@ -14,6 +14,8 @@ const ASSETS = [
   './js/modules/patternBank.js',
   './js/modules/storage.js',
   './js/modules/tonePanel.js',
+
+  './assets/jump.png',
   './icons/file.svg',
   './icon.svg',
   './manifest.json'

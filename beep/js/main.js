@@ -111,6 +111,21 @@ class Sequencer {
                 }
                 saveState(this.state);
             },
+            (scaleName) => { // onScaleApplyAll
+                this.state.patterns.forEach(pat => {
+                    if (pat) pat.scale = scaleName;
+                });
+
+                // Update visuals for active cells in current view
+                for (let track = 0; track < ROWS; track++) {
+                    for (let step = 0; step < COLS; step++) {
+                        if (this.cells[track] && this.cells[track][step]) {
+                            this.cells[track][step].updateVisuals();
+                        }
+                    }
+                }
+                saveState(this.state);
+            },
             () => { // onInit (called when audioEngine is first initialized)
                 this.syncAudioWithState();
             }
@@ -960,7 +975,10 @@ class Sequencer {
         }
 
         // Update dance animation
+        // Update dance animation (2x per step for faster animation, BPM-linked)
         this.updateDanceFrame();
+        const halfStep = (60 / this.state.bpm / 4) * 500; // half of one 16th-note step in ms
+        this.danceTimer = setTimeout(() => this.updateDanceFrame(), halfStep);
 
         // DJ Automation and Recording
         try {
@@ -1072,6 +1090,7 @@ class Sequencer {
 
     resetDanceAnimation() {
         if (!this.dancer) return;
+        if (this.danceTimer) clearTimeout(this.danceTimer);
         this.danceFrame = 0;
         this.dancer.style.backgroundPosition = '0px 0px';
         this.dancer.classList.remove('playing');
