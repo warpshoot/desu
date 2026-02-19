@@ -135,8 +135,14 @@
             color: #fff !important;
         }
 
-        .pattern-pad:hover {
-            background: #fdf5e6 !important;
+        .pattern-pad.queued {
+            animation: blink-pink 0.4s ease-in-out infinite alternate !important;
+        }
+
+        @media (hover: hover) {
+            .pattern-pad:hover {
+                background: #fdf5e6 !important;
+            }
         }
 
         /* --- Grid & Cells --- */
@@ -177,9 +183,11 @@
             margin-right: 12px !important;
         }
 
-        .cell:hover {
-            border-color: var(--unicorn-active) !important;
-            transform: scale(0.95);
+        @media (hover: hover) {
+            .cell:hover {
+                border-color: var(--unicorn-active) !important;
+                transform: scale(0.95);
+            }
         }
 
         /* Grid ON State - Force Color */
@@ -287,6 +295,10 @@
             border-color: #fff !important;
             transform: translateY(2px);
             box-shadow: 0 0 10px var(--unicorn-active) !important;
+        }
+
+        .chain-slot.queued {
+            animation: blink-pink 0.4s ease-in-out infinite alternate !important;
         }
 
         #bpm-drag-value {
@@ -614,8 +626,10 @@
             font-size: 14px;
         }
 
-        .popup-menu .menu-item:hover {
-            background: #444;
+        @media (hover: hover) {
+            .popup-menu .menu-item:hover {
+                background: #444;
+            }
         }
     </style>
     <style>

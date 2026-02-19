@@ -64,10 +64,12 @@ body.playing .control-btn.active#play-pause-btn {
     transition: all 0.2s;
 }
 
-#credit-btn:hover {
-    background: rgba(0, 0, 0, 0.2);
-    color: rgba(0, 0, 0, 0.8);
-    border-color: rgba(0, 0, 0, 0.5);
+@media (hover: hover) {
+    #credit-btn:hover {
+        background: rgba(0, 0, 0, 0.2);
+        color: rgba(0, 0, 0, 0.8);
+        border-color: rgba(0, 0, 0, 0.5);
+    }
 }
 
 body.playing #credit-btn {
@@ -76,16 +78,20 @@ body.playing #credit-btn {
     color: rgba(255, 255, 255, 0.5);
 }
 
-body.playing #credit-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: rgba(255, 255, 255, 0.8);
-    border-color: rgba(255, 255, 255, 0.5);
+@media (hover: hover) {
+    body.playing #credit-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.8);
+        border-color: rgba(255, 255, 255, 0.5);
+    }
 }
 
-#credit-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: rgba(255, 255, 255, 0.8);
-    border-color: rgba(255, 255, 255, 0.5);
+@media (hover: hover) {
+    #credit-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.8);
+        border-color: rgba(255, 255, 255, 0.5);
+    }
 }
 
 /* Credit Modal */
@@ -147,8 +153,10 @@ body.playing #credit-btn:hover {
     font-weight: bold;
 }
 
-#credit-author a:hover {
-    text-decoration: underline;
+@media (hover: hover) {
+    #credit-author a:hover {
+        text-decoration: underline;
+    }
 }
 
 .credit-manual-link {
@@ -163,10 +171,12 @@ body.playing #credit-btn:hover {
     transition: all 0.2s;
 }
 
-.credit-manual-link:hover {
-    background: #f5f5f5;
-    color: #333;
-    border-color: #bbb;
+@media (hover: hover) {
+    .credit-manual-link:hover {
+        background: #f5f5f5;
+        color: #333;
+        border-color: #bbb;
+    }
 }
 
 #sequencer-container {
@@ -396,8 +406,10 @@ body.playing #credit-btn:hover {
     margin-right: 6px;
 }
 
-.cell:hover {
-    border-color: #666;
+@media (hover: hover) {
+    .cell:hover {
+        border-color: #666;
+    }
 }
 
 .cell.active {
@@ -548,10 +560,12 @@ body.playing #credit-btn:hover {
     margin-top: 4px;
 }
 
-.reset-btn:hover {
-    border-color: #666;
-    color: #fff;
-    background: #222;
+@media (hover: hover) {
+    .reset-btn:hover {
+        border-color: #666;
+        color: #fff;
+        background: #222;
+    }
 }
 
 .knob-label {
@@ -626,9 +640,11 @@ body.playing #credit-btn:hover {
     filter: none;
 }
 
-.control-btn:hover {
-    border-color: #666;
-    background: #222;
+@media (hover: hover) {
+    .control-btn:hover {
+        border-color: #666;
+        background: #222;
+    }
 }
 
 .control-btn:active {
@@ -683,9 +699,11 @@ body.playing #credit-btn:hover {
     padding: 0;
 }
 
-.control-btn-sm:hover {
-    border-color: #666;
-    background: #222;
+@media (hover: hover) {
+    .control-btn-sm:hover {
+        border-color: #666;
+        background: #222;
+    }
 }
 
 .control-btn-sm:active {
@@ -898,8 +916,10 @@ body.playing #credit-btn:hover {
     border-right: none;
 }
 
-.roll-option:hover {
-    background: #333;
+@media (hover: hover) {
+    .roll-option:hover {
+        background: #333;
+    }
 }
 
 .roll-option.active {
@@ -2035,9 +2055,11 @@ body.playing #credit-btn:hover {
     padding: 0;
 }
 
-.pattern-pad:hover {
-    background: #1a1a1a;
-    color: #aaa;
+@media (hover: hover) {
+    .pattern-pad:hover {
+        background: #1a1a1a;
+        color: #aaa;
+    }
 }
 
 .pattern-pad.has-data {
@@ -2104,8 +2126,10 @@ body.playing .pattern-pad.has-data {
     border-right: none;
 }
 
-.context-menu .menu-item:hover {
-    background: #333;
+@media (hover: hover) {
+    .context-menu .menu-item:hover {
+        background: #333;
+    }
 }
 
 .context-menu .menu-item.disabled {
@@ -2142,9 +2166,11 @@ body.playing .pattern-pad.has-data {
     padding: 0;
 }
 
-.chain-slot:hover {
-    border-color: #666;
-    color: #888;
+@media (hover: hover) {
+    .chain-slot:hover {
+        border-color: #666;
+        color: #888;
+    }
 }
 
 .chain-slot.filled {
@@ -2204,9 +2230,11 @@ body.playing .chain-slot.playing {
     border-bottom: 1px solid #333;
 }
 
-.mode-option:hover {
-    color: #999;
-    background: #222;
+@media (hover: hover) {
+    .mode-option:hover {
+        color: #999;
+        background: #222;
+    }
 }
 
 .mode-option.active {
@@ -2249,9 +2277,11 @@ body.playing .chain-slot.playing {
     color: #888;
 }
 
-#chain-container.mode-live .chain-slot:hover {
-    border-color: #888;
-    color: #fff;
+@media (hover: hover) {
+    #chain-container.mode-live .chain-slot:hover {
+        border-color: #888;
+        color: #fff;
+    }
 }
 
 /* Chain disabled: gray out slots (unused now but kept for safety) */
@@ -2452,10 +2482,12 @@ body.playing .chain-arrow {
     box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
 }
 
-.control-btn:hover,
-.control-btn-sm:hover {
-    background: #ffe;
-    border-color: #000;
+@media (hover: hover) {
+    .control-btn:hover,
+    .control-btn-sm:hover {
+        background: #ffe;
+        border-color: #000;
+    }
 }
 
 .control-btn:active,
@@ -2555,9 +2587,11 @@ body.playing .chain-arrow {
     line-height: 26px !important;
 }
 
-.pattern-btn:hover {
-    background: #f0f0f0 !important;
-    transform: translate(-1px, -1px);
+@media (hover: hover) {
+    .pattern-btn:hover {
+        background: #f0f0f0 !important;
+        transform: translate(-1px, -1px);
+    }
 }
 
 .pattern-btn.active {
@@ -2599,9 +2633,11 @@ body.playing .chain-arrow {
     border-radius: 2px;
 }
 
-.track-ctrls button:hover {
-    border-color: #333 !important;
-    color: #333 !important;
+@media (hover: hover) {
+    .track-ctrls button:hover {
+        border-color: #333 !important;
+        color: #333 !important;
+    }
 }
 
 .track-ctrls button.active.mute-btn {
