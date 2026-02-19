@@ -81,7 +81,7 @@ class Sequencer {
                         this.syncAudioWithState();
 
                         this.controls.setBPM(this.state.bpm);
-                        this.controls.setSwing(this.pattern.swingEnabled);
+                        this.controls.setSwing(this.state.swingLevel);
                         this.controls.setScale(this.pattern.scale);
                         this.setupTrackControls();
                         this.patternBank.updateUI();
@@ -880,7 +880,7 @@ class Sequencer {
         this.createGrid();
 
         this.syncAudioWithState();
-        this.controls.setSwing(this.pattern.swingEnabled);
+        this.controls.setSwing(this.state.swingLevel);
         this.controls.setScale(this.pattern.scale);
         this.setupTrackControls();
 
