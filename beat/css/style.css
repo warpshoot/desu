@@ -628,6 +628,12 @@ body.playing #credit-btn:hover {
 }
 
 #swing-btn.active {
+    color: #fff;
+    background: #555;
+    border-color: #555;
+}
+
+#swing-btn.active.heavy {
     color: #000;
     background: #fff;
     border-color: #fff;
