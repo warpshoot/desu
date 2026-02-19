@@ -674,6 +674,13 @@ body.playing #credit-btn {
     letter-spacing: 0.05em;
 }
 
+/* PRJ button - full size, font styling */
+#file-btn {
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+}
+
 /* Stacked small buttons (REC + RPT) */
 .control-stack {
     display: flex;
