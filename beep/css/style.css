@@ -750,24 +750,28 @@ body.playing #credit-btn:hover {
     letter-spacing: 0.05em;
 }
 
-#bpm-buttons {
-    display: flex;
-    gap: 4px;
-}
 
-.bpm-step-btn {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    color: #888;
-    padding: 2px 8px;
-    cursor: pointer;
-    font-size: 10px;
-    transition: all 0.1s ease;
-}
-
-.bpm-step-btn:hover {
+.bpm-edit-input {
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: bold;
     color: #fff;
-    border-color: #666;
+    background: #1a1a1a;
+    border: 2px solid #555;
+    height: 30px;
+    width: 60px;
+    text-align: center;
+    outline: none;
+    letter-spacing: 0.05em;
+    padding: 0;
+    box-sizing: border-box;
+    -moz-appearance: textfield;
+}
+
+.bpm-edit-input::-webkit-inner-spin-button,
+.bpm-edit-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 #volume-ctrl {

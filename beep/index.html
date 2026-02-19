@@ -289,30 +289,14 @@
             box-shadow: 0 0 10px var(--unicorn-active) !important;
         }
 
-        /* --- BPM Buttons --- */
-        .bpm-step-btn {
-            background: #fff !important;
-            border: 2px solid var(--unicorn-border) !important;
-            border-radius: 50% !important;
-            width: 30px !important;
-            height: 30px !important;
-            min-width: 30px !important;
-            color: var(--unicorn-text) !important;
-            font-weight: bold !important;
-            box-shadow: 2px 2px 0 var(--unicorn-shadow) !important;
-            margin: 0 4px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            padding: 0 !important;
-        }
-
-        .bpm-step-btn:active {
-            transform: translateY(2px) !important;
-            box-shadow: none !important;
-        }
-
         #bpm-drag-value {
+            background: #fff !important;
+            color: var(--unicorn-text) !important;
+            border: 2px solid var(--unicorn-border) !important;
+            border-radius: 12px !important;
+        }
+
+        .bpm-edit-input {
             background: #fff !important;
             color: var(--unicorn-text) !important;
             border: 2px solid var(--unicorn-border) !important;
@@ -1426,11 +1410,8 @@
         <div id="visualizer-display" title="Visualizer"></div>
 
         <div id="bpm-ctrl">
+            <div class="ctrl-label">BPM</div>
             <div id="bpm-drag-value">120</div>
-            <div id="bpm-buttons">
-                <button class="bpm-step-btn" id="bpm-dec">◀</button>
-                <button class="bpm-step-btn" id="bpm-inc">▶</button>
-            </div>
         </div>
 
         <div id="volume-ctrl">
