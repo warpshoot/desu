@@ -25,8 +25,6 @@ export class Controls {
         this.repeatBtn = document.getElementById('repeat-btn');
 
         this.bpmDragValue = document.getElementById('bpm-drag-value');
-        this.bpmDecBtn = document.getElementById('bpm-dec');
-        this.bpmIncBtn = document.getElementById('bpm-inc');
         this.volumeSlider = document.getElementById('volume-slider');
 
         this.init();
@@ -175,20 +173,6 @@ export class Controls {
             });
         }
 
-        // BPM Buttons
-        if (this.bpmDecBtn) {
-            this.bpmDecBtn.addEventListener('click', () => {
-                const currentBpm = parseInt(this.bpmDragValue.textContent);
-                this.setBPM(currentBpm - 1);
-            });
-        }
-        if (this.bpmIncBtn) {
-            this.bpmIncBtn.addEventListener('click', () => {
-                const currentBpm = parseInt(this.bpmDragValue.textContent);
-                this.setBPM(currentBpm + 1);
-            });
-        }
-
         // Volume slider
         if (this.volumeSlider) {
             this.volumeSlider.addEventListener('input', (e) => {
@@ -233,6 +217,8 @@ export class Controls {
         let startY = 0;
         let startX = 0;
         let startBpm = 0;
+        let hasDragged = false;
+        const DRAG_THRESHOLD = 5;
 
         const onMove = (e) => {
             // Only handle single-finger touches for BPM adjustment
@@ -249,6 +235,10 @@ export class Controls {
             const dx = currentX - startX;
             const dy = startY - currentY; // Up is positive
 
+            if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+                hasDragged = true;
+            }
+
             // Sensitivity: 1 bpm per 4 pixels
             const sensitivity = 0.25;
             const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
@@ -263,12 +253,17 @@ export class Controls {
             window.removeEventListener('touchmove', onMove);
             window.removeEventListener('touchend', onEnd);
 
-            if (this.onBPMChange) {
-                this.onBPMChange(parseInt(this.bpmDragValue.textContent));
+            if (hasDragged) {
+                if (this.onBPMChange) {
+                    this.onBPMChange(parseInt(this.bpmDragValue.textContent));
+                }
+            } else {
+                this.showBPMInput();
             }
         };
 
         this.bpmDragValue.addEventListener('mousedown', (e) => {
+            hasDragged = false;
             startY = e.clientY;
             startX = e.clientX;
             startBpm = parseInt(this.bpmDragValue.textContent);
@@ -279,6 +274,7 @@ export class Controls {
         this.bpmDragValue.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) {
                 e.preventDefault();
+                hasDragged = false;
                 startY = e.touches[0].clientY;
                 startX = e.touches[0].clientX;
                 startBpm = parseInt(this.bpmDragValue.textContent);
@@ -286,6 +282,47 @@ export class Controls {
                 window.addEventListener('touchend', onEnd);
             }
         }, { passive: false });
+    }
+
+    showBPMInput() {
+        if (!this.bpmDragValue || !this.bpmDragValue.parentNode) return;
+
+        const current = parseInt(this.bpmDragValue.textContent);
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = current;
+        input.min = 60;
+        input.max = 180;
+        input.className = 'bpm-edit-input';
+
+        const commit = () => {
+            const val = parseInt(input.value);
+            if (!isNaN(val)) {
+                this.setBPM(val);
+                if (this.onBPMChange) {
+                    this.onBPMChange(parseInt(this.bpmDragValue.textContent));
+                }
+            }
+            if (input.parentNode) {
+                input.parentNode.replaceChild(this.bpmDragValue, input);
+            }
+        };
+
+        input.addEventListener('blur', commit);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                input.blur();
+            } else if (e.key === 'Escape') {
+                input.removeEventListener('blur', commit);
+                if (input.parentNode) {
+                    input.parentNode.replaceChild(this.bpmDragValue, input);
+                }
+            }
+        });
+
+        this.bpmDragValue.parentNode.replaceChild(input, this.bpmDragValue);
+        input.select();
+        input.focus();
     }
 
     async togglePlay() {
