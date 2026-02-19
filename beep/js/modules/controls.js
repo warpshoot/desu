@@ -258,7 +258,7 @@ export class Controls {
                     this.onBPMChange(parseInt(this.bpmDragValue.textContent));
                 }
             } else {
-                this.showBPMInput();
+                this.showBPMPicker();
             }
         };
 
@@ -284,45 +284,107 @@ export class Controls {
         }, { passive: false });
     }
 
-    showBPMInput() {
-        if (!this.bpmDragValue || !this.bpmDragValue.parentNode) return;
+    showBPMPicker() {
+        if (!this.bpmDragValue) return;
 
-        const current = parseInt(this.bpmDragValue.textContent);
-        const input = document.createElement('input');
-        input.type = 'number';
-        input.value = current;
-        input.min = 60;
-        input.max = 180;
-        input.className = 'bpm-edit-input';
+        const MIN = 60, MAX = 180;
+        const ITEM_HEIGHT = 36;
+        const VISIBLE = 5;
+        const PAD = Math.floor(VISIBLE / 2);
+        let selectedBpm = parseInt(this.bpmDragValue.textContent);
 
-        const commit = () => {
-            const val = parseInt(input.value);
-            if (!isNaN(val)) {
-                this.setBPM(val);
-                if (this.onBPMChange) {
-                    this.onBPMChange(parseInt(this.bpmDragValue.textContent));
-                }
-            }
-            if (input.parentNode) {
-                input.parentNode.replaceChild(this.bpmDragValue, input);
+        // Overlay (transparent, catches outside taps)
+        const overlay = document.createElement('div');
+        overlay.className = 'bpm-picker-overlay';
+
+        // Picker positioned below (or above) the BPM display
+        const picker = document.createElement('div');
+        picker.className = 'bpm-picker';
+        const rect = this.bpmDragValue.getBoundingClientRect();
+        const pickerH = ITEM_HEIGHT * VISIBLE;
+        let top = rect.bottom + 6;
+        if (top + pickerH > window.innerHeight - 8) top = rect.top - pickerH - 6;
+        picker.style.top = top + 'px';
+        picker.style.left = (rect.left + rect.width / 2) + 'px';
+
+        // Scrollable list
+        const list = document.createElement('div');
+        list.className = 'bpm-picker-list';
+
+        for (let i = 0; i < PAD; i++) {
+            const pad = document.createElement('div');
+            pad.className = 'bpm-picker-item';
+            list.appendChild(pad);
+        }
+        for (let bpm = MIN; bpm <= MAX; bpm++) {
+            const item = document.createElement('div');
+            item.className = 'bpm-picker-item';
+            if (bpm === selectedBpm) item.classList.add('bpm-picker-item-selected');
+            item.textContent = bpm;
+            item.dataset.bpm = bpm;
+            list.appendChild(item);
+        }
+        for (let i = 0; i < PAD; i++) {
+            const pad = document.createElement('div');
+            pad.className = 'bpm-picker-item';
+            list.appendChild(pad);
+        }
+
+        // Center selection bar
+        const highlight = document.createElement('div');
+        highlight.className = 'bpm-picker-highlight';
+
+        picker.appendChild(list);
+        picker.appendChild(highlight);
+        overlay.appendChild(picker);
+        document.body.appendChild(overlay);
+
+        // Set initial scroll position
+        list.scrollTop = (selectedBpm - MIN) * ITEM_HEIGHT;
+
+        let prevBpm = selectedBpm;
+        let scrollTimer;
+
+        const updateSelected = () => {
+            const idx = Math.round(list.scrollTop / ITEM_HEIGHT);
+            const newBpm = Math.max(MIN, Math.min(MAX, MIN + idx));
+            if (newBpm !== prevBpm) {
+                const oldEl = list.querySelector(`[data-bpm="${prevBpm}"]`);
+                const newEl = list.querySelector(`[data-bpm="${newBpm}"]`);
+                if (oldEl) oldEl.classList.remove('bpm-picker-item-selected');
+                if (newEl) newEl.classList.add('bpm-picker-item-selected');
+                prevBpm = newBpm;
+                selectedBpm = newBpm;
+                this.setBPM(newBpm);
             }
         };
 
-        input.addEventListener('blur', commit);
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                input.blur();
-            } else if (e.key === 'Escape') {
-                input.removeEventListener('blur', commit);
-                if (input.parentNode) {
-                    input.parentNode.replaceChild(this.bpmDragValue, input);
-                }
-            }
+        list.addEventListener('scroll', () => {
+            updateSelected();
+            clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+                list.scrollTo({ top: (selectedBpm - MIN) * ITEM_HEIGHT, behavior: 'smooth' });
+            }, 150);
         });
 
-        this.bpmDragValue.parentNode.replaceChild(input, this.bpmDragValue);
-        input.select();
-        input.focus();
+        list.addEventListener('click', (e) => {
+            const item = e.target.closest('[data-bpm]');
+            if (!item) return;
+            const bpm = parseInt(item.dataset.bpm);
+            selectedBpm = bpm;
+            list.scrollTo({ top: (bpm - MIN) * ITEM_HEIGHT, behavior: 'smooth' });
+            setTimeout(close, 200);
+        });
+
+        const close = () => {
+            clearTimeout(scrollTimer);
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            if (this.onBPMChange) this.onBPMChange(selectedBpm);
+        };
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) close();
+        });
     }
 
     async togglePlay() {
