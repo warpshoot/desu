@@ -124,7 +124,7 @@ export class PatternBank {
 
         this.seq.syncAudioWithState();
 
-        this.seq.controls.setSwing(this.seq.pattern.swingEnabled);
+        this.seq.controls.setSwing(this.seq.state.swingLevel);
         this.seq.controls.setScale(this.seq.pattern.scale);
         this.seq.setupTrackControls();
 
