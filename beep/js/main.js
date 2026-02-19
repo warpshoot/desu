@@ -377,6 +377,8 @@ class Sequencer {
                 this.audioEngine.stop();
                 this.restoreState();
                 this.patternBank.updateUI();
+                this.chain.chainPosition = -1;
+                this.chain.updateUI();
                 saveState(this.state);
                 fileMenu.classList.add('hidden');
             }
