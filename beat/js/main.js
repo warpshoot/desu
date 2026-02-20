@@ -609,10 +609,10 @@ class Sequencer {
                     (c, x, y) => {
                         this.showRollMenu(c, x, y);
                     },
-                    (isStart, trackId) => {
+                    (isStart, trackId, isPaintMode = true) => {
                         const grid = document.getElementById('grid-container');
                         if (isStart) {
-                            this.isPainting = true;
+                            this.isPainting = isPaintMode;
                             this.paintingTrack = trackId;
                             if (grid) grid.classList.add('global-interacting');
                         } else {

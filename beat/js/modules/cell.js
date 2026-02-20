@@ -148,7 +148,7 @@ export class Cell {
                     // Horizontal Drag -> Continuous Paint
                     this.isPaintDrag = true; // Flag to prevent duration adjustment
                     // Trigger global paint mode with track ID
-                    if (this.onPaintChange) this.onPaintChange(true, this.track);
+                    if (this.onPaintChange) this.onPaintChange(true, this.track, true);
                     this.paintActivate();
                     // We don't adjust duration on initial paint drag, just activate
                 } else {
@@ -160,12 +160,12 @@ export class Cell {
                     this.triggerPulse();
                     this.updateVisuals();
                     this.element.classList.add('adjusting');
-                    if (this.onPaintChange) this.onPaintChange(true, this.track);
+                    if (this.onPaintChange) this.onPaintChange(true, this.track, false);
                     if (this.onChange) this.onChange(this.track, this.step, this.data, false);
                 }
             } else {
                 // Active Cell Logic (Existing)
-                if (this.onPaintChange) this.onPaintChange(true, this.track);
+                if (this.onPaintChange) this.onPaintChange(true, this.track, false);
                 if (this.dragDirection === 'vertical') {
                     this.startValue = this.data.pitch;
                     this.element.classList.add('adjusting');
