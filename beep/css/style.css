@@ -2750,6 +2750,17 @@ body.playing::after {
     animation: blink-pink 0.4s ease-in-out infinite alternate;
 }
 
+/* Override: main CSS .chain-slot.filled { background: #1a1a1a } has higher specificity */
+.chain-slot.filled {
+    background: rgba(255, 255, 255, 0.8);
+    border-style: solid;
+    color: var(--unicorn-text);
+}
+
+body.playing .chain-slot.filled {
+    border-color: var(--unicorn-border);
+}
+
 /* BPM */
 #bpm-drag-value {
     background: #fff;
@@ -2807,6 +2818,11 @@ body.playing::after {
     opacity: 0.8;
 }
 
+/* Override: main CSS #volume-slider { background: #222 } not overridden globally */
+#volume-slider {
+    background: var(--unicorn-border);
+}
+
 /* Tone Panel */
 #tone-panel {
     background: rgba(255, 255, 255, 0.95);
@@ -2835,6 +2851,21 @@ body.playing::after {
     background: var(--unicorn-active);
     color: #fff;
     border-color: #fff;
+}
+
+/* Override: main CSS uses ID selector (#play-pause-btn) giving higher specificity */
+.control-btn.active#play-pause-btn,
+body.playing .control-btn.active#play-pause-btn {
+    background: var(--unicorn-active) !important;
+    color: #fff !important;
+    border-color: #fff !important;
+}
+
+/* Override: main CSS #repeat-btn.active { color: #000 } beats .control-btn-sm.active */
+#repeat-btn.active {
+    background: var(--unicorn-active) !important;
+    color: #fff !important;
+    border-color: #fff !important;
 }
 
 #swing-btn.active {
