@@ -77,7 +77,7 @@ export function createDefaultPattern() {
                 active: false,
                 pitch: 0,
                 velocity: 1.0,
-                duration: 1.0,
+                duration: 0.5,
                 rollMode: false,
                 rollSubdivision: DEFAULT_ROLL_SUBDIVISION
             };
@@ -121,7 +121,7 @@ function migratePatternGrid(pattern) {
             pattern.grid[track] = [];
             for (let step = 0; step < COLS; step++) {
                 pattern.grid[track][step] = {
-                    active: false, pitch: 0, velocity: 1.0, duration: 1.0,
+                    active: false, pitch: 0, velocity: 1.0, duration: 0.5,
                     rollMode: false, rollSubdivision: DEFAULT_ROLL_SUBDIVISION
                 };
             }
@@ -136,7 +136,7 @@ function migratePatternGrid(pattern) {
         } else if (pattern.grid[track].length < COLS) {
             for (let step = pattern.grid[track].length; step < COLS; step++) {
                 pattern.grid[track][step] = {
-                    active: false, pitch: 0, velocity: 1.0, duration: 1.0,
+                    active: false, pitch: 0, velocity: 1.0, duration: 0.5,
                     rollMode: false, rollSubdivision: DEFAULT_ROLL_SUBDIVISION
                 };
             }
@@ -149,14 +149,14 @@ function migratePatternGrid(pattern) {
             const cell = pattern.grid[track][step];
             if (cell === 0 || cell === 1) {
                 pattern.grid[track][step] = {
-                    active: cell === 1, pitch: 0, velocity: 1.0, duration: 1.0,
+                    active: cell === 1, pitch: 0, velocity: 1.0, duration: 0.5,
                     rollMode: false, rollSubdivision: DEFAULT_ROLL_SUBDIVISION
                 };
             } else if (typeof cell === 'object' && cell !== null) {
                 if (cell.active === undefined) cell.active = false;
                 if (cell.pitch === undefined) cell.pitch = 0;
                 if (cell.velocity === undefined) cell.velocity = 1.0;
-                if (cell.duration === undefined) cell.duration = 1.0;
+                if (cell.duration === undefined) cell.duration = 0.5;
                 if (cell.rollMode === undefined) cell.rollMode = false;
                 if (cell.rollSubdivision === undefined) cell.rollSubdivision = DEFAULT_ROLL_SUBDIVISION;
             }
@@ -390,14 +390,14 @@ function compactState(state) {
             const p = {
                 grid: pattern.grid.map(track =>
                     track.map(step => {
-                        const isDefault = step.pitch === 0 && step.duration === 1.0 && step.velocity === 1.0 &&
+                        const isDefault = step.pitch === 0 && step.duration === 0.5 && step.velocity === 1.0 &&
                             !step.rollMode && step.rollSubdivision === DEFAULT_ROLL_SUBDIVISION;
                         if (!step.active && isDefault) return 0;
                         if (step.active && isDefault) return 1;
                         const s = { active: step.active };
                         if (step.pitch !== 0) s.pitch = step.pitch;
                         if (step.velocity !== 1.0 && step.velocity !== undefined) s.velocity = step.velocity;
-                        if (step.duration !== 1.0) s.duration = step.duration;
+                        if (step.duration !== 0.5) s.duration = step.duration;
                         if (step.rollMode) s.rollMode = true;
                         if (step.rollSubdivision !== DEFAULT_ROLL_SUBDIVISION) s.rollSubdivision = step.rollSubdivision;
                         return s;
