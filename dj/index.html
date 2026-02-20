@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>DESU™ dj</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="../favicon.js"></script>
+</head>
+
+<body>
+    <!-- Credit Button -->
+    <div id="credit-btn">?</div>
+
+    <!-- Credit Modal -->
+    <div id="credit-modal">
+        <div id="credit-content">
+            <h2>DESU™ dj</h2>
+            <a href="https://warpshoot.github.io/desu/" target="_blank" id="credit-logo">
+                <img src="../images/logo.gif" alt="DESU™ Logo">
+            </a>
+            <div id="credit-author">
+                by <a href="https://warpshoot.github.io/" target="_blank">wpy</a>
+            </div>
+            <div id="credit-keys">
+                <span>Q: Deck A</span>
+                <span>P: Deck B</span>
+                <span>SPACE: Both</span>
+                <span>S: Sync</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div id="app">
+        <!-- Deck A -->
+        <div id="deck-a" class="deck-container"></div>
+
+        <!-- Center Mixer -->
+        <div id="mixer">
+            <div class="mixer-section">
+                <div class="mixer-label">A</div>
+                <div class="crossfader-container">
+                    <input type="range" id="crossfader" min="0" max="100" value="50" class="crossfader">
+                </div>
+                <div class="mixer-label">B</div>
+            </div>
+
+            <button id="sync-btn" class="mixer-btn">SYNC</button>
+
+            <div class="master-section">
+                <div class="master-label">MST</div>
+                <input type="range" id="master-vol" min="-60" max="0" value="-6" class="master-slider">
+            </div>
+        </div>
+
+        <!-- Deck B -->
+        <div id="deck-b" class="deck-container"></div>
+    </div>
+
+    <script src="../fish.js"></script>
+    <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+    <script type="module" src="js/main.js"></script>
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>
+
+    <script>
+        // Credit modal
+        const creditBtn = document.getElementById('credit-btn');
+        const creditModal = document.getElementById('credit-modal');
+        if (creditBtn && creditModal) {
+            creditBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                creditModal.classList.add('visible');
+            });
+            creditModal.addEventListener('click', () => {
+                creditModal.classList.remove('visible');
+            });
+            const content = document.getElementById('credit-content');
+            if (content) content.addEventListener('click', (e) => e.stopPropagation());
+        }
+    </script>
+</body>
+
+</html>

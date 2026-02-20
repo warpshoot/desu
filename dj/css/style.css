@@ -1,0 +1,996 @@
+/* ===================================
+   DESU™ DJ - Dual Deck Turntable
+   =================================== */
+
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    background: #0a0a0a;
+    color: #fff;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', monospace;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* ===================================
+   Credit Button & Modal
+   =================================== */
+#credit-btn {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.2s;
+}
+
+#credit-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+#credit-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 1001;
+    align-items: center;
+    justify-content: center;
+}
+
+#credit-modal.visible {
+    display: flex;
+}
+
+#credit-content {
+    background: #111;
+    border: 1px solid #333;
+    padding: 32px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+}
+
+#credit-content h2 {
+    font-size: 24px;
+    margin-bottom: 16px;
+    font-weight: bold;
+}
+
+#credit-logo {
+    display: block;
+    margin: 16px auto;
+}
+
+#credit-logo img {
+    max-width: 100%;
+    height: auto;
+}
+
+#credit-author {
+    font-size: 14px;
+    color: #888;
+    margin-top: 12px;
+}
+
+#credit-author a {
+    color: #aaa;
+    text-decoration: none;
+}
+
+#credit-keys {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+#credit-keys span {
+    font-size: 11px;
+    color: #666;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    padding: 4px 10px;
+    font-family: monospace;
+}
+
+/* ===================================
+   App Layout - Side by Side
+   =================================== */
+#app {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    gap: 0;
+}
+
+/* ===================================
+   Deck Container
+   =================================== */
+.deck-container {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.deck {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 8px;
+    gap: 6px;
+}
+
+.deck-a {
+    background: #0a0a0a;
+    border-right: 1px solid #1a1a1a;
+}
+
+.deck-b {
+    background: #0a0a0a;
+    border-left: 1px solid #1a1a1a;
+}
+
+/* ===================================
+   Deck Header
+   =================================== */
+.deck-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 4px;
+    min-height: 28px;
+}
+
+.deck-label {
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    color: #666;
+}
+
+.deck-a .deck-label {
+    color: #ff6644;
+}
+
+.deck-b .deck-label {
+    color: #4488ff;
+}
+
+.preset-select {
+    background: #111;
+    border: 1px solid #333;
+    color: #888;
+    font-size: 11px;
+    font-family: monospace;
+    padding: 3px 6px;
+    cursor: pointer;
+    outline: none;
+}
+
+.preset-select:hover {
+    border-color: #555;
+    color: #ccc;
+}
+
+/* ===================================
+   Pattern Bank
+   =================================== */
+.pattern-bank {
+    display: flex;
+    gap: 2px;
+}
+
+.pat-pad {
+    flex: 1;
+    height: 24px;
+    background: #111;
+    border: none;
+    border-bottom: 2px solid #222;
+    color: #444;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pat-pad:hover {
+    background: #1a1a1a;
+    color: #888;
+}
+
+.pat-pad.has-data {
+    color: #777;
+}
+
+.pat-pad.active {
+    background: #000;
+    color: #fff;
+    border-bottom-color: #fff;
+}
+
+/* ===================================
+   Grid Area
+   =================================== */
+.grid-area {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+    min-height: 0;
+}
+
+.track-labels {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.track-label {
+    flex: 1;
+    width: 24px;
+    min-height: 20px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #888;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.track-label:hover {
+    border-color: #555;
+    color: #fff;
+}
+
+.track-label.muted {
+    background: #000;
+    color: #333;
+    border-color: #111;
+}
+
+.track-label:nth-child(1) { color: #ff4444; }
+.track-label:nth-child(2) { color: #44aaff; }
+.track-label:nth-child(3) { color: #44ff88; }
+.track-label:nth-child(4) { color: #bb66ff; }
+.track-label.muted { color: #333 !important; }
+
+/* ===================================
+   Grid
+   =================================== */
+.grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(16, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 2px;
+    min-height: 0;
+}
+
+.cell {
+    background: #151515;
+    border: 1px solid #252525;
+    cursor: pointer;
+    transition: background 0.08s, border-color 0.08s;
+    position: relative;
+    min-height: 0;
+    min-width: 0;
+}
+
+/* Beat grouping - subtle separator every 4 steps */
+.cell[data-step="4"],
+.cell[data-step="8"],
+.cell[data-step="12"] {
+    border-left: 2px solid #2a2a2a;
+}
+
+.cell:hover {
+    border-color: #444;
+}
+
+.cell.active {
+    background: #555;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Track colors when active */
+.grid .cell[data-track="0"].active { background: #cc3333; }
+.grid .cell[data-track="1"].active { background: #3388dd; }
+.grid .cell[data-track="2"].active { background: #33cc66; }
+.grid .cell[data-track="3"].active { background: #9944dd; }
+
+/* Playhead */
+.cell.playhead {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45);
+}
+
+.cell.active.playhead {
+    filter: brightness(1.4);
+}
+
+/* ===================================
+   Step Indicators
+   =================================== */
+.step-indicators {
+    display: flex;
+    gap: 2px;
+    padding: 0;
+    min-height: 6px;
+}
+
+.step-spacer {
+    width: 24px;
+    flex-shrink: 0;
+    margin-right: 4px;
+}
+
+.step-dot {
+    flex: 1;
+    height: 4px;
+    background: #1a1a1a;
+    transition: background 0.05s;
+}
+
+.step-dot.active {
+    background: #fff;
+}
+
+/* Beat marker on 1-beat steps */
+.step-dot:nth-child(4n+2) {
+    /* every 4th starting from index 1 (0-indexed after spacer) */
+}
+
+/* ===================================
+   Deck Controls
+   =================================== */
+.deck-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0 0;
+    flex-wrap: wrap;
+}
+
+.deck-btn {
+    width: 44px;
+    height: 44px;
+    background: #1a1a1a;
+    border: 2px solid #333;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.deck-btn:hover {
+    border-color: #666;
+    background: #222;
+}
+
+.deck-btn:active {
+    transform: scale(0.95);
+}
+
+.deck-btn.play-btn.active {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+}
+
+/* BPM area */
+.bpm-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.bpm-value {
+    font-family: monospace;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: ns-resize;
+    padding: 2px 8px;
+    background: #111;
+    border: 1px solid #333;
+    min-width: 52px;
+    text-align: center;
+}
+
+.bpm-label {
+    font-size: 9px;
+    color: #555;
+    letter-spacing: 0.15em;
+}
+
+/* Volume area */
+.vol-area,
+.filter-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    min-width: 60px;
+}
+
+.vol-label,
+.filter-label {
+    font-size: 9px;
+    color: #555;
+    letter-spacing: 0.15em;
+}
+
+.vol-slider,
+.filter-slider {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #222;
+    outline: none;
+    cursor: pointer;
+}
+
+.vol-slider::-webkit-slider-thumb,
+.filter-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+}
+
+.vol-slider::-moz-range-thumb,
+.filter-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+/* ===================================
+   Center Mixer
+   =================================== */
+#mixer {
+    width: 80px;
+    flex-shrink: 0;
+    background: #0f0f0f;
+    border-left: 1px solid #1a1a1a;
+    border-right: 1px solid #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 16px 8px;
+}
+
+.mixer-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.mixer-label {
+    font-size: 12px;
+    font-weight: 900;
+    color: #666;
+    letter-spacing: 0.2em;
+}
+
+.crossfader-container {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.crossfader {
+    width: 60px;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(90deg, #ff6644 0%, #333 50%, #4488ff 100%);
+    outline: none;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.crossfader::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 24px;
+    background: #fff;
+    border-radius: 2px;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
+.crossfader::-moz-range-thumb {
+    width: 18px;
+    height: 24px;
+    background: #fff;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.mixer-btn {
+    width: 60px;
+    height: 32px;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    color: #888;
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.1s;
+}
+
+.mixer-btn:hover {
+    background: #222;
+    color: #fff;
+    border-color: #666;
+}
+
+.mixer-btn:active,
+.mixer-btn.flash {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+}
+
+.master-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.master-label {
+    font-size: 10px;
+    color: #555;
+    letter-spacing: 0.15em;
+}
+
+.master-slider {
+    width: 60px;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #222;
+    outline: none;
+    cursor: pointer;
+}
+
+.master-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    background: #fff;
+}
+
+.master-slider::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    background: #fff;
+    border: none;
+}
+
+/* ===================================
+   Responsive - Landscape Mobile
+   =================================== */
+@media (max-width: 932px) and (orientation: landscape) {
+    .deck {
+        padding: 4px;
+        gap: 3px;
+    }
+
+    .deck-header {
+        min-height: 20px;
+        padding: 2px 4px;
+    }
+
+    .deck-label {
+        font-size: 11px;
+    }
+
+    .preset-select {
+        font-size: 10px;
+        padding: 2px 4px;
+    }
+
+    .pat-pad {
+        height: 18px;
+        font-size: 10px;
+    }
+
+    .track-label {
+        width: 18px;
+        font-size: 10px;
+    }
+
+    .step-spacer {
+        width: 18px;
+    }
+
+    .deck-controls {
+        gap: 6px;
+        padding: 3px 0 0;
+    }
+
+    .deck-btn {
+        width: 34px;
+        height: 34px;
+        font-size: 12px;
+    }
+
+    .bpm-value {
+        font-size: 16px;
+        padding: 1px 6px;
+    }
+
+    #mixer {
+        width: 56px;
+        gap: 12px;
+        padding: 8px 4px;
+    }
+
+    .crossfader {
+        width: 48px;
+    }
+
+    .mixer-btn {
+        width: 48px;
+        height: 26px;
+        font-size: 10px;
+    }
+
+    .master-slider {
+        width: 48px;
+    }
+}
+
+/* ===================================
+   Responsive - Very small landscape
+   =================================== */
+@media (max-width: 700px) and (orientation: landscape) {
+    .deck {
+        padding: 3px;
+        gap: 2px;
+    }
+
+    .deck-header {
+        min-height: 16px;
+    }
+
+    .deck-label {
+        font-size: 10px;
+    }
+
+    .pat-pad {
+        height: 16px;
+        font-size: 9px;
+    }
+
+    .track-label {
+        width: 16px;
+        font-size: 9px;
+    }
+
+    .step-spacer {
+        width: 16px;
+    }
+
+    .deck-controls {
+        gap: 4px;
+        padding: 2px 0 0;
+    }
+
+    .deck-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 10px;
+        border-width: 1px;
+    }
+
+    .bpm-value {
+        font-size: 14px;
+        padding: 1px 4px;
+    }
+
+    #mixer {
+        width: 44px;
+        gap: 8px;
+        padding: 6px 3px;
+    }
+
+    .crossfader {
+        width: 36px;
+    }
+
+    .mixer-btn {
+        width: 36px;
+        height: 22px;
+        font-size: 9px;
+    }
+
+    .master-slider {
+        width: 36px;
+    }
+}
+
+/* ===================================
+   Responsive - Portrait Mobile
+   =================================== */
+@media (orientation: portrait) {
+    #app {
+        flex-direction: column;
+        height: 100vh;
+    }
+
+    .deck-container {
+        flex: 1;
+        min-height: 0;
+    }
+
+    .deck-a {
+        border-right: none;
+        border-bottom: 1px solid #1a1a1a;
+    }
+
+    .deck-b {
+        border-left: none;
+        border-top: 1px solid #1a1a1a;
+    }
+
+    #mixer {
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        gap: 16px;
+        padding: 6px 12px;
+        border-left: none;
+        border-right: none;
+        border-top: 1px solid #222;
+        border-bottom: 1px solid #222;
+    }
+
+    .mixer-section {
+        flex-direction: row;
+        gap: 8px;
+    }
+
+    .crossfader-container {
+        width: auto;
+    }
+
+    .crossfader {
+        width: 120px;
+    }
+
+    .master-section {
+        flex-direction: row;
+        gap: 6px;
+        width: auto;
+    }
+
+    .master-slider {
+        width: 80px;
+    }
+
+    .deck {
+        padding: 4px 6px;
+        gap: 3px;
+    }
+
+    .deck-header {
+        min-height: 20px;
+    }
+
+    .deck-label {
+        font-size: 11px;
+    }
+
+    .pat-pad {
+        height: 20px;
+        font-size: 10px;
+    }
+
+    .track-label {
+        width: 18px;
+        font-size: 10px;
+    }
+
+    .step-spacer {
+        width: 18px;
+    }
+
+    .deck-controls {
+        gap: 6px;
+        padding: 2px 0;
+    }
+
+    .deck-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 12px;
+        border-width: 1px;
+    }
+
+    .bpm-value {
+        font-size: 16px;
+        padding: 1px 6px;
+    }
+
+    .vol-area,
+    .filter-area {
+        min-width: 50px;
+    }
+}
+
+/* ===================================
+   Responsive - Small Portrait
+   =================================== */
+@media (orientation: portrait) and (max-width: 480px) {
+    .deck {
+        padding: 3px 4px;
+        gap: 2px;
+    }
+
+    .deck-header {
+        min-height: 18px;
+    }
+
+    .deck-label {
+        font-size: 10px;
+    }
+
+    .preset-select {
+        font-size: 9px;
+    }
+
+    .pat-pad {
+        height: 18px;
+        font-size: 9px;
+    }
+
+    .track-label {
+        width: 16px;
+        font-size: 9px;
+    }
+
+    .step-spacer {
+        width: 16px;
+    }
+
+    .deck-controls {
+        gap: 4px;
+    }
+
+    .deck-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 10px;
+    }
+
+    .bpm-value {
+        font-size: 14px;
+        min-width: 44px;
+    }
+
+    #mixer {
+        padding: 4px 8px;
+        gap: 10px;
+    }
+
+    .crossfader {
+        width: 80px;
+    }
+
+    .mixer-btn {
+        height: 24px;
+        font-size: 9px;
+    }
+}
+
+/* ===================================
+   Large Screen
+   =================================== */
+@media (min-width: 1200px) {
+    .deck {
+        padding: 12px 16px;
+        gap: 8px;
+    }
+
+    .deck-label {
+        font-size: 16px;
+    }
+
+    .pat-pad {
+        height: 28px;
+        font-size: 13px;
+    }
+
+    .track-label {
+        width: 32px;
+        font-size: 14px;
+    }
+
+    .step-spacer {
+        width: 32px;
+    }
+
+    .deck-btn {
+        width: 52px;
+        height: 52px;
+        font-size: 16px;
+    }
+
+    .bpm-value {
+        font-size: 24px;
+        min-width: 64px;
+    }
+
+    #mixer {
+        width: 100px;
+        gap: 32px;
+    }
+
+    .crossfader {
+        width: 72px;
+    }
+
+    .mixer-btn {
+        width: 72px;
+        height: 36px;
+        font-size: 12px;
+    }
+}
