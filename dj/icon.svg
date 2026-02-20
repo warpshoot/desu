@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#000"/>
+  <!-- Deck A (left turntable) -->
+  <circle cx="160" cy="256" r="90" fill="none" stroke="#ff6644" stroke-width="4"/>
+  <circle cx="160" cy="256" r="60" fill="none" stroke="#ff6644" stroke-width="2" opacity="0.5"/>
+  <circle cx="160" cy="256" r="8" fill="#ff6644"/>
+  <!-- Deck B (right turntable) -->
+  <circle cx="352" cy="256" r="90" fill="none" stroke="#4488ff" stroke-width="4"/>
+  <circle cx="352" cy="256" r="60" fill="none" stroke="#4488ff" stroke-width="2" opacity="0.5"/>
+  <circle cx="352" cy="256" r="8" fill="#4488ff"/>
+  <!-- Crossfader -->
+  <rect x="230" y="380" width="52" height="12" rx="2" fill="#fff" opacity="0.8"/>
+  <text x="256" y="430" text-anchor="middle" fill="#666" font-family="monospace" font-size="36" font-weight="bold">DJ</text>
+</svg>
