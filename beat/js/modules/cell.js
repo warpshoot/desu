@@ -159,14 +159,19 @@ export class Cell {
                     this.startValue = 0; // Start adjusting from 0
                     this.triggerPulse();
                     this.updateVisuals();
+                    this.element.classList.add('adjusting');
+                    if (this.onPaintChange) this.onPaintChange(true, this.track);
                     if (this.onChange) this.onChange(this.track, this.step, this.data, false);
                 }
             } else {
                 // Active Cell Logic (Existing)
+                if (this.onPaintChange) this.onPaintChange(true, this.track);
                 if (this.dragDirection === 'vertical') {
                     this.startValue = this.data.pitch;
+                    this.element.classList.add('adjusting');
                 } else {
                     this.startValue = this.data.duration;
+                    this.element.classList.add('adjusting');
                 }
             }
         }

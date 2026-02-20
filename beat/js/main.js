@@ -610,12 +610,15 @@ class Sequencer {
                         this.showRollMenu(c, x, y);
                     },
                     (isStart, trackId) => {
+                        const grid = document.getElementById('grid-container');
                         if (isStart) {
                             this.isPainting = true;
                             this.paintingTrack = trackId;
+                            if (grid) grid.classList.add('global-interacting');
                         } else {
                             this.isPainting = false;
                             this.paintingTrack = null;
+                            if (grid) grid.classList.remove('global-interacting');
                         }
                     },
                     () => this.isPainting,
