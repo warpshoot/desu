@@ -67,7 +67,7 @@
             alignItems: 'center',
             justifyContent: 'center'
         },
-        '.cell': {
+        '.cell-visual': {
             background: 'rgba(255, 255, 255, 0.6)',
             border: '2px solid #e1bee7',
             borderRadius: '12px'
