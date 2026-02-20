@@ -1,4 +1,4 @@
-import { PITCH_RANGE, DURATION_RANGE, BRIGHTNESS_RANGE, LONG_PRESS_DURATION, DRAG_THRESHOLD, TAP_THRESHOLD, ROLL_SUBDIVISIONS, SCALES } from './constants.js';
+import { PITCH_RANGE, DURATION_RANGE, LONG_PRESS_DURATION, DRAG_THRESHOLD, TAP_THRESHOLD, ROLL_SUBDIVISIONS, SCALES } from './constants.js';
 
 export class Cell {
     constructor(element, track, step, data, onChange, onLongPress, onPaintChange, getGlobalIsPainting, baseFreq, noteIndicator, getIsTwoFingerTouch, getScale) {
@@ -334,7 +334,6 @@ export class Cell {
 
     updateVisuals() {
         if (!this.data.active) {
-            this.element.style.filter = '';
             this.visual.style.transform = '';
             this.visual.style.setProperty('--base-scale-x', '1');
             this.visual.dataset.rollSubdivision = '';
@@ -356,11 +355,7 @@ export class Cell {
             this.visual.classList.remove('weak');
         }
 
-        // Apply dynamic brightness based on pitch
         const effectivePitch = this.getEffectivePitch ? this.getEffectivePitch() : this.data.pitch;
-        const normalizedForBrightness = Math.max(0, Math.min(1, (effectivePitch - PITCH_RANGE.min) / (PITCH_RANGE.max - PITCH_RANGE.min)));
-        const brightness = BRIGHTNESS_RANGE.min + normalizedForBrightness * (BRIGHTNESS_RANGE.max - BRIGHTNESS_RANGE.min);
-        this.element.style.filter = `brightness(${brightness})`;
 
         // Scale based on duration (pixel-based: 1 step = 24px cell + 4px gap = 28px)
         const targetWidth = (this.data.duration * 28) - 4;
