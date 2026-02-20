@@ -1,11 +1,13 @@
-const CACHE_NAME = 'desu-dj-v1';
+const CACHE_NAME = 'desu-dj-v2';
 const ASSETS = [
   './',
   './css/style.css',
   './js/main.js',
+  './js/modules/audioEngine.js',
   './js/modules/constants.js',
   './js/modules/deck.js',
   './js/modules/mixer.js',
+  './js/modules/storage.js',
   './icon.svg',
   './manifest.json'
 ];

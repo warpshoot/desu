@@ -1,343 +1,315 @@
-import { TRACKS, ROWS, COLS, MAX_PATTERNS, DEFAULT_BPM, MIN_BPM, MAX_BPM, PRESET_PATTERNS } from './constants.js';
+import { BEAT_TRACKS, BEEP_TRACKS, ROWS, COLS, MAX_PATTERNS, CHAIN_LENGTH, DEFAULT_BPM, MIN_BPM, MAX_BPM, SWING_LEVELS } from './constants.js';
+import { DeckAudioEngine } from './audioEngine.js';
+import { loadProjectFile, detectProjectType } from './storage.js';
 
 /**
- * Deck - Independent sequencer deck with its own audio, timing, and UI.
- * Each deck has 4 tracks x 16 steps, 8 pattern banks, independent BPM,
- * and a filter effect.
+ * Deck - DJ deck that loads BEAT/BEEP projects and plays them.
+ * Read-only grid display, pattern switching, chain playback, DJ FX.
+ * Independent timing (no Tone.Transport).
  */
 export class Deck {
     constructor(id, containerEl, outputNode) {
         this.id = id; // 'a' or 'b'
         this.container = containerEl;
-        this.outputNode = outputNode; // Tone.js Gain node to connect to
+        this.outputNode = outputNode;
+
+        // Mode & state
+        this.mode = null; // 'beat' or 'beep'
+        this.projectState = null;
+        this.loaded = false;
 
         // Audio
-        this.instruments = [];
-        this.filters = [];
-        this.gains = [];
-        this.deckGain = null;
-        this.deckFilter = null; // LPF/HPF sweep
-        this.deckHPF = null;
+        this.engine = null;
 
-        // State
-        this.bpm = DEFAULT_BPM;
+        // Playback
         this.playing = false;
+        this.bpm = DEFAULT_BPM;
         this.currentStep = 0;
         this.currentPattern = 0;
-        this.patterns = [];
-        this.mutedTracks = [false, false, false, false];
+        this.queuedPattern = null;
+        this.swingAmount = 0;
 
-        // Scheduler
+        // Chain
+        this.chainMode = 'chain';
+        this.chain = new Array(CHAIN_LENGTH).fill(null);
+        this.chainIndex = 0;
+        this.chainEnabled = false;
+
+        // Loop
+        this.djLoopEnabled = false;
+        this.loopStart = 0;
+
+        // Slow
+        this.djSlowEnabled = false;
+        this.originalBPM = DEFAULT_BPM;
+
+        // Scheduler (independent per deck, no Tone.Transport)
         this.nextStepTime = 0;
         this.schedulerInterval = null;
-        this.lookahead = 0.1; // seconds ahead to schedule
-        this.scheduleMs = 25; // check interval in ms
+        this.lookahead = 0.1;
+        this.scheduleMs = 25;
 
-        // Filter state: 0 = center (no filter), -1 = HPF, +1 = LPF
-        this.filterPosition = 0;
-
-        // UI refs
+        // UI references
         this.cells = [];
-        this.stepIndicators = [];
+        this.stepDots = [];
+        this.patPads = [];
+        this.chainSlots = [];
         this.bpmDisplay = null;
         this.playBtn = null;
+        this.modeLabel = null;
+        this.titleLabel = null;
 
-        this.initialized = false;
-
-        this._initPatterns();
+        this.buildUI();
     }
 
-    _initPatterns() {
-        for (let p = 0; p < MAX_PATTERNS; p++) {
-            this.patterns[p] = this._createEmptyPattern();
-        }
-        // Load preset into pattern 0
-        const presetKeys = Object.keys(PRESET_PATTERNS).filter(k => k !== 'Empty');
-        const presetIdx = this.id === 'a' ? 0 : 1;
-        const presetName = presetKeys[presetIdx % presetKeys.length];
-        const preset = PRESET_PATTERNS[presetName];
-        if (preset) {
-            for (let t = 0; t < ROWS; t++) {
-                for (let s = 0; s < COLS; s++) {
-                    this.patterns[0][t][s] = preset.grid[t][s] ? 1 : 0;
-                }
-            }
-        }
-    }
-
-    _createEmptyPattern() {
-        const pattern = [];
-        for (let t = 0; t < ROWS; t++) {
-            pattern[t] = new Array(COLS).fill(0);
-        }
-        return pattern;
+    get tracks() {
+        return this.mode === 'beep' ? BEEP_TRACKS : BEAT_TRACKS;
     }
 
     get pattern() {
-        return this.patterns[this.currentPattern];
+        if (!this.projectState) return null;
+        return this.projectState.patterns[this.currentPattern];
     }
 
-    async init() {
-        if (this.initialized) return;
+    // --- Project Loading ---
 
-        await Tone.start();
+    async loadProject(file) {
+        try {
+            this.stop();
 
-        // Deck output gain
-        this.deckGain = new Tone.Gain(0.8);
+            // Detect type & load
+            this.mode = detectProjectType(file);
+            this.projectState = await loadProjectFile(file);
 
-        // Deck filter chain: HPF -> LPF -> deckGain -> output
-        this.deckHPF = new Tone.Filter({
-            frequency: 20,
-            type: 'highpass',
-            rolloff: -24,
-            Q: 1
-        });
-        this.deckFilter = new Tone.Filter({
-            frequency: 20000,
-            type: 'lowpass',
-            rolloff: -24,
-            Q: 1
-        });
+            // Apply project state
+            this.bpm = this.projectState.bpm || DEFAULT_BPM;
+            this.currentPattern = this.projectState.currentPattern || 0;
+            this.swingAmount = SWING_LEVELS[this.projectState.swingLevel] || 0;
+            this.chain = this.projectState.chain || new Array(CHAIN_LENGTH).fill(null);
+            this.chainMode = this.projectState.chainMode || 'chain';
+            this.chainEnabled = this.chain.some(v => v !== null);
 
-        this.deckHPF.connect(this.deckFilter);
-        this.deckFilter.connect(this.deckGain);
-        this.deckGain.connect(this.outputNode);
+            // Rebuild audio engine for new track config
+            if (this.engine) {
+                this.engine.dispose();
+                this.engine = null;
+            }
+            this.engine = new DeckAudioEngine(this.tracks, this.outputNode);
+            await this.engine.init();
 
-        // Create instruments
-        for (let i = 0; i < TRACKS.length; i++) {
-            const track = TRACKS[i];
-            let instrument;
-
-            switch (track.type) {
-                case 'membrane':
-                    instrument = new Tone.MembraneSynth({
-                        pitchDecay: 0.05,
-                        octaves: 7,
-                        oscillator: { type: 'sine' },
-                        envelope: { attack: 0.01, decay: 0.4, sustain: 0.01, release: 1.0 }
-                    });
-                    break;
-                case 'noise':
-                    instrument = new Tone.NoiseSynth({
-                        noise: { type: 'white' },
-                        envelope: { attack: 0.008, decay: 0.2, sustain: 0 }
-                    });
-                    break;
-                case 'metal':
-                    instrument = new Tone.MetalSynth({
-                        frequency: 200,
-                        envelope: { attack: 0.008, decay: 0.1, release: 0.15 },
-                        harmonicity: 5.1,
-                        modulationIndex: 32,
-                        resonance: 4000,
-                        octaves: 1.5
-                    });
-                    break;
-                case 'fm':
-                    instrument = new Tone.PolySynth(Tone.FMSynth, {
-                        maxPolyphony: 2,
-                        harmonicity: 1,
-                        modulationIndex: 14,
-                        oscillator: { type: 'triangle' },
-                        envelope: { attack: 0.01, decay: 0.2, sustain: 0.7, release: 0.4 },
-                        modulation: { type: 'square' },
-                        modulationEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.4 }
-                    });
-                    break;
+            // Apply track params
+            if (this.projectState.trackParams) {
+                for (let t = 0; t < this.projectState.trackParams.length; t++) {
+                    this.engine.updateTrackParams(t, this.projectState.trackParams[t]);
+                }
             }
 
-            const filter = new Tone.Filter({
-                frequency: track.defaultParams.cutoff,
-                type: 'lowpass',
-                rolloff: -24
-            });
-
-            const gain = new Tone.Gain(track.defaultParams.vol);
-
-            instrument.connect(filter);
-            filter.connect(gain);
-            gain.connect(this.deckHPF);
-
-            this.instruments.push(instrument);
-            this.filters.push(filter);
-            this.gains.push(gain);
-        }
-
-        this.initialized = true;
-    }
-
-    // --- Audio ---
-
-    triggerNote(track, time) {
-        if (!this.initialized || !this.instruments[track]) return;
-        if (this.mutedTracks[track]) return;
-
-        const instrument = this.instruments[track];
-        const trackConfig = TRACKS[track];
-        const dur = trackConfig.defaultParams.decay;
-
-        switch (trackConfig.type) {
-            case 'membrane':
-                instrument.triggerAttackRelease(trackConfig.baseFreq, dur * 0.6, time, 0.9);
-                break;
-            case 'noise':
-                instrument.triggerAttackRelease(dur * 0.3, time, 0.7);
-                break;
-            case 'metal': {
-                const freq = typeof trackConfig.baseFreq === 'number'
-                    ? trackConfig.baseFreq
-                    : Tone.Frequency(trackConfig.baseFreq).toFrequency();
-                instrument.triggerAttackRelease(freq, dur * 0.3, time, 0.6);
-                break;
+            // Apply mute/solo from current pattern
+            const pat = this.pattern;
+            if (pat) {
+                for (let t = 0; t < ROWS; t++) {
+                    if (pat.mutedTracks[t]) this.engine.setTrackMute(t, true);
+                    if (pat.soloedTracks[t]) this.engine.setTrackSolo(t, true);
+                }
             }
-            case 'fm':
-                instrument.triggerAttackRelease(trackConfig.baseFreq, dur * 0.7, time, 0.9);
-                break;
+
+            this.loaded = true;
+            this.rebuildGrid();
+            this.renderGrid();
+            this.updatePatternBank();
+            this.updateChainDisplay();
+            this.updateLabels();
+            if (this.bpmDisplay) this.bpmDisplay.textContent = this.bpm;
+
+        } catch (err) {
+            console.error('Failed to load project:', err);
         }
     }
 
-    setFilterPosition(position) {
-        // position: -1 (HPF full) to 0 (flat) to +1 (LPF full)
-        this.filterPosition = position;
-        if (!this.initialized) return;
+    // --- Audio Init ---
 
-        if (position > 0.02) {
-            // LPF sweep: map 0..1 to 20000..200Hz
-            const factor = Math.pow(0.01, position);
-            const lpf = Math.max(200, 20000 * factor);
-            this.deckFilter.frequency.rampTo(lpf, 0.05);
-            this.deckHPF.frequency.rampTo(20, 0.05);
-            this.deckFilter.Q.rampTo(1 + position * 8, 0.05);
-            this.deckHPF.Q.rampTo(1, 0.05);
-        } else if (position < -0.02) {
-            // HPF sweep: map -1..0 to 6000..20Hz
-            const absPos = Math.abs(position);
-            const factor = Math.pow(300, absPos);
-            const hpf = Math.min(6000, 20 * factor);
-            this.deckHPF.frequency.rampTo(hpf, 0.05);
-            this.deckFilter.frequency.rampTo(20000, 0.05);
-            this.deckHPF.Q.rampTo(1 + absPos * 8, 0.05);
-            this.deckFilter.Q.rampTo(1, 0.05);
-        } else {
-            // Flat
-            this.deckFilter.frequency.rampTo(20000, 0.1);
-            this.deckHPF.frequency.rampTo(20, 0.1);
-            this.deckFilter.Q.rampTo(1, 0.1);
-            this.deckHPF.Q.rampTo(1, 0.1);
-        }
+    async ensureEngine() {
+        if (this.engine && this.engine.initialized) return;
+        if (!this.mode) this.mode = 'beat';
+        this.engine = new DeckAudioEngine(this.tracks, this.outputNode);
+        await this.engine.init();
     }
 
-    setVolume(value) {
-        // value: 0..1
-        if (this.deckGain) {
-            this.deckGain.gain.rampTo(value, 0.05);
-        }
-    }
+    // --- Playback ---
 
-    // --- Scheduler ---
-
-    play() {
+    async play() {
         if (this.playing) return;
+        if (!this.loaded) return;
+        await this.ensureEngine();
         this.playing = true;
         this.currentStep = 0;
         this.nextStepTime = Tone.now() + 0.05;
         this.schedulerInterval = setInterval(() => this._schedule(), this.scheduleMs);
-        this._updatePlayButton();
+        this.updatePlayBtn();
     }
 
     stop() {
+        if (!this.playing) return;
         this.playing = false;
         if (this.schedulerInterval) {
             clearInterval(this.schedulerInterval);
             this.schedulerInterval = null;
         }
         this.currentStep = 0;
-        this._clearPlayheads();
-        this._updatePlayButton();
+        this.clearPlayheads();
+        this.updatePlayBtn();
+
+        // Reset DJ effects
+        if (this.djSlowEnabled) this.disableSlow();
+        if (this.djLoopEnabled) this.disableLoop();
+        if (this.engine) {
+            this.engine.disableStutter();
+            this.engine.disableCrush();
+            this.engine.resetDJFilter();
+            this.engine.setOctaveShift(0);
+        }
     }
 
     togglePlay() {
-        if (this.playing) {
-            this.stop();
-        } else {
-            this.play();
-        }
+        if (this.playing) this.stop();
+        else this.play();
     }
 
     setBPM(bpm) {
         this.bpm = Math.max(MIN_BPM, Math.min(MAX_BPM, bpm));
-        if (this.bpmDisplay) {
-            this.bpmDisplay.textContent = this.bpm;
-        }
+        if (this.bpmDisplay) this.bpmDisplay.textContent = this.bpm;
     }
 
     _schedule() {
         const now = Tone.now();
         while (this.nextStepTime < now + this.lookahead) {
             this._onStep(this.currentStep, this.nextStepTime);
-            const secondsPerStep = 60.0 / this.bpm / 4; // 16th notes
-            this.nextStepTime += secondsPerStep;
-            this.currentStep = (this.currentStep + 1) % COLS;
+
+            // Step duration based on BPM
+            const stepTime = 60.0 / this.bpm / 4;
+            this.nextStepTime += stepTime;
+
+            // Advance step
+            if (this.djLoopEnabled) {
+                const loopEnd = this.loopStart + 4;
+                this.currentStep++;
+                if (this.currentStep >= loopEnd) this.currentStep = this.loopStart;
+            } else {
+                this.currentStep = (this.currentStep + 1) % COLS;
+                // Pattern end -> chain advance or pattern switch
+                if (this.currentStep === 0) this._onPatternEnd();
+            }
         }
     }
 
     _onStep(step, time) {
         const pat = this.pattern;
+        if (!pat || !this.engine) return;
 
-        // Schedule audio
+        // Swing adjustment
+        let adjustedTime = time;
+        if (this.swingAmount > 0 && step % 2 === 1) {
+            const stepDur = 60.0 / this.bpm / 4;
+            adjustedTime += stepDur * this.swingAmount;
+        }
+
+        // Trigger notes
         for (let track = 0; track < ROWS; track++) {
-            if (pat[track][step]) {
-                this.triggerNote(track, time);
-            }
+            const cell = pat.grid[track]?.[step];
+            if (!cell || !cell.active) continue;
+
+            const octaveShift = pat.trackOctaves?.[track] || 0;
+            this.engine.triggerNote(
+                track, cell.pitch, cell.duration, adjustedTime,
+                cell.rollMode, cell.rollSubdivision, octaveShift, cell.velocity
+            );
         }
 
-        // Schedule visual update
-        const visualDelay = Math.max(0, (time - Tone.now()) * 1000);
-        setTimeout(() => {
-            this._updatePlayheads(step);
-        }, visualDelay);
+        // Visual update
+        const delay = Math.max(0, (adjustedTime - Tone.now()) * 1000);
+        setTimeout(() => this.updatePlayheads(step), delay);
     }
 
-    // --- Pattern Management ---
+    _onPatternEnd() {
+        // Queued pattern switch
+        if (this.queuedPattern !== null) {
+            this.switchPattern(this.queuedPattern, true);
+            this.queuedPattern = null;
+            return;
+        }
 
-    switchPattern(index) {
+        // Chain advance
+        if (this.chainEnabled && this.chainMode === 'chain') {
+            const activeSlots = [];
+            for (let i = 0; i < this.chain.length; i++) {
+                if (this.chain[i] !== null) activeSlots.push(i);
+            }
+            if (activeSlots.length > 0) {
+                let nextIdx = -1;
+                for (let i = 0; i < activeSlots.length; i++) {
+                    if (activeSlots[i] > this.chainIndex) { nextIdx = activeSlots[i]; break; }
+                }
+                if (nextIdx === -1) nextIdx = activeSlots[0];
+                this.chainIndex = nextIdx;
+                this.switchPattern(this.chain[nextIdx], true);
+            }
+        }
+    }
+
+    switchPattern(index, immediate) {
         if (index < 0 || index >= MAX_PATTERNS) return;
+        if (this.playing && !immediate) {
+            this.queuedPattern = index;
+            this.updatePatternBank();
+            return;
+        }
         this.currentPattern = index;
-        this._renderGrid();
-        this._updatePatternBank();
-    }
+        this.queuedPattern = null;
 
-    loadPreset(presetName) {
-        const preset = PRESET_PATTERNS[presetName];
-        if (!preset) return;
-        for (let t = 0; t < ROWS; t++) {
-            for (let s = 0; s < COLS; s++) {
-                this.pattern[t][s] = preset.grid[t][s] ? 1 : 0;
+        // Apply mute/solo
+        const pat = this.pattern;
+        if (pat && this.engine) {
+            for (let t = 0; t < ROWS; t++) {
+                this.engine.setTrackMute(t, pat.mutedTracks?.[t] || false);
+                this.engine.setTrackSolo(t, pat.soloedTracks?.[t] || false);
             }
         }
-        this._renderGrid();
-        this._updatePatternBank();
+
+        this.renderGrid();
+        this.updatePatternBank();
+        this.updateChainDisplay();
     }
 
-    clearPattern() {
-        for (let t = 0; t < ROWS; t++) {
-            for (let s = 0; s < COLS; s++) {
-                this.pattern[t][s] = 0;
-            }
-        }
-        this._renderGrid();
-        this._updatePatternBank();
-    }
+    // --- DJ Effects ---
 
-    hasData(patIndex) {
-        const pat = this.patterns[patIndex];
-        if (!pat) return false;
-        for (let t = 0; t < ROWS; t++) {
-            for (let s = 0; s < COLS; s++) {
-                if (pat[t][s]) return true;
-            }
-        }
-        return false;
+    enableLoop() {
+        if (this.djLoopEnabled) return;
+        this.djLoopEnabled = true;
+        this.loopStart = Math.floor(this.currentStep / 4) * 4;
+    }
+    disableLoop() { this.djLoopEnabled = false; }
+
+    enableSlow() {
+        if (this.djSlowEnabled) return;
+        this.djSlowEnabled = true;
+        this.originalBPM = this.bpm;
+        const target = 30;
+        const steps = 60;
+        let i = 0;
+        const stepInterval = setInterval(() => {
+            i++;
+            this.bpm = this.originalBPM + (target - this.originalBPM) * (i / steps);
+            if (this.bpmDisplay) this.bpmDisplay.textContent = Math.round(this.bpm);
+            if (i >= steps) clearInterval(stepInterval);
+        }, 33);
+        this._slowInterval = stepInterval;
+    }
+    disableSlow() {
+        if (!this.djSlowEnabled) return;
+        this.djSlowEnabled = false;
+        if (this._slowInterval) clearInterval(this._slowInterval);
+        this.bpm = this.originalBPM;
+        if (this.bpmDisplay) this.bpmDisplay.textContent = Math.round(this.bpm);
     }
 
     // --- UI Building ---
@@ -349,154 +321,80 @@ export class Deck {
         // Header
         const header = document.createElement('div');
         header.className = 'deck-header';
-        header.innerHTML = `<span class="deck-label">DECK ${this.id.toUpperCase()}</span>`;
 
-        // Preset selector
-        const presetSelect = document.createElement('select');
-        presetSelect.className = 'preset-select';
-        const defaultOpt = document.createElement('option');
-        defaultOpt.value = '';
-        defaultOpt.textContent = 'Load...';
-        presetSelect.appendChild(defaultOpt);
-        Object.keys(PRESET_PATTERNS).forEach(name => {
-            const opt = document.createElement('option');
-            opt.value = name;
-            opt.textContent = name;
-            presetSelect.appendChild(opt);
-        });
-        presetSelect.addEventListener('change', () => {
-            if (presetSelect.value) {
-                this.loadPreset(presetSelect.value);
-                presetSelect.value = '';
-            }
-        });
-        header.appendChild(presetSelect);
+        this.titleLabel = document.createElement('span');
+        this.titleLabel.className = 'deck-label';
+        this.titleLabel.textContent = `DECK ${this.id.toUpperCase()}`;
+
+        this.modeLabel = document.createElement('span');
+        this.modeLabel.className = 'mode-label';
+        this.modeLabel.textContent = '---';
+
+        const loadBtn = document.createElement('button');
+        loadBtn.className = 'load-btn';
+        loadBtn.textContent = 'LOAD';
+        loadBtn.addEventListener('click', () => this._openFileDialog());
+
+        header.appendChild(this.titleLabel);
+        header.appendChild(this.modeLabel);
+        header.appendChild(loadBtn);
         this.container.appendChild(header);
 
         // Pattern bank
-        const bankEl = document.createElement('div');
-        bankEl.className = 'pattern-bank';
+        const bank = document.createElement('div');
+        bank.className = 'pattern-bank';
+        this.patPads = [];
         for (let i = 0; i < MAX_PATTERNS; i++) {
             const pad = document.createElement('button');
             pad.className = 'pat-pad';
             pad.textContent = i + 1;
-            pad.dataset.index = i;
-            if (i === this.currentPattern) pad.classList.add('active');
-            if (this.hasData(i)) pad.classList.add('has-data');
-
             pad.addEventListener('click', () => this.switchPattern(i));
-
-            // Long press to clear
-            let longTimer = null;
-            pad.addEventListener('mousedown', () => {
-                longTimer = setTimeout(() => {
-                    this.patterns[i] = this._createEmptyPattern();
-                    if (i === this.currentPattern) this._renderGrid();
-                    this._updatePatternBank();
-                }, 600);
-            });
-            pad.addEventListener('mouseup', () => clearTimeout(longTimer));
-            pad.addEventListener('mouseleave', () => clearTimeout(longTimer));
-
-            bankEl.appendChild(pad);
+            this.patPads.push(pad);
+            bank.appendChild(pad);
         }
-        this.container.appendChild(bankEl);
+        this.container.appendChild(bank);
 
-        // Grid with track labels
-        const gridArea = document.createElement('div');
-        gridArea.className = 'grid-area';
-
-        const trackLabels = document.createElement('div');
-        trackLabels.className = 'track-labels';
-
-        for (let t = 0; t < ROWS; t++) {
-            const label = document.createElement('div');
-            label.className = 'track-label';
-            label.textContent = TRACKS[t].short;
-            label.addEventListener('click', () => {
-                this.mutedTracks[t] = !this.mutedTracks[t];
-                label.classList.toggle('muted', this.mutedTracks[t]);
-            });
-            trackLabels.appendChild(label);
-        }
-
-        const gridEl = document.createElement('div');
-        gridEl.className = 'grid';
-
-        this.cells = [];
-        const pat = this.pattern;
-        for (let t = 0; t < ROWS; t++) {
-            this.cells[t] = [];
-            for (let s = 0; s < COLS; s++) {
-                const cell = document.createElement('div');
-                cell.className = 'cell';
-                cell.dataset.track = t;
-                cell.dataset.step = s;
-                if (pat[t][s]) cell.classList.add('active');
-
-                cell.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                    this._toggleCell(t, s);
-                    this._paintMode = true;
-                    this._paintTrack = t;
-                    this._paintValue = pat[t][s];
-                });
-                cell.addEventListener('mouseenter', () => {
-                    if (this._paintMode && this._paintTrack === t) {
-                        pat[t][s] = this._paintValue;
-                        cell.classList.toggle('active', !!this._paintValue);
-                        this._updatePatternBank();
-                    }
-                });
-
-                // Touch support
-                cell.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    this._toggleCell(t, s);
-                }, { passive: false });
-
-                this.cells[t][s] = cell;
-                gridEl.appendChild(cell);
-            }
-        }
-
-        // Global mouseup to end painting
-        document.addEventListener('mouseup', () => {
-            this._paintMode = false;
-        });
-
-        gridArea.appendChild(trackLabels);
-        gridArea.appendChild(gridEl);
-        this.container.appendChild(gridArea);
+        // Grid area (empty until project loaded)
+        this.gridArea = document.createElement('div');
+        this.gridArea.className = 'grid-area';
+        this.gridArea.innerHTML = '<div class="empty-msg">LOAD PROJECT</div>';
+        this.container.appendChild(this.gridArea);
 
         // Step indicators
-        const stepsEl = document.createElement('div');
-        stepsEl.className = 'step-indicators';
-        // Spacer for track labels
-        const spacer = document.createElement('div');
-        spacer.className = 'step-spacer';
-        stepsEl.appendChild(spacer);
-        this.stepIndicators = [];
+        const stepsRow = document.createElement('div');
+        stepsRow.className = 'step-indicators';
+        this.stepDots = [];
         for (let s = 0; s < COLS; s++) {
             const dot = document.createElement('div');
             dot.className = 'step-dot';
-            this.stepIndicators.push(dot);
-            stepsEl.appendChild(dot);
+            this.stepDots.push(dot);
+            stepsRow.appendChild(dot);
         }
-        this.container.appendChild(stepsEl);
+        this.container.appendChild(stepsRow);
 
-        // Controls
+        // Chain display
+        this.chainContainer = document.createElement('div');
+        this.chainContainer.className = 'chain-row hidden';
+        this.chainSlots = [];
+        for (let i = 0; i < CHAIN_LENGTH; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'chain-slot';
+            slot.addEventListener('click', () => {
+                if (this.chain[i] !== null) this.switchPattern(this.chain[i]);
+            });
+            this.chainSlots.push(slot);
+            this.chainContainer.appendChild(slot);
+        }
+        this.container.appendChild(this.chainContainer);
+
+        // Controls row
         const controls = document.createElement('div');
         controls.className = 'deck-controls';
 
-        // Play/Stop
         this.playBtn = document.createElement('button');
         this.playBtn.className = 'deck-btn play-btn';
         this.playBtn.innerHTML = '&#9654;';
-        this.playBtn.addEventListener('click', async () => {
-            if (!this.initialized) await this.init();
-            this.togglePlay();
-        });
+        this.playBtn.addEventListener('click', () => { if (this.loaded) this.togglePlay(); });
 
         const stopBtn = document.createElement('button');
         stopBtn.className = 'deck-btn stop-btn';
@@ -509,167 +407,239 @@ export class Deck {
         this.bpmDisplay = document.createElement('div');
         this.bpmDisplay.className = 'bpm-value';
         this.bpmDisplay.textContent = this.bpm;
-
-        // BPM drag
-        let bpmDragging = false;
-        let bpmStartY = 0;
-        let bpmStartVal = 0;
-
-        const bpmDragStart = (y) => {
-            bpmDragging = true;
-            bpmStartY = y;
-            bpmStartVal = this.bpm;
-        };
-        const bpmDragMove = (y) => {
-            if (!bpmDragging) return;
-            const delta = Math.round((bpmStartY - y) / 3);
-            this.setBPM(bpmStartVal + delta);
-        };
-        const bpmDragEnd = () => { bpmDragging = false; };
-
-        this.bpmDisplay.addEventListener('mousedown', (e) => bpmDragStart(e.clientY));
-        document.addEventListener('mousemove', (e) => bpmDragMove(e.clientY));
-        document.addEventListener('mouseup', bpmDragEnd);
-        this.bpmDisplay.addEventListener('touchstart', (e) => {
-            bpmDragStart(e.touches[0].clientY);
-        }, { passive: true });
-        document.addEventListener('touchmove', (e) => {
-            if (bpmDragging) bpmDragMove(e.touches[0].clientY);
-        }, { passive: true });
-        document.addEventListener('touchend', bpmDragEnd);
-
-        const bpmLabel = document.createElement('div');
-        bpmLabel.className = 'bpm-label';
-        bpmLabel.textContent = 'BPM';
-
+        this._setupBPMDrag(this.bpmDisplay);
+        const bpmLbl = document.createElement('div');
+        bpmLbl.className = 'ctrl-label';
+        bpmLbl.textContent = 'BPM';
         bpmArea.appendChild(this.bpmDisplay);
-        bpmArea.appendChild(bpmLabel);
+        bpmArea.appendChild(bpmLbl);
 
-        // Volume slider
+        // Volume
         const volArea = document.createElement('div');
-        volArea.className = 'vol-area';
+        volArea.className = 'slider-area';
         const volSlider = document.createElement('input');
         volSlider.type = 'range';
-        volSlider.className = 'vol-slider';
+        volSlider.className = 'deck-slider';
         volSlider.min = '0';
         volSlider.max = '100';
         volSlider.value = '80';
         volSlider.addEventListener('input', () => {
-            this.setVolume(parseInt(volSlider.value) / 100);
+            if (!this.engine) return;
+            const vol = parseInt(volSlider.value) / 100;
+            for (let t = 0; t < ROWS; t++) {
+                const base = this.projectState?.trackParams?.[t]?.vol ?? 0.7;
+                if (this.engine.gains[t]) this.engine.gains[t].gain.rampTo(base * vol, 0.05);
+            }
         });
-        const volLabel = document.createElement('div');
-        volLabel.className = 'vol-label';
-        volLabel.textContent = 'VOL';
+        const volLbl = document.createElement('div');
+        volLbl.className = 'ctrl-label';
+        volLbl.textContent = 'VOL';
         volArea.appendChild(volSlider);
-        volArea.appendChild(volLabel);
-
-        // Filter knob area
-        const filterArea = document.createElement('div');
-        filterArea.className = 'filter-area';
-        const filterSlider = document.createElement('input');
-        filterSlider.type = 'range';
-        filterSlider.className = 'filter-slider';
-        filterSlider.min = '-100';
-        filterSlider.max = '100';
-        filterSlider.value = '0';
-        filterSlider.addEventListener('input', () => {
-            this.setFilterPosition(parseInt(filterSlider.value) / 100);
-        });
-        // Snap back to center on release
-        filterSlider.addEventListener('mouseup', () => {
-            filterSlider.value = '0';
-            this.setFilterPosition(0);
-        });
-        filterSlider.addEventListener('touchend', () => {
-            filterSlider.value = '0';
-            this.setFilterPosition(0);
-        });
-        const filterLabel = document.createElement('div');
-        filterLabel.className = 'filter-label';
-        filterLabel.textContent = 'FILTER';
-        filterArea.appendChild(filterSlider);
-        filterArea.appendChild(filterLabel);
+        volArea.appendChild(volLbl);
 
         controls.appendChild(this.playBtn);
         controls.appendChild(stopBtn);
         controls.appendChild(bpmArea);
         controls.appendChild(volArea);
-        controls.appendChild(filterArea);
-
         this.container.appendChild(controls);
+
+        // FX buttons
+        const fxRow = document.createElement('div');
+        fxRow.className = 'fx-row';
+        const fxDefs = [
+            { label: 'LOOP', on: () => this.enableLoop(), off: () => this.disableLoop() },
+            { label: 'SLOW', on: () => this.enableSlow(), off: () => this.disableSlow() },
+            { label: 'STUT', on: () => this.engine?.enableStutter(), off: () => this.engine?.disableStutter() },
+            { label: 'CRSH', on: () => this.engine?.enableCrush(), off: () => this.engine?.disableCrush() },
+        ];
+        fxDefs.forEach(fx => {
+            const btn = document.createElement('button');
+            btn.className = 'fx-btn';
+            btn.textContent = fx.label;
+            let active = false;
+            const on = (e) => { e.preventDefault(); if (!this.playing || !this.engine) return; active = true; btn.classList.add('active'); fx.on(); };
+            const off = (e) => { e.preventDefault(); if (!active) return; active = false; btn.classList.remove('active'); fx.off(); };
+            btn.addEventListener('mousedown', on);
+            btn.addEventListener('mouseup', off);
+            btn.addEventListener('mouseleave', off);
+            btn.addEventListener('touchstart', on, { passive: false });
+            btn.addEventListener('touchend', off, { passive: false });
+            btn.addEventListener('touchcancel', off, { passive: false });
+            fxRow.appendChild(btn);
+        });
+        this.container.appendChild(fxRow);
+
+        // Filter slider
+        const filterArea = document.createElement('div');
+        filterArea.className = 'slider-area';
+        const filterSlider = document.createElement('input');
+        filterSlider.type = 'range';
+        filterSlider.className = 'deck-slider filter-slider';
+        filterSlider.min = '-100';
+        filterSlider.max = '100';
+        filterSlider.value = '0';
+        filterSlider.addEventListener('input', () => {
+            if (!this.engine) return;
+            const pos = parseInt(filterSlider.value) / 100;
+            if (Math.abs(pos) < 0.05) {
+                this.engine.resetDJFilter();
+            } else if (pos > 0) {
+                const lpf = 20000 * Math.pow(0.01, pos);
+                this.engine.setDJFilter(Math.max(200, lpf), 20, 1 + pos * 12, pos * 0.4);
+            } else {
+                const absPos = Math.abs(pos);
+                const hpf = 20 * Math.pow(300, absPos);
+                this.engine.setDJFilter(20000, Math.min(6000, hpf), 1 + absPos * 12, absPos * 0.3);
+            }
+        });
+        const snapBack = () => { filterSlider.value = '0'; if (this.engine) this.engine.resetDJFilter(); };
+        filterSlider.addEventListener('mouseup', snapBack);
+        filterSlider.addEventListener('touchend', snapBack);
+        const filterLbl = document.createElement('div');
+        filterLbl.className = 'ctrl-label';
+        filterLbl.textContent = 'FILTER';
+        filterArea.appendChild(filterSlider);
+        filterArea.appendChild(filterLbl);
+        this.container.appendChild(filterArea);
+    }
+
+    rebuildGrid() {
+        this.gridArea.innerHTML = '';
+        const labels = document.createElement('div');
+        labels.className = 'track-labels';
+        const tracks = this.tracks;
+        for (let t = 0; t < ROWS; t++) {
+            const lbl = document.createElement('div');
+            lbl.className = 'track-label';
+            lbl.textContent = tracks[t].short;
+            lbl.style.color = tracks[t].color;
+            labels.appendChild(lbl);
+        }
+
+        const grid = document.createElement('div');
+        grid.className = 'grid';
+        this.cells = [];
+        for (let t = 0; t < ROWS; t++) {
+            this.cells[t] = [];
+            for (let s = 0; s < COLS; s++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.track = t;
+                cell.dataset.step = s;
+                this.cells[t][s] = cell;
+                grid.appendChild(cell);
+            }
+        }
+
+        this.gridArea.appendChild(labels);
+        this.gridArea.appendChild(grid);
     }
 
     // --- UI Updates ---
 
-    _toggleCell(track, step) {
+    renderGrid() {
         const pat = this.pattern;
-        pat[track][step] = pat[track][step] ? 0 : 1;
-        this.cells[track][step].classList.toggle('active', !!pat[track][step]);
-        this._updatePatternBank();
-    }
-
-    _renderGrid() {
-        const pat = this.pattern;
+        if (!pat) return;
         for (let t = 0; t < ROWS; t++) {
             for (let s = 0; s < COLS; s++) {
-                if (this.cells[t] && this.cells[t][s]) {
-                    this.cells[t][s].classList.toggle('active', !!pat[t][s]);
-                }
+                const cell = this.cells[t]?.[s];
+                if (!cell) continue;
+                const isActive = pat.grid[t]?.[s]?.active;
+                cell.classList.toggle('active', !!isActive);
+                const vel = pat.grid[t]?.[s]?.velocity;
+                cell.classList.toggle('weak', isActive && vel !== undefined && vel < 1.0);
             }
         }
     }
 
-    _updatePlayheads(step) {
+    updatePlayheads(step) {
         for (let s = 0; s < COLS; s++) {
-            const isActive = s === step;
-            if (this.stepIndicators[s]) {
-                this.stepIndicators[s].classList.toggle('active', isActive);
-            }
+            const isHere = s === step;
+            this.stepDots[s]?.classList.toggle('active', isHere);
             for (let t = 0; t < ROWS; t++) {
-                if (this.cells[t] && this.cells[t][s]) {
-                    this.cells[t][s].classList.toggle('playhead', isActive);
-                }
+                this.cells[t]?.[s]?.classList.toggle('playhead', isHere);
             }
         }
     }
 
-    _clearPlayheads() {
+    clearPlayheads() {
         for (let s = 0; s < COLS; s++) {
-            if (this.stepIndicators[s]) {
-                this.stepIndicators[s].classList.remove('active');
-            }
+            this.stepDots[s]?.classList.remove('active');
             for (let t = 0; t < ROWS; t++) {
-                if (this.cells[t] && this.cells[t][s]) {
-                    this.cells[t][s].classList.remove('playhead');
-                }
+                this.cells[t]?.[s]?.classList.remove('playhead');
             }
         }
     }
 
-    _updatePlayButton() {
-        if (this.playBtn) {
-            this.playBtn.classList.toggle('active', this.playing);
-            this.playBtn.innerHTML = this.playing ? '&#10074;&#10074;' : '&#9654;';
-        }
+    updatePlayBtn() {
+        if (!this.playBtn) return;
+        this.playBtn.classList.toggle('active', this.playing);
+        this.playBtn.innerHTML = this.playing ? '&#10074;&#10074;' : '&#9654;';
     }
 
-    _updatePatternBank() {
-        const pads = this.container.querySelectorAll('.pat-pad');
-        pads.forEach((pad, i) => {
+    updatePatternBank() {
+        for (let i = 0; i < MAX_PATTERNS; i++) {
+            const pad = this.patPads[i];
+            if (!pad) continue;
             pad.classList.toggle('active', i === this.currentPattern);
-            pad.classList.toggle('has-data', this.hasData(i));
-        });
+            pad.classList.toggle('queued', i === this.queuedPattern);
+            const pat = this.projectState?.patterns?.[i];
+            const hasData = pat?.grid?.some(row => row.some(c => c.active));
+            pad.classList.toggle('has-data', !!hasData);
+        }
     }
 
-    // --- Cleanup ---
+    updateChainDisplay() {
+        for (let i = 0; i < CHAIN_LENGTH; i++) {
+            const slot = this.chainSlots[i];
+            if (!slot) continue;
+            const val = this.chain[i];
+            if (val !== null && val !== undefined) {
+                slot.textContent = val + 1;
+                slot.classList.add('filled');
+            } else {
+                slot.textContent = '';
+                slot.classList.remove('filled');
+            }
+            slot.classList.toggle('playing', this.chainEnabled && i === this.chainIndex && this.playing);
+        }
+        this.chainContainer.classList.toggle('hidden', !this.chainEnabled);
+    }
+
+    updateLabels() {
+        if (this.modeLabel) {
+            this.modeLabel.textContent = this.mode ? this.mode.toUpperCase() : '---';
+            this.modeLabel.classList.toggle('beat', this.mode === 'beat');
+            this.modeLabel.classList.toggle('beep', this.mode === 'beep');
+        }
+    }
+
+    _openFileDialog() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) this.loadProject(file);
+        });
+        input.click();
+    }
+
+    _setupBPMDrag(el) {
+        let dragging = false, startY = 0, startVal = 0;
+        const start = (y) => { dragging = true; startY = y; startVal = this.bpm; };
+        const move = (y) => { if (dragging) this.setBPM(startVal + Math.round((startY - y) / 3)); };
+        const end = () => { dragging = false; };
+        el.addEventListener('mousedown', (e) => start(e.clientY));
+        document.addEventListener('mousemove', (e) => move(e.clientY));
+        document.addEventListener('mouseup', end);
+        el.addEventListener('touchstart', (e) => start(e.touches[0].clientY), { passive: true });
+        document.addEventListener('touchmove', (e) => { if (dragging) move(e.touches[0].clientY); }, { passive: true });
+        document.addEventListener('touchend', end);
+    }
 
     dispose() {
         this.stop();
-        this.instruments.forEach(inst => { if (inst) inst.dispose(); });
-        this.filters.forEach(f => { if (f) f.dispose(); });
-        this.gains.forEach(g => { if (g) g.dispose(); });
-        if (this.deckGain) this.deckGain.dispose();
-        if (this.deckFilter) this.deckFilter.dispose();
-        if (this.deckHPF) this.deckHPF.dispose();
+        if (this.engine) this.engine.dispose();
     }
 }

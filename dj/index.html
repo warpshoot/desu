@@ -26,6 +26,7 @@
             <a href="https://warpshoot.github.io/desu/" target="_blank" id="credit-logo">
                 <img src="../images/logo.gif" alt="DESU™ Logo">
             </a>
+            <p id="credit-desc">Load your BEAT / BEEP projects and DJ!</p>
             <div id="credit-author">
                 by <a href="https://warpshoot.github.io/" target="_blank">wpy</a>
             </div>
@@ -33,7 +34,6 @@
                 <span>Q: Deck A</span>
                 <span>P: Deck B</span>
                 <span>SPACE: Both</span>
-                <span>S: Sync</span>
             </div>
         </div>
     </div>
@@ -45,15 +45,14 @@
 
         <!-- Center Mixer -->
         <div id="mixer">
-            <div class="mixer-section">
-                <div class="mixer-label">A</div>
-                <div class="crossfader-container">
-                    <input type="range" id="crossfader" min="0" max="100" value="50" class="crossfader">
-                </div>
-                <div class="mixer-label">B</div>
+            <div class="mixer-label">A</div>
+            <div class="crossfader-wrap">
+                <input type="range" id="crossfader" min="0" max="100" value="50" class="crossfader">
             </div>
+            <div class="mixer-label">B</div>
 
-            <button id="sync-btn" class="mixer-btn">SYNC</button>
+            <button id="sync-ab" class="mixer-btn">A&rarr;B</button>
+            <button id="sync-ba" class="mixer-btn">B&rarr;A</button>
 
             <div class="master-section">
                 <div class="master-label">MST</div>
@@ -71,20 +70,13 @@
     <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>
 
     <script>
-        // Credit modal
         const creditBtn = document.getElementById('credit-btn');
         const creditModal = document.getElementById('credit-modal');
         if (creditBtn && creditModal) {
-            creditBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                creditModal.classList.add('visible');
-            });
-            creditModal.addEventListener('click', () => {
-                creditModal.classList.remove('visible');
-            });
-            const content = document.getElementById('credit-content');
-            if (content) content.addEventListener('click', (e) => e.stopPropagation());
+            creditBtn.addEventListener('click', (e) => { e.preventDefault(); creditModal.classList.add('visible'); });
+            creditModal.addEventListener('click', () => { creditModal.classList.remove('visible'); });
+            const c = document.getElementById('credit-content');
+            if (c) c.addEventListener('click', (e) => e.stopPropagation());
         }
     </script>
 </body>
