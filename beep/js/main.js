@@ -629,6 +629,17 @@ class Sequencer {
                 gridContainer.appendChild(cellElement);
             }
         }
+
+        // Recalculate cell visuals when the grid resizes (orientation change, responsive layout).
+        // Width-based sizing stores absolute px values, so a fresh updateVisuals() is needed
+        // after the grid's column width changes.
+        if (this._gridResizeObserver) this._gridResizeObserver.disconnect();
+        this._gridResizeObserver = new ResizeObserver(() => {
+            this.cells.forEach(trackCells => {
+                if (trackCells) trackCells.forEach(cell => cell && cell.updateVisuals());
+            });
+        });
+        this._gridResizeObserver.observe(gridContainer);
     }
 
     setupTrackIcons() {
