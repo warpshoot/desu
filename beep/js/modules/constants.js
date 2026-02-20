@@ -53,7 +53,7 @@ export const MAX_BPM = 180;
 
 // Cell parameter ranges
 export const PITCH_RANGE = { min: -36, max: 36, default: 0 };
-export const DURATION_RANGE = { min: 0.1, max: 1.0, default: 0.5 };
+export const DURATION_RANGE = { min: 0.1, max: 4.0, default: 1.0 };
 export const ROLL_SUBDIVISIONS = [1, 2, 4, 8]; // Available roll speeds
 export const DEFAULT_ROLL_SUBDIVISION = 4;
 

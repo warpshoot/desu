@@ -1,4 +1,4 @@
-import { PITCH_RANGE, DURATION_RANGE, BRIGHTNESS_RANGE, SCALE_RANGE, LONG_PRESS_DURATION, DRAG_THRESHOLD, TAP_THRESHOLD, ROLL_SUBDIVISIONS, SCALES } from './constants.js';
+import { PITCH_RANGE, DURATION_RANGE, BRIGHTNESS_RANGE, LONG_PRESS_DURATION, DRAG_THRESHOLD, TAP_THRESHOLD, ROLL_SUBDIVISIONS, SCALES } from './constants.js';
 
 export class Cell {
     constructor(element, track, step, data, onChange, onLongPress, onPaintChange, getGlobalIsPainting, baseFreq, noteIndicator, getIsTwoFingerTouch, getScale) {
@@ -15,10 +15,15 @@ export class Cell {
         this.getScale = getScale;
         this.getIsTwoFingerTouch = getIsTwoFingerTouch || (() => false);
 
-        // Visual pitch indicator
+        // Inner visual element (receives scaleX; outer element stays fixed for hit area)
+        this.visual = document.createElement('div');
+        this.visual.className = 'cell-visual';
+        this.element.appendChild(this.visual);
+
+        // Visual pitch indicator (inside visual so it scales with note)
         this.pitchIndicator = document.createElement('div');
         this.pitchIndicator.className = 'pitch-indicator';
-        this.element.appendChild(this.pitchIndicator);
+        this.visual.appendChild(this.pitchIndicator);
 
         // Drag state
         this.isDragging = false;
@@ -203,7 +208,7 @@ export class Cell {
             if (this.isPaintDrag) return;
 
             const range = DURATION_RANGE.max - DURATION_RANGE.min;
-            const sensitivity = range / 200;
+            const sensitivity = range / 400; // More precise for longer range
             let newValue = this.startValue + (deltaX * sensitivity);
             newValue = Math.max(DURATION_RANGE.min, Math.min(DURATION_RANGE.max, newValue));
             this.data.duration = newValue;
@@ -261,12 +266,9 @@ export class Cell {
         if (!this.data.active) {
             this.data.active = true;
             this.data.velocity = 1.0;
-            this.element.classList.add('active');
-            this.element.classList.remove('weak');
             this.updateVisuals();
         } else if (this.data.velocity === 1.0) {
             this.data.velocity = 0.5;
-            this.element.classList.add('weak');
             this.updateVisuals();
         } else {
             this.deactivate();
@@ -283,7 +285,8 @@ export class Cell {
         this.data.rollMode = false;
         this.data.pitch = PITCH_RANGE.default;
         this.data.duration = DURATION_RANGE.default;
-        this.element.classList.remove('active', 'roll', 'playhead', 'weak');
+        this.visual.classList.remove('active', 'roll', 'weak');
+        this.element.classList.remove('playhead', 'weak');
         this.updateVisuals();
         if (this.onChange) {
             this.onChange(this.track, this.step, this.data, false);
@@ -294,8 +297,6 @@ export class Cell {
         if (!this.data.active) {
             this.data.active = true;
             this.data.velocity = 1.0;
-            this.element.classList.add('active');
-            this.element.classList.remove('weak');
             this.updateVisuals();
             if (this.onChange) {
                 this.onChange(this.track, this.step, this.data, true);
@@ -311,11 +312,11 @@ export class Cell {
 
         if (sub === 1) {
             this.data.rollMode = false;
-            this.element.classList.remove('roll');
+            this.visual.classList.remove('roll');
         } else {
             this.data.rollMode = true;
             this.data.rollSubdivision = sub;
-            this.element.classList.add('roll');
+            this.visual.classList.add('roll');
         }
 
         this.updateVisuals();
@@ -334,48 +335,54 @@ export class Cell {
     updateVisuals() {
         if (!this.data.active) {
             this.element.style.filter = '';
-            this.element.style.transform = '';
-            this.element.style.setProperty('--base-scale-x', '1');
-            this.element.dataset.rollSubdivision = '';
-            this.element.classList.remove('octave-low', 'weak');
+            this.visual.style.transform = '';
+            this.visual.style.setProperty('--base-scale-x', '1');
+            this.visual.dataset.rollSubdivision = '';
+            this.element.classList.remove('active', 'roll', 'octave-low', 'weak');
+            this.visual.classList.remove('active', 'roll', 'octave-low', 'weak');
             this.pitchIndicator.style.display = 'none';
             return;
         }
 
-        if (this.data.velocity === 0.5) {
+        this.visual.classList.add('active');
+        this.element.classList.add('active');
+
+        // Velocity: weak class for low velocity
+        if (this.data.velocity < 1.0) {
             this.element.classList.add('weak');
+            this.visual.classList.add('weak');
         } else {
             this.element.classList.remove('weak');
+            this.visual.classList.remove('weak');
         }
 
-        // Apply dynamic brightness/scale
+        // Apply dynamic brightness based on pitch
         const effectivePitch = this.getEffectivePitch ? this.getEffectivePitch() : this.data.pitch;
         const normalizedForBrightness = Math.max(0, Math.min(1, (effectivePitch - PITCH_RANGE.min) / (PITCH_RANGE.max - PITCH_RANGE.min)));
         const brightness = BRIGHTNESS_RANGE.min + normalizedForBrightness * (BRIGHTNESS_RANGE.max - BRIGHTNESS_RANGE.min);
         this.element.style.filter = `brightness(${brightness})`;
 
-        // Scale based on duration (Only X-axis for length)
-        const durationNormalized = (this.data.duration - DURATION_RANGE.min) / (DURATION_RANGE.max - DURATION_RANGE.min);
-        const scale = SCALE_RANGE.min + durationNormalized * (SCALE_RANGE.max - SCALE_RANGE.min);
-        this.element.style.setProperty('--base-scale-x', scale);
-        this.element.style.transform = `scaleX(${scale})`;
+        // Scale based on duration (pixel-based: 1 step = 24px cell + 4px gap = 28px)
+        const targetWidth = (this.data.duration * 28) - 4;
+        const scale = Math.max(0.1, targetWidth / 24);
+        this.visual.style.setProperty('--base-scale-x', scale);
+        this.visual.style.transform = `scaleX(${scale})`;
 
-        // Store roll subdivision for CSS
+        // Store roll subdivision for CSS (on visual for ::after overlay)
         if (this.data.rollMode) {
-            this.element.dataset.rollSubdivision = this.data.rollSubdivision;
+            this.visual.dataset.rollSubdivision = this.data.rollSubdivision;
+            this.visual.classList.add('roll');
         } else {
-            this.element.dataset.rollSubdivision = '';
+            this.visual.dataset.rollSubdivision = '';
+            this.visual.classList.remove('roll');
         }
-
-        // Octave indicator
 
         // Pitch indicator (uses effective pitch to match actual playback)
         if (this.data.active) {
             const range = PITCH_RANGE.max - PITCH_RANGE.min;
             const rawNormalized = (effectivePitch - PITCH_RANGE.min) / range;
-            const normalized = Math.max(0, Math.min(1, rawNormalized)); // Clamp to bounds
-            // 0% at bottom, 100% at top. top 0 is top.
-            const topPercent = (1 - normalized) * 90; // Use 90% to avoid sticking to bottom
+            const normalized = Math.max(0, Math.min(1, rawNormalized));
+            const topPercent = (1 - normalized) * 90;
             this.pitchIndicator.style.top = `${5 + topPercent}%`;
             this.pitchIndicator.style.display = 'block';
         } else {
@@ -392,9 +399,9 @@ export class Cell {
     }
 
     triggerPulse() {
-        this.element.classList.remove('playing');
-        void this.element.offsetWidth; // Force reflow
-        this.element.classList.add('playing');
+        this.visual.classList.remove('playing');
+        void this.visual.offsetWidth; // Force reflow
+        this.visual.classList.add('playing');
     }
 
     getEffectivePitch() {
