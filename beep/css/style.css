@@ -2715,6 +2715,11 @@ body.playing::after {
     box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+/* Override: main CSS .mode-option:first-child { border-bottom: 1px solid #333 } */
+.mode-option:first-child {
+    border-bottom-color: var(--unicorn-border);
+}
+
 /* Chain Slots */
 .chain-slot {
     width: 40px;
@@ -2754,11 +2759,14 @@ body.playing::after {
 .chain-slot.filled {
     background: rgba(255, 255, 255, 0.8);
     border-style: solid;
+    border-color: var(--unicorn-border);
     color: var(--unicorn-text);
 }
 
-body.playing .chain-slot.filled {
+/* Override: main CSS #chain-container.mode-live .chain-slot { border: 1px solid #444 } */
+#chain-container.mode-live .chain-slot {
     border-color: var(--unicorn-border);
+    color: var(--unicorn-text);
 }
 
 /* BPM */
