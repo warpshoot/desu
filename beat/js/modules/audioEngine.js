@@ -368,15 +368,15 @@ export class AudioEngine {
         // Use velocity as-is (per-track calibrated values stored in cell data)
         const actualVelocity = velocity;
 
-        // Calculate number of triggers
-        const triggers = rollMode ? rollSubdivision : 1;
-
-        // Calculate time between triggers (within one 16th note)
+        // Calculate actual note duration in seconds based on BPM
+        // duration 1.0 = 1 full step (16th note)
         const stepDuration = Tone.Time('16n').toSeconds();
-        const triggerInterval = stepDuration / triggers;
+        const baseNoteDuration = duration * stepDuration;
 
-        // Shorten note duration for rolls to avoid overlap
-        const noteDuration = rollMode ? duration * 0.15 : duration;
+        // For rolls, subdivide the duration
+        const triggers = rollMode ? rollSubdivision : 1;
+        const triggerInterval = stepDuration / triggers;
+        const noteDuration = rollMode ? (baseNoteDuration / triggers) * 0.8 : baseNoteDuration;
 
         for (let i = 0; i < triggers; i++) {
             const triggerTime = time + (i * triggerInterval);
@@ -384,23 +384,17 @@ export class AudioEngine {
             if (trackConfig.type === 'membrane') {
                 const totalPitch = pitch + (totalOctaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch);
-                // Longer gate time lets the envelope release naturally without clipping
-                instrument.triggerAttackRelease(freq, noteDuration * 0.6, triggerTime, actualVelocity);
+                instrument.triggerAttackRelease(freq, noteDuration, triggerTime, actualVelocity);
             } else if (trackConfig.type === 'noise') {
-                // Snare: trigger with duration and time
-                const totalPitch = pitch + (totalOctaveShift * 12);
-                const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch);
-                instrument.triggerAttackRelease(noteDuration * 0.3, triggerTime, actualVelocity);
+                instrument.triggerAttackRelease(noteDuration, triggerTime, actualVelocity);
             } else if (trackConfig.type === 'metal') {
-                // Hi-hat (MetalSynth): (frequency, duration, time, velocity)
                 const totalPitch = pitch + (totalOctaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch).toFrequency();
-                instrument.triggerAttackRelease(freq, noteDuration * 0.3, triggerTime, actualVelocity);
+                instrument.triggerAttackRelease(freq, noteDuration, triggerTime, actualVelocity);
             } else if (trackConfig.type === 'fm') {
                 const totalPitch = pitch + (totalOctaveShift * 12);
                 const freq = Tone.Frequency(trackConfig.baseFreq).transpose(totalPitch).toFrequency();
-                // Longer gate for bass/lead prevents release clipping with drive
-                instrument.triggerAttackRelease(freq, noteDuration * 0.7, triggerTime, actualVelocity);
+                instrument.triggerAttackRelease(freq, noteDuration, triggerTime, actualVelocity);
             }
         }
     }
