@@ -15,16 +15,18 @@ export class Cell {
         this.getScale = getScale;
         this.getIsTwoFingerTouch = getIsTwoFingerTouch || (() => false);
 
-        // Inner visual element (receives scaleX; outer element stays fixed for hit area)
+        // Inner visual element (width-based duration; outer element stays fixed for hit area)
         this.visual = document.createElement('div');
         this.visual.className = 'cell-visual';
         this.element.appendChild(this.visual);
 
-        // Visual pitch indicator (child of cell, not cell-visual, so it is
-        // not inside the scaleX-transformed element and not in the flex container)
+        // Pitch indicator inside .cell-visual so it shares the same stacking context.
+        // Previously kept in .cell to avoid scaleX distortion; now that duration uses
+        // width (not transform), placing it here prevents adjacent active cells
+        // (z-index:5) from covering it when their visual extends rightward.
         this.pitchIndicator = document.createElement('div');
         this.pitchIndicator.className = 'pitch-indicator';
-        this.element.appendChild(this.pitchIndicator);
+        this.visual.appendChild(this.pitchIndicator);
 
         // Drag state
         this.isDragging = false;
