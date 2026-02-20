@@ -20,10 +20,11 @@ export class Cell {
         this.visual.className = 'cell-visual';
         this.element.appendChild(this.visual);
 
-        // Visual pitch indicator (inside visual so it scales with note)
+        // Visual pitch indicator (child of cell, not cell-visual, so it is
+        // not inside the scaleX-transformed element and not in the flex container)
         this.pitchIndicator = document.createElement('div');
         this.pitchIndicator.className = 'pitch-indicator';
-        this.visual.appendChild(this.pitchIndicator);
+        this.element.appendChild(this.pitchIndicator);
 
         // Drag state
         this.isDragging = false;
@@ -334,8 +335,8 @@ export class Cell {
 
     updateVisuals() {
         if (!this.data.active) {
+            this.visual.style.width = '';
             this.visual.style.transform = '';
-            this.visual.style.setProperty('--base-scale-x', '1');
             this.visual.dataset.rollSubdivision = '';
             this.element.classList.remove('active', 'weak');
             this.visual.classList.remove('active', 'roll', 'weak');
@@ -355,13 +356,13 @@ export class Cell {
             this.visual.classList.remove('weak');
         }
 
-        // Scale based on duration (pixel-based, adapts to actual cell width)
-        // step width = cell width + column-gap (2px in beep)
+        // Width-based sizing: extend .cell-visual to the right by setting its width
+        // directly instead of using scaleX transform. This avoids Safari rendering
+        // issues with transform + border-radius inside a backdrop-filter container.
         const cellWidth = this.element.offsetWidth || 28;
-        const targetWidth = (this.data.duration * (cellWidth + 2)) - 2;
-        const scale = Math.max(0.1, targetWidth / cellWidth);
-        this.visual.style.setProperty('--base-scale-x', scale);
-        this.visual.style.transform = `scaleX(${scale})`;
+        const targetWidth = Math.max(2, (this.data.duration * (cellWidth + 2)) - 2);
+        this.visual.style.width = `${targetWidth}px`;
+        this.visual.style.transform = '';
 
         // Store roll subdivision for CSS (on visual for ::after overlay)
         if (this.data.rollMode) {
