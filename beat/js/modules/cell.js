@@ -351,6 +351,7 @@ export class Cell {
         }
 
         this.visual.classList.add('active');
+        this.element.classList.add('active');
 
         // Velocity: weak class for low velocity
         if (this.data.velocity < 1.0) {
