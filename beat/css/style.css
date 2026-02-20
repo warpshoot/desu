@@ -355,6 +355,15 @@ body.playing #credit-btn:hover {
     cursor: pointer;
     position: relative;
     box-sizing: border-box;
+    z-index: 1;
+}
+
+.cell.active {
+    z-index: 5;
+}
+
+.cell:hover {
+    z-index: 100 !important;
 }
 
 .cell-visual {
@@ -400,11 +409,16 @@ body.playing #credit-btn:hover {
 }
 
 .cell:hover .cell-visual {
-    border-color: #666;
+    border-color: #fff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    z-index: 10;
 }
 
 .cell-visual.active {
-    border-color: rgba(255, 255, 255, 0.15);
+    background: #666;
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+    z-index: 5;
 }
 
 #note-indicator {
@@ -470,14 +484,9 @@ body.playing #credit-btn:hover {
     }
 }
 
-.cell-visual.active {
-    background: #666;
-    border-color: rgba(255, 255, 255, 0.15);
-    z-index: 10;
-}
-
 .cell-visual.active.weak {
     opacity: 0.7;
+    box-shadow: none;
 }
 
 /* Playhead indicator */
