@@ -369,21 +369,40 @@ body.playing #credit-btn {
 .cell {
     width: 24px;
     height: 72px;
-    background: #1a1a1a;
-    border: 1px solid #333;
     cursor: pointer;
-    transition: background 0.1s ease, border-color 0.1s ease, box-shadow 0.1s ease;
     position: relative;
     box-sizing: border-box;
+    z-index: 1;
+}
+
+.cell-visual {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    box-sizing: border-box;
+    transform-origin: left center;
+    transition: background 0.1s ease, border-color 0.1s ease, box-shadow 0.1s ease;
+    pointer-events: none;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
 }
 
+.cell.active {
+    z-index: 5;
+}
+
 .cell.adjusting {
+    z-index: 200 !important;
+}
+
+.cell.adjusting .cell-visual {
     transition: none !important;
     border-color: #fff !important;
-    z-index: 10;
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
 }
 
@@ -408,12 +427,12 @@ body.playing #credit-btn {
 
 @media (hover: hover) {
     .cell:hover {
+        z-index: 100 !important;
+    }
+
+    .cell:hover .cell-visual {
         border-color: #666;
     }
-}
-
-.cell.active {
-    border-color: rgba(255, 255, 255, 0.15);
 }
 
 #note-indicator {
@@ -434,7 +453,7 @@ body.playing #credit-btn {
 }
 
 /* Roll mode stripes */
-.cell.roll::after {
+.cell-visual.roll::after {
     content: '';
     position: absolute;
     top: 0;
@@ -450,7 +469,7 @@ body.playing #credit-btn {
 }
 
 /* Adjust stripe density based on roll subdivision */
-.cell.roll[data-roll-subdivision="2"]::after {
+.cell-visual.roll[data-roll-subdivision="2"]::after {
     background: repeating-linear-gradient(45deg,
             transparent,
             transparent 6px,
@@ -458,7 +477,7 @@ body.playing #credit-btn {
             rgba(255, 255, 255, 0.5) 12px);
 }
 
-.cell.roll[data-roll-subdivision="4"]::after {
+.cell-visual.roll[data-roll-subdivision="4"]::after {
     background: repeating-linear-gradient(45deg,
             transparent,
             transparent 4px,
@@ -466,7 +485,7 @@ body.playing #credit-btn {
             rgba(255, 255, 255, 0.5) 8px);
 }
 
-.cell.roll[data-roll-subdivision="8"]::after {
+.cell-visual.roll[data-roll-subdivision="8"]::after {
     background: repeating-linear-gradient(45deg,
             transparent,
             transparent 2px,
@@ -474,8 +493,9 @@ body.playing #credit-btn {
             rgba(255, 255, 255, 0.5) 4px);
 }
 
-.cell.playing {
+.cell-visual.playing {
     animation: pulse 0.15s ease-out;
+    z-index: 50;
 }
 
 @keyframes pulse {
@@ -492,20 +512,23 @@ body.playing #credit-btn {
     }
 }
 
-.cell.active {
+.cell-visual.active {
     background: #666;
     border-color: rgba(255, 255, 255, 0.2);
 }
 
-.cell.active.weak {
+.cell-visual.active.weak {
     opacity: 0.7 !important;
 }
 
 /* Playhead indicator */
 .cell.playhead {
+    z-index: 70;
+}
+
+.cell.playhead .cell-visual {
     border-color: #fff !important;
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
-    z-index: 5;
 }
 
 /* Tone Panel */
@@ -2439,19 +2462,19 @@ body.playing .chain-arrow {
     /* More gap for retro feel */
 }
 
-.cell {
+.cell-visual {
     background: #eef;
     border: 2px solid #8ac;
     /* Pop border */
     border-radius: 4px;
 }
 
-.cell.active {
+.cell-visual.active {
     border-color: #000 !important;
     box-shadow: inset 0 0 0 2px #fff;
 }
 
-/* Active cell background color is handled by JS logic but border/shadow here helps Pop feel */
+/* Active cell background color is handled by unicorn theme in index.html */
 
 /* Tone Panel Pop style */
 #tone-panel {

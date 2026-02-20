@@ -159,11 +159,14 @@
         .cell {
             width: 28px !important;
             height: 72px !important;
+            filter: none !important;
+            box-sizing: border-box !important;
+        }
+
+        .cell-visual {
             background: rgba(255, 255, 255, 0.6) !important;
             border: 2px solid #e1bee7 !important;
             border-radius: 12px !important;
-            filter: none !important;
-            box-sizing: border-box !important;
         }
 
         @media (min-width: 960px) {
@@ -185,13 +188,16 @@
 
         @media (hover: hover) {
             .cell:hover {
-                border-color: var(--unicorn-active) !important;
                 transform: scale(0.95);
+            }
+
+            .cell:hover .cell-visual {
+                border-color: var(--unicorn-active) !important;
             }
         }
 
         /* Grid ON State - Force Color */
-        .cell.active {
+        .cell-visual.active {
             background-color: var(--unicorn-active) !important;
             /* Force Pink */
             border: 2px solid #fff !important;
