@@ -155,8 +155,6 @@ export class Cell {
                     // Vertical Drag -> One-shot Activate & Pitch Adjust
                     // Activate immediately but DO NOT trigger global continuous paint
                     this.data.active = true;
-                    this.element.classList.add('active'); // Add active class to show color
-                    // Reset to default/current duration
                     this.data.pitch = 0; // Reset pitch to center
                     this.startValue = 0; // Start adjusting from 0
                     this.triggerPulse();
@@ -270,12 +268,9 @@ export class Cell {
         if (!this.data.active) {
             this.data.active = true;
             this.data.velocity = 1.0;
-            this.visual.classList.add('active');
-            this.visual.classList.remove('weak');
             this.updateVisuals();
         } else if (this.data.velocity === 1.0) {
             this.data.velocity = WEAK_VELOCITY[this.track] ?? 0.5;
-            this.visual.classList.add('weak');
             this.updateVisuals();
         } else {
             this.deactivate();
@@ -304,8 +299,6 @@ export class Cell {
         if (!this.data.active) {
             this.data.active = true;
             this.data.velocity = 1.0;
-            this.visual.classList.add('active');
-            this.visual.classList.remove('weak');
             this.updateVisuals();
             if (this.onChange) {
                 this.onChange(this.track, this.step, this.data, true);
@@ -351,6 +344,8 @@ export class Cell {
             this.pitchIndicator.style.display = 'none';
             return;
         }
+
+        this.visual.classList.add('active');
 
         // Velocity: weak class for low velocity
         if (this.data.velocity < 1.0) {
