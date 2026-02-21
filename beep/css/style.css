@@ -2557,7 +2557,7 @@ body.playing::after {
     background: #fff;
     border-right: 1px solid var(--unicorn-border);
     border-bottom: none;
-    color: var(--unicorn-text);
+    color: var(--unicorn-border);
     font-weight: bold;
     display: flex;
     align-items: center;
@@ -2581,11 +2581,11 @@ body.playing::after {
 
 /* Override main CSS: .pattern-pad.has-data { color: #888 } has higher specificity */
 .pattern-pad.has-data {
-    color: var(--unicorn-text);
+    color: var(--unicorn-border);
 }
 
 body.playing .pattern-pad.has-data {
-    color: var(--unicorn-text);
+    color: var(--unicorn-border);
 }
 
 .pattern-pad.queued {
