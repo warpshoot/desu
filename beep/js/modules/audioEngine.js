@@ -52,6 +52,9 @@ export class AudioEngine {
         this.onStepCallback = null;
         this.onStopCallback = null;
 
+        // Init guard (prevents double-init from rapid button taps)
+        this._initializing = false;
+
         // Recorder
         this.recorder = null;
         this.isRecording = false;
@@ -70,7 +73,8 @@ export class AudioEngine {
     }
 
     async init() {
-        if (this.initialized) return;
+        if (this.initialized || this._initializing) return;
+        this._initializing = true;
 
         await Tone.start();
 

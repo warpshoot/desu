@@ -2778,6 +2778,15 @@ body.playing .pattern-pad.has-data {
     color: var(--unicorn-text);
 }
 
+/* Override: main CSS body.playing .chain-slot { border-color: #444 } */
+body.playing .chain-slot {
+    border-color: var(--unicorn-border);
+}
+
+body.playing .chain-slot.filled {
+    border-color: var(--unicorn-border);
+}
+
 /* Override: main CSS #chain-container.mode-live .chain-slot { border: 1px solid #444 } */
 #chain-container.mode-live .chain-slot {
     border-color: var(--unicorn-border);
