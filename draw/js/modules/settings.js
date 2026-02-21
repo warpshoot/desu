@@ -3,7 +3,8 @@
 // ============================================
 
 import { setTTSEnabled, isTTSEnabled } from './tts.js';
-import { DEFAULT_SYSTEM_PROMPT } from './ai.js';
+import { DEFAULT_SYSTEM_PROMPT, clearHistory } from './ai.js';
+import { updatePauseBtn, clearMessages } from './chatPanel.js';
 
 const STORAGE_PREFIX = 'drawai_';
 
@@ -52,9 +53,11 @@ let settings = {
     apiKey: '',
     debounceMs: 30000,
     ttsEnabled: false,
-    aiEnabled: false,
+    aiEnabled: true,
+    autoMonitoring: true,
+    maxHistory: 10,
     systemPrompt: '',
-    displayName: 'トモ'
+    displayName: '👀'
 };
 
 /**
@@ -66,10 +69,13 @@ export function loadSettings() {
     settings.apiKey = localStorage.getItem(STORAGE_PREFIX + 'apikey_' + settings.provider) || '';
     settings.debounceMs = parseInt(localStorage.getItem(STORAGE_PREFIX + 'debounce') || '30000', 10);
     settings.ttsEnabled = localStorage.getItem(STORAGE_PREFIX + 'tts_enabled') === 'true';
-    settings.aiEnabled = localStorage.getItem(STORAGE_PREFIX + 'ai_enabled') === 'true'; // Default false
+    settings.aiEnabled = localStorage.getItem(STORAGE_PREFIX + 'ai_enabled') === 'true';
+    settings.autoMonitoring = localStorage.getItem(STORAGE_PREFIX + 'auto_monitoring') !== 'false';
+    settings.maxHistory = parseInt(localStorage.getItem(STORAGE_PREFIX + 'max_history') || '10', 10);
     settings.systemPrompt = localStorage.getItem(STORAGE_PREFIX + 'system_prompt') || DEFAULT_SYSTEM_PROMPT;
-    settings.displayName = localStorage.getItem(STORAGE_PREFIX + 'display_name') || 'トモ';
+    settings.displayName = localStorage.getItem(STORAGE_PREFIX + 'display_name') || '👀';
     setTTSEnabled(settings.ttsEnabled);
+    updateAIVisibility();
 }
 
 /**
@@ -82,6 +88,8 @@ function saveSettings() {
     localStorage.setItem(STORAGE_PREFIX + 'debounce', settings.debounceMs.toString());
     localStorage.setItem(STORAGE_PREFIX + 'tts_enabled', settings.ttsEnabled ? 'true' : 'false');
     localStorage.setItem(STORAGE_PREFIX + 'ai_enabled', settings.aiEnabled ? 'true' : 'false');
+    localStorage.setItem(STORAGE_PREFIX + 'auto_monitoring', settings.autoMonitoring ? 'true' : 'false');
+    localStorage.setItem(STORAGE_PREFIX + 'max_history', settings.maxHistory.toString());
     localStorage.setItem(STORAGE_PREFIX + 'system_prompt', settings.systemPrompt);
     localStorage.setItem(STORAGE_PREFIX + 'display_name', settings.displayName);
 }
@@ -92,7 +100,18 @@ function saveSettings() {
 export function toggleAIEnabled() {
     settings.aiEnabled = !settings.aiEnabled;
     saveSettings();
+    updateAIVisibility();
     return settings.aiEnabled;
+}
+
+/**
+ * Toggle automatic monitoring only
+ */
+export function toggleAutoMonitoring() {
+    settings.autoMonitoring = !settings.autoMonitoring;
+    saveSettings();
+    updateAIVisibility();
+    return settings.autoMonitoring;
 }
 
 /**
@@ -107,6 +126,29 @@ export function getSettings() {
  */
 export function getApiKeyFor(provider) {
     return localStorage.getItem(STORAGE_PREFIX + 'apikey_' + provider) || '';
+}
+
+/**
+ * Update UI visibility based on AI enabled state
+ */
+function updateAIVisibility() {
+    const aiPanel = document.getElementById('ai-chat-panel');
+    const aiSettingsFields = document.getElementById('ai-settings-fields');
+
+    // Sync chat panel UI based on autoMonitoring state
+    updatePauseBtn(settings.autoMonitoring);
+
+    if (settings.aiEnabled) {
+        if (aiPanel) {
+            aiPanel.classList.remove('hidden-system');
+        }
+        if (aiSettingsFields) aiSettingsFields.classList.remove('disabled');
+    } else {
+        if (aiPanel) {
+            aiPanel.classList.add('hidden-system');
+        }
+        if (aiSettingsFields) aiSettingsFields.classList.add('disabled');
+    }
 }
 
 /**
@@ -132,6 +174,8 @@ export function initSettingsUI() {
     const promptTextarea = document.getElementById('settings-prompt');
     const promptResetBtn = document.getElementById('settings-prompt-reset');
     const displayNameInput = document.getElementById('settings-display-name');
+    const historyLimitInput = document.getElementById('settings-history-limit');
+    const clearHistoryBtn = document.getElementById('settings-clear-history');
 
     if (!modal || !openBtn) return;
 
@@ -199,6 +243,7 @@ export function initSettingsUI() {
         aiToggle.addEventListener('change', () => {
             settings.aiEnabled = aiToggle.checked;
             saveSettings();
+            updateAIVisibility();
         });
     }
 
@@ -222,10 +267,32 @@ export function initSettingsUI() {
     // Display name
     if (displayNameInput) {
         displayNameInput.addEventListener('input', () => {
-            settings.displayName = displayNameInput.value.trim() || 'トモ';
+            settings.displayName = displayNameInput.value.trim() || '👀';
             const titleEl = document.getElementById('ai-chat-title');
             if (titleEl) titleEl.textContent = settings.displayName;
             saveSettings();
+        });
+    }
+
+    // History limit
+    if (historyLimitInput) {
+        historyLimitInput.addEventListener('input', () => {
+            const val = parseInt(historyLimitInput.value, 10);
+            if (!isNaN(val) && val >= 0) {
+                settings.maxHistory = val;
+                saveSettings();
+            }
+        });
+    }
+
+    // Clear history
+    if (clearHistoryBtn) {
+        clearHistoryBtn.addEventListener('click', () => {
+            if (confirm('これまでの会話履歴を消去して、AIの記憶とログをリセットしますか？')) {
+                clearHistory();
+                clearMessages();
+                alert('記憶とログをリセットしました');
+            }
         });
     }
 }
@@ -256,6 +323,11 @@ function populateSettingsUI() {
     const displayNameInput = document.getElementById('settings-display-name');
     if (displayNameInput) {
         displayNameInput.value = settings.displayName;
+    }
+
+    const historyLimitInput = document.getElementById('settings-history-limit');
+    if (historyLimitInput) {
+        historyLimitInput.value = settings.maxHistory;
     }
 }
 

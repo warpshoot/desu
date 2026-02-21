@@ -3,6 +3,10 @@ import { initCanvas } from './modules/canvas.js';
 import { initUI } from './modules/ui.js';
 import { saveInitialState } from './modules/history.js';
 import { loadLocalState, exportProject, importProject } from './modules/storage.js';
+import { initAI } from './modules/ai.js';
+import { initTTS } from './modules/tts.js';
+import { loadSettings, initSettingsUI, getSettings } from './modules/settings.js';
+import { initChatPanel, addMessage } from './modules/chatPanel.js';
 
 window.onerror = function (msg, url, line, col, error) {
     alert(`Error: ${msg}\nLine: ${line}:${col}\nURL: ${url}`);
@@ -12,12 +16,49 @@ window.onerror = function (msg, url, line, col, error) {
 // Entry Point
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        console.log('App starting...');
+        console.log('draw starting...');
         initDOM();
         await initCanvas();
         await loadLocalState(); // Validated: if fails, just continues
         await saveInitialState();
         initUI();
+
+        // AI Setup
+        loadSettings();
+        initTTS();
+        initSettingsUI();
+        initChatPanel();
+
+        // Apply display name
+        const titleEl = document.getElementById('ai-chat-title');
+        if (titleEl) titleEl.textContent = getSettings().displayName;
+
+        initAI({
+            onComment: (text) => {
+                addMessage(text);
+            },
+            onStatus: (status) => {
+                const statusEl = document.getElementById('ai-chat-status');
+                if (!statusEl) return;
+                switch (status) {
+                    case 'sending':
+                        statusEl.textContent = '...';
+                        statusEl.className = 'status-sending';
+                        break;
+                    case 'no-key':
+                        statusEl.textContent = 'APIキーを入力してください';
+                        statusEl.className = 'status-nokey';
+                        break;
+                    case 'error':
+                        statusEl.textContent = '!';
+                        statusEl.className = 'status-error';
+                        break;
+                    default:
+                        statusEl.textContent = '';
+                        statusEl.className = '';
+                }
+            }
+        });
 
         // Drag & Drop Import
         window.addEventListener('dragover', (e) => {
@@ -44,7 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        console.log('App initialized.');
+        console.log('draw initialized.');
     } catch (e) {
         console.error('Initialization error:', e);
         alert('Initialization error: ' + e.message);

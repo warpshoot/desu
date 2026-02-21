@@ -41,6 +41,7 @@ import {
     floodFillTone
 } from './tools/tone.js';
 import { exportProject, importProject } from './storage.js';
+import { onStrokeStart, onStrokeEnd } from './ai.js';
 
 
 // ============================================
@@ -145,9 +146,6 @@ export function initUI() {
     setupToolPanel();
     setupPointerEvents();
     setupColorPickers();
-    setupClearButtons();
-    setupZoomControls();
-    setupClearButtons();
     setupZoomControls();
     setupSaveUI();
     setupFileUI();
@@ -988,6 +986,9 @@ function setupPointerEvents() {
 async function handlePointerDown(e) {
     if (state.isSaveMode) return;
 
+    // Notify AI module: stroke starting
+    onStrokeStart();
+
     // Prevent default to avoid native touch actions
     e.preventDefault();
 
@@ -1393,6 +1394,9 @@ async function handlePointerUp(e) {
             state.drawingPointerId = null;
         }
 
+        // Notify AI module: stroke ended
+        onStrokeEnd();
+
         // Clean up
         state.isErasing = false;
         state.isPenDrawing = false;
@@ -1477,20 +1481,16 @@ function setupColorPickers() {
 // Clear Buttons
 // ============================================
 
-function setupClearButtons() {
-    const clearBtn = document.getElementById('clearBtn');
+async function clearAll() {
+    await saveState();
 
-    clearBtn.addEventListener('click', async () => {
-        await saveState();
+    // Clear all layers
+    for (const layer of layers) {
+        layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+        updateLayerThumbnail(layer);
+    }
 
-        // Clear all layers
-        for (const layer of layers) {
-            layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
-            updateLayerThumbnail(layer);
-        }
-
-        await saveState();
-    });
+    await saveState();
 }
 
 // ============================================
@@ -1702,8 +1702,9 @@ function setupSaveUI() {
 
             let targetRatio;
             if (state.selectedAspect === '1:1') targetRatio = 1;
-            else if (state.selectedAspect === '4:3') targetRatio = 4 / 3;
+            else if (state.selectedAspect === '4:5') targetRatio = 4 / 5;
             else if (state.selectedAspect === '16:9') targetRatio = 16 / 9;
+            else if (state.selectedAspect === '9:16') targetRatio = 9 / 16;
             else targetRatio = null;
 
             if (targetRatio) {
@@ -1966,7 +1967,7 @@ function setupKeyboardShortcuts() {
         if (e.key === 'Delete' || e.key === 'Backspace') {
             if (!e.target.matches('input, textarea')) {
                 e.preventDefault();
-                document.getElementById('clearBtn').click();
+                clearAll();
             }
         }
 

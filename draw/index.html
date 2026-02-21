@@ -81,6 +81,14 @@
     <!-- 右上ツールバー -->
     <div id="toolbar-right">
 
+        <!-- 設定ボタン (AI用) -->
+        <div class="tool-btn" id="settingsBtn">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97s-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.49.49 0 0 0 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1s.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.58 1.69-.98l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66z" />
+            </svg>
+            <div class="tool-tooltip tool-tooltip-bottom">AI設定</div>
+        </div>
 
         <div class="tool-btn" id="fileBtn">
             <img src="icons/file.svg" alt="File" style="width: 24px; height: 24px;">
@@ -93,14 +101,6 @@
                 <path d="M4 20 L20 20" />
             </svg>
             <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-2">保存 (⌘S)</div>
-        </div>
-
-        <div class="tool-btn" id="clearBtn">
-            <svg viewBox="0 0 24 24">
-                <path
-                    d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34" />
-            </svg>
-            <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-3">全消去 (Del)</div>
         </div>
     </div>
 
@@ -276,6 +276,111 @@
             <svg viewBox="0 0 24 24">
                 <path d="M6 6 L18 18 M6 18 L18 6" />
             </svg>
+        </div>
+    </div>
+
+    <div id="ai-chat-panel">
+        <div id="ai-chat-header" style="cursor: grab;">
+            <span id="ai-chat-title">Fano</span>
+            <div id="ai-chat-header-btns">
+                <span id="ai-chat-status"></span>
+                <button id="ai-pause-btn" title="監視モード切替">● LIVE</button>
+            </div>
+        </div>
+        <div id="ai-chat-messages">
+            <!-- AIコメントがここに吹き出し風で追加される -->
+        </div>
+        <div id="ai-chat-footer">
+            <button id="ai-chat-mic" title="音声入力">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"
+                        fill="currentColor" />
+                    <path
+                        d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"
+                        fill="currentColor" />
+                </svg>
+            </button>
+            <input type="text" id="ai-chat-input" placeholder="メッセージ..." autocomplete="off">
+            <button id="ai-chat-send">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor" />
+                </svg>
+            </button>
+        </div>
+        <div id="ai-chat-resizer"></div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- 設定モーダル -->
+    <!-- ============================================ -->
+    <div id="settings-modal" class="hidden">
+        <div id="settings-content">
+            <h3>Options</h3>
+
+            <div class="settings-group settings-toggle-group"
+                style="padding-bottom: 12px; border-bottom: 1px solid #eee; margin-bottom: 20px;">
+                <label for="settings-ai-enabled" style="font-weight: bold; color: #333;">AI監視モード (試験中)</label>
+                <input type="checkbox" id="settings-ai-enabled">
+            </div>
+
+            <div id="ai-settings-fields">
+
+                <div class="settings-group">
+                    <label for="settings-provider">API Provider</label>
+                    <select id="settings-provider">
+                        <option value="anthropic">Anthropic</option>
+                        <option value="google" selected>Google</option>
+                        <option value="openai">OpenAI</option>
+                    </select>
+                </div>
+
+                <div class="settings-group">
+                    <label for="settings-model">Model</label>
+                    <select id="settings-model">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div class="settings-group">
+                    <label for="settings-apikey">API Key</label>
+                    <input type="password" id="settings-apikey" placeholder="sk-... / AIza...">
+                </div>
+
+                <div class="settings-group">
+                    <label for="settings-debounce">送信間隔 (秒)</label>
+                    <input type="number" id="settings-debounce" min="1" max="30" value="3">
+                </div>
+
+                <div class="settings-group settings-toggle-group">
+                    <label for="settings-tts">読み上げ</label>
+                    <input type="checkbox" id="settings-tts">
+                </div>
+
+                <div class="settings-group">
+                    <label for="settings-history-limit">記憶保持数 (メッセージ数)</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="number" id="settings-history-limit" min="0" max="100" value="10"
+                            style="width: 60px;">
+                        <button id="settings-clear-history" class="settings-reset-btn"
+                            style="flex: 1;">これまでの会話を忘れる</button>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <label for="settings-display-name">表示名</label>
+                    <input type="text" id="settings-display-name" placeholder="👀" value="👀">
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-prompt-header">
+                        <label for="settings-prompt">キャラ設定</label>
+                        <button id="settings-prompt-reset" class="settings-reset-btn">リセット</button>
+                    </div>
+                    <textarea id="settings-prompt" rows="8" spellcheck="false"></textarea>
+                </div>
+            </div>
+
+            <button id="settings-close-btn">閉じる</button>
         </div>
     </div>
 
