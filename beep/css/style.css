@@ -2579,6 +2579,15 @@ body.playing::after {
     color: #fff;
 }
 
+/* Override main CSS: .pattern-pad.has-data { color: #888 } has higher specificity */
+.pattern-pad.has-data {
+    color: var(--unicorn-text);
+}
+
+body.playing .pattern-pad.has-data {
+    color: var(--unicorn-text);
+}
+
 .pattern-pad.queued {
     animation: blink-pink 0.4s ease-in-out infinite alternate;
 }
