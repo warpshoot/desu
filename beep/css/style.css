@@ -2556,7 +2556,8 @@ body.playing::after {
     flex: 1;
     background: #fff;
     border-right: 1px solid var(--unicorn-border);
-    color: var(--unicorn-border);
+    border-bottom: none;
+    color: var(--unicorn-text);
     font-weight: bold;
     display: flex;
     align-items: center;
@@ -2615,6 +2616,7 @@ body.playing::after {
 
 .pitch-indicator {
     z-index: 2;
+    border-color: var(--unicorn-border);
 }
 
 @media (min-width: 960px) {
