@@ -2556,6 +2556,7 @@ body.playing::after {
     flex: 1;
     background: #fff;
     border-right: 1px solid var(--unicorn-border);
+    border-bottom: none;
     color: var(--unicorn-border);
     font-weight: bold;
     display: flex;
@@ -2576,6 +2577,15 @@ body.playing::after {
 .pattern-pad.active {
     background: var(--unicorn-active);
     color: #fff;
+}
+
+/* Override main CSS: .pattern-pad.has-data { color: #888 } has higher specificity */
+.pattern-pad.has-data {
+    color: var(--unicorn-border);
+}
+
+body.playing .pattern-pad.has-data {
+    color: var(--unicorn-border);
 }
 
 .pattern-pad.queued {
@@ -2615,6 +2625,7 @@ body.playing::after {
 
 .pitch-indicator {
     z-index: 2;
+    border-color: var(--unicorn-border);
 }
 
 @media (min-width: 960px) {
