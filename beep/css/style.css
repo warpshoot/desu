@@ -2674,7 +2674,7 @@ body.playing::after {
     border-radius: 99px;
     background: #fff;
     box-shadow: 0 1px 4px var(--unicorn-shadow);
-    overflow: hidden;
+    overflow: visible;
     gap: 0;
     height: 40px;
     width: 40px;
@@ -2709,9 +2709,14 @@ body.playing::after {
     opacity: 0.8;
 }
 
-/* Single 1px divider between the two buttons */
+/* Each button owns its outer corners to avoid relying on overflow:hidden clipping */
 .mode-option:first-child {
+    border-radius: 99px 99px 0 0;
     border-bottom: 1px solid var(--unicorn-border);
+}
+
+.mode-option:last-child {
+    border-radius: 0 0 99px 99px;
 }
 
 .mode-option.active {
