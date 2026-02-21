@@ -52,6 +52,9 @@ export class AudioEngine {
         this.onStepCallback = null;
         this.onStopCallback = null;
 
+        // Deduplicates concurrent init() calls (e.g. rapid double-tap on mobile)
+        this._initPromise = null;
+
         // Recorder
         this.recorder = null;
         this.isRecording = false;
@@ -71,7 +74,12 @@ export class AudioEngine {
 
     async init() {
         if (this.initialized) return;
+        if (this._initPromise) return this._initPromise;
+        this._initPromise = this._performInit();
+        return this._initPromise;
+    }
 
+    async _performInit() {
         await Tone.start();
 
         // Apply cached master volume if any
