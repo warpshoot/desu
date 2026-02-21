@@ -2694,7 +2694,7 @@ body.playing::after {
     color: var(--unicorn-text);
     background: #fff;
     border: 2px solid var(--unicorn-border);
-    box-shadow: 1px 1px 0 var(--unicorn-shadow);
+    box-shadow: 0 1px 3px var(--unicorn-shadow);
     cursor: pointer;
     transition: all 0.1s;
     display: flex;
@@ -2708,16 +2708,17 @@ body.playing::after {
     box-shadow: none;
 }
 
+/* Override: main CSS .mode-option:first-child { border-bottom: 1px solid #333 } */
+/* Must come BEFORE .mode-option.active so active state's border-color wins */
+.mode-option:first-child {
+    border-bottom-color: var(--unicorn-border);
+}
+
 .mode-option.active {
     background: var(--unicorn-active);
     color: #fff;
     border-color: #fff;
     box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-/* Override: main CSS .mode-option:first-child { border-bottom: 1px solid #333 } */
-.mode-option:first-child {
-    border-bottom-color: var(--unicorn-border);
 }
 
 /* Chain Slots */
