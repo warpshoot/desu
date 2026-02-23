@@ -24,7 +24,6 @@ export async function saveState() {
     }
 
     state.undoStack.push(snapshot);
-    // console.log('[DEBUG] saveState() called, undoStack.length now:', state.undoStack.length);
     saveLocalState();
 
     // Limit history size
@@ -75,9 +74,7 @@ async function createSnapshot() {
  * Undo last action
  */
 export async function undo() {
-    console.log('[DEBUG] undo() called, undoStack.length:', state.undoStack.length);
     if (state.undoStack.length === 0) {
-        console.log('[DEBUG] undo() aborted, undoStack.length is 0');
         return;
     }
 

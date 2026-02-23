@@ -1,4 +1,4 @@
-import { state, getActiveLayerCtx } from '../state.js';
+﻿import { state, getActiveLayerCtx } from '../state.js';
 import { getBounds, isPointInPolygon } from '../utils.js';
 
 // ============================================
@@ -293,10 +293,8 @@ export function fillTone(points) {
 // ============================================
 
 export function floodFillTone(startX, startY) {
-    console.log('[DEBUG] floodFillTone called with', startX, startY);
     const ctx = getActiveLayerCtx();
     if (!ctx) {
-        console.log('[DEBUG] No context, returning');
         return;
     }
 
@@ -304,10 +302,8 @@ export function floodFillTone(startX, startY) {
     const w = canvas.width;
     const h = canvas.height;
 
-    console.log('[DEBUG] Canvas size:', w, h);
 
     if (startX < 0 || startX >= w || startY < 0 || startY >= h) {
-        console.log('[DEBUG] Start point out of bounds, returning');
         return;
     }
 
@@ -319,7 +315,6 @@ export function floodFillTone(startX, startY) {
     const targetB = data[idx + 2];
     const targetA = data[idx + 3];
 
-    console.log('[DEBUG] Target color:', targetR, targetG, targetB, targetA);
 
     const matchTarget = (i) => data[i] === targetR && data[i + 1] === targetG && data[i + 2] === targetB && data[i + 3] === targetA;
 
@@ -381,11 +376,8 @@ export function floodFillTone(startX, startY) {
         }
     }
 
-    console.log('[DEBUG] Flood fill complete, iterations:', iterations);
-    console.log('[DEBUG] Region bounds:', minX, minY, maxX, maxY);
 
     if (minX > maxX) {
-        console.log('[DEBUG] Invalid region, returning');
         return;
     }
 

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceSynth</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="top-bar">
+            <div class="logo">Voice<span>Synth</span></div>
+            <div class="top-actions">
+                <button class="btn-sm" id="exportBtn">💾 Export</button>
+                <button class="btn-sm" id="importBtn">📂 Import</button>
+                <input type="file" id="fileInput" accept=".json" style="display:none">
+            </div>
+        </header>
+
+        <!-- Text Input -->
+        <section class="text-section">
+            <textarea id="textInput" placeholder="テキストを入力... (日本語ひらがな/カタカナ対応)">こんにちは</textarea>
+            <div class="play-controls">
+                <button class="btn-play" id="playBtn">▶ 再生</button>
+                <button class="btn-stop" id="stopBtn">■ 停止</button>
+            </div>
+        </section>
+
+        <!-- Preset Bar -->
+        <section class="preset-bar">
+            <button class="preset-btn active" data-preset="normal">👤 Normal</button>
+            <button class="preset-btn" data-preset="robot">🤖 Robot</button>
+            <button class="preset-btn" data-preset="demon">👹 Demon</button>
+            <button class="preset-btn" data-preset="whisper">🌬 Whisper</button>
+            <button class="preset-btn" data-preset="chipmunk">🐿 Chipmunk</button>
+        </section>
+
+        <!-- Waveform Visualizer -->
+        <section class="viz-section">
+            <canvas id="vizCanvas" width="760" height="100"></canvas>
+        </section>
+
+        <!-- Parameter Controls -->
+        <section class="params-panel">
+            <h3 class="section-title">Voice Parameters</h3>
+            <div class="params-grid">
+                <div class="param-group">
+                    <label>Pitch <span class="param-val" id="pitchVal">140</span> Hz</label>
+                    <input type="range" id="pitch" min="40" max="800" step="1" value="140">
+                </div>
+                <div class="param-group">
+                    <label>Rate <span class="param-val" id="rateVal">1.00</span>x</label>
+                    <input type="range" id="rate" min="0.2" max="3" step="0.05" value="1">
+                </div>
+                <div class="param-group">
+                    <label>Formant <span class="param-val" id="formantVal">0</span> st</label>
+                    <input type="range" id="formant" min="-12" max="12" step="0.5" value="0">
+                </div>
+                <div class="param-group">
+                    <label>Noise <span class="param-val" id="noiseVal">10</span>%</label>
+                    <input type="range" id="noise" min="0" max="100" step="1" value="10">
+                </div>
+                <div class="param-group">
+                    <label>Vibrato <span class="param-val" id="vibratoVal">30</span>%</label>
+                    <input type="range" id="vibrato" min="0" max="100" step="1" value="30">
+                </div>
+                <div class="param-group">
+                    <label>Distortion <span class="param-val" id="distortionVal">0</span>%</label>
+                    <input type="range" id="distortion" min="0" max="100" step="1" value="0">
+                </div>
+                <div class="param-group">
+                    <label>BitCrush <span class="param-val" id="bitcrushVal">16</span> bit</label>
+                    <input type="range" id="bitcrush" min="1" max="16" step="1" value="16">
+                </div>
+                <div class="param-group">
+                    <label>Reverb <span class="param-val" id="reverbVal">10</span>%</label>
+                    <input type="range" id="reverb" min="0" max="100" step="1" value="10">
+                </div>
+                <div class="param-group">
+                    <label>Volume <span class="param-val" id="volumeVal">80</span>%</label>
+                    <input type="range" id="volume" min="0" max="100" step="1" value="80">
+                </div>
+                <div class="param-group">
+                    <label>Wave <span class="param-val" id="waveVal">sine</span></label>
+                    <select id="wave">
+                        <option value="sine">Sine</option>
+                        <option value="triangle">Triangle</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="square">Square</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="engine.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>

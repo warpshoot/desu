@@ -26,6 +26,13 @@ export function initChatPanel() {
 
     if (!panelEl || !headerEl) return;
 
+    // Set initial display name from settings
+    const titleEl = document.getElementById('ai-chat-title');
+    if (titleEl) {
+        const { displayName } = getSettings();
+        titleEl.textContent = displayName || '👀';
+    }
+
     // Init Speech Recognition
     initSpeechRecognition();
 
@@ -118,6 +125,42 @@ export function initChatPanel() {
     panelEl.addEventListener('pointerdown', (e) => {
         e.stopPropagation();
     });
+
+    // Resizing logic
+    const resizerEl = document.getElementById('ai-chat-resizer');
+    let isResizing = false;
+    let resStartX, resStartY, initialWidth, initialHeight;
+
+    if (resizerEl) {
+        resizerEl.addEventListener('pointerdown', (e) => {
+            isResizing = true;
+            resStartX = e.clientX;
+            resStartY = e.clientY;
+            const rect = panelEl.getBoundingClientRect();
+            initialWidth = rect.width;
+            initialHeight = rect.height;
+            resizerEl.setPointerCapture(e.pointerId);
+            e.stopPropagation();
+            e.preventDefault();
+        });
+
+        resizerEl.addEventListener('pointermove', (e) => {
+            if (!isResizing) return;
+            const dx = e.clientX - resStartX;
+            const dy = e.clientY - resStartY;
+            const newWidth = Math.max(150, initialWidth + dx);
+            const newHeight = Math.max(150, initialHeight + dy);
+            panelEl.style.width = newWidth + 'px';
+            panelEl.style.height = newHeight + 'px';
+        });
+
+        resizerEl.addEventListener('pointerup', () => {
+            if (isResizing) {
+                isResizing = false;
+                savePos();
+            }
+        });
+    }
 }
 
 // Message Input
@@ -127,7 +170,7 @@ async function handleSend() {
     const isManualLook = !text;
 
     if (isManualLook) {
-        text = '今の絵を見てコメントして'; // Default prompt for empty send
+        text = '今�E絵を見てコメントして'; // Default prompt for empty send
     }
 
     // Clear input and add user bubble
@@ -188,7 +231,7 @@ export function updatePauseBtn(enabled) {
     if (!pauseBtn) return;
     const statusEl = document.getElementById('ai-chat-status');
     if (enabled) {
-        pauseBtn.textContent = '● LIVE';
+        pauseBtn.textContent = '◁ELIVE';
         pauseBtn.style.color = '#4cd137';
         pauseBtn.classList.add('active');
         panelEl.classList.add('monitoring');

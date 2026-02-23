@@ -46,8 +46,8 @@ const CORE_INSTRUCTIONS = `
 - ユーザーが描いた絵や、送られてきたテキストメッセージに対して、指定された人格として反応してください
 - 反応は【絶対に1〜2文】の短文に限定してください。3文以上は禁止です。
 - 文字での説明や解説ではなく、ボソッとした「つぶやき」を意識してください
-- 【重要】ユーザーからのチャット（テキスト入力）がある場合は、キャンバスの変化に関わらず必ず「会話」として応答してください。
-- 逆に、自動的な監視（[画像を送信]のみの場合）で、空白キャンバスや変化が少ないときは「PASS」とだけ返してください
+- 【重要】ユーザーからのチャット（テキスト入力や送信ボタン押下）がある場合は、キャンバスの変化に関わらず必ず「会話」として応答してください。
+- 逆に、システムによる「自動的な監視」において、空白キャンバスや変化が極端に少ないときは、無理に反応せず「PASS」とだけ返してください（これは画面には表示されません）
 - 絵文字や記号（！や？）の多用は避けてください
 - キャンバス上に手書きの文字があれば、それを最優先で読み取って応答してください`;
 
@@ -183,11 +183,16 @@ async function sendMessage(userText, includeSnapshot) {
         const imageBase64 = includeSnapshot ? captureSnapshot() : null;
         const response = await callAPI(provider, model, apiKey, imageBase64, userText);
 
-        // 手動メッセージ、または「PASS」以外の返答があれば処理
-        const isManual = userText !== '[画像を送信]';
-        // response.trim() が 'PASS' でも、手動チャットならそのまま表示する（AIが言葉で返せなかった場合も含む）
-        if (response && (response.trim() !== 'PASS' || isManual)) {
+        // 何か返答があれば処理
+        if (response && response.trim()) {
             const finalResponse = response.trim();
+
+            // 「PASS」はノイズなので無視（自動監視時にAIが沈黙を選んだ場合）
+            if (finalResponse.toUpperCase() === 'PASS') {
+                onStatusChange('idle');
+                isSending = false;
+                return;
+            }
 
             // Add to history
             conversationHistory.push({ role: 'user', content: userText });
@@ -302,13 +307,17 @@ function buildAnthropicMessages(imageBase64, userText) {
 
     let promptText = userText;
     const isAutoPoll = userText === '[画像を送信]';
-    if (imageBase64 && isAutoPoll) {
-        promptText = '描いてる途中の絵を見てコメントして。';
+    if (imageBase64) {
+        if (isAutoPoll) {
+            promptText = '描いてる途中の絵を見て。もし大きな変化や面白い点があれば短くコメントして。特になければ「PASS」とだけ返して。';
+        } else {
+            promptText = '今の絵を見て！必ず何か一つ、短くリアクションして。';
+        }
     }
 
     const lastAiMsg = conversationHistory.slice().reverse().find(c => c.role === 'assistant');
     if (lastAiMsg && isAutoPoll) {
-        promptText += `\n(直前のあなたのコメント: "${lastAiMsg.content}")\n※これと似た内容や表現は絶対に避けてください。語彙を変えるか、思いつかなければ「PASS」してください。`;
+        promptText += `\n(直前のあなたのコメント: "${lastAiMsg.content}")\n※これと似た内容や表現は避けて、自然なバリエーションで反応してください。`;
     }
 
     content.push({ type: 'text', text: promptText });
@@ -374,13 +383,17 @@ function buildGeminiContents(imageBase64, userText) {
 
     let promptText = userText;
     const isAutoPoll = userText === '[画像を送信]';
-    if (imageBase64 && isAutoPoll) {
-        promptText = '描いてる途中の絵を見てコメントして。';
+    if (imageBase64) {
+        if (isAutoPoll) {
+            promptText = '描いてる途中の絵を見て。もし大きな変化や面白い点があれば短くコメントして。特になければ「PASS」とだけ返して。';
+        } else {
+            promptText = '今の絵を見て！必ず何か一つ、短くリアクションして。';
+        }
     }
 
     const lastAiMsg = conversationHistory.slice().reverse().find(c => c.role === 'assistant');
     if (lastAiMsg && isAutoPoll) {
-        promptText += `\n(直前のあなたのコメント: "${lastAiMsg.content}")\n※これと似た内容や表現は絶対に避けてください。語彙を変えるか、思いつかなければ「PASS」してください。`;
+        promptText += `\n(直前のあなたのコメント: "${lastAiMsg.content}")\n※これと似た内容や表現は避けて、自然なバリエーションで反応してください。`;
     }
 
     parts.push({ text: promptText });
@@ -448,13 +461,17 @@ async function buildOpenAIMessages(imageBase64, userText) {
 
     let promptText = userText;
     const isAutoPoll = userText === '[画像を送信]';
-    if (imageBase64 && isAutoPoll) {
-        promptText = '描いてる途中の絵を見てコメントして。';
+    if (imageBase64) {
+        if (isAutoPoll) {
+            promptText = '描いてる途中の絵を見て。もし大きな変化や面白い点があれば短くコメントして。特になければ「PASS」とだけ返して。';
+        } else {
+            promptText = '今の絵を見て！必ず何か一つ、短くリアクションして。';
+        }
     }
 
     const lastAiMsg = conversationHistory.slice().reverse().find(c => c.role === 'assistant');
     if (lastAiMsg && isAutoPoll) {
-        promptText += `\n(直前のあなたのコメント: "${lastAiMsg.content}")\n※これと似た内容や表現は絶対に避けてください。語彙を変えるか、思いつかなければ「PASS」してください。`;
+        promptText += `\n(直前のあなたのコメント: "${lastAiMsg.content}")\n※これと似た内容や表現は避けて、自然なバリエーションで反応してください。`;
     }
 
     content.push({ type: 'text', text: promptText });

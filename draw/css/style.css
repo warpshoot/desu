@@ -1145,7 +1145,6 @@ body.help-mode #tool-panel {
     flex-direction: column;
     z-index: 350;
     overflow: hidden;
-    resize: both;
     pointer-events: auto;
     transition: border-color 0.5s;
     box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.1);
@@ -1352,8 +1351,9 @@ body.help-mode #tool-panel {
 /* AI Footer & Input */
 #ai-chat-footer {
     display: flex;
-    border-top: 1px solid #000;
-    padding: 4px;
+    border: 1px solid #000;
+    padding: 2px 4px;
+    margin: 4px 12px 12px 12px;
     background: #fff;
     flex-shrink: 0;
 }
@@ -1368,6 +1368,7 @@ body.help-mode #tool-panel {
     align-items: center;
     justify-content: center;
     transition: color 0.1s;
+    flex-shrink: 0;
 }
 
 #ai-chat-mic:hover {
@@ -1403,6 +1404,7 @@ body.help-mode #tool-panel {
     font-size: 13px;
     outline: none;
     background: transparent;
+    min-width: 0;
 }
 
 #ai-chat-send {
@@ -1414,6 +1416,7 @@ body.help-mode #tool-panel {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 #ai-chat-send:hover {
@@ -1426,16 +1429,26 @@ body.help-mode #tool-panel {
     filter: grayscale(1);
 }
 
-/* Resizer handle visual */
 #ai-chat-resizer {
     position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 10px;
-    height: 10px;
+    bottom: 0;
+    right: 0;
+    width: 24px;
+    height: 24px;
+    cursor: nwse-resize;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+#ai-chat-resizer::after {
+    content: '';
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
     border-right: 2px solid #666;
     border-bottom: 2px solid #666;
-    pointer-events: none;
 }
 
 /* Resizable handle fix for border radius */

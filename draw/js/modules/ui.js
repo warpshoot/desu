@@ -1,4 +1,4 @@
-import {
+﻿import {
     state,
     layers,
     lassoCanvas,
@@ -168,7 +168,6 @@ function setupFileUI() {
     const importBtn = document.getElementById('importProjectBtn');
     const fileInput = document.getElementById('fileInput');
 
-    console.log('[DEBUG] setupFileUI', { fileBtn, menu, newBtn, exportBtn, importBtn, fileInput });
 
     if (!fileBtn || !menu) return;
 
@@ -235,11 +234,9 @@ function setupFileUI() {
     // Export click
     if (exportBtn) {
         exportBtn.addEventListener('click', async () => {
-            console.log('[DEBUG] exportBtn clicked');
             hideAllMenus();
             try {
                 const success = await exportProject();
-                console.log('[DEBUG] exportProject result:', success);
 
             } catch (e) {
                 console.error('[DEBUG] exportProject error:', e);
@@ -551,11 +548,9 @@ function updateDrawToolIcon() {
         default: selector = '.tool-pen'; break;
     }
 
-    console.log('[DEBUG] updateDrawToolIcon:', state.currentTool, selector);
 
     const activeIcon = btn.querySelector(selector);
     if (activeIcon) {
-        console.log('[DEBUG] Active Icon Src:', activeIcon.src);
         activeIcon.style.display = 'block';
         activeIcon.classList.add('active');
     }
@@ -1097,12 +1092,9 @@ async function handlePointerDown(e) {
                 startLasso(e.clientX, e.clientY);
             } else if (state.currentTool === 'pen') {
                 state.drawingPending = true;
-                console.log('[DEBUG] Before saveState, undoStack.length:', state.undoStack.length);
                 await saveState();
-                console.log('[DEBUG] After saveState, undoStack.length:', state.undoStack.length);
                 if (!state.drawingPending) {
                     state.undoStack.pop(); // Revert save if aborted
-                    console.log('[DEBUG] Drawing aborted, popped from undoStack');
                     return;
                 }
                 state.drawingPending = false;
@@ -1275,13 +1267,11 @@ async function handlePointerUp(e) {
 
         // Check for gestures (Undo/Redo)
         // Trigger if: short tap, no significant movement/interaction
-        console.log('[DEBUG] Undo check:', { duration, didInteract: state.didInteract, strokeMade: state.strokeMade, maxFingers: state.maxFingers, wasPanning: state.wasPanning, wasPinching: state.wasPinching, undoStackLength: state.undoStack.length });
 
         let undoCalled = false;
         if (duration < 400 && !state.didInteract && !state.strokeMade && !state.wasPanning && !state.wasPinching) {
             // Note: maxFingers tracks maximum fingers seen during this touch session
             if (state.maxFingers === 2) {
-                console.log('[DEBUG] Calling undo()');
                 undoCallCount++;
                 await undo();
                 updateAllThumbnails();
@@ -1305,29 +1295,17 @@ async function handlePointerUp(e) {
         updateDebugDisplay();
 
         // Handle Flood Fill Tap/Click
-        console.log('[DEBUG] Fill check:', {
-            duration,
-            didInteract: state.didInteract,
-            strokeMade: state.strokeMade,
-            wasPanning: state.wasPanning,
-            wasPinching: state.wasPinching,
-            maxFingers: state.maxFingers,
-            currentTool: state.currentTool,
-            isEraserActive: state.isEraserActive
-        });
 
         if (duration < 300 && !state.didInteract && !state.strokeMade && !state.wasPanning && !state.wasPinching && state.maxFingers === 1) {
             const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
             // Fill tool tap
             if (state.currentTool === 'fill' && !state.isEraserActive) {
-                console.log('[DEBUG] Triggering fill at', canvasPoint);
                 await saveState();
                 floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), hexToRgba(state.color));
                 updateLayerThumbnail(getActiveLayer());
             } else if (state.currentTool === 'tone' && !state.isEraserActive) {
                 // Tone fill tap
-                console.log('[DEBUG] Triggering tone fill at', canvasPoint);
                 await saveState();
                 floodFillTone(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
                 updateLayerThumbnail(getActiveLayer());
@@ -1344,33 +1322,24 @@ async function handlePointerUp(e) {
                 // Check if this was a click (minimal movement) rather than a drag
                 const wasClick = pointer && pointer.totalMove < 5;
 
-                console.log('[DEBUG] Lasso finished:', {
-                    pointsLength: points ? points.length : 0,
-                    wasClick,
-                    totalMove: pointer ? pointer.totalMove : 'N/A'
-                });
 
                 if (wasClick && duration < 300 && !state.wasPanning && !state.wasPinching) {
                     // Click detected - trigger flood fill
                     const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
                     if (state.currentTool === 'fill' && !state.isEraserActive) {
-                        console.log('[DEBUG] Click triggering fill at', canvasPoint);
                         await saveState();
                         floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), [0, 0, 0, 255]);
                         updateLayerThumbnail(getActiveLayer());
                     } else if (state.currentTool === 'tone' && !state.isEraserActive) {
-                        console.log('[DEBUG] Click triggering tone fill at', canvasPoint);
                         await saveState();
                         floodFillTone(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
                         updateLayerThumbnail(getActiveLayer());
                     } else if (state.currentTool === 'sketch' && !state.isEraserActive) {
-                        console.log('[DEBUG] Click triggering sketch fill at', canvasPoint);
                         await saveState();
                         floodFillSketch(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
                         updateLayerThumbnail(getActiveLayer());
                     } else if (state.isEraserActive && state.currentEraser === 'lasso') {
-                        console.log('[DEBUG] Click triggering eraser fill at', canvasPoint);
                         await saveState();
                         floodFillTransparent(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
                         updateLayerThumbnail(getActiveLayer());

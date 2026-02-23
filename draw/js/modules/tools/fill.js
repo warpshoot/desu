@@ -1,4 +1,4 @@
-import {
+﻿import {
     state,
     lassoCanvas,
     lassoCtx,
@@ -251,10 +251,8 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
 
 // Sketch flood fill (semi-transparent grey with multiply blend)
 export function floodFillSketch(startX, startY) {
-    console.log('[DEBUG] floodFillSketch called with', startX, startY);
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) {
-        console.log('[DEBUG] No context, returning');
         return;
     }
 
@@ -313,7 +311,6 @@ export function floodFillSketch(startX, startY) {
         }
     }
 
-    console.log('[DEBUG] Flood fill complete, creating result');
 
     // Create a temporary canvas for the final result
     const resultCanvas = document.createElement('canvas');
@@ -355,7 +352,6 @@ export function floodFillSketch(startX, startY) {
     ctx.drawImage(resultCanvas, 0, 0);
     ctx.restore();
 
-    console.log('[DEBUG] floodFillSketch complete');
 }
 
 export function fillPolygon(points) {

@@ -1,4 +1,4 @@
-import { initDOM } from './modules/state.js';
+﻿import { initDOM } from './modules/state.js';
 import { initCanvas } from './modules/canvas.js';
 import { initUI } from './modules/ui.js';
 import { saveInitialState } from './modules/history.js';
@@ -16,7 +16,6 @@ window.onerror = function (msg, url, line, col, error) {
 // Entry Point
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        console.log('draw starting...');
         initDOM();
         await initCanvas();
         await loadLocalState(); // Validated: if fails, just continues
@@ -85,7 +84,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        console.log('draw initialized.');
     } catch (e) {
         console.error('Initialization error:', e);
         alert('Initialization error: ' + e.message);

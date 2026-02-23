@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voice Pad</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #08080b;
+      --surface: #111118;
+      --surface2: #1c1c26;
+      --border: #2a2a38;
+      --text: #e0e0ec;
+      --text-dim: #5a5a6e;
+      --text-mid: #8a8a9e;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Zen Kaku Gothic New', sans-serif;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .app {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 32px 16px 100px;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .top-bar .logo {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .top-bar .logo span {
+      color: var(--text);
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-sm:hover {
+      border-color: var(--text-dim);
+      color: var(--text);
+    }
+
+    .btn-sm:active {
+      transform: scale(0.96);
+    }
+
+    /* Global voice controls */
+    .global-controls {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 24px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      flex-wrap: wrap;
+    }
+
+    .g-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .g-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      min-width: 36px;
+    }
+
+    .g-control input[type="range"] {
+      -webkit-appearance: none;
+      width: 90px;
+      height: 3px;
+      background: var(--surface2);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    .g-control input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text-mid);
+      cursor: pointer;
+    }
+
+    .g-val {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      width: 32px;
+      text-align: right;
+    }
+
+    .g-control select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 11px;
+      max-width: 200px;
+    }
+
+    .voice-wrap {
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .voice-wrap select {
+      width: 100%;
+    }
+
+    /* Pad Grid */
+    .pad-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 560px) {
+      .pad-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 400px) {
+      .pad-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* Pad */
+    .pad {
+      aspect-ratio: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.1s;
+      position: relative;
+      overflow: hidden;
+      padding: 8px;
+    }
+
+    .pad:active,
+    .pad.active {
+      transform: scale(0.95);
+      border-color: var(--pad-color, #ff6b4a);
+      box-shadow: 0 0 20px rgba(var(--pad-color-rgb, 255, 107, 74), 0.25);
+    }
+
+    .pad.active {
+      background: rgba(var(--pad-color-rgb, 255, 107, 74), 0.08);
+    }
+
+    .pad .pad-text {
+      font-size: 13px;
+      font-weight: 500;
+      text-align: center;
+      line-height: 1.3;
+      color: var(--text);
+      word-break: break-all;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .pad .pad-text.empty {
+      color: var(--text-dim);
+      font-size: 11px;
+      font-style: italic;
+    }
+
+    .pad .pad-num {
+      position: absolute;
+      top: 6px;
+      left: 8px;
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--text-dim);
+      opacity: 0.5;
+    }
+
+    .pad .pad-edit-btn {
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s;
+      padding: 4px;
+    }
+
+    .pad:hover .pad-edit-btn {
+      opacity: 1;
+    }
+
+    .pad .pad-color-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--pad-color, #ff6b4a);
+      position: absolute;
+      bottom: 8px;
+      opacity: 0.6;
+    }
+
+    /* Edit Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .modal h3 {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    .modal-field {
+      margin-bottom: 14px;
+    }
+
+    .modal-field label {
+      display: block;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .modal-field textarea,
+    .modal-field input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      resize: none;
+    }
+
+    .modal-field textarea {
+      height: 80px;
+    }
+
+    .modal-field textarea:focus,
+    .modal-field input:focus {
+      outline: none;
+      border-color: var(--text-dim);
+    }
+
+    .modal-field .color-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .color-opt {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .color-opt:hover {
+      transform: scale(1.15);
+    }
+
+    .color-opt.selected {
+      border-color: var(--text);
+      transform: scale(1.15);
+    }
+
+    .modal-field .override-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-field .override-row input[type="range"] {
+      -webkit-appearance: none;
+      flex: 1;
+      height: 3px;
+      background: var(--surface2);
+      border-radius: 2px;
+    }
+
+    .modal-field .override-row input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text-mid);
+      cursor: pointer;
+    }
+
+    .modal-field .override-val {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      width: 32px;
+      text-align: right;
+    }
+
+    .modal-field .check-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .btn-modal {
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-family: var(--mono);
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      transition: all 0.15s;
+    }
+
+    .btn-modal.cancel {
+      background: var(--surface2);
+      color: var(--text-dim);
+    }
+
+    .btn-modal.save {
+      background: #ff6b4a;
+      color: var(--bg);
+      border-color: #ff6b4a;
+      font-weight: 600;
+    }
+
+    .btn-modal:hover {
+      filter: brightness(1.15);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text);
+      opacity: 0;
+      transition: all 0.25s ease;
+      z-index: 200;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    /* Stop all button */
+    .btn-stop-all {
+      padding: 6px 12px;
+      background: var(--surface);
+      border: 1px solid #ff4444;
+      border-radius: 6px;
+      color: #ff4444;
+      font-family: var(--mono);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-stop-all:hover {
+      background: rgba(255, 68, 68, 0.1);
+    }
+
+    /* Queue display */
+    .queue-bar {
+      height: 2px;
+      background: var(--surface2);
+      border-radius: 1px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .queue-bar .queue-fill {
+      height: 100%;
+      background: #ff6b4a;
+      width: 0%;
+      transition: width 0.3s;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+    <div class="top-bar">
+      <div class="logo">Voice <span>Pad</span></div>
+      <div class="top-actions">
+        <button class="btn-stop-all" id="stopAll">■ Stop</button>
+        <button class="btn-sm" id="exportBtn">Export</button>
+        <button class="btn-sm" id="importBtn">Import</button>
+      </div>
+    </div>
+
+    <div class="global-controls">
+      <div class="g-control">
+        <span class="g-label">Pitch</span>
+        <input type="range" id="gPitch" min="0" max="2" step="0.05" value="1">
+        <span class="g-val" id="gPitchVal">1.00</span>
+      </div>
+      <div class="g-control">
+        <span class="g-label">Rate</span>
+        <input type="range" id="gRate" min="0.1" max="3" step="0.05" value="1">
+        <span class="g-val" id="gRateVal">1.00</span>
+      </div>
+      <div class="g-control">
+        <span class="g-label">Vol</span>
+        <input type="range" id="gVol" min="0" max="1" step="0.05" value="1">
+        <span class="g-val" id="gVolVal">1.00</span>
+      </div>
+      <div class="g-control voice-wrap">
+        <span class="g-label">Voice</span>
+        <select id="gVoice"></select>
+      </div>
+    </div>
+
+    <div class="queue-bar">
+      <div class="queue-fill" id="queueFill"></div>
+    </div>
+
+    <div class="pad-grid" id="padGrid"></div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h3>Pad #<span id="modalPadNum"></span></h3>
+      <div class="modal-field">
+        <label>テキスト</label>
+        <textarea id="modalText" placeholder="喋らせたいテキスト..."></textarea>
+      </div>
+      <div class="modal-field">
+        <label>ラベル（空欄ならテキストを表示）</label>
+        <input type="text" id="modalLabel" placeholder="短いラベル...">
+      </div>
+      <div class="modal-field">
+        <label>カラー</label>
+        <div class="color-row" id="colorRow"></div>
+      </div>
+      <div class="modal-field">
+        <div class="check-row">
+          <input type="checkbox" id="modalOverride">
+          <label for="modalOverride" style="margin:0; text-transform:none; font-size:11px;">個別パラメータ</label>
+        </div>
+      </div>
+      <div id="overrideControls" style="display:none;">
+        <div class="modal-field">
+          <label>Pitch</label>
+          <div class="override-row">
+            <input type="range" id="modalPitch" min="0" max="2" step="0.05" value="1">
+            <span class="override-val" id="modalPitchVal">1.00</span>
+          </div>
+        </div>
+        <div class="modal-field">
+          <label>Rate</label>
+          <div class="override-row">
+            <input type="range" id="modalRate" min="0.1" max="3" step="0.05" value="1">
+            <span class="override-val" id="modalRateVal">1.00</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal cancel" id="modalCancel">キャンセル</button>
+        <button class="btn-modal save" id="modalSave">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <input type="file" class="file-input" id="fileInput" accept=".json">
+
+  <script>
+    const synth = window.speechSynthesis;
+    let voices = [];
+    const PAD_COUNT = 16;
+
+    const COLORS = [
+      { hex: '#ff6b4a', rgb: '255,107,74' },
+      { hex: '#4af0c8', rgb: '74,240,200' },
+      { hex: '#b080ff', rgb: '176,128,255' },
+      { hex: '#ffcc44', rgb: '255,204,68' },
+      { hex: '#44aaff', rgb: '68,170,255' },
+      { hex: '#ff66aa', rgb: '255,102,170' },
+      { hex: '#88dd44', rgb: '136,221,68' },
+      { hex: '#ff8844', rgb: '255,136,68' },
+    ];
+
+    const DEFAULT_TEXTS = [
+      'こんにちは', 'ありがとう', 'なるほど', 'すごい',
+      'えっ', 'まじで？', 'やばい', 'わかった',
+      'ちょっと待って', 'いいね', 'うーん', 'はい',
+      'おつかれ', 'おはよう', 'おやすみ', 'www',
+    ];
+
+    // Pad data
+    let pads = Array.from({ length: PAD_COUNT }, (_, i) => ({
+      text: DEFAULT_TEXTS[i] || '',
+      label: '',
+      colorIndex: i % COLORS.length,
+      override: false,
+      pitch: 1,
+      rate: 1,
+    }));
+
+    // Voices
+    function loadVoices() {
+      const allVoices = synth.getVoices();
+      const sel = document.getElementById('gVoice');
+      const currentVal = sel.value;
+      sel.innerHTML = '';
+
+      // Filter only ja and en
+      voices = allVoices.filter(v => v.lang.startsWith('ja') || v.lang.startsWith('en'));
+
+      // Sort: ja first
+      voices.sort((a, b) => {
+        if (a.lang.startsWith('ja') && !b.lang.startsWith('ja')) return -1;
+        if (!a.lang.startsWith('ja') && b.lang.startsWith('ja')) return 1;
+        return 0;
+      });
+
+      voices.forEach((v, i) => {
+        const o = document.createElement('option');
+        o.value = i;
+        o.textContent = `${v.name} (${v.lang})`;
+        sel.appendChild(o);
+      });
+    }
+    loadVoices();
+    if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+
+    // Global controls
+    const gPitch = document.getElementById('gPitch');
+    const gRate = document.getElementById('gRate');
+    const gVol = document.getElementById('gVol');
+    const gPitchVal = document.getElementById('gPitchVal');
+    const gRateVal = document.getElementById('gRateVal');
+    const gVolVal = document.getElementById('gVolVal');
+
+    [gPitch, gRate, gVol].forEach(s => {
+      s.addEventListener('input', () => {
+        gPitchVal.textContent = parseFloat(gPitch.value).toFixed(2);
+        gRateVal.textContent = parseFloat(gRate.value).toFixed(2);
+        gVolVal.textContent = parseFloat(gVol.value).toFixed(2);
+      });
+    });
+
+    // Render pads
+    const padGrid = document.getElementById('padGrid');
+
+    function renderPads() {
+      padGrid.innerHTML = '';
+      pads.forEach((pad, i) => {
+        const el = document.createElement('div');
+        el.className = 'pad';
+        const c = COLORS[pad.colorIndex] || COLORS[0];
+        el.style.setProperty('--pad-color', c.hex);
+        el.style.setProperty('--pad-color-rgb', c.rgb);
+
+        const displayText = pad.label || pad.text || '';
+        const isEmpty = !pad.text;
+
+        el.innerHTML = `
+      <span class="pad-num">${i + 1}</span>
+      <button class="pad-edit-btn" data-idx="${i}">✎</button>
+      <div class="pad-text ${isEmpty ? 'empty' : ''}">${isEmpty ? 'tap ✎' : escHtml(displayText)}</div>
+      <div class="pad-color-dot"></div>
+    `;
+
+        // Tap to speak
+        el.addEventListener('mousedown', (e) => {
+          if (e.target.classList.contains('pad-edit-btn')) return;
+          triggerPad(i, el);
+        });
+        el.addEventListener('touchstart', (e) => {
+          if (e.target.classList.contains('pad-edit-btn')) return;
+          e.preventDefault();
+          triggerPad(i, el);
+        }, { passive: false });
+
+        // Edit button
+        el.querySelector('.pad-edit-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          openModal(i);
+        });
+
+        padGrid.appendChild(el);
+      });
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Speak stabilization
+    let currentUtterance = null;
+
+    // Keep-alive hack for Chrome (long texts can stall)
+    function keepAlive() {
+      if (synth.speaking && !synth.paused) {
+        synth.pause();
+        synth.resume();
+      }
+    }
+    setInterval(keepAlive, 5000);
+
+    function triggerPad(idx, el) {
+      const pad = pads[idx];
+      if (!pad.text) return;
+
+      el.classList.add('active');
+      setTimeout(() => el.classList.remove('active'), 200);
+
+      // Stop current to avoid overlapping/stuck queue if needed
+      // synth.cancel(); // Uncomment if you want only one voice at a time
+
+      const utter = new SpeechSynthesisUtterance(pad.text);
+
+      // Keep reference global to prevent GC
+      currentUtterance = utter;
+
+      const vi = parseInt(document.getElementById('gVoice').value);
+      if (voices[vi]) utter.voice = voices[vi];
+
+      utter.pitch = pad.override ? pad.pitch : parseFloat(gPitch.value);
+      utter.rate = pad.override ? pad.rate : parseFloat(gRate.value);
+      utter.volume = parseFloat(gVol.value);
+
+      utter.onstart = () => {
+        // Force resume just in case it's stalled
+        if (synth.paused) synth.resume();
+      };
+
+      utter.onend = () => {
+        currentUtterance = null;
+      };
+
+      utter.onerror = (e) => {
+        console.error('Speech error:', e);
+        currentUtterance = null;
+        synth.cancel(); // Reset on error
+      };
+
+      // Ensure synth is not paused before speaking
+      if (synth.paused) synth.resume();
+
+      synth.speak(utter);
+    }
+
+    // Stop
+    document.getElementById('stopAll').addEventListener('click', () => {
+      synth.cancel();
+    });
+
+    // Modal
+    let editingIdx = -1;
+    const overlay = document.getElementById('modalOverlay');
+    const modalText = document.getElementById('modalText');
+    const modalLabel = document.getElementById('modalLabel');
+    const colorRow = document.getElementById('colorRow');
+    const modalOverride = document.getElementById('modalOverride');
+    const overrideControls = document.getElementById('overrideControls');
+    const modalPitch = document.getElementById('modalPitch');
+    const modalRate = document.getElementById('modalRate');
+    const modalPitchVal = document.getElementById('modalPitchVal');
+    const modalRateVal = document.getElementById('modalRateVal');
+
+    // Build color options
+    COLORS.forEach((c, i) => {
+      const el = document.createElement('div');
+      el.className = 'color-opt';
+      el.style.background = c.hex;
+      el.dataset.idx = i;
+      el.addEventListener('click', () => {
+        colorRow.querySelectorAll('.color-opt').forEach(e => e.classList.remove('selected'));
+        el.classList.add('selected');
+      });
+      colorRow.appendChild(el);
+    });
+
+    modalOverride.addEventListener('change', () => {
+      overrideControls.style.display = modalOverride.checked ? 'block' : 'none';
+    });
+
+    [modalPitch, modalRate].forEach(s => {
+      s.addEventListener('input', () => {
+        modalPitchVal.textContent = parseFloat(modalPitch.value).toFixed(2);
+        modalRateVal.textContent = parseFloat(modalRate.value).toFixed(2);
+      });
+    });
+
+    function openModal(idx) {
+      editingIdx = idx;
+      const pad = pads[idx];
+      document.getElementById('modalPadNum').textContent = idx + 1;
+      modalText.value = pad.text;
+      modalLabel.value = pad.label;
+      modalOverride.checked = pad.override;
+      overrideControls.style.display = pad.override ? 'block' : 'none';
+      modalPitch.value = pad.pitch;
+      modalRate.value = pad.rate;
+      modalPitchVal.textContent = pad.pitch.toFixed(2);
+      modalRateVal.textContent = pad.rate.toFixed(2);
+
+      colorRow.querySelectorAll('.color-opt').forEach((e, i) => {
+        e.classList.toggle('selected', i === pad.colorIndex);
+      });
+
+      overlay.classList.add('show');
+      setTimeout(() => modalText.focus(), 100);
+    }
+
+    document.getElementById('modalCancel').addEventListener('click', () => {
+      overlay.classList.remove('show');
+    });
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.classList.remove('show');
+    });
+
+    document.getElementById('modalSave').addEventListener('click', () => {
+      const pad = pads[editingIdx];
+      pad.text = modalText.value;
+      pad.label = modalLabel.value;
+      pad.override = modalOverride.checked;
+      pad.pitch = parseFloat(modalPitch.value);
+      pad.rate = parseFloat(modalRate.value);
+
+      const selectedColor = colorRow.querySelector('.color-opt.selected');
+      if (selectedColor) pad.colorIndex = parseInt(selectedColor.dataset.idx);
+
+      overlay.classList.remove('show');
+      renderPads();
+      showToast('保存');
+    });
+
+    // Export / Import
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const data = {
+        version: 1,
+        global: {
+          pitch: parseFloat(gPitch.value),
+          rate: parseFloat(gRate.value),
+          volume: parseFloat(gVol.value),
+          voiceName: voices[parseInt(document.getElementById('gVoice').value)]?.name || null,
+        },
+        pads: pads,
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'voice-pad.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast('Export完了');
+    });
+
+    const fileInput = document.getElementById('fileInput');
+    document.getElementById('importBtn').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (data.global) {
+            gPitch.value = data.global.pitch ?? 1;
+            gRate.value = data.global.rate ?? 1;
+            gVol.value = data.global.volume ?? 1;
+            gPitchVal.textContent = parseFloat(gPitch.value).toFixed(2);
+            gRateVal.textContent = parseFloat(gRate.value).toFixed(2);
+            gVolVal.textContent = parseFloat(gVol.value).toFixed(2);
+            if (data.global.voiceName) {
+              const vi = voices.findIndex(v => v.name === data.global.voiceName);
+              if (vi >= 0) document.getElementById('gVoice').value = vi;
+            }
+          }
+          if (data.pads && Array.isArray(data.pads)) {
+            pads = data.pads;
+            while (pads.length < PAD_COUNT) {
+              pads.push({ text: '', label: '', colorIndex: 0, override: false, pitch: 1, rate: 1 });
+            }
+            renderPads();
+          }
+          showToast('Import完了');
+        } catch (err) {
+          showToast('JSONエラー');
+        }
+      };
+      reader.readAsText(file);
+      fileInput.value = '';
+    });
+
+    // Toast
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 1500);
+    }
+
+    // Keyboard shortcuts (1-9, 0, q-t, etc.)
+    const KEY_MAP = '1234567890qwerty';
+    document.addEventListener('keydown', (e) => {
+      if (overlay.classList.contains('show')) return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+      const idx = KEY_MAP.indexOf(e.key.toLowerCase());
+      if (idx >= 0 && idx < PAD_COUNT) {
+        const padEl = padGrid.children[idx];
+        if (padEl) triggerPad(idx, padEl);
+      }
+    });
+
+    // Init
+    renderPads();
+  </script>
+
+</body>
+
+</html>
