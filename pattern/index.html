@@ -257,7 +257,7 @@
             text-decoration: none;
         }
 
-        a.credit-val:hover {
+        a.credit-val {
             text-decoration: underline;
         }
 
@@ -267,17 +267,10 @@
             margin: 12px 0;
         }
 
-        .credit-manual-section {
-            font-size: 11px;
-            color: #888;
-            margin-bottom: 4px;
-        }
-
         .credit-manual-link {
-            display: inline-block;
             font-size: 11px;
             color: #888;
-            text-decoration: none;
+            text-decoration: underline;
             margin-right: 16px;
         }
 
@@ -758,8 +751,10 @@
                 <a href="https://warpshoot.github.io/" target="_blank" class="credit-val">wpy</a>
             </div>
             <hr class="credit-divider">
-            <div class="credit-manual-section">取扱説明書</div>
-            <a href="MANUAL.md" target="_blank" class="credit-manual-link">人間向け</a>
+            <div class="credit-row">
+                <span class="credit-key">説明書</span>
+                <a href="MANUAL.md" target="_blank" class="credit-manual-link">人間向け</a>
+            </div>
         </div>
     </div>
 
