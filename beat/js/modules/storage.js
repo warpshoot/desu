@@ -387,6 +387,8 @@ function compactState(state) {
         swingLevel: state.swingLevel || DEFAULT_SWING_LEVEL,
         currentPattern: state.currentPattern,
         trackParams: state.trackParams,
+        userPresets: state.userPresets,
+        trackActivePresets: state.trackActivePresets,
         patterns: state.patterns.map(pattern => {
             const p = {
                 grid: pattern.grid.map(track =>
