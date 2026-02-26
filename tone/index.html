@@ -75,66 +75,48 @@
     }
 
     #credit-content {
-        background: rgba(255, 255, 255, 0.95);
-        padding: 32px;
-        border-radius: 0;
-        /* Square */
-        text-align: center;
-        width: 400px;
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.6);
+        padding: 20px 24px;
+        font-family: monospace;
+        width: 300px;
         max-width: calc(100vw - 40px);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     }
 
-    #credit-content h2 {
-        font-size: 24px;
-        margin-bottom: 16px;
-        font-weight: bold;
-        color: #333;
+    .credit-row {
+        display: flex;
+        gap: 12px;
+        line-height: 1.9;
     }
 
-    #credit-logo {
-        margin: 16px auto;
-        cursor: pointer;
-        display: block;
+    .credit-key {
+        color: #888;
+        font-size: 11px;
+        min-width: 4em;
+        flex-shrink: 0;
     }
 
-    #credit-logo img {
-        max-width: 100%;
-        height: auto;
-    }
-
-    #credit-author {
-        font-size: 16px;
-        margin-top: 16px;
-        color: #333;
-    }
-
-    #credit-author a {
-        color: #333;
+    .credit-val {
+        font-size: 11px;
+        color: #111;
         text-decoration: none;
-        font-weight: bold;
     }
 
-    #credit-author a:hover {
+    a.credit-val {
         text-decoration: underline;
     }
 
-    .credit-manual-link {
-        display: inline-block;
-        margin-top: 24px;
-        font-size: 13px;
-        color: #999;
-        text-decoration: none;
-        border: 1px solid #ddd;
-        padding: 6px 12px;
-        border-radius: 4px;
-        transition: all 0.2s;
+    .credit-divider {
+        border: none;
+        border-top: 1px solid #ddd;
+        margin: 12px 0;
     }
 
-    .credit-manual-link:hover {
-        background: #f5f5f5;
-        color: #333;
-        border-color: #bbb;
+    .credit-manual-link {
+        font-size: 11px;
+        color: #111;
+        text-decoration: underline;
+        margin-right: 16px;
     }
 
     .container {
@@ -621,14 +603,23 @@
     <!-- Credit Modal -->
     <div id="credit-modal">
         <div id="credit-content">
-            <h2>DESU™ tone</h2>
-            <a href="https://warpshoot.github.io/desu/" target="_blank" id="credit-logo">
-                <img src="../images/logo.gif" alt="DESU™ Logo">
-            </a>
-            <div id="credit-author">
-                by <a href="https://warpshoot.github.io/" target="_blank">wpy</a>
+            <div class="credit-row">
+                <span class="credit-key">名称</span>
+                <span class="credit-val">DESU™ tone</span>
             </div>
-            <a href="MANUAL.md" target="_blank" class="credit-manual-link">Manual</a>
+            <div class="credit-row">
+                <span class="credit-key">支給元</span>
+                <a href="https://warpshoot.github.io/desu/" target="_blank" class="credit-val">warpshoot.github.io/desu</a>
+            </div>
+            <div class="credit-row">
+                <span class="credit-key">製造</span>
+                <a href="https://warpshoot.github.io/" target="_blank" class="credit-val">wpy</a>
+            </div>
+            <hr class="credit-divider">
+            <div class="credit-row">
+                <span class="credit-key">説明書</span>
+                <a href="MANUAL.md" target="_blank" class="credit-manual-link">人間向け</a>
+            </div>
         </div>
     </div>
 
