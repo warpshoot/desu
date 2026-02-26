@@ -291,6 +291,11 @@ export function loadState() {
             }
             if (!state.chainMode) state.chainMode = 'chain';
 
+            // Migrate masterVolume from dB (-60 to 0) to linear (0 to 1)
+            if (state.masterVolume !== undefined && state.masterVolume < 0) {
+                state.masterVolume = Math.round(Tone.dbToGain(state.masterVolume) * 100) / 100;
+            }
+
             // Ensure we have MAX_PATTERNS patterns
             if (!state.patterns) state.patterns = [];
             while (state.patterns.length < MAX_PATTERNS) {
@@ -361,7 +366,7 @@ export function createDefaultState() {
         currentPattern: 0,
         nextPattern: null,
         bpm: DEFAULT_BPM,
-        masterVolume: -12,
+        masterVolume: 0.7,
         trackParams: createDefaultTrackParams(),
         swingLevel: DEFAULT_SWING_LEVEL,
         repeatEnabled: true,

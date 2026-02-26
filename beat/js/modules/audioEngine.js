@@ -72,9 +72,9 @@ export class AudioEngine {
 
         await Tone.start();
 
-        // Apply cached master volume if any
+        // Apply cached master volume if any (convert linear to dB)
         if (this.cachedMasterVolume !== undefined) {
-            Tone.Destination.volume.value = this.cachedMasterVolume;
+            Tone.Destination.volume.value = Tone.gainToDb(this.cachedMasterVolume);
         }
 
         // Create master DJ effect chain: HPF → LPF → Delay → Crusher → Gate → Limiter
@@ -339,10 +339,11 @@ export class AudioEngine {
         Tone.Transport.bpm.value = bpm;
     }
 
-    setMasterVolume(db) {
-        this.cachedMasterVolume = db;
+    setMasterVolume(vol) {
+        this.cachedMasterVolume = vol;
         if (!this.initialized) return;
-        Tone.Destination.volume.value = db;
+        // Convert linear slider value (0-1) to decibels
+        Tone.Destination.volume.value = Tone.gainToDb(vol);
     }
 
     setSwingLevel(level) {

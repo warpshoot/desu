@@ -471,10 +471,10 @@ export class Controls {
         // We don't call onBPMChange (storage save) here to avoid too many writes during drag
     }
 
-    setVolume(db) {
+    setVolume(vol) {
         if (this.volumeSlider) {
-            this.volumeSlider.value = db;
-            this.audioEngine.setMasterVolume(db);
+            this.volumeSlider.value = vol;
+            this.audioEngine.setMasterVolume(vol);
         }
     }
 
