@@ -622,7 +622,7 @@ class Sequencer {
                         }
                     },
                     () => this.isPainting,
-                    trackConfig.baseFreq,
+                    () => this.audioEngine.activeTrackConfigs[track].baseFreq,
                     document.getElementById('note-indicator'),
                     () => this.isTwoFingerTouch,
                     () => pat.scale || 'Chromatic'

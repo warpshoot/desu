@@ -14,7 +14,7 @@ export class Cell {
         this.onLongPress = onLongPress;
         this.onPaintChange = onPaintChange;
         this.getGlobalIsPainting = getGlobalIsPainting;
-        this.baseFreq = baseFreq;
+        this._getBaseFreq = typeof baseFreq === 'function' ? baseFreq : () => baseFreq;
         this.noteIndicator = noteIndicator;
         this.getScale = getScale;
         this.getIsTwoFingerTouch = getIsTwoFingerTouch || (() => false);
@@ -199,7 +199,7 @@ export class Cell {
                 let noteName;
                 try {
                     // Hi-hat and Snare can show freq or note
-                    noteName = Tone.Frequency(this.baseFreq).transpose(totalPitch).toNote();
+                    noteName = Tone.Frequency(this._getBaseFreq()).transpose(totalPitch).toNote();
                 } catch (e) {
                     noteName = Math.round(effectivePitch);
                 }
