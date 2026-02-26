@@ -791,59 +791,48 @@ body {
 }
 
 #credit-content {
-    background: rgba(255, 255, 255, 0.95);
-    padding: 32px;
-    border-radius: 16px;
-    text-align: center;
-    width: 400px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.6);
+    padding: 20px 24px;
+    font-family: monospace;
+    width: 300px;
     max-width: calc(100vw - 40px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-
-
-#credit-content h2 {
-    font-size: 24px;
-    margin-bottom: 16px;
+.credit-row {
+    display: flex;
+    gap: 12px;
+    line-height: 1.9;
 }
 
-#credit-logo {
-    margin: 16px auto;
-    cursor: pointer;
+.credit-key {
+    color: #888;
+    font-size: 11px;
+    min-width: 4em;
+    flex-shrink: 0;
 }
 
-#credit-logo img {
-    max-width: 100%;
-    height: auto;
-}
-
-#credit-author {
-    font-size: 16px;
-    margin-top: 16px;
-}
-
-#credit-author a {
-    color: #333;
+.credit-val {
+    font-size: 11px;
+    color: #111;
     text-decoration: none;
-    font-weight: bold;
+}
+
+a.credit-val {
+    text-decoration: underline;
+}
+
+.credit-divider {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 12px 0;
 }
 
 .credit-manual-link {
-    display: inline-block;
-    margin-top: 24px;
-    font-size: 13px;
-    color: #999;
-    text-decoration: none;
-    border: 1px solid #ddd;
-    padding: 6px 12px;
-    border-radius: 4px;
-    transition: all 0.2s;
-}
-
-.credit-manual-link:hover {
-    background: #f5f5f5;
-    color: #333;
-    border-color: #bbb;
+    font-size: 11px;
+    color: #111;
+    text-decoration: underline;
+    margin-right: 16px;
 }
 
 /* ============================================
