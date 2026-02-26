@@ -5,7 +5,7 @@ export const TRACKS = [
         color: '#ff4444',
         type: 'membrane',
         baseFreq: 'C1',
-        defaultParams: { tune: -12, cutoff: 1000, resonance: 1, drive: 10, decay: 0.4, vol: 0.9 } // Thick & Strong
+        defaultParams: { tune: 0, cutoff: 2500, resonance: 1, drive: 10, decay: 0.4, vol: 0.9 } // Thick & Strong
     },
     {
         name: 'Snare',
@@ -106,7 +106,7 @@ export const DEFAULT_SCALE = 'Chromatic';
 
 export const TRACK_PRESETS = {
     0: { // Kick (Membrane)
-        '1': { tune: -12, cutoff: 1000, resonance: 1, drive: 10, decay: 0.4, vol: 0.9 },   // Thick & Strong
+        '1': { tune: 0, cutoff: 2500, resonance: 1, drive: 10, decay: 0.4, vol: 0.9 },   // Thick & Strong
         '2': { tune: -18, cutoff: 600, resonance: 0.5, drive: 5, decay: 0.8, vol: 1.0 },   // Sub/Deep 808
         '3': { tune: 0, cutoff: 3000, resonance: 8, drive: 30, decay: 0.1, vol: 0.7 },      // Punchy/Clicky
         '4': { tune: -8, cutoff: 2000, resonance: 3, drive: 60, decay: 0.3, vol: 0.8 }      // Distorted
