@@ -1,427 +1,429 @@
-/* ===================================
-   DESU - Unified Styles
-   =================================== */
-
-/* Reset & Base Styles */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-html,
 body {
-    margin: 0;
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, 'YuGothic', 'Yu Gothic', sans-serif;
-    background: #fff;
-    color: #000;
-    height: 100%;
-    overflow-x: hidden;
-}
-
-body {
+    font-family: 'Yu Gothic', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    height: -webkit-fill-available;
     position: relative;
-    z-index: 0;
-}
-
-.layout {
     display: flex;
-    flex-direction: column;
-    height: auto;
-    position: relative;
+    justify-content: center;
+    align-items: center;
+    padding-top: 0;
+    background-color: #000;
 }
 
-.container {
+/* コンテナ（縦位置固定） */
+#app-container {
+    position: relative;
     width: 100%;
     max-width: 600px;
-    margin: 0 auto;
-    padding: 0 1rem;
-    box-sizing: border-box;
-}
-
-/* ===================================
-   Arowana Background Animation
-   =================================== */
-.arowana-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: -1;
+    height: 100vh;
     overflow: hidden;
 }
 
-.arowana {
+/* 背景画像 */
+.background {
     position: absolute;
-    width: 800px;
-    height: auto;
-    opacity: 0.2;
-    will-change: left, top;
-    transform: translateZ(0);
-}
-
-/* ===================================
-   Header & Tab Navigation
-   =================================== */
-.header {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    box-sizing: border-box;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1000;
-    margin: 0;
-    padding: 1rem;
-    background: transparent;
-}
-
-.header-fade {
-    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
-    height: 160px;
-    background: linear-gradient(to bottom, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
-    z-index: 5;
-    pointer-events: none;
-}
-
-.title-wrap {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.site-logo {
-    height: auto;
-    filter: grayscale(100%);
-    display: block;
-    cursor: pointer;
-    transition: opacity 0.3s ease;
-}
-
-.header .site-logo {
-    max-width: 150px;
-}
-
-.site-logo:hover {
-    opacity: 0.7;
-}
-
-h1 {
-    font-size: 2rem;
-    margin: 0;
-}
-
-.subtitle {
-    font-size: 1rem;
-    opacity: 0.8;
-    margin: 0;
-    line-height: 1;
-    padding-top: 0;
-}
-
-/* Tab Navigation */
-nav {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.2rem;
-    margin-bottom: 0.5rem;
-}
-
-.tab-button {
-    background: transparent;
-    border: none;
-    color: #000;
-    padding: 0.1rem 0.8rem;
-    font-size: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 120px;
-    text-align: center;
+    height: 100%;
+    object-fit: contain;
+    object-position: center 20%;
+    /* Shift image upwards to balance with bottom text */
+    background-color: #000;
     z-index: 1;
-    transition: color 0.2s ease 0.15s;
-    text-decoration: none;
 }
 
-.tab-button::before {
-    content: "";
+/* フェード用オーバーレイ */
+.fade-overlay {
     position: absolute;
     top: 0;
     left: 0;
-    width: 0;
+    width: 100%;
     height: 100%;
     background-color: #000;
-    z-index: 0;
-    transition: width 0.1s ease;
+    z-index: 10;
     pointer-events: none;
+    opacity: 1;
+    transition: opacity 2s ease-in-out;
 }
 
-.tab-button:hover::before,
-.tab-button.active::before {
-    width: 100%;
-}
-
-.tab-button:hover,
-.tab-button.active {
-    color: #fff;
-}
-
-.tab-button:hover .label,
-.tab-button.active .label {
-    color: #fff;
-}
-
-.tab-button .label {
-    position: relative;
-    z-index: 2;
-    display: block;
-    margin: 0 auto;
-    text-align: center;
-    color: inherit;
-    transition: color 0.2s ease 0.15s;
-}
-
-/* ===================================
-   Main Content Area
-   =================================== */
-.main {
-    padding: 2rem 0;
-    padding-top: 130px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-    min-width: 100%;
-    position: relative;
-    z-index: 0;
+.fade-overlay.fade-out {
     opacity: 0;
-    animation: fadeIn 0.4s ease forwards;
 }
 
-@keyframes fadeIn {
-    to {
+.fade-overlay.fade-in {
+    opacity: 1;
+}
+
+/* スタートプロンプト */
+.start-prompt {
+    position: absolute;
+    bottom: calc(25% + env(safe-area-inset-bottom, 0px));
+    /* Shifted higher */
+    /* Center it vertically within the bottom area */
+    left: 50%;
+    transform: translate(-50%, 50%);
+    font-size: 20px;
+    color: #ffffff;
+    letter-spacing: 2px;
+    cursor: pointer;
+    z-index: 20;
+    /* Ensure this is above the fade-overlay (z-index 10) */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease-in-out, transform 0.3s ease;
+}
+
+.start-prompt.show {
+    opacity: 1;
+    pointer-events: auto;
+    animation: promptBlink 3s infinite ease-in-out;
+}
+
+.start-prompt:hover {
+    transform: translate(-50%, 50%) scale(1.05);
+}
+
+@keyframes promptBlink {
+
+    0%,
+    100% {
+        opacity: 0.5;
+    }
+
+    50% {
         opacity: 1;
     }
 }
 
-/* Tab Content */
-.tab-content {
-    visibility: hidden;
+/* テキストウィンドウ */
+.text-window {
+    position: absolute;
+    bottom: env(safe-area-inset-bottom, 0);
+    left: 0;
+    width: 100%;
+    height: 30%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 15;
+    padding: 20px 40px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
     opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.4s ease, transform 0.4s ease;
     pointer-events: none;
-    height: 0;
-    overflow: hidden;
-    width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-    text-align: left;
 }
 
-.tab-content.active {
-    visibility: visible;
+.text-window.active {
     opacity: 1;
-    transform: translateY(0);
     pointer-events: auto;
-    height: auto;
-    overflow: visible;
 }
 
-.content-inner {
-    width: 100%;
-    max-width: 600px;
-    margin: 0 auto;
-    box-sizing: border-box;
-    padding: 0 1rem;
+.text-window.overlay-mode {
+    z-index: 50 !important;
+    /* tools-screen is 20, so 50 will show above it */
 }
 
-@media (max-width: 768px) {
-    .content-inner {
-        max-width: 100%;
-        min-width: 0;
-        padding: 0 1.5rem;
-        overflow-wrap: break-word;
+.text-window.empty {
+    opacity: 1;
+    pointer-events: none;
+}
+
+.text-window.empty .face-icon,
+.text-window.empty .name-display,
+.text-window.empty .text-content {
+    display: none;
+}
+
+/* 顔アイコン */
+.face-icon {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+}
+
+/* テキストエリア */
+.text-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+/* 名前表示 */
+.name-display {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    min-height: 24px;
+    color: #fff;
+}
+
+.name-display.shi {
+    color: #ff9eff;
+}
+
+/* テキスト内容 */
+.text-content {
+    font-size: 18px;
+    line-height: 1.8;
+    color: #ffffff;
+}
+
+/* 進行可能マーク */
+.continue-icon {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 24px;
+    color: #ffffff;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.continue-icon.show {
+    opacity: 1;
+    animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 0.3;
+    }
+
+    50% {
+        opacity: 1;
     }
 }
 
-.content-inner>* {
-    margin-left: 0 !important;
-    padding-left: 0 !important;
-    align-self: flex-start;
-    text-align: left;
-}
-
-/* ===================================
-   Top Page - Main Illustration
-   =================================== */
-.main-illustration-section {
-    margin-bottom: 80px;
-    display: flex;
-    justify-content: center;
-}
-
-.main-illustration-container {
-    display: block;
-    width: 100%;
-    max-width: 600px;
-    overflow: hidden;
-}
-
-.main-illustration {
+/* メニュー画面 */
+.menu-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    object-fit: contain;
-    display: block;
-}
-
-/* ===================================
-   Top Page - Updates Section
-   =================================== */
-.updates-section {
-    margin-bottom: 80px;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-    text-align: center;
-}
-
-.updates-title {
-    font-size: 20px;
-    font-weight: 400;
-    letter-spacing: 2px;
-    margin-bottom: 20px;
-    color: #000;
-}
-
-.updates-list {
-    list-style: none;
-    font-size: 14px;
-    line-height: 2;
-    color: #000;
-}
-
-.updates-list li {
-    padding: 4px 0;
-}
-
-/* ===================================
-   Common Section Styles
-   =================================== */
-.section {
-    margin-bottom: 80px;
-}
-
-.section-title {
-    font-size: 24px;
-    font-weight: 500;
-    letter-spacing: 2px;
-    margin-bottom: 30px;
-    color: #000;
-}
-
-/* ===================================
-   Episodes & Tools - Grid & Cards
-   =================================== */
-.episodes-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 20px;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
     justify-content: center;
+    align-items: center;
+    z-index: 15;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease-in-out;
 }
 
-.episode-card {
-    background: #000;
-    border: 2px solid #000;
-    border-radius: 0;
-    padding: 20px 20px;
-    text-decoration: none;
+.menu-screen.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.menu-container {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    align-items: center;
+    transform: translateY(-10%);
+    /* Shift menu upwards */
+}
+
+.menu-button {
+    font-size: 28px;
     color: #fff;
-    transition: all 0.3s ease;
+    text-decoration: none;
+    letter-spacing: 8px;
     cursor: pointer;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    /* Slightly spread out the characters */
+    padding: 10px 20px;
+    position: relative;
+    transition: color 0.3s ease, transform 0.3s;
+    font-weight: 300;
 }
 
-.episode-card:hover {
-    background: #333;
-    border-color: #000;
-    transform: translateY(-6px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+.menu-button::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 1px;
+    background-color: #fff;
+    transition: width 0.3s ease;
+    opacity: 0.7;
 }
 
-.episode-card.coming-soon {
-    opacity: 0.4;
-    cursor: default;
+.menu-button:hover {
+    color: #ddd;
+    transform: scale(1.05);
 }
 
-.episode-card.coming-soon:hover {
-    background: #000;
-    border-color: #000;
-    transform: none;
+.menu-button:hover::before {
+    width: 60%;
 }
 
-.episode-number {
+.menu-button:active {
+    transform: scale(1.0);
+}
+
+/* サブ画面 (支給品・記録・名簿共通) */
+.sub-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s ease-in-out;
+}
+
+.sub-screen.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.close-container {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+}
+
+.close-button {
     font-size: 40px;
-    font-weight: 400;
-    letter-spacing: 3px;
-    margin-bottom: 12px;
+    font-weight: 300;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.3s ease, color 0.3s;
+    line-height: 1;
 }
 
-.episode-number:last-child {
-    margin-bottom: 0;
+.close-button:hover {
+    color: #ccc;
+    transform: scale(1.1) rotate(90deg);
 }
 
-.episode-title {
-    font-size: 16px;
-    color: rgba(255, 255, 255, 0.7);
+.sub-container {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    align-items: center;
+    transform: translateY(-5%);
+    /* Shift sub-screens upwards slightly */
 }
 
-.episode-status {
-    font-size: 16px;
+.list-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.tool-info-btn {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease;
+    font-weight: bold;
+}
+
+.tool-info-btn:hover {
+    color: #fff;
+    border-color: #fff;
+    transform: scale(1.1);
+}
+
+.list-button {
+    font-size: 24px;
+    /* Matched closer to main menu (28px) */
     color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    letter-spacing: 8px;
+    /* Matched main menu letter spacing */
+    cursor: pointer;
+    padding: 8px 15px;
+    position: relative;
+    transition: color 0.3s ease, transform 0.3s;
+    font-weight: 300;
 }
 
-/* ===================================
-   Characters Page
-   =================================== */
-.characters-section {
-    margin-bottom: 80px;
+.list-button::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.5);
+    transition: width 0.3s ease;
+}
+
+.list-button:hover {
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.list-button:hover::before {
+    width: 80%;
+}
+
+.list-button:active {
+    transform: scale(1.0);
+}
+
+.characters-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    width: 90%;
+    max-width: 500px;
+    transform: translateY(-5%);
+    /* Match sub-container alignment */
 }
 
 .character-icons {
     display: flex;
+    gap: 15px;
     justify-content: center;
-    gap: 1rem;
-    margin-bottom: 2rem;
 }
 
 .character-icon {
-    width: 50px;
-    height: 50px;
-    border: 1px solid transparent;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
-    background: transparent;
+    border: 2px solid transparent;
     cursor: pointer;
-    transition: all 0.3s ease;
     padding: 0;
+    transition: transform 0.3s, border-color 0.3s;
+    background: none;
     overflow: hidden;
 }
 
@@ -429,272 +431,117 @@ nav {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block;
-    border-radius: 50%;
 }
 
 .character-icon:hover {
-    opacity: 0.7;
+    transform: scale(1.1);
 }
 
 .character-icon.active {
-    border-color: #000;
-}
-
-.characters-grid {
-    display: flex;
-    justify-content: center;
-    gap: 3rem;
-    padding: 1rem;
-    flex-wrap: wrap;
+    border-color: rgba(255, 255, 255, 0.8);
+    transform: scale(1.1);
 }
 
 .character-card {
-    background: transparent;
-    padding: 0 2rem 2rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+    border-radius: 10px;
+    padding: 20px;
     text-align: center;
-    transition: opacity 0.3s ease;
+    width: 100%;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    animation: fadeIn 0.4s ease-out;
 }
 
-.character-card:hover {
-    opacity: 0.8;
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .character-image {
-    width: 400px;
-    height: auto;
-    margin-bottom: 1.5rem;
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
+    max-width: 150px;
+    max-height: 150px;
+    object-fit: contain;
+    margin-bottom: 15px;
 }
 
 .character-name {
-    font-size: 1.8rem;
-    margin-bottom: 1rem;
-    color: #000;
-    font-weight: 500;
+    font-size: 22px;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
 }
 
 .character-description {
-    font-size: 1rem;
-    color: #000;
-    line-height: 1.6;
-}
-
-/* ===================================
-   Gallery Page
-   =================================== */
-.gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-}
-
-.gallery-item {
-    position: relative;
-    aspect-ratio: 1;
-    overflow: hidden;
-    border-radius: 0;
-    cursor: pointer;
-    background: rgba(0, 0, 0, 0.02);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease, border-color 0.3s ease;
-}
-
-.gallery-item:hover {
-    transform: scale(1.02);
-    border-color: rgba(0, 0, 0, 0.3);
-}
-
-.gallery-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-/* Gallery Placeholder */
-.placeholder {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 80px 20px;
-    color: rgba(0, 0, 0, 0.5);
-}
-
-.placeholder-icon {
-    font-size: 80px;
-    margin-bottom: 20px;
-}
-
-.placeholder-text {
-    font-size: 20px;
-    margin-bottom: 12px;
-}
-
-.placeholder-hint {
     font-size: 14px;
     line-height: 1.6;
-    color: rgba(0, 0, 0, 0.3);
+    color: rgba(255, 255, 255, 0.8);
 }
 
-/* Gallery Lightbox */
-.lightbox {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-    justify-content: center;
-    align-items: center;
-}
-
-.lightbox.active {
-    display: flex;
-}
-
-.lightbox-close {
-    position: absolute;
-    top: 30px;
-    right: 40px;
-    font-size: 48px;
-    color: #fff;
-    cursor: pointer;
-    line-height: 1;
-    transition: opacity 0.3s ease;
-}
-
-.lightbox-close:hover {
-    opacity: 0.7;
-}
-
-.lightbox-image {
-    max-width: 90%;
-    max-height: 90%;
-    object-fit: contain;
-}
-
-/* ===================================
-   Footer
-   =================================== */
+/* フッター */
 .footer {
-    position: fixed;
-    bottom: 0;
+    position: absolute;
+    bottom: 10px;
     left: 0;
     width: 100%;
-    font-size: 0.7rem;
+    font-size: 10px;
     text-align: center;
-    padding: 0.5rem;
-    color: rgba(0, 0, 0, 0.5);
-    background: transparent;
-    z-index: 1001;
-}
-
-.footer a {
-    color: rgba(0, 0, 0, 0.7);
-    text-decoration: none;
-    transition: color 0.3s ease;
-}
-
-.footer a:hover {
-    color: #000;
-}
-
-.footer-fade {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 80px;
-    background: linear-gradient(to top, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
-    z-index: 1000;
+    color: #666666;
+    /* 控えめなグレー */
+    z-index: 100;
+    /* オーバーレイに影響されず常に一番上に表示 */
     pointer-events: none;
+    letter-spacing: 1px;
 }
 
-/* ===================================
-   Responsive Design
-   =================================== */
+/* レスポンシブ対応 */
+
+/* モバイル */
 @media (max-width: 768px) {
     body {
-        padding-top: 80px;
-        padding-bottom: 50px;
+        align-items: flex-start;
+        padding-top: 10vh;
     }
 
-    .header {
-        padding: 15px;
+    #app-container {
+        height: 90vh;
     }
 
-    .main {
-        padding-top: 50px;
+    .text-window {
+        height: 35%;
+        padding: 15px 20px;
+        padding-bottom: max(15px, env(safe-area-inset-bottom, 15px));
+        gap: 15px;
     }
 
-    .header .site-logo {
-        max-width: 120px;
+    .face-icon {
+        width: 70px;
+        height: 70px;
+        border-width: 2px;
     }
 
-    /* Arowana */
-    .arowana {
-        width: 500px;
-        opacity: 0.1;
+    .name-display {
+        font-size: 16px;
     }
 
-    /* Characters */
-    .characters-grid {
-        flex-direction: column;
-        align-items: center;
-        gap: 2rem;
+    .text-content {
+        font-size: 14px;
     }
 
-    .character-card {
-        padding: 1.5rem;
+    .continue-icon {
+        font-size: 20px;
+        right: 15px;
     }
 
-    .character-image {
-        width: 300px;
-        height: auto;
-    }
-
-    .character-name {
-        font-size: 1.5rem;
-    }
-
-    .character-description {
-        font-size: 0.9rem;
-    }
-
-    /* Gallery */
-    .gallery-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 10px;
-    }
-
-    .lightbox-close {
-        top: 20px;
-        right: 20px;
-        font-size: 36px;
-    }
-}
-
-/* Small Mobile */
-@media (max-width: 480px) {
-    .characters-grid {
-        padding: 0.5rem;
-        gap: 1rem;
-    }
-
-    .character-card {
-        padding: 1rem;
-    }
-
-    .character-image {
-        width: 280px;
-        height: auto;
-    }
-
-    .character-name {
-        font-size: 1.3rem;
+    .menu-button {
+        font-size: 24px;
+        letter-spacing: 6px;
     }
 }

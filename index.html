@@ -3,59 +3,155 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>DESU™</title>
     <link rel="stylesheet" href="style.css">
     <script src="./favicon.js"></script>
-    <script src="./fish.js"></script>
 </head>
 
 <body>
-    <div class="header-fade"></div>
+    <div id="app-container">
+        <!-- 背景画像 -->
+        <img class="background" id="backgroundImage" src="" alt="背景">
 
-    <!-- Arowana Background Animation -->
-    <div class="arowana-container">
-        <img src="./images/sakana.gif" alt="" class="arowana">
-    </div>
+        <!-- フェード用オーバーレイ -->
+        <div class="fade-overlay" id="fadeOverlay"></div>
 
-    <div class="layout">
-        <div class="header">
-            <div class="title-wrap">
-                <a href="./">
-                    <img src="./desu_logo.png" alt="DESU™" class="site-logo">
-                </a>
-            </div>
-            <nav>
-                <a href="./episodes/" class="tab-button"><span class="label">Episodes</span></a>
-                <a href="./characters/" class="tab-button"><span class="label">Characters</span></a>
-                <a href="./tools/" class="tab-button"><span class="label">Tools</span></a>
-            </nav>
+        <!-- スタートプロンプト -->
+        <div class="start-prompt" id="startPrompt">
+            <span>&gt; 声をかける</span>
         </div>
 
-        <div class="main">
-            <div class="content-inner">
-                <!-- Main Illustration -->
-                <section class="main-illustration-section">
-                    <div class="main-illustration-container">
-                        <img src="./images/desu_main.png" alt="DESU Illustration" class="main-illustration">
+        <!-- テキストウィンドウ -->
+        <div class="text-window" id="textWindow">
+            <img class="face-icon" id="faceIcon" src="" alt="キャラクター">
+            <div class="text-area">
+                <div class="name-display" id="nameDisplay"></div>
+                <div class="text-content" id="textContent"></div>
+            </div>
+            <div class="continue-icon" id="continueIcon">▼</div>
+        </div>
+
+        <!-- メニュー画面 -->
+        <div class="menu-screen" id="menuScreen">
+            <div class="close-container">
+                <span class="close-button" id="closeMenuButton">×</span>
+            </div>
+            <div class="menu-container">
+                <span class="menu-button" id="episodesLink">記録</span>
+                <span class="menu-button" id="charactersLink">名簿</span>
+                <span class="menu-button" id="toolsLink">支給品</span>
+            </div>
+        </div>
+
+        <!-- ツール画面 (支給品) -->
+        <div class="sub-screen" id="toolsScreen">
+            <div class="close-container">
+                <span class="close-button" id="closeToolsButton">×</span>
+            </div>
+            <div class="sub-container list-container">
+                <div class="list-item">
+                    <a href="./draw/" class="list-button">DRAW</a>
+                    <span class="tool-info-btn" data-tool="DRAW">?</span>
+                </div>
+                <div class="list-item">
+                    <a href="./beat/" class="list-button">BEAT</a>
+                    <span class="tool-info-btn" data-tool="BEAT">?</span>
+                </div>
+                <div class="list-item">
+                    <a href="./beep/" class="list-button">BEEP</a>
+                    <span class="tool-info-btn" data-tool="BEEP">?</span>
+                </div>
+                <div class="list-item">
+                    <a href="./pattern/" class="list-button">PATTERN</a>
+                    <span class="tool-info-btn" data-tool="PATTERN">?</span>
+                </div>
+                <div class="list-item">
+                    <a href="./emojie/" class="list-button">EMOJIE</a>
+                    <span class="tool-info-btn" data-tool="EMOJIE">?</span>
+                </div>
+                <div class="list-item">
+                    <a href="./tone/" class="list-button">TONE</a>
+                    <span class="tool-info-btn" data-tool="TONE">?</span>
+                </div>
+                <div class="list-item">
+                    <a href="./noise/" class="list-button">NOISE</a>
+                    <span class="tool-info-btn" data-tool="NOISE">?</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- エピソード画面 (記録) -->
+        <div class="sub-screen" id="episodesScreen">
+            <div class="close-container">
+                <span class="close-button" id="closeEpisodesButton">×</span>
+            </div>
+            <div class="sub-container">
+                <a href="./episodes/ep_gara/" class="list-button" target="_blank">ガラ</a>
+                <a href="./episodes/ep_hen/" class="list-button" target="_blank">ヘン</a>
+                <a href="./episodes/ep_shita/" class="list-button" target="_blank">下</a>
+            </div>
+        </div>
+
+        <!-- キャラクター画面 (名簿) -->
+        <div class="sub-screen" id="charactersScreen">
+            <div class="close-container">
+                <span class="close-button" id="closeCharactersButton">×</span>
+            </div>
+
+            <div class="characters-content">
+                <!-- Character Icon Navigation -->
+                <div class="character-icons">
+                    <button class="character-icon active" data-character="desu">
+                        <img src="./characters/desu_icon.jpg" alt="デス">
+                    </button>
+                    <button class="character-icon" data-character="sakana">
+                        <img src="./characters/sakana_icon.jpg" alt="サカナ">
+                    </button>
+                    <button class="character-icon" data-character="shi">
+                        <img src="./characters/shi_icon.jpg" alt="し">
+                    </button>
+                    <button class="character-icon" data-character="holem">
+                        <img src="./characters/holem_icon.jpg" alt="ホーレム">
+                    </button>
+                </div>
+
+                <div class="characters-grid">
+                    <!-- デス -->
+                    <div class="character-card" data-character="desu">
+                        <img src="./characters/desu.png" alt="デス" class="character-image">
+                        <h2 class="character-name">デス</h2>
+                        <p class="character-description">あやしいバイトをしてるらしい。</p>
                     </div>
-                </section>
 
-                <!-- Updates Section -->
-                <section class="updates-section">
-                    <h2 class="updates-title">last update</h2>
-                    <ul class="updates-list">
-                        <li>20260218 : tool "BEEP" 追加 </li>
-                        <li>20260214 : tool "BEAT" 追加 </li>
-                        <li>20260203 : tool "EMOJIE" 追加 </li>
-                    </ul>
-                </section>
+                    <!-- サカナ -->
+                    <div class="character-card" data-character="sakana" style="display: none;">
+                        <img src="./characters/sakana.png" alt="サカナ" class="character-image">
+                        <h2 class="character-name">サカナ</h2>
+                        <p class="character-description">デスが連れてる魚。しゃべる。</p>
+                    </div>
+
+                    <!-- し -->
+                    <div class="character-card" data-character="shi" style="display: none;">
+                        <img src="./characters/shi.png" alt="し" class="character-image">
+                        <h2 class="character-name">し</h2>
+                        <p class="character-description">歩み寄る死</p>
+                    </div>
+
+                    <!-- ホーレム -->
+                    <div class="character-card" data-character="holem" style="display: none;">
+                        <img src="./characters/holem.png" alt="ホーレム" class="character-image">
+                        <h2 class="character-name">ホーレム</h2>
+                        <p class="character-description">？（なにかの残骸のように見える）</p>
+                    </div>
+                </div>
             </div>
-
-            <div class="footer">&copy; 2026 <a href="https://warpshoot.github.io/" target="_blank">wpy</a></div>
-            <div class="footer-fade"></div>
         </div>
+
+        <div class="footer">&copy; 2026 wpy / last update 20260218</div>
     </div>
+
+    <script src="script.js"></script>
 </body>
 
 </html>
