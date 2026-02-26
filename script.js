@@ -377,11 +377,8 @@ function showSubScreen(screenElement, targetState) {
     if (currentState !== 3) return;
     currentState = targetState;
 
-    menuScreen.classList.remove('show');
-
-    setTimeout(() => {
-        screenElement.classList.add('show');
-    }, 400); // メニューが少し消えかけてから表示開始
+    menuScreen.classList.add('sub-active');
+    screenElement.classList.add('show');
 }
 
 function hideSubScreen(screenElement, currentStateValue) {
@@ -389,10 +386,7 @@ function hideSubScreen(screenElement, currentStateValue) {
     currentState = 3;
 
     screenElement.classList.remove('show');
-
-    setTimeout(() => {
-        menuScreen.classList.add('show');
-    }, 400);
+    menuScreen.classList.remove('sub-active');
 }
 
 window.addEventListener('load', init);

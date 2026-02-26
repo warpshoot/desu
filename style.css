@@ -112,6 +112,8 @@ body {
     width: 100%;
     height: 30%;
     background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
     z-index: 15;
     padding: 20px 40px;
     display: flex;
@@ -218,6 +220,8 @@ body {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -230,6 +234,18 @@ body {
 .menu-screen.show {
     opacity: 1;
     pointer-events: auto;
+}
+
+.menu-screen .menu-container,
+.menu-screen .close-container {
+    transition: opacity 0.3s ease-in-out;
+    opacity: 1;
+}
+
+.menu-screen.sub-active .menu-container,
+.menu-screen.sub-active .close-container {
+    opacity: 0;
+    pointer-events: none;
 }
 
 .menu-container {
@@ -287,7 +303,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: transparent;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -499,6 +515,17 @@ body {
     /* オーバーレイに影響されず常に一番上に表示 */
     pointer-events: none;
     letter-spacing: 1px;
+}
+
+.footer a {
+    color: inherit;
+    text-decoration: underline;
+    pointer-events: auto;
+    transition: color 0.3s ease;
+}
+
+.footer a:hover {
+    color: #999999;
 }
 
 /* レスポンシブ対応 */
