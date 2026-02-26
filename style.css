@@ -237,8 +237,8 @@ body {
     flex-direction: column;
     gap: 40px;
     align-items: center;
-    transform: translateY(-10%);
-    /* Shift menu upwards */
+    transform: translateY(-5vh);
+    /* Shift upwards consistently based on viewport */
 }
 
 .menu-button {
@@ -328,8 +328,8 @@ body {
     flex-direction: column;
     gap: 25px;
     align-items: center;
-    transform: translateY(-5%);
-    /* Shift sub-screens upwards slightly */
+    transform: translateY(-5vh);
+    /* Match main menu alignment */
 }
 
 .list-item {
@@ -405,7 +405,7 @@ body {
     gap: 30px;
     width: 90%;
     max-width: 500px;
-    transform: translateY(-5%);
+    transform: translateY(-5vh);
     /* Match sub-container alignment */
 }
 

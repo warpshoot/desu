@@ -209,8 +209,8 @@ body {
     flex-direction: row;
     gap: 30px;
     align-items: center;
-    transform: translateY(-10%);
-    /* Shift choices upwards */
+    transform: translateY(-5vh);
+    /* Match top page alignment */
 }
 
 .choice-button {
