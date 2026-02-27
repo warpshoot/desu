@@ -67,8 +67,6 @@ body {
 .start-prompt {
     position: absolute;
     bottom: calc(25% + env(safe-area-inset-bottom, 0px));
-    /* Shifted higher */
-    /* Center it vertically within the bottom area */
     left: 50%;
     transform: translate(-50%, 50%);
     font-size: 20px;
@@ -76,7 +74,8 @@ body {
     letter-spacing: 2px;
     cursor: pointer;
     z-index: 20;
-    /* Ensure this is above the fade-overlay (z-index 10) */
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 10px 20px;
     opacity: 0;
     pointer-events: none;
     transition: opacity 1s ease-in-out, transform 0.3s ease;
