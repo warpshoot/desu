@@ -43,6 +43,11 @@ const partingDialogues = [
     '…おつかれさん'
 ];
 
+const menuOpenDialogues = ['どうする', 'なんの用だ', '……'];
+const episodesDialogues = ['見ていくか', 'なにか気になるのか', '……'];
+const charactersDialogues = ['気になる奴でもいるのか', '珍しいな', '……'];
+const toolsDialogues = ['持ってくか', '色々あるぞ', '……'];
+
 // 状態管理
 // 0: 初期(背景のみ・プロンプト待ち)
 // 1: 挨拶テキスト表示中
@@ -85,6 +90,15 @@ function playTextSound() {
     }
 }
 
+// メニュー中のコメントを即時表示（タイピングなし・continueIconなし）
+function showMenuComment(text) {
+    textWindow.classList.remove('empty');
+    textWindow.classList.add('active');
+    textContent.textContent = text;
+    textContent.dataset.currentText = text;
+    continueIcon.classList.remove('show');
+}
+
 // 初期化
 function init() {
     // 初期背景設定
@@ -113,6 +127,8 @@ function init() {
     // ツール画面のイベント
     toolsLink.addEventListener('click', (e) => {
         e.stopPropagation();
+        const text = toolsDialogues[Math.floor(Math.random() * toolsDialogues.length)];
+        showMenuComment(text);
         showSubScreen(toolsScreen, 4);
     });
     closeToolsButton.addEventListener('click', (e) => {
@@ -163,6 +179,8 @@ function init() {
     // 記録画面のイベント
     episodesLink.addEventListener('click', (e) => {
         e.stopPropagation();
+        const text = episodesDialogues[Math.floor(Math.random() * episodesDialogues.length)];
+        showMenuComment(text);
         showSubScreen(episodesScreen, 5);
     });
     closeEpisodesButton.addEventListener('click', (e) => {
@@ -173,6 +191,8 @@ function init() {
     // 名簿画面のイベント
     charactersLink.addEventListener('click', (e) => {
         e.stopPropagation();
+        const text = charactersDialogues[Math.floor(Math.random() * charactersDialogues.length)];
+        showMenuComment(text);
         showSubScreen(charactersScreen, 6);
     });
     closeCharactersButton.addEventListener('click', (e) => {
@@ -317,14 +337,11 @@ function skipTyping() {
 function showMenu() {
     currentState = 3;
 
-    // テキストウィンドウを非表示
-    textWindow.classList.remove('active');
-    continueIcon.classList.remove('show');
-
-    // 背景を暗くしてメニューを表示
-    setTimeout(() => {
-        menuScreen.classList.add('show');
-    }, 500); // ウィンドウが消えるのを少し待つ
+    // テキストウィンドウはそのまま表示（消さない）
+    // メニューを表示してコメントを即時更新
+    menuScreen.classList.add('show');
+    const randomText = menuOpenDialogues[Math.floor(Math.random() * menuOpenDialogues.length)];
+    showMenuComment(randomText);
 }
 
 function startPartingDialogue() {
@@ -396,6 +413,10 @@ function hideSubScreen(screenElement, currentStateValue) {
 
     screenElement.classList.remove('show');
     menuScreen.classList.remove('sub-active');
+
+    // メニューに戻ったらコメントを更新して再表示
+    const randomText = menuOpenDialogues[Math.floor(Math.random() * menuOpenDialogues.length)];
+    showMenuComment(randomText);
 }
 
 window.addEventListener('load', init);
