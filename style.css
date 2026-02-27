@@ -114,7 +114,7 @@ body {
     background-color: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
-    z-index: 15;
+    z-index: 18; /* menuScreen(15)より上、sub-screen(20)より下 */
     padding: 20px 40px;
     display: flex;
     flex-direction: row;
@@ -135,7 +135,7 @@ body {
 }
 
 .text-window.empty {
-    opacity: 1;
+    opacity: 0;
     pointer-events: none;
 }
 
