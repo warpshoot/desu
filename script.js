@@ -147,7 +147,16 @@ function init() {
             }
 
             const toolName = btn.dataset.tool;
-            startToolInfoDialogue(`${toolName}だ。`);
+            const toolDescriptions = {
+                'DRAW': 'スケッチや図示に使うそうだ。現場で使ってる奴を見たことがある。',
+                'BEAT': 'リズムを組める。音の記録や暗号に使うのだろう。',
+                'BEEP': 'BEATの別型だ。こっちは音が軽い。',
+                'PATTERN': '図形を並べて模様を作るものらしい。用途はわからない。',
+                'EMOJIE': '絵文字で絵を作れる。それ以上でもそれ以下でもない。',
+                'TONE': '写真を白黒に加工できる。記録の処理用だろう。',
+                'NOISE': '画像にノイズをかける。なんのためのものなんだろうな。',
+            };
+            startToolInfoDialogue(toolDescriptions[toolName] ?? `${toolName}だ。`);
         });
     });
 
