@@ -460,7 +460,7 @@ body {
     border-radius: 0;
     padding: 20px;
     text-align: center;
-    width: 500px;
+    width: min(500px, 90vw);
     height: 300px;
     box-sizing: border-box;
     overflow: hidden;
