@@ -116,15 +116,6 @@ body {
     /* デフォルトは白 */
 }
 
-.name-display.sakana {
-    color: #4a9eff;
-}
-
-.name-display.death {
-    color: #ccc;
-    /* より明るいグレーに変更 */
-}
-
 /* テキスト内容 */
 .text-content {
     font-size: 18px;
