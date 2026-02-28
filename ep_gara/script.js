@@ -33,9 +33,9 @@ const faceIcon = document.getElementById('faceIcon');
 const nameDisplay = document.getElementById('nameDisplay');
 const textContent = document.getElementById('textContent');
 const continueIcon = document.getElementById('continueIcon');
-const choiceScreen = document.getElementById('choiceScreen');
+const replayScreen = document.getElementById('replayScreen');
 const replayButton = document.getElementById('replayButton');
-const backButton = document.getElementById('backButton');
+const closeBtnTop = document.getElementById('closeBtnTop');
 
 // 状態管理
 let currentDialogueIndex = -1;
@@ -104,15 +104,16 @@ function init() {
     // クリックイベント
     document.body.addEventListener('click', handleClick);
 
-    // 選択ボタンのイベントリスナー
+    // エンド画面のイベントリスナー
     replayButton.addEventListener('click', (e) => {
         e.stopPropagation();
         handleReplay();
     });
 
-    backButton.addEventListener('click', (e) => {
+    // 常時表示クローズボタン
+    closeBtnTop.addEventListener('click', (e) => {
         e.stopPropagation();
-        handleBack();
+        window.location.href = '../index.html';
     });
 }
 
@@ -348,9 +349,9 @@ function endStory() {
     textWindow.classList.remove('active', 'empty');
     continueIcon.classList.remove('show');
 
-    // 2秒後に選択画面を表示
+    // 2秒後にエンド画面を表示
     setTimeout(() => {
-        choiceScreen.classList.add('show');
+        replayScreen.classList.add('show');
         fadeOverlay.classList.remove('fade-in');
         fadeOverlay.classList.add('fade-out');
     }, 2000);
@@ -358,8 +359,8 @@ function endStory() {
 
 // もう一度見る
 function handleReplay() {
-    // 選択画面を非表示
-    choiceScreen.classList.remove('show');
+    // エンド画面を非表示
+    replayScreen.classList.remove('show');
 
     // フェードインで黒画面にする
     fadeOverlay.classList.remove('fade-out');
@@ -386,12 +387,6 @@ function handleReplay() {
         fadeOverlay.classList.remove('fade-in');
         fadeOverlay.classList.add('fade-out');
     }, 1000);
-}
-
-// 戻る
-function handleBack() {
-    // index.html に遷移
-    window.location.href = '../index.html';
 }
 
 // ページ読み込み時に初期化

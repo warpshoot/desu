@@ -4,7 +4,7 @@ const page1 = document.getElementById('page1');
 const page2 = document.getElementById('page2');
 const choiceScreen = document.getElementById('choiceScreen');
 const replayButton = document.getElementById('replayButton');
-const backButton = document.getElementById('backButton');
+const closeBtnTop = document.getElementById('closeBtnTop');
 
 // 現在のページ状態
 let currentPage = 'title'; // 'title', 'page1', 'page2', 'choice'
@@ -52,8 +52,8 @@ replayButton.addEventListener('click', (e) => {
     }, 1000);
 });
 
-// ×ボタン: タブを閉じる
-backButton.addEventListener('click', (e) => {
+// 常時表示クローズボタン
+closeBtnTop.addEventListener('click', (e) => {
     e.stopPropagation();
-    window.close();
+    window.location.href = '../index.html';
 });

@@ -89,6 +89,24 @@ body {
     max-width: 100%;
 }
 
+/* 常時表示クローズボタン */
+.close-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 30;
+    font-size: 32px;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: color 0.2s ease;
+    line-height: 1;
+    user-select: none;
+}
+
+.close-btn:hover {
+    color: #fff;
+}
+
 /* 選択画面 */
 .choice-screen {
     position: absolute;
