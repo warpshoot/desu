@@ -2,7 +2,7 @@
 const titleScreen = document.getElementById('titleScreen');
 const page1 = document.getElementById('page1');
 const page2 = document.getElementById('page2');
-const choiceScreen = document.getElementById('choiceScreen');
+const replayScreen = document.getElementById('replayScreen');
 const replayButton = document.getElementById('replayButton');
 const closeBtnTop = document.getElementById('closeBtnTop');
 
@@ -36,7 +36,7 @@ page2.addEventListener('click', () => {
     if (currentPage === 'page2') {
         page2.classList.remove('show');
         setTimeout(() => {
-            choiceScreen.classList.add('show');
+            replayScreen.classList.add('show');
             currentPage = 'choice';
         }, 500);
     }
@@ -45,7 +45,7 @@ page2.addEventListener('click', () => {
 // ↻ボタン: タイトル画面に戻る
 replayButton.addEventListener('click', (e) => {
     e.stopPropagation();
-    choiceScreen.classList.remove('show');
+    replayScreen.classList.remove('show');
     setTimeout(() => {
         titleScreen.classList.remove('hidden');
         currentPage = 'title';
