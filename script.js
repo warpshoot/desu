@@ -61,8 +61,8 @@ let typingTimeout = null;
 
 let audioContext = null;
 
-// テキスト表示音（ep_garaから流用）
-function playTextSound() {
+// テキスト表示音（ep_garaに合わせた実装）
+function playTextSound(speaker) {
     try {
         if (!audioContext) {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -74,8 +74,14 @@ function playTextSound() {
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
 
-        // 「？」の音（shi）
-        oscillator.frequency.value = 200;
+        // キャラクターごとに周波数を変える
+        const frequencies = {
+            sakana: 300,
+            desu: 700,
+            shi: 200
+        };
+        oscillator.frequency.value = frequencies[speaker] || 600;
+
         gainNode.gain.value = 0.1;
 
         oscillator.start();
@@ -262,10 +268,10 @@ function startDialogue(text, targetState = 1) {
 
     // 現在のテキストを保存してタイプ開始
     textContent.dataset.currentText = text;
-    typeText(text);
+    typeText(text, 'shi');
 }
 
-function typeText(text) {
+function typeText(text, speaker) {
     isTyping = true;
     let charIndex = 0;
     const typingSpeed = 50;
@@ -278,7 +284,7 @@ function typeText(text) {
             tempDiv.textContent = currentChar;
             textContent.innerHTML += tempDiv.innerHTML;
 
-            playTextSound();
+            playTextSound(speaker);
 
             charIndex++;
             typingTimeout = setTimeout(typeNextChar, typingSpeed);
@@ -364,7 +370,7 @@ function startToolInfoDialogue(text) {
     continueIcon.classList.remove('show');
 
     textContent.dataset.currentText = text;
-    typeText(text);
+    typeText(text, 'shi');
 }
 
 function resetToInitialState() {
