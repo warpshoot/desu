@@ -68,6 +68,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: flex-start;
+    padding-top: 60px;
     z-index: 5;
     opacity: 0;
     pointer-events: none;
@@ -92,7 +93,7 @@ body {
 /* 常時表示クローズボタン */
 .close-btn {
     position: absolute;
-    top: 55px;
+    top: 20px;
     right: 20px;
     z-index: 30;
     font-size: 32px;
