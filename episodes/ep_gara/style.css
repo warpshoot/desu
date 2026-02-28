@@ -186,8 +186,8 @@ body {
     background-color: #000;
     display: flex;
     justify-content: center;
-    align-items: center;
-    padding-top: 0;
+    align-items: flex-start;
+    padding-top: 40vh;
     z-index: 20;
     opacity: 1;
     transition: opacity 1s ease-in-out;
@@ -204,7 +204,6 @@ body {
     font-weight: 300;
     letter-spacing: 4px;
     text-align: center;
-    transform: translateY(-5vh);
 }
 
 /* 選択画面 */
@@ -278,8 +277,7 @@ body {
     }
 
     .title-screen {
-        align-items: flex-start;
-        padding-top: 35vh;
+        padding-top: 30vh;
     }
 
     .text-window {

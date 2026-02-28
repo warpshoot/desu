@@ -185,6 +185,10 @@ function showDialogue(index) {
     if (dialogue.background && dialogue.background !== currentBackground) {
         // 背景切り替え処理（fade プロパティがない場合はデフォルトで true）
         const useFade = dialogue.fade !== false;
+        // フェードあり切り替え中はテキストウィンドウを非表示（アイコン枠が透けて見えるのを防ぐ）
+        if (useFade) {
+            textWindow.classList.remove('active');
+        }
         changeBackground(dialogue.background, useFade, () => {
             // 背景切り替え後に台詞を表示
             displayDialogue(dialogue);
@@ -237,6 +241,10 @@ function changeBackground(newBackground, useFade, callback) {
 
 // 台詞を表示（実際の表示処理）
 function displayDialogue(dialogue) {
+    // テキストウィンドウを確実に表示（背景フェード後に呼ばれる場合も対応）
+    textWindow.classList.remove('empty');
+    textWindow.classList.add('active');
+
     // 顔アイコン切り替え
     faceIcon.src = faceIcons[dialogue.speaker];
     faceIcon.alt = speakerNames[dialogue.speaker];
