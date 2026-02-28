@@ -78,6 +78,14 @@ body {
     align-items: flex-start;
     /* center → flex-start（上寄せ） */
     gap: 20px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* セリフがある状態 */
+.text-window.active {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 /* 顔アイコン */
@@ -180,6 +188,7 @@ body {
     font-weight: 300;
     letter-spacing: 4px;
     text-align: center;
+    transform: translateY(-5vh);
 }
 
 /* 選択画面 */

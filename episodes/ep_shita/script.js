@@ -18,6 +18,7 @@ const dialogues = [
 // DOM要素
 const titleScreen = document.getElementById('titleScreen');
 const fadeOverlay = document.getElementById('fadeOverlay');
+const textWindow = document.getElementById('textWindow');
 const faceIcon = document.getElementById('faceIcon');
 const nameDisplay = document.getElementById('nameDisplay');
 const textContent = document.getElementById('textContent');
@@ -135,6 +136,8 @@ function showDialogue(index) {
         return;
     }
 
+    textWindow.classList.add('active');
+
     const dialogue = dialogues[index];
     currentDialogueIndex = index;
     canProceed = false;
@@ -246,6 +249,7 @@ function endStory() {
     fadeOverlay.classList.add('fade-in');
 
     // テキストウィンドウを非表示
+    textWindow.classList.remove('active');
     continueIcon.classList.remove('show');
 
     // 2秒後に選択画面を表示
@@ -275,6 +279,7 @@ function handleReplay() {
         textContent.innerHTML = '';
         nameDisplay.textContent = '';
         continueIcon.classList.remove('show');
+        textWindow.classList.remove('active');
 
         // タイトル画面を再表示
         titleScreen.classList.remove('hidden');
