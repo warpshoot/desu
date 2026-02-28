@@ -128,18 +128,6 @@ body {
     /* デフォルトは白 */
 }
 
-.name-display.sakana {
-    color: #4a9eff;
-}
-
-.name-display.desu {
-    color: #ccc;
-}
-
-.name-display.shi {
-    color: #ff9eff;
-}
-
 /* テキスト内容 */
 .text-content {
     font-size: 18px;
