@@ -103,7 +103,9 @@ function init() {
 
         // 背景が見えてからワンテンポ置いて「＞ 声をかける」を表示
         setTimeout(() => {
-            startPrompt.classList.add('show');
+            if (currentState === 0) {
+                startPrompt.classList.add('show');
+            }
         }, 2000);
     }, 500);
 
@@ -383,7 +385,9 @@ function resetToInitialState() {
 
         // プロンプトを再表示
         setTimeout(() => {
-            startPrompt.classList.add('show');
+            if (currentState === 0) {
+                startPrompt.classList.add('show');
+            }
         }, 1000);
     }, 500);
 }
@@ -405,3 +409,39 @@ function hideSubScreen(screenElement, currentStateValue) {
 }
 
 window.addEventListener('load', init);
+
+// bfcache（ブラウザの戻る/進むキャッシュ）からの復元時に状態をリセット
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        // 保留中のタイムアウトをクリア
+        if (typingTimeout) {
+            clearTimeout(typingTimeout);
+            typingTimeout = null;
+        }
+        isTyping = false;
+        currentState = 0;
+
+        // UIをリセット
+        fadeOverlay.classList.remove('fade-out');
+        menuScreen.classList.remove('show');
+        menuScreen.classList.remove('sub-active');
+        toolsScreen.classList.remove('show');
+        episodesScreen.classList.remove('show');
+        charactersScreen.classList.remove('show');
+        startPrompt.classList.remove('show');
+        textWindow.classList.remove('active');
+        textWindow.classList.remove('overlay-mode');
+        textWindow.classList.add('empty');
+        continueIcon.classList.remove('show');
+
+        // 通常の初期化シーケンスを再実行
+        setTimeout(() => {
+            fadeOverlay.classList.add('fade-out');
+            setTimeout(() => {
+                if (currentState === 0) {
+                    startPrompt.classList.add('show');
+                }
+            }, 2000);
+        }, 500);
+    }
+});
