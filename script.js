@@ -40,7 +40,7 @@ const dialogues = [
 const partingDialogues = [
     '……',
     '…またな',
-    '…おつかれさん'
+    '…もういいのか'
 ];
 
 // 状態管理
