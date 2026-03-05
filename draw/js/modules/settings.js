@@ -30,7 +30,7 @@ const PROVIDERS = {
             { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro' },
             { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite' },
         ],
-        defaultModel: 'gemini-2.5-flash-lite'
+        defaultModel: 'gemini-3.1-flash-lite'
     },
     openai: {
         name: 'OpenAI',
