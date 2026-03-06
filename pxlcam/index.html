@@ -642,6 +642,7 @@
     let animId = null;
     let mode = null; // 'cam' or 'img'
     let loadedImage = null; // Image element for img mode
+    let customized = false;
 
     const video = document.getElementById('videoFeed');
     const pixelCanvas = document.getElementById('pixelCanvas');
@@ -666,6 +667,13 @@
       });
 
       palSelect.addEventListener('change', (e) => {
+        if (e.target.value === '__custom__') return;
+
+        // Remove CUSTOM option if present
+        const customOpt = palSelect.querySelector('option[value="__custom__"]');
+        if (customOpt) palSelect.removeChild(customOpt);
+        customized = false;
+
         currentPalette = e.target.value;
 
         // Reset all sliders back to baseline when a palette is chosen/re-chosen
@@ -695,28 +703,43 @@
 
     buildSelectors();
 
+    function setCustomMode() {
+      if (customized) return;
+      customized = true;
+      const palSelect = document.getElementById('paletteSelect');
+      const opt = document.createElement('option');
+      opt.value = '__custom__';
+      opt.textContent = 'CUSTOM';
+      palSelect.appendChild(opt);
+      palSelect.value = '__custom__';
+    }
+
     // === SLIDERS ===
     document.getElementById('brightness').addEventListener('input', e => {
       brightness = parseInt(e.target.value);
       document.getElementById('brightVal').textContent = brightness;
+      setCustomMode();
       if ((mode === 'img' && loadedImage) || frozen) renderFrame();
     });
 
     document.getElementById('contrast').addEventListener('input', e => {
       contrast = parseFloat(e.target.value);
       document.getElementById('contVal').textContent = contrast.toFixed(1);
+      setCustomMode();
       if ((mode === 'img' && loadedImage) || frozen) renderFrame();
     });
 
     document.getElementById('saturation').addEventListener('input', e => {
       saturation = parseFloat(e.target.value);
       document.getElementById('satVal').textContent = saturation.toFixed(1);
+      setCustomMode();
       if ((mode === 'img' && loadedImage) || frozen) renderFrame();
     });
 
     document.getElementById('hue').addEventListener('input', e => {
       hueShift = parseInt(e.target.value);
       document.getElementById('hueVal').textContent = hueShift;
+      setCustomMode();
       if ((mode === 'img' && loadedImage) || frozen) renderFrame();
     });
 
@@ -724,6 +747,7 @@
     document.getElementById('ditherToggle').addEventListener('click', function () {
       dither = !dither;
       this.classList.toggle('on', dither);
+      setCustomMode();
       if ((mode === 'img' && loadedImage) || frozen) renderFrame();
     });
 
