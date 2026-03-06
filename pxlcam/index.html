@@ -212,6 +212,11 @@
       border-color: var(--accent);
     }
 
+    .styled-select:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
+
     .select-wrap {
       position: relative;
       flex: 1;
@@ -557,7 +562,7 @@
       <button class="btn" id="freezeBtn">FREEZE</button>
       <button class="btn" id="loadAnotherBtn">LOAD IMG</button>
       <div class="select-wrap" style="flex:1;">
-        <select id="saveResolution" class="styled-select" style="width:100%; text-align:center; padding-right:20px;">
+        <select id="saveResolution" class="styled-select" style="width:100%; text-align:center; padding-right:20px;" disabled>
           <option value="320">SAVE 320px</option>
           <option value="640" selected>SAVE 640px</option>
           <option value="1280">SAVE 1280px</option>
@@ -704,6 +709,11 @@
     buildSelectors();
     document.getElementById('gridOverlay').style.display = 'none';
 
+    function updateSaveState() {
+      const canSave = (mode === 'img' && loadedImage) || (mode === 'cam' && frozen);
+      document.getElementById('saveResolution').disabled = !canSave;
+    }
+
     function setCustomMode() {
       if (customized) return;
       customized = true;
@@ -783,6 +793,7 @@
         document.getElementById('status').textContent = 'IMAGE';
         document.getElementById('status').className = 'status';
         document.getElementById('freezeBtn').textContent = 'CAM';
+        updateSaveState();
         renderFrame();
       };
       img.src = URL.createObjectURL(file);
@@ -968,6 +979,7 @@
         document.getElementById('status').className = 'status live';
         frozen = false;
         document.getElementById('freezeBtn').textContent = 'FREEZE';
+        updateSaveState();
         loop();
       } catch (err) {
         console.error(err);
@@ -1014,6 +1026,7 @@
         document.getElementById('status').textContent = 'LIVE';
         document.getElementById('status').className = 'status live';
       }
+      updateSaveState();
     };
 
     // === COLOR QUANTIZATION ===
