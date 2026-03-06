@@ -599,7 +599,7 @@
     </div>
 
     <div class="canvas-wrap">
-      <canvas id="pixelCanvas" width="16" height="16"></canvas>
+      <canvas id="pixelCanvas" width="16" height="16" style="touch-action:none;"></canvas>
       <div class="grid-overlay" id="gridOverlay"></div>
       <div class="corner-mark tl"></div>
       <div class="corner-mark tr"></div>
@@ -804,6 +804,12 @@
     let loadedImage = null; // Image element for img mode
     let customized = false;
 
+    let cropCenterX = 0.5;
+    let cropCenterY = 0.5;
+    let cropZoom = 1.0;
+    const CROP_ZOOM_MIN = 0.25;
+    const CROP_ZOOM_MAX = 8.0;
+
     const video = document.getElementById('videoFeed');
     const pixelCanvas = document.getElementById('pixelCanvas');
     const sampleCanvas = document.getElementById('sampleCanvas');
@@ -926,6 +932,87 @@
       }
     });
 
+    // === CROP GESTURES (img mode only) ===
+    (function () {
+      const canvas = pixelCanvas;
+      const ptrs = new Map();
+      let lastDragX = 0, lastDragY = 0;
+      let pinchStartDist = 0, pinchStartZoom = 1;
+      let lastTapTime = 0;
+
+      function clampCrop() {
+        if (!loadedImage) return;
+        const { width: iw, height: ih } = loadedImage;
+        const cropSide = Math.min(iw, ih) / cropZoom;
+        if (cropSide < iw) {
+          const h = cropSide / 2 / iw;
+          cropCenterX = Math.max(h, Math.min(1 - h, cropCenterX));
+        }
+        if (cropSide < ih) {
+          const h = cropSide / 2 / ih;
+          cropCenterY = Math.max(h, Math.min(1 - h, cropCenterY));
+        }
+      }
+
+      canvas.addEventListener('pointerdown', e => {
+        if (mode !== 'img' || !loadedImage) return;
+        e.preventDefault();
+        ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        canvas.setPointerCapture(e.pointerId);
+
+        if (ptrs.size === 1) {
+          lastDragX = e.clientX;
+          lastDragY = e.clientY;
+          const now = Date.now();
+          if (now - lastTapTime < 300) {
+            cropCenterX = 0.5; cropCenterY = 0.5; cropZoom = 1.0;
+            renderFrame();
+          }
+          lastTapTime = now;
+        } else if (ptrs.size === 2) {
+          const [a, b] = [...ptrs.values()];
+          pinchStartDist = Math.hypot(b.x - a.x, b.y - a.y);
+          pinchStartZoom = cropZoom;
+        }
+      }, { passive: false });
+
+      canvas.addEventListener('pointermove', e => {
+        if (mode !== 'img' || !loadedImage || !ptrs.has(e.pointerId)) return;
+        e.preventDefault();
+        ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (ptrs.size === 1) {
+          const { width: iw, height: ih } = loadedImage;
+          const cropSide = Math.min(iw, ih) / cropZoom;
+          const rect = canvas.getBoundingClientRect();
+          cropCenterX -= (e.clientX - lastDragX) / rect.width  * cropSide / iw;
+          cropCenterY -= (e.clientY - lastDragY) / rect.height * cropSide / ih;
+          clampCrop();
+          lastDragX = e.clientX;
+          lastDragY = e.clientY;
+          renderFrame();
+        } else if (ptrs.size === 2) {
+          const [a, b] = [...ptrs.values()];
+          const dist = Math.hypot(b.x - a.x, b.y - a.y);
+          cropZoom = Math.max(CROP_ZOOM_MIN, Math.min(CROP_ZOOM_MAX, pinchStartZoom * dist / pinchStartDist));
+          clampCrop();
+          renderFrame();
+        }
+      }, { passive: false });
+
+      const endPtr = e => { ptrs.delete(e.pointerId); };
+      canvas.addEventListener('pointerup', endPtr);
+      canvas.addEventListener('pointercancel', endPtr);
+
+      canvas.addEventListener('wheel', e => {
+        if (mode !== 'img' || !loadedImage) return;
+        e.preventDefault();
+        cropZoom = Math.max(CROP_ZOOM_MIN, Math.min(CROP_ZOOM_MAX, cropZoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+        clampCrop();
+        renderFrame();
+      }, { passive: false });
+    })();
+
     // === IMAGE MODE ===
     const fileInput = document.getElementById('fileInput');
 
@@ -940,6 +1027,7 @@
       img.onload = () => {
         loadedImage = img;
         mode = 'img';
+        cropCenterX = 0.5; cropCenterY = 0.5; cropZoom = 1.0;
         // Stop camera if running
         if (stream) {
           stream.getTracks().forEach(t => t.stop());
@@ -968,9 +1056,19 @@
 
       if (mode === 'img' && loadedImage) {
         const iw = loadedImage.width, ih = loadedImage.height;
-        const side = Math.min(iw, ih);
-        const sx = (iw - side) / 2, sy = (ih - side) / 2;
-        sCtx.drawImage(loadedImage, sx, sy, side, side, 0, 0, res, res);
+        const cropSide = Math.min(iw, ih) / cropZoom;
+        const cx = cropCenterX * iw, cy = cropCenterY * ih;
+        const srcL = cx - cropSide / 2, srcT = cy - cropSide / 2;
+        const clampL = Math.max(0, srcL), clampT = Math.max(0, srcT);
+        const clampR = Math.min(iw, srcL + cropSide), clampB = Math.min(ih, srcT + cropSide);
+        const scale = res / cropSide;
+        sCtx.fillStyle = '#000';
+        sCtx.fillRect(0, 0, res, res);
+        sCtx.drawImage(loadedImage,
+          clampL, clampT, clampR - clampL, clampB - clampT,
+          (clampL - srcL) * scale, (clampT - srcT) * scale,
+          (clampR - clampL) * scale, (clampB - clampT) * scale
+        );
       } else if (mode === 'cam') {
         if (frozen) {
           sCtx.drawImage(freezeCanvas, 0, 0, freezeCanvas.width, freezeCanvas.height, 0, 0, res, res);
