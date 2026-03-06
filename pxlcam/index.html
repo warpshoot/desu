@@ -1303,32 +1303,43 @@
 
     document.getElementById('modalSaveBtn').onclick = () => {
       const res = currentRes;
-      buildExportCanvas(saveSize).toBlob(blob => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.download = `pxlcam_${res}x${res}_${saveSize}px_${Date.now()}.png`;
-        a.href = url;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        const btn = document.getElementById('modalSaveBtn');
-        const orig = btn.textContent;
-        btn.textContent = 'SAVED';
-        setTimeout(() => { btn.textContent = orig; }, 1200);
-      }, 'image/png');
+      const dataURL = buildExportCanvas(saveSize).toDataURL('image/png');
+      const a = document.createElement('a');
+      a.download = `pxlcam_${res}x${res}_${saveSize}px_${Date.now()}.png`;
+      a.href = dataURL;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      const btn = document.getElementById('modalSaveBtn');
+      const orig = btn.textContent;
+      btn.textContent = 'SAVED';
+      setTimeout(() => { btn.textContent = orig; }, 1200);
     };
 
+    function openImageTab(canvas) {
+      const url = canvas.toDataURL('image/png');
+      const win = window.open();
+      win.document.write(`<body style="margin:0;background:#000"><img src="${url}" style="max-width:100%;height:auto;image-rendering:pixelated;display:block"></body>`);
+      win.document.close();
+    }
+
     document.getElementById('modalCopyBtn').onclick = () => {
-      buildExportCanvas(saveSize).toBlob(async blob => {
-        try {
-          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-          const btn = document.getElementById('modalCopyBtn');
-          const orig = btn.textContent;
-          btn.textContent = 'COPIED';
-          setTimeout(() => { btn.textContent = orig; }, 1200);
-        } catch {
-          // clipboard API not supported or denied
-        }
-      }, 'image/png');
+      const c = buildExportCanvas(saveSize);
+      if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+        c.toBlob(async blob => {
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+            const btn = document.getElementById('modalCopyBtn');
+            const orig = btn.textContent;
+            btn.textContent = 'COPIED';
+            setTimeout(() => { btn.textContent = orig; }, 1200);
+          } catch {
+            openImageTab(c);
+          }
+        }, 'image/png');
+      } else {
+        openImageTab(c);
+      }
     };
   </script>
 </body>
