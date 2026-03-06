@@ -545,7 +545,7 @@
           <div class="dither-label">DITHER</div>
         </div>
         <div class="toggle-row">
-          <div class="toggle on" id="gridToggle"></div>
+          <div class="toggle" id="gridToggle"></div>
           <div class="dither-label">GRID</div>
         </div>
         <div class="spacer"></div>
@@ -635,7 +635,7 @@
     let saturation = 1;
     let hueShift = 0;
     let dither = false;
-    let showGrid = true;
+    let showGrid = false;
     let frozen = false;
     let stream = null;
     let facingMode = 'environment';
@@ -702,6 +702,7 @@
     }
 
     buildSelectors();
+    document.getElementById('gridOverlay').style.display = 'none';
 
     function setCustomMode() {
       if (customized) return;
@@ -1071,6 +1072,19 @@
       const eCtx = exportCanvas.getContext('2d');
       eCtx.imageSmoothingEnabled = false;
       eCtx.drawImage(pixelCanvas, 0, 0, targetSize, targetSize);
+
+      if (showGrid) {
+        const cellSize = targetSize / res;
+        eCtx.strokeStyle = 'rgba(204, 204, 204, 0.08)';
+        eCtx.lineWidth = 1;
+        eCtx.beginPath();
+        for (let i = 1; i < res; i++) {
+          const pos = i * cellSize;
+          eCtx.moveTo(pos, 0); eCtx.lineTo(pos, targetSize);
+          eCtx.moveTo(0, pos); eCtx.lineTo(targetSize, pos);
+        }
+        eCtx.stroke();
+      }
 
       const link = document.createElement('a');
       link.download = `pxlcam_${res}x${res}_to_${targetSize}px_${Date.now()}.png`;
