@@ -38,9 +38,9 @@
                 <span class="close-button" id="closeMenuButton">×</span>
             </div>
             <div class="menu-container">
-                <span class="menu-button" id="episodesLink">記録</span>
-                <span class="menu-button" id="charactersLink">名簿</span>
-                <span class="menu-button" id="toolsLink">支給品</span>
+                <span class="menu-button" id="episodesLink">記録を見る</span>
+                <span class="menu-button" id="charactersLink">尋ねる</span>
+                <span class="menu-button" id="toolsLink">支給品を得る</span>
             </div>
         </div>
 
@@ -93,16 +93,16 @@
             </div>
         </div>
 
-        <!-- キャラクター画面 (名簿) -->
+        <!-- 尋ねる画面 (旧 名簿) -->
         <div class="sub-screen" id="charactersScreen">
             <div class="close-container">
                 <span class="close-button" id="closeCharactersButton">×</span>
             </div>
 
             <div class="characters-content">
-                <!-- Character Icon Navigation -->
+                <!-- Character Icon Navigation (Photos to ask about) -->
                 <div class="character-icons">
-                    <button class="character-icon active" data-character="desu">
+                    <button class="character-icon" data-character="desu">
                         <img src="./characters/desu_icon.jpg" alt="デス">
                     </button>
                     <button class="character-icon" data-character="sakana">
@@ -119,41 +119,9 @@
                     </button>
                 </div>
 
-                <div class="characters-grid">
-                    <!-- デス -->
-                    <div class="character-card" data-character="desu">
-                        <img src="./characters/desu.png" alt="デス" class="character-image">
-                        <h2 class="character-name">デス</h2>
-                        <p class="character-description">あやしいバイトをしてるらしい。</p>
-                    </div>
-
-                    <!-- サカナ -->
-                    <div class="character-card" data-character="sakana" style="display: none;">
-                        <img src="./characters/sakana.png" alt="サカナ" class="character-image">
-                        <h2 class="character-name">サカナ</h2>
-                        <p class="character-description">デスが連れてる魚。しゃべる。</p>
-                    </div>
-
-                    <!-- し -->
-                    <div class="character-card" data-character="shi" style="display: none;">
-                        <img src="./characters/shi.png" alt="し" class="character-image">
-                        <h2 class="character-name">し</h2>
-                        <p class="character-description">歩み寄る死</p>
-                    </div>
-
-                    <!-- ホーレム -->
-                    <div class="character-card" data-character="holem" style="display: none;">
-                        <img src="./characters/holem.png" alt="ホーレム" class="character-image">
-                        <h2 class="character-name">ホーレム</h2>
-                        <p class="character-description">？（なにかの残骸のように見える）</p>
-                    </div>
-
-                    <!-- wpy -->
-                    <div class="character-card" data-character="wpy" style="display: none;">
-                        <img src="./characters/wpy.png" alt="wpy" class="character-image">
-                        <h2 class="character-name">wpy</h2>
-                        <p class="character-description">支給品はすべてこいつが作っているそうだ。</p>
-                    </div>
+                <!-- Display area for the selected character's photo -->
+                <div class="character-display" id="characterDisplay" style="display: none;">
+                    <img id="characterLargeImage" src="" alt="Selected Character" class="character-image">
                 </div>
             </div>
         </div>

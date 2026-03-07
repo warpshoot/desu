@@ -27,7 +27,37 @@ const closeToolsButton = document.getElementById('closeToolsButton');
 
 // 名簿の切り替え用
 const characterIcons = document.querySelectorAll('.character-icon');
-const characterCards = document.querySelectorAll('.character-card');
+const characterDisplay = document.getElementById('characterDisplay');
+const characterLargeImage = document.getElementById('characterLargeImage');
+
+// キャラクター定義
+const characterDescriptions = {
+    'desu': {
+        name: 'デス',
+        image: './characters/desu.png',
+        desc: 'あやしいバイトをしてるらしい。'
+    },
+    'sakana': {
+        name: 'サカナ',
+        image: './characters/sakana.png',
+        desc: 'デスが連れてる魚。しゃべる。'
+    },
+    'shi': {
+        name: 'し',
+        image: './characters/shi.png',
+        desc: '歩み寄る死'
+    },
+    'holem': {
+        name: 'ホーレム',
+        image: './characters/holem.png',
+        desc: '？（なにかの残骸のように見える）'
+    },
+    'wpy': {
+        name: 'wpy',
+        image: './characters/wpy.png',
+        desc: '支給品はすべてこいつが作っているそうだ。'
+    }
+};
 
 // セリフバリエーション
 const dialogues = [
@@ -192,20 +222,23 @@ function init() {
     characterIcons.forEach(icon => {
         icon.addEventListener('click', (e) => {
             e.stopPropagation(); // 誤爆防止
-            const character = icon.dataset.character;
+            if (currentState !== 6 && currentState !== 11 && currentState !== 12) return;
+
+            if (typingTimeout) {
+                clearTimeout(typingTimeout);
+                typingTimeout = null;
+            }
+
+            const characterId = icon.dataset.character;
 
             // Update icon active state
             characterIcons.forEach(i => i.classList.remove('active'));
             icon.classList.add('active');
 
-            // Show selected character card
-            characterCards.forEach(card => {
-                if (card.dataset.character === character) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
+            const charInfo = characterDescriptions[characterId];
+            if (charInfo) {
+                startCharacterInfoDialogue(charInfo);
+            }
         });
     });
 }
@@ -244,6 +277,17 @@ function handleClick(e) {
             textWindow.classList.add('empty');
             textWindow.classList.remove('overlay-mode');
             currentState = 4; // ツール画面の待機状態へ戻る
+        }, 500);
+    } else if (currentState === 12) {
+        // キャラクター説明完了後、テキストウィンドウと画像を閉じる
+        continueIcon.classList.remove('show');
+        textWindow.classList.remove('active');
+        characterDisplay.style.display = 'none'; // 画像も隠す
+        characterIcons.forEach(i => i.classList.remove('active')); // 選択状態解除
+        setTimeout(() => {
+            textWindow.classList.add('empty');
+            textWindow.classList.remove('overlay-mode');
+            currentState = 6; // 記録画面の待機状態へ戻る
         }, 500);
     }
 }
@@ -296,6 +340,7 @@ function typeText(text, speaker) {
             if (currentState === 1) currentState = 2;
             else if (currentState === 7) currentState = 8;
             else if (currentState === 9) currentState = 10;
+            else if (currentState === 11) currentState = 12;
 
             // 「…」の場合は少し長く待ってから進行可能にする
             setTimeout(() => {
@@ -317,6 +362,7 @@ function skipTyping() {
     if (currentState === 1) currentState = 2;
     else if (currentState === 7) currentState = 8;
     else if (currentState === 9) currentState = 10;
+    else if (currentState === 11) currentState = 12;
 
     textContent.textContent = textContent.dataset.currentText || '…';
     continueIcon.classList.add('show');
@@ -375,6 +421,34 @@ function startToolInfoDialogue(text) {
     typeText(text, 'shi');
 }
 
+function startCharacterInfoDialogue(charInfo) {
+    currentState = 11; // 11: キャラクター説明テキスト表示中, 12: 完了
+
+    // 画像を表示
+    characterLargeImage.src = charInfo.image;
+    characterDisplay.style.display = 'flex';
+
+    textWindow.classList.add('overlay-mode');
+
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    textWindow.classList.remove('empty');
+    textWindow.classList.add('active');
+
+    faceIcon.src = SHI_ICON;
+    faceIcon.alt = '？';
+    nameDisplay.textContent = '？';
+    nameDisplay.className = 'name-display shi';
+
+    textContent.textContent = '';
+    continueIcon.classList.remove('show');
+
+    textContent.dataset.currentText = charInfo.desc;
+    typeText(charInfo.desc, 'shi');
+}
+
 function resetToInitialState() {
     // 全てを非表示にしてリセット
     textWindow.classList.remove('active');
@@ -428,6 +502,7 @@ window.addEventListener('pageshow', (event) => {
         toolsScreen.classList.remove('show');
         episodesScreen.classList.remove('show');
         charactersScreen.classList.remove('show');
+        characterDisplay.style.display = 'none';
         startPrompt.classList.remove('show');
         textWindow.classList.remove('active');
         textWindow.classList.remove('overlay-mode');
