@@ -527,6 +527,11 @@
       color: var(--text);
     }
 
+    .cam-switch svg {
+      width: 16px;
+      height: 16px;
+    }
+
     .bottom-row {
       display: flex;
       align-items: center;
@@ -797,7 +802,13 @@
           <div class="dither-label">GRID</div>
         </div>
         <div class="spacer"></div>
-        <button class="cam-switch" id="camSwitch" title="Switch camera">R</button>
+        <button class="cam-switch" id="camSwitch" title="Switch camera">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path
+              d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8m0 0V3m0 5h5m-5 4a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16m0 0h-5m5 0v5" />
+          </svg>
+        </button>
       </div>
     </div>
   </div>
