@@ -415,17 +415,26 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: flex-start;
+    /* Ensures content aligns to top */
+    padding-top: 10vh;
+    /* Fixed offset from top */
     gap: 30px;
     width: 90%;
     max-width: 500px;
-    transform: translateY(-5vh);
-    /* Match sub-container alignment */
+    height: 100%;
+    /* Take full height so flex-start works correctly */
 }
 
 .character-icons {
     display: flex;
     gap: 15px;
     justify-content: center;
+    width: 100%;
+    /* Ensure full width */
+    height: 70px;
+    /* Fixed height to match icon, prevents layout jump */
+    flex-shrink: 0;
 }
 
 .character-icon {
