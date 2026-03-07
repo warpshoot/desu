@@ -452,7 +452,6 @@ body {
 
 .character-icon.active {
     border-color: rgba(255, 255, 255, 0.8);
-    transform: scale(1.1);
 }
 
 .character-display {
