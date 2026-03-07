@@ -212,6 +212,11 @@
       border-color: var(--accent);
     }
 
+    .styled-select:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
+
     .select-wrap {
       position: relative;
       flex: 1;
@@ -453,6 +458,135 @@
     .spacer {
       flex: 1;
     }
+
+    .btn:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 100;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      width: 100%;
+      max-width: 420px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0 2px;
+      font-family: 'DM Mono', monospace;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      color: var(--text);
+    }
+
+    .modal-preview-wrap {
+      aspect-ratio: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .modal-preview-wrap canvas {
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+    }
+
+    .modal-grid-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.08;
+      background-image:
+        repeating-linear-gradient(to right, var(--text) 0, var(--text) 1px, transparent 1px, transparent),
+        repeating-linear-gradient(to bottom, var(--text) 0, var(--text) 1px, transparent 1px, transparent);
+    }
+
+    .modal-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      width: 40px;
+      flex-shrink: 0;
+    }
+
+    .seg-group {
+      display: flex;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .seg-btn {
+      flex: 1;
+      padding: 7px 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text-dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+
+    .seg-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 6px;
+    }
   </style>
 </head>
 
@@ -465,7 +599,7 @@
     </div>
 
     <div class="canvas-wrap">
-      <canvas id="pixelCanvas" width="16" height="16"></canvas>
+      <canvas id="pixelCanvas" width="16" height="16" style="touch-action:none;"></canvas>
       <div class="grid-overlay" id="gridOverlay"></div>
       <div class="corner-mark tl"></div>
       <div class="corner-mark tr"></div>
@@ -545,7 +679,7 @@
           <div class="dither-label">DITHER</div>
         </div>
         <div class="toggle-row">
-          <div class="toggle on" id="gridToggle"></div>
+          <div class="toggle" id="gridToggle"></div>
           <div class="dither-label">GRID</div>
         </div>
         <div class="spacer"></div>
@@ -556,12 +690,38 @@
     <div class="actions">
       <button class="btn" id="freezeBtn">FREEZE</button>
       <button class="btn" id="loadAnotherBtn">LOAD IMG</button>
-      <div class="select-wrap" style="flex:1;">
-        <select id="saveResolution" class="styled-select" style="width:100%; text-align:center; padding-right:20px;">
-          <option value="320">SAVE 320px</option>
-          <option value="640" selected>SAVE 640px</option>
-          <option value="1280">SAVE 1280px</option>
-        </select>
+      <button class="btn" id="saveOpenBtn" disabled>SAVE</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="saveModal" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">EXPORT</span>
+        <button class="modal-close" id="modalClose">×</button>
+      </div>
+      <div class="modal-preview-wrap">
+        <canvas id="modalPreview"></canvas>
+        <div class="modal-grid-overlay" id="modalGridOverlay" style="display:none;"></div>
+      </div>
+      <div class="modal-row">
+        <div class="modal-label">SIZE</div>
+        <div class="seg-group" id="sizeGroup">
+          <button class="seg-btn" data-size="320">320px</button>
+          <button class="seg-btn active" data-size="640">640px</button>
+          <button class="seg-btn" data-size="1280">1280px</button>
+        </div>
+      </div>
+      <div class="modal-row">
+        <div class="modal-label">GRID</div>
+        <div class="seg-group" id="modalGridGroup">
+          <button class="seg-btn" data-grid="on">ON</button>
+          <button class="seg-btn" data-grid="off">OFF</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="modalCopyBtn">COPY</button>
+        <button class="btn primary" id="modalSaveBtn">SAVE</button>
       </div>
     </div>
   </div>
@@ -635,13 +795,20 @@
     let saturation = 1;
     let hueShift = 0;
     let dither = false;
-    let showGrid = true;
+    let showGrid = false;
     let frozen = false;
     let stream = null;
     let facingMode = 'environment';
     let animId = null;
     let mode = null; // 'cam' or 'img'
     let loadedImage = null; // Image element for img mode
+    let customized = false;
+
+    let cropCenterX = 0.5;
+    let cropCenterY = 0.5;
+    let cropZoom = 1.0;
+    const CROP_ZOOM_MIN = 0.25;
+    const CROP_ZOOM_MAX = 8.0;
 
     const video = document.getElementById('videoFeed');
     const pixelCanvas = document.getElementById('pixelCanvas');
@@ -666,6 +833,13 @@
       });
 
       palSelect.addEventListener('change', (e) => {
+        if (e.target.value === '__custom__') return;
+
+        // Remove CUSTOM option if present
+        const customOpt = palSelect.querySelector('option[value="__custom__"]');
+        if (customOpt) palSelect.removeChild(customOpt);
+        customized = false;
+
         currentPalette = e.target.value;
 
         // Reset all sliders back to baseline when a palette is chosen/re-chosen
@@ -694,29 +868,50 @@
     }
 
     buildSelectors();
+    document.getElementById('gridOverlay').style.display = 'none';
+
+    function updateSaveState() {
+      const canSave = (mode === 'img' && loadedImage) || (mode === 'cam' && frozen);
+      document.getElementById('saveOpenBtn').disabled = !canSave;
+    }
+
+    function setCustomMode() {
+      if (customized) return;
+      customized = true;
+      const palSelect = document.getElementById('paletteSelect');
+      const opt = document.createElement('option');
+      opt.value = '__custom__';
+      opt.textContent = 'CUSTOM';
+      palSelect.appendChild(opt);
+      palSelect.value = '__custom__';
+    }
 
     // === SLIDERS ===
     document.getElementById('brightness').addEventListener('input', e => {
       brightness = parseInt(e.target.value);
       document.getElementById('brightVal').textContent = brightness;
+      setCustomMode();
       if ((mode === 'img' && loadedImage) || frozen) renderFrame();
     });
 
     document.getElementById('contrast').addEventListener('input', e => {
       contrast = parseFloat(e.target.value);
       document.getElementById('contVal').textContent = contrast.toFixed(1);
+      setCustomMode();
       if ((mode === 'img' && loadedImage) || frozen) renderFrame();
     });
 
     document.getElementById('saturation').addEventListener('input', e => {
       saturation = parseFloat(e.target.value);
       document.getElementById('satVal').textContent = saturation.toFixed(1);
+      setCustomMode();
       if ((mode === 'img' && loadedImage) || frozen) renderFrame();
     });
 
     document.getElementById('hue').addEventListener('input', e => {
       hueShift = parseInt(e.target.value);
       document.getElementById('hueVal').textContent = hueShift;
+      setCustomMode();
       if ((mode === 'img' && loadedImage) || frozen) renderFrame();
     });
 
@@ -724,6 +919,7 @@
     document.getElementById('ditherToggle').addEventListener('click', function () {
       dither = !dither;
       this.classList.toggle('on', dither);
+      setCustomMode();
       if ((mode === 'img' && loadedImage) || frozen) renderFrame();
     });
 
@@ -731,7 +927,91 @@
       showGrid = !showGrid;
       this.classList.toggle('on', showGrid);
       document.getElementById('gridOverlay').style.display = showGrid ? '' : 'none';
+      if (document.getElementById('saveModal').style.display !== 'none') {
+        updateModalGridState();
+      }
     });
+
+    // === CROP GESTURES (img mode only) ===
+    (function () {
+      const canvas = pixelCanvas;
+      const ptrs = new Map();
+      let lastDragX = 0, lastDragY = 0;
+      let pinchStartDist = 0, pinchStartZoom = 1;
+      let lastTapTime = 0;
+
+      function clampCrop() {
+        if (!loadedImage) return;
+        const { width: iw, height: ih } = loadedImage;
+        const cropSide = Math.min(iw, ih) / cropZoom;
+        if (cropSide < iw) {
+          const h = cropSide / 2 / iw;
+          cropCenterX = Math.max(h, Math.min(1 - h, cropCenterX));
+        }
+        if (cropSide < ih) {
+          const h = cropSide / 2 / ih;
+          cropCenterY = Math.max(h, Math.min(1 - h, cropCenterY));
+        }
+      }
+
+      canvas.addEventListener('pointerdown', e => {
+        if (mode !== 'img' || !loadedImage) return;
+        e.preventDefault();
+        ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        canvas.setPointerCapture(e.pointerId);
+
+        if (ptrs.size === 1) {
+          lastDragX = e.clientX;
+          lastDragY = e.clientY;
+          const now = Date.now();
+          if (now - lastTapTime < 300) {
+            cropCenterX = 0.5; cropCenterY = 0.5; cropZoom = 1.0;
+            renderFrame();
+          }
+          lastTapTime = now;
+        } else if (ptrs.size === 2) {
+          const [a, b] = [...ptrs.values()];
+          pinchStartDist = Math.hypot(b.x - a.x, b.y - a.y);
+          pinchStartZoom = cropZoom;
+        }
+      }, { passive: false });
+
+      canvas.addEventListener('pointermove', e => {
+        if (mode !== 'img' || !loadedImage || !ptrs.has(e.pointerId)) return;
+        e.preventDefault();
+        ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (ptrs.size === 1) {
+          const { width: iw, height: ih } = loadedImage;
+          const cropSide = Math.min(iw, ih) / cropZoom;
+          const rect = canvas.getBoundingClientRect();
+          cropCenterX -= (e.clientX - lastDragX) / rect.width  * cropSide / iw;
+          cropCenterY -= (e.clientY - lastDragY) / rect.height * cropSide / ih;
+          clampCrop();
+          lastDragX = e.clientX;
+          lastDragY = e.clientY;
+          renderFrame();
+        } else if (ptrs.size === 2) {
+          const [a, b] = [...ptrs.values()];
+          const dist = Math.hypot(b.x - a.x, b.y - a.y);
+          cropZoom = Math.max(CROP_ZOOM_MIN, Math.min(CROP_ZOOM_MAX, pinchStartZoom * dist / pinchStartDist));
+          clampCrop();
+          renderFrame();
+        }
+      }, { passive: false });
+
+      const endPtr = e => { ptrs.delete(e.pointerId); };
+      canvas.addEventListener('pointerup', endPtr);
+      canvas.addEventListener('pointercancel', endPtr);
+
+      canvas.addEventListener('wheel', e => {
+        if (mode !== 'img' || !loadedImage) return;
+        e.preventDefault();
+        cropZoom = Math.max(CROP_ZOOM_MIN, Math.min(CROP_ZOOM_MAX, cropZoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+        clampCrop();
+        renderFrame();
+      }, { passive: false });
+    })();
 
     // === IMAGE MODE ===
     const fileInput = document.getElementById('fileInput');
@@ -747,6 +1027,7 @@
       img.onload = () => {
         loadedImage = img;
         mode = 'img';
+        cropCenterX = 0.5; cropCenterY = 0.5; cropZoom = 1.0;
         // Stop camera if running
         if (stream) {
           stream.getTracks().forEach(t => t.stop());
@@ -758,6 +1039,7 @@
         document.getElementById('status').textContent = 'IMAGE';
         document.getElementById('status').className = 'status';
         document.getElementById('freezeBtn').textContent = 'CAM';
+        updateSaveState();
         renderFrame();
       };
       img.src = URL.createObjectURL(file);
@@ -774,9 +1056,19 @@
 
       if (mode === 'img' && loadedImage) {
         const iw = loadedImage.width, ih = loadedImage.height;
-        const side = Math.min(iw, ih);
-        const sx = (iw - side) / 2, sy = (ih - side) / 2;
-        sCtx.drawImage(loadedImage, sx, sy, side, side, 0, 0, res, res);
+        const cropSide = Math.min(iw, ih) / cropZoom;
+        const cx = cropCenterX * iw, cy = cropCenterY * ih;
+        const srcL = cx - cropSide / 2, srcT = cy - cropSide / 2;
+        const clampL = Math.max(0, srcL), clampT = Math.max(0, srcT);
+        const clampR = Math.min(iw, srcL + cropSide), clampB = Math.min(ih, srcT + cropSide);
+        const scale = res / cropSide;
+        sCtx.fillStyle = '#000';
+        sCtx.fillRect(0, 0, res, res);
+        sCtx.drawImage(loadedImage,
+          clampL, clampT, clampR - clampL, clampB - clampT,
+          (clampL - srcL) * scale, (clampT - srcT) * scale,
+          (clampR - clampL) * scale, (clampB - clampT) * scale
+        );
       } else if (mode === 'cam') {
         if (frozen) {
           sCtx.drawImage(freezeCanvas, 0, 0, freezeCanvas.width, freezeCanvas.height, 0, 0, res, res);
@@ -943,6 +1235,7 @@
         document.getElementById('status').className = 'status live';
         frozen = false;
         document.getElementById('freezeBtn').textContent = 'FREEZE';
+        updateSaveState();
         loop();
       } catch (err) {
         console.error(err);
@@ -989,6 +1282,7 @@
         document.getElementById('status').textContent = 'LIVE';
         document.getElementById('status').className = 'status live';
       }
+      updateSaveState();
     };
 
     // === COLOR QUANTIZATION ===
@@ -1035,37 +1329,116 @@
       animId = requestAnimationFrame(loop);
     }
 
-    // === SAVE ===
-    document.getElementById('saveResolution').addEventListener('change', (e) => {
-      const selectEl = e.target;
-      const targetSize = parseInt(selectEl.value);
+    // === SAVE MODAL ===
+    let saveSize = 640;
 
+    function buildExportCanvas(targetSize) {
       const res = currentRes;
-      const exportCanvas = document.createElement('canvas');
-      exportCanvas.width = targetSize;
-      exportCanvas.height = targetSize;
-      const eCtx = exportCanvas.getContext('2d');
-      eCtx.imageSmoothingEnabled = false;
-      eCtx.drawImage(pixelCanvas, 0, 0, targetSize, targetSize);
+      const c = document.createElement('canvas');
+      c.width = targetSize;
+      c.height = targetSize;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(pixelCanvas, 0, 0, targetSize, targetSize);
+      if (showGrid) {
+        const cell = targetSize / res;
+        ctx.strokeStyle = 'rgba(204, 204, 204, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 1; i < res; i++) {
+          const p = i * cell;
+          ctx.moveTo(p, 0); ctx.lineTo(p, targetSize);
+          ctx.moveTo(0, p); ctx.lineTo(targetSize, p);
+        }
+        ctx.stroke();
+      }
+      return c;
+    }
 
-      const link = document.createElement('a');
-      link.download = `pxlcam_${res}x${res}_to_${targetSize}px_${Date.now()}.png`;
-      link.href = exportCanvas.toDataURL('image/png');
-      link.click();
+    function updateModalGridState() {
+      document.querySelectorAll('#modalGridGroup .seg-btn').forEach(b => {
+        b.classList.toggle('active',
+          (b.dataset.grid === 'on' && showGrid) || (b.dataset.grid === 'off' && !showGrid)
+        );
+      });
+      const res = currentRes;
+      document.getElementById('modalGridOverlay').style.display = showGrid ? '' : 'none';
+      document.getElementById('modalGridOverlay').style.backgroundSize =
+        `calc(100% / ${res}) calc(100% / ${res})`;
+    }
 
-      // UI Feedback
-      const originalText = selectEl.options[1].text; // Store "SAVE 640px"
-      selectEl.options[selectEl.selectedIndex].text = 'SAVED...';
-      selectEl.style.color = 'var(--accent)';
+    function openSaveModal() {
+      const preview = document.getElementById('modalPreview');
+      preview.width = currentRes;
+      preview.height = currentRes;
+      preview.getContext('2d').drawImage(pixelCanvas, 0, 0);
+      updateModalGridState();
+      document.getElementById('saveModal').style.display = 'flex';
+    }
 
-      setTimeout(() => {
-        selectEl.selectedIndex = 1; // reset back to default view after action
-        selectEl.options[1].text = originalText;
-        selectEl.options[0].text = 'SAVE 320px'; // just in case
-        selectEl.options[2].text = 'SAVE 1280px';
-        selectEl.style.color = '';
-      }, 800);
+    document.getElementById('saveOpenBtn').onclick = openSaveModal;
+
+    document.getElementById('modalClose').onclick = () => {
+      document.getElementById('saveModal').style.display = 'none';
+    };
+
+    document.getElementById('sizeGroup').addEventListener('click', e => {
+      const btn = e.target.closest('.seg-btn');
+      if (!btn) return;
+      saveSize = parseInt(btn.dataset.size);
+      document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
     });
+
+    document.getElementById('modalGridGroup').addEventListener('click', e => {
+      const btn = e.target.closest('.seg-btn');
+      if (!btn) return;
+      showGrid = btn.dataset.grid === 'on';
+      document.getElementById('gridToggle').classList.toggle('on', showGrid);
+      document.getElementById('gridOverlay').style.display = showGrid ? '' : 'none';
+      updateModalGridState();
+    });
+
+    document.getElementById('modalSaveBtn').onclick = () => {
+      const res = currentRes;
+      const dataURL = buildExportCanvas(saveSize).toDataURL('image/png');
+      const a = document.createElement('a');
+      a.download = `pxlcam_${res}x${res}_${saveSize}px_${Date.now()}.png`;
+      a.href = dataURL;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      const btn = document.getElementById('modalSaveBtn');
+      const orig = btn.textContent;
+      btn.textContent = 'SAVED';
+      setTimeout(() => { btn.textContent = orig; }, 1200);
+    };
+
+    function openImageTab(canvas) {
+      const url = canvas.toDataURL('image/png');
+      const win = window.open();
+      win.document.write(`<body style="margin:0;background:#000"><img src="${url}" style="max-width:100%;height:auto;image-rendering:pixelated;display:block"></body>`);
+      win.document.close();
+    }
+
+    document.getElementById('modalCopyBtn').onclick = () => {
+      const c = buildExportCanvas(saveSize);
+      if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+        c.toBlob(async blob => {
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+            const btn = document.getElementById('modalCopyBtn');
+            const orig = btn.textContent;
+            btn.textContent = 'COPIED';
+            setTimeout(() => { btn.textContent = orig; }, 1200);
+          } catch {
+            openImageTab(c);
+          }
+        }, 'image/png');
+      } else {
+        openImageTab(c);
+      }
+    };
   </script>
 </body>
 
