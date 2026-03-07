@@ -431,7 +431,7 @@ body {
 .character-icon {
     width: 70px;
     height: 70px;
-    border-radius: 4px;
+    border-radius: 0;
     border: 2px solid transparent;
     cursor: pointer;
     padding: 0;
