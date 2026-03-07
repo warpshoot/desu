@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>PXL CAM</title>
+  <title>DESU&trade; pxlcam</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
 
@@ -59,12 +59,96 @@
       color: var(--accent);
     }
 
-    .logo span {
-      color: var(--text-dim);
-      font-weight: 300;
+    /* Credit Button */
+    #credit-btn {
+      position: fixed;
+      top: max(12px, env(safe-area-inset-top));
+      left: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: bold;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      cursor: pointer;
+      z-index: 100;
+      transition: all 0.2s;
+    }
+
+    #credit-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.8);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Credit Modal */
+    #credit-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      z-index: 1001;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #credit-modal.visible {
+      display: flex;
+    }
+
+    #credit-content {
+      background: #fff;
+      border: 1px solid rgba(0, 0, 0, 0.6);
+      padding: 20px 24px;
+      font-family: monospace;
+      width: 300px;
+      max-width: calc(100vw - 40px);
+    }
+
+    .credit-row {
+      display: flex;
+      gap: 12px;
+      line-height: 1.9;
+    }
+
+    .credit-key {
+      color: #888;
       font-size: 11px;
-      letter-spacing: 0.05em;
-      margin-left: 6px;
+      min-width: 4em;
+      flex-shrink: 0;
+    }
+
+    .credit-val {
+      font-size: 11px;
+      color: #111;
+      text-decoration: none;
+    }
+
+    a.credit-val {
+      text-decoration: underline;
+    }
+
+    .credit-divider {
+      border: none;
+      border-top: 1px solid #ddd;
+      margin: 12px 0;
+    }
+
+    .credit-manual-link {
+      font-size: 11px;
+      color: #111;
+      text-decoration: underline;
+      margin-right: 16px;
     }
 
     .status {
@@ -224,7 +308,7 @@
     }
 
     .select-wrap::after {
-      content: '▼';
+      content: 'V';
       position: absolute;
       right: 10px;
       top: 50%;
@@ -471,7 +555,7 @@
       background: rgba(0, 0, 0, 0.85);
       z-index: 100;
       display: flex;
-      align-items: flex-end;
+      align-items: flex-start;
       justify-content: center;
       padding: 16px;
     }
@@ -592,9 +676,34 @@
 
 <body>
 
+  <!-- Credit Button -->
+  <div id="credit-btn">?</div>
+
+  <!-- Credit Modal -->
+  <div id="credit-modal">
+    <div id="credit-content">
+      <div class="credit-row">
+        <span class="credit-key">NAME</span>
+        <span class="credit-val">DESU&trade; pxlcam</span>
+      </div>
+      <div class="credit-row">
+        <span class="credit-key">SOURCE</span>
+        <a href="https://warpshoot.github.io/desu/" target="_blank" class="credit-val">warpshoot.github.io/desu</a>
+      </div>
+      <div class="credit-row">
+        <span class="credit-key">CREDIT</span>
+        <a href="https://warpshoot.github.io/" target="_blank" class="credit-val">wpy</a>
+      </div>
+      <hr class="credit-divider">
+      <div class="credit-row">
+        <span class="credit-key">MANUAL</span>
+        <a href="MANUAL.md" target="_blank" class="credit-manual-link">FOR HUMANS</a>
+      </div>
+    </div>
+  </div>
+
   <div class="app">
-    <div class="header">
-      <div class="logo">PXL CAM<span>DESU™</span></div>
+    <div class="header" style="justify-content: flex-end">
       <div class="status" id="status">STANDBY</div>
     </div>
 
@@ -606,8 +715,7 @@
       <div class="corner-mark bl"></div>
       <div class="corner-mark br"></div>
       <div class="start-screen" id="startScreen">
-        <div class="icon">◩</div>
-        <p>CAMERA / IMAGE → PIXEL ART</p>
+        <div class="icon">#</div>
         <div class="start-buttons">
           <button class="start-btn" id="startBtn">CAM</button>
           <button class="start-btn secondary" id="loadImgBtn">IMG</button>
@@ -618,6 +726,12 @@
     <video id="videoFeed" playsinline autoplay muted></video>
     <canvas id="sampleCanvas" style="display:none;"></canvas>
     <input type="file" id="fileInput" accept="image/*" style="display:none;">
+
+    <div class="actions">
+      <button class="btn" id="freezeBtn">FREEZE</button>
+      <button class="btn" id="loadAnotherBtn">LOAD IMG</button>
+      <button class="btn" id="saveOpenBtn" disabled>SAVE</button>
+    </div>
 
     <div class="controls">
       <!-- Palette -->
@@ -683,14 +797,8 @@
           <div class="dither-label">GRID</div>
         </div>
         <div class="spacer"></div>
-        <button class="cam-switch" id="camSwitch" title="Switch camera">⟲</button>
+        <button class="cam-switch" id="camSwitch" title="Switch camera">R</button>
       </div>
-    </div>
-
-    <div class="actions">
-      <button class="btn" id="freezeBtn">FREEZE</button>
-      <button class="btn" id="loadAnotherBtn">LOAD IMG</button>
-      <button class="btn" id="saveOpenBtn" disabled>SAVE</button>
     </div>
   </div>
 
@@ -698,7 +806,7 @@
     <div class="modal">
       <div class="modal-header">
         <span class="modal-title">EXPORT</span>
-        <button class="modal-close" id="modalClose">×</button>
+        <button class="modal-close" id="modalClose">x</button>
       </div>
       <div class="modal-preview-wrap">
         <canvas id="modalPreview"></canvas>
@@ -730,35 +838,35 @@
     // === PALETTES ===
     const PALETTES = {
       full: {
-        name: 'FULL',
+        name: 'FULL COLOR',
         colors: null // no restriction
       },
       gb: {
-        name: 'GAMEBOY',
+        name: 'GREEN 4BIT',
         colors: ['#0f380f', '#306230', '#8bac0f', '#9bbc0f']
       },
       gbp: {
-        name: 'GB POCKET',
+        name: 'GRAY 4BIT',
         colors: ['#1a1a1a', '#545454', '#a8a8a8', '#e0e0e0']
       },
       cga: {
-        name: 'CGA',
+        name: 'CYAN MAGENTA',
         colors: ['#000000', '#55ffff', '#ff55ff', '#ffffff']
       },
       amber: {
-        name: 'AMBER',
+        name: 'AMBER PHOSPHOR',
         colors: ['#1a0800', '#6b3000', '#c76b00', '#ffb000']
       },
       vboy: {
-        name: 'V.BOY',
+        name: 'RED MATRIX',
         colors: ['#000000', '#550000', '#aa0000', '#ff0000']
       },
       pastel: {
-        name: 'PASTEL',
+        name: 'PASTEL DREAM',
         colors: ['#332941', '#a98fba', '#e8c8d4', '#fef4e0']
       },
       fc: {
-        name: 'FAMICOM',
+        name: '8BIT TILE',
         preview: ['#E40058', '#0078F8', '#F8B800', '#F8F8F8'],
         colors: [
           '#7C7C7C', '#0000FC', '#0000BC', '#4428BC', '#940084', '#A80020', '#A81000', '#881400', '#503000', '#007800', '#006800', '#005800', '#004058', '#000000',
@@ -768,13 +876,13 @@
         ]
       },
       sfc: {
-        name: 'SUPER FC',
+        name: '16BIT CHIP',
         preview: ['#ff0000', '#00ff00', '#0000ff', '#ffff00'],
         colors: null,
         quantize: 8 // Artificially drop it to 3-bit per channel for aesthetics (true SFC is 32)
       },
       mac: {
-        name: 'SYSTEM 7',
+        name: 'SYSTEM 216',
         preview: ['#ff00ff', '#00ffff', '#ffff00', '#cccccc'],
         colors: null,
         quantize: 6 // 216 web safe colors
@@ -856,7 +964,7 @@
       RESOLUTIONS.forEach(r => {
         const opt = document.createElement('option');
         opt.value = r;
-        opt.textContent = r + '×' + r;
+        opt.textContent = r + 'x' + r;
         if (r === currentRes) opt.selected = true;
         resSelect.appendChild(opt);
       });
@@ -985,7 +1093,7 @@
           const { width: iw, height: ih } = loadedImage;
           const cropSide = Math.min(iw, ih) / cropZoom;
           const rect = canvas.getBoundingClientRect();
-          cropCenterX -= (e.clientX - lastDragX) / rect.width  * cropSide / iw;
+          cropCenterX -= (e.clientX - lastDragX) / rect.width * cropSide / iw;
           cropCenterY -= (e.clientY - lastDragY) / rect.height * cropSide / ih;
           clampCrop();
           lastDragX = e.clientX;
@@ -1217,6 +1325,16 @@
       }
     }
 
+    // === CREDIT MODAL ===
+    document.getElementById('credit-btn').addEventListener('click', () => {
+      document.getElementById('credit-modal').classList.add('visible');
+    });
+    document.getElementById('credit-modal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('credit-modal')) {
+        document.getElementById('credit-modal').classList.remove('visible');
+      }
+    });
+
     // === CAMERA ===
     async function startCamera() {
       try {
@@ -1417,7 +1535,7 @@
     function openImageTab(canvas) {
       const url = canvas.toDataURL('image/png');
       const win = window.open();
-      win.document.write(`<body style="margin:0;background:#000"><img src="${url}" style="max-width:100%;height:auto;image-rendering:pixelated;display:block"></body>`);
+      win.document.write(`<body style="margin:0;background:#000"><img src="${url}" style="max-width:100%;height:auto;image-rendering:pixelated;display:block"></` + `body>`);
       win.document.close();
     }
 
