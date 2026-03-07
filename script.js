@@ -215,7 +215,23 @@ function init() {
     });
     closeCharactersButton.addEventListener('click', (e) => {
         e.stopPropagation();
-        hideSubScreen(charactersScreen, 6);
+        if (currentState === 6 || currentState === 11 || currentState === 12) {
+            if (currentState === 11 || currentState === 12) {
+                if (typingTimeout) {
+                    clearTimeout(typingTimeout);
+                    typingTimeout = null;
+                }
+                textWindow.classList.remove('active');
+                textWindow.classList.remove('overlay-mode');
+                characterDisplay.style.display = 'none';
+                characterIcons.forEach(i => i.classList.remove('active'));
+                setTimeout(() => {
+                    textWindow.classList.add('empty');
+                }, 500);
+            }
+            currentState = 6;
+            hideSubScreen(charactersScreen, 6);
+        }
     });
 
     // 名簿のキャラクター切り替え
@@ -427,6 +443,11 @@ function startCharacterInfoDialogue(charInfo) {
     // 画像を表示
     characterLargeImage.src = charInfo.image;
     characterDisplay.style.display = 'flex';
+
+    // アニメーションを再トリガーして常にフワッと出させる
+    characterLargeImage.style.animation = 'none';
+    characterLargeImage.offsetHeight; /* リフロー強制 */
+    characterLargeImage.style.animation = 'fadeIn 0.4s ease-out';
 
     textWindow.classList.add('overlay-mode');
 
