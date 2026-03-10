@@ -665,7 +665,7 @@
 
     // === STATE ===
     let currentCharSet = 'standard';
-    let currentCols = 20;
+    let currentCols = 60;
     let currentScheme = 'dark';
     let brightness = 0;
     let contrast = 1;
@@ -1195,6 +1195,12 @@
       preview.width  = out.width;
       preview.height = out.height;
       preview.getContext('2d').drawImage(out, 0, 0);
+
+      // Update size button labels with actual pixel dimensions
+      document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => {
+        const sc = parseInt(b.dataset.size);
+        b.textContent = `${out.width * sc}×${out.height * sc}`;
+      });
     }
 
     document.getElementById('saveOpenBtn').onclick = () => {
