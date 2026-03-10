@@ -572,6 +572,14 @@
         </div>
       </div>
 
+      <!-- Color scheme -->
+      <div class="control-row">
+        <div class="control-label">SCHEME</div>
+        <div class="select-wrap">
+          <select id="schemeSelect" class="styled-select"></select>
+        </div>
+      </div>
+
       <!-- Bottom row: COLOR toggle, INVERT toggle, cam switch -->
       <div class="bottom-row">
         <div class="toggle-row">
@@ -579,7 +587,7 @@
           <div class="toggle-label">COLOR</div>
         </div>
         <div class="toggle-row">
-          <div class="toggle" id="invertToggle"></div>
+          <div class="toggle on" id="invertToggle"></div>
           <div class="toggle-label">INVERT</div>
         </div>
         <div class="spacer"></div>
@@ -640,17 +648,32 @@
       jp:       'KATAKANA',
     };
 
-    const COLS_OPTIONS = [40, 60, 80, 100, 120];
+    const COLS_OPTIONS = [20, 60, 100];
+
+    // === COLOR SCHEMES ===
+    // darkBg: true → invertMode auto-on (bright pixels → dense chars)
+    const SCHEMES = {
+      dark:  { label: 'DARK',   bg: '#0a0a0a', fg: '#cccccc', darkBg: true  },
+      green: { label: 'GREEN',  bg: '#0a0a0a', fg: '#7fff6a', darkBg: true  },
+      amber: { label: 'AMBER',  bg: '#0c0800', fg: '#ffb300', darkBg: true  },
+      cyan:  { label: 'CYAN',   bg: '#000c0f', fg: '#00e5ff', darkBg: true  },
+      blue:  { label: 'BLUE',   bg: '#000820', fg: '#6699ff', darkBg: true  },
+      red:   { label: 'RED',    bg: '#0f0000', fg: '#ff4444', darkBg: true  },
+      paper: { label: 'PAPER',  bg: '#f5f0e8', fg: '#2a2a2a', darkBg: false },
+      white: { label: 'WHITE',  bg: '#ffffff', fg: '#111111', darkBg: false },
+    };
 
     // === STATE ===
     let currentCharSet = 'standard';
     let currentCols = 80;
+    let currentScheme = 'dark';
     let brightness = 0;
     let contrast = 1;
     let colorMode = false;
-    let invertMode = false;
+    let invertMode = true;  // default: dark scheme → bright pixels → dense chars
     let mode = null;          // 'cam' | 'img'
     let frozen = false;
+    let frozenFrame = null;   // canvas snapshot of video when frozen
     let facingMode = 'environment';
     let stream = null;
     let animFrameId = null;
@@ -720,6 +743,23 @@
       document.getElementById('contVal').textContent = contrast.toFixed(1);
     });
 
+    // Scheme select
+    const schemeSelect = document.getElementById('schemeSelect');
+    Object.entries(SCHEMES).forEach(([key, s]) => {
+      const opt   = document.createElement('option');
+      opt.value   = key;
+      opt.text    = s.label;
+      if (key === currentScheme) opt.selected = true;
+      schemeSelect.appendChild(opt);
+    });
+    schemeSelect.addEventListener('change', e => {
+      currentScheme = e.target.value;
+      // Auto-set invertMode to match the scheme's natural look
+      invertMode = SCHEMES[currentScheme].darkBg;
+      document.getElementById('invertToggle').classList.toggle('on', invertMode);
+      maybeRender();
+    });
+
     document.getElementById('colorToggle').addEventListener('click', function () {
       colorMode = !colorMode;
       this.classList.toggle('on', colorMode);
@@ -780,6 +820,7 @@
       sampleCtx.save();
 
       if (mode === 'cam') {
+        const src = (frozen && frozenFrame) ? frozenFrame : video;
         const isFront = facingMode === 'user';
         if (isFront) {
           sampleCtx.translate(cols, 0);
@@ -789,7 +830,7 @@
         const srcSize = Math.min(srcW, srcH);
         const sx = (srcW - srcSize) / 2;
         const sy = (srcH - srcSize) / 2;
-        sampleCtx.drawImage(video, sx, sy, srcSize, srcSize, 0, 0, cols, rows);
+        sampleCtx.drawImage(src, sx, sy, srcSize, srcSize, 0, 0, cols, rows);
       } else {
         // Image mode with crop/zoom
         const srcSize = Math.min(srcW, srcH) / cropZoom;
@@ -811,7 +852,7 @@
       const oc   = out.getContext('2d');
 
       // Background
-      oc.fillStyle = invertMode ? '#f0f0f0' : '#0a0a0a';
+      oc.fillStyle = SCHEMES[currentScheme].bg;
       oc.fillRect(0, 0, out.width, out.height);
 
       oc.font         = `${cH}px 'DM Mono', monospace`;
@@ -834,7 +875,7 @@
           if (colorMode) {
             oc.fillStyle = `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
           } else {
-            oc.fillStyle = invertMode ? '#111' : '#ccc';
+            oc.fillStyle = SCHEMES[currentScheme].fg;
           }
 
           oc.fillText(ch, col * cW, row * cH);
@@ -859,8 +900,7 @@
     }
 
     function renderSingle() {
-      // For image mode: single render
-      cancelAnimationFrame(animFrameId);
+      // Single render (image mode, or frozen cam)
       const out = buildAACanvas(1);
       aaCanvas.width  = out.width;
       aaCanvas.height = out.height;
@@ -881,8 +921,9 @@
         });
         video.srcObject = stream;
         await video.play();
-        mode   = 'cam';
-        frozen = false;
+        mode        = 'cam';
+        frozen      = false;
+        frozenFrame = null;
         startScreen.style.display = 'none';
         statusEl.textContent = 'LIVE';
         document.getElementById('freezeBtn').textContent = 'FREEZE';
@@ -918,10 +959,16 @@
       }
       frozen = !frozen;
       if (frozen) {
+        // Capture current video frame so subsequent renders are consistent
+        frozenFrame = document.createElement('canvas');
+        frozenFrame.width  = video.videoWidth;
+        frozenFrame.height = video.videoHeight;
+        frozenFrame.getContext('2d').drawImage(video, 0, 0);
         cancelAnimationFrame(animFrameId);
         statusEl.textContent = 'FROZEN';
         document.getElementById('freezeBtn').textContent = 'RESUME';
       } else {
+        frozenFrame = null;
         statusEl.textContent = 'LIVE';
         document.getElementById('freezeBtn').textContent = 'FREEZE';
         animFrameId = requestAnimationFrame(renderFrame);
@@ -1048,21 +1095,16 @@
     });
     document.addEventListener('mouseup', () => { mouseDragging = false; });
 
-    // Re-render image on control changes
+    // Re-render when controls change (image mode, or frozen cam)
+    function maybeRender() {
+      if (mode === 'img' || (mode === 'cam' && frozen)) renderSingle();
+    }
     ['charSetSelect', 'colsSelect', 'brightness', 'contrast'].forEach(id => {
-      document.getElementById(id).addEventListener('input', () => {
-        if (mode === 'img') renderSingle();
-      });
-      document.getElementById(id).addEventListener('change', () => {
-        if (mode === 'img') renderSingle();
-      });
+      document.getElementById(id).addEventListener('input', maybeRender);
+      document.getElementById(id).addEventListener('change', maybeRender);
     });
-    document.getElementById('colorToggle').addEventListener('click', () => {
-      if (mode === 'img') renderSingle();
-    });
-    document.getElementById('invertToggle').addEventListener('click', () => {
-      if (mode === 'img') renderSingle();
-    });
+    document.getElementById('colorToggle').addEventListener('click', maybeRender);
+    document.getElementById('invertToggle').addEventListener('click', maybeRender);
 
     // === BUILD TEXT (for TEXT export) ===
     function buildAAText() {
@@ -1076,10 +1118,11 @@
       sampleCtx.save();
 
       if (mode === 'cam') {
+        const src = (frozen && frozenFrame) ? frozenFrame : video;
         const isFront = facingMode === 'user';
         if (isFront) { sampleCtx.translate(cols, 0); sampleCtx.scale(-1, 1); }
         const srcSize = Math.min(srcW, srcH);
-        sampleCtx.drawImage(video, (srcW-srcSize)/2, (srcH-srcSize)/2, srcSize, srcSize, 0, 0, cols, rows);
+        sampleCtx.drawImage(src, (srcW-srcSize)/2, (srcH-srcSize)/2, srcSize, srcSize, 0, 0, cols, rows);
       } else {
         const srcSize = Math.min(srcW, srcH) / cropZoom;
         sampleCtx.drawImage(loadedImage, cropCenterX*srcW - srcSize/2, cropCenterY*srcH - srcSize/2, srcSize, srcSize, 0, 0, cols, rows);
@@ -1110,7 +1153,8 @@
     let exportScale = 2;
 
     function refreshModalPreview() {
-      const out     = buildAACanvas(exportScale);
+      // Always render at scale=1 for preview consistency
+      const out     = buildAACanvas(1);
       const preview = document.getElementById('modalPreview');
       preview.width  = out.width;
       preview.height = out.height;
@@ -1136,7 +1180,7 @@
       exportScale = parseInt(btn.dataset.size);
       document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      refreshModalPreview();
+      // Preview is fixed at scale=1; only exportScale changes for actual save
     });
 
     document.getElementById('modalTextBtn').onclick = async () => {
