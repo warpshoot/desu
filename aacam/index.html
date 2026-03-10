@@ -1011,6 +1011,30 @@
     let pointers = {};
     let lastPinchDist = null;
 
+    // Convert screen drag delta to normalized image center delta.
+    // Accounts for image aspect ratio so pan speed is 1:1 with finger.
+    function panDelta(dxScreen, dyScreen, rect) {
+      const { w: srcW, h: srcH } = getSourceDimensions();
+      const srcMin = Math.min(srcW, srcH);
+      return {
+        dx: dxScreen / rect.width  / cropZoom * srcMin / srcW,
+        dy: dyScreen / rect.height / cropZoom * srcMin / srcH,
+      };
+    }
+
+    // Zoom around a focal point (nx, ny) in normalized display coords [0,1].
+    function zoomAround(newZoom, nx, ny) {
+      const { w: srcW, h: srcH } = getSourceDimensions();
+      const srcMin = Math.min(srcW, srcH);
+      const oldSrcSize = srcMin / cropZoom;
+      const imgX = cropCenterX * srcW + (nx - 0.5) * oldSrcSize;
+      const imgY = cropCenterY * srcH + (ny - 0.5) * oldSrcSize;
+      cropZoom = Math.max(0.25, Math.min(8, newZoom));
+      const newSrcSize = srcMin / cropZoom;
+      cropCenterX = Math.max(0, Math.min(1, (imgX - (nx - 0.5) * newSrcSize) / srcW));
+      cropCenterY = Math.max(0, Math.min(1, (imgY - (ny - 0.5) * newSrcSize) / srcH));
+    }
+
     document.getElementById('aaCanvas').addEventListener('touchstart', e => {
       e.preventDefault();
       if (mode !== 'img') return;
@@ -1025,24 +1049,24 @@
       e.preventDefault();
       if (mode !== 'img') return;
       const rect = aaCanvas.getBoundingClientRect();
-      const dispW = rect.width;
-      const dispH = rect.height;
 
       if (e.touches.length === 1) {
         const t   = e.touches[0];
         const old = pointers[t.identifier];
         if (old) {
-          const dx = (t.clientX - old.x) / dispW / cropZoom;
-          const dy = (t.clientY - old.y) / dispH / cropZoom;
+          const { dx, dy } = panDelta(t.clientX - old.x, t.clientY - old.y, rect);
           cropCenterX = Math.max(0, Math.min(1, cropCenterX - dx));
           cropCenterY = Math.max(0, Math.min(1, cropCenterY - dy));
         }
         pointers[t.identifier] = { x: t.clientX, y: t.clientY };
       } else if (e.touches.length === 2) {
         const [a, b] = [...e.touches];
-        const dist   = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
         if (lastPinchDist) {
-          cropZoom = Math.max(0.25, Math.min(8, cropZoom * dist / lastPinchDist));
+          // Zoom around midpoint of the two fingers
+          const nx = ((a.clientX + b.clientX) / 2 - rect.left) / rect.width;
+          const ny = ((a.clientY + b.clientY) / 2 - rect.top)  / rect.height;
+          zoomAround(cropZoom * dist / lastPinchDist, nx, ny);
         }
         lastPinchDist = dist;
         for (const t of e.touches) pointers[t.identifier] = { x: t.clientX, y: t.clientY };
@@ -1067,15 +1091,18 @@
       lastTap = now;
     });
 
-    // Wheel zoom
+    // Wheel zoom around cursor
     document.getElementById('aaCanvas').addEventListener('wheel', e => {
       if (mode !== 'img') return;
       e.preventDefault();
-      cropZoom = Math.max(0.25, Math.min(8, cropZoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+      const rect = aaCanvas.getBoundingClientRect();
+      const nx = (e.clientX - rect.left) / rect.width;
+      const ny = (e.clientY - rect.top)  / rect.height;
+      zoomAround(cropZoom * (e.deltaY > 0 ? 0.9 : 1.1), nx, ny);
       renderSingle();
     }, { passive: false });
 
-    // Mouse drag for image mode (desktop)
+    // Mouse drag
     let mouseDragging = false;
     let mouseLast = null;
     document.getElementById('aaCanvas').addEventListener('mousedown', e => {
@@ -1086,8 +1113,7 @@
     document.addEventListener('mousemove', e => {
       if (!mouseDragging || mode !== 'img') return;
       const rect = aaCanvas.getBoundingClientRect();
-      const dx = (e.clientX - mouseLast.x) / rect.width / cropZoom;
-      const dy = (e.clientY - mouseLast.y) / rect.height / cropZoom;
+      const { dx, dy } = panDelta(e.clientX - mouseLast.x, e.clientY - mouseLast.y, rect);
       cropCenterX = Math.max(0, Math.min(1, cropCenterX - dx));
       cropCenterY = Math.max(0, Math.min(1, cropCenterY - dy));
       mouseLast = { x: e.clientX, y: e.clientY };
