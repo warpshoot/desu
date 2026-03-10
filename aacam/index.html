@@ -809,10 +809,9 @@
       // charScale: explicit multiplier for export; null = auto-fit preview container
       const cols = currentCols;
       const { w: srcW, h: srcH } = getSourceDimensions();
-      const aspect = srcW / srcH;
 
-      // Rows accounting for char aspect ratio
-      const rows = Math.max(1, Math.round(cols / aspect * (CHAR_W / CHAR_H)));
+      // Crop is always square, so rows is fixed by char aspect ratio
+      const rows = Math.max(1, Math.round(cols * CHAR_W / CHAR_H));
 
       if (charScale === null) {
         // Scale chars so the canvas fills (or exceeds) the preview container
@@ -1146,8 +1145,7 @@
     function buildAAText() {
       const cols = currentCols;
       const { w: srcW, h: srcH } = getSourceDimensions();
-      const aspect = srcW / srcH;
-      const rows = Math.max(1, Math.round(cols / aspect * (CHAR_W / CHAR_H)));
+      const rows = Math.max(1, Math.round(cols * CHAR_W / CHAR_H));
 
       sampleCanvas.width  = cols;
       sampleCanvas.height = rows;
@@ -1236,8 +1234,7 @@
       return new Promise(resolve => {
         // Render at a scale that meets or exceeds exportSize, then scale down
         const cols = currentCols;
-        const { w: srcW, h: srcH } = getSourceDimensions();
-        const rows = Math.max(1, Math.round(cols / (srcW / srcH) * (CHAR_W / CHAR_H)));
+        const rows = Math.max(1, Math.round(cols * CHAR_W / CHAR_H));
         const natW = cols * CHAR_W;
         const natH = rows * CHAR_H;
         const charScale = Math.max(1, Math.ceil(exportSize / Math.max(natW, natH)));
