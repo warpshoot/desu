@@ -1530,17 +1530,32 @@
 
     document.getElementById('modalSaveBtn').onclick = () => {
       const res = currentRes;
-      const dataURL = buildExportCanvas(saveSize).toDataURL('image/png');
-      const a = document.createElement('a');
-      a.download = `pxlcam_${res}x${res}_${saveSize}px_${Date.now()}.png`;
-      a.href = dataURL;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const fileName = `pxlcam_${res}x${res}_${saveSize}px_${Date.now()}.png`;
       const btn = document.getElementById('modalSaveBtn');
       const orig = btn.textContent;
-      btn.textContent = 'SAVED';
-      setTimeout(() => { btn.textContent = orig; }, 1200);
+      buildExportCanvas(saveSize).toBlob(async (blob) => {
+        if (navigator.canShare) {
+          const file = new File([blob], fileName, { type: 'image/png' });
+          try {
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({ files: [file] });
+              btn.textContent = 'SAVED';
+              setTimeout(() => { btn.textContent = orig; }, 1200);
+              return;
+            }
+          } catch (e) {
+            if (e.name === 'AbortError') return;
+          }
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+        btn.textContent = 'SAVED';
+        setTimeout(() => { btn.textContent = orig; }, 1200);
+      }, 'image/png');
     };
 
     function openImageTab(canvas) {
