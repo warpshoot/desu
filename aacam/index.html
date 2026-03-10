@@ -640,7 +640,7 @@
       jp:       'KATAKANA',
     };
 
-    const COLS_OPTIONS = [40, 60, 80, 100, 120];
+    const COLS_OPTIONS = [20, 60, 100];
 
     // === STATE ===
     let currentCharSet = 'standard';
@@ -859,8 +859,7 @@
     }
 
     function renderSingle() {
-      // For image mode: single render
-      cancelAnimationFrame(animFrameId);
+      // Single render (image mode, or frozen cam)
       const out = buildAACanvas(1);
       aaCanvas.width  = out.width;
       aaCanvas.height = out.height;
@@ -1048,21 +1047,16 @@
     });
     document.addEventListener('mouseup', () => { mouseDragging = false; });
 
-    // Re-render image on control changes
+    // Re-render when controls change (image mode, or frozen cam)
+    function maybeRender() {
+      if (mode === 'img' || (mode === 'cam' && frozen)) renderSingle();
+    }
     ['charSetSelect', 'colsSelect', 'brightness', 'contrast'].forEach(id => {
-      document.getElementById(id).addEventListener('input', () => {
-        if (mode === 'img') renderSingle();
-      });
-      document.getElementById(id).addEventListener('change', () => {
-        if (mode === 'img') renderSingle();
-      });
+      document.getElementById(id).addEventListener('input', maybeRender);
+      document.getElementById(id).addEventListener('change', maybeRender);
     });
-    document.getElementById('colorToggle').addEventListener('click', () => {
-      if (mode === 'img') renderSingle();
-    });
-    document.getElementById('invertToggle').addEventListener('click', () => {
-      if (mode === 'img') renderSingle();
-    });
+    document.getElementById('colorToggle').addEventListener('click', maybeRender);
+    document.getElementById('invertToggle').addEventListener('click', maybeRender);
 
     // === BUILD TEXT (for TEXT export) ===
     function buildAAText() {
