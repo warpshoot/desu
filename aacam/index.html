@@ -615,9 +615,9 @@
       <div class="modal-row">
         <div class="modal-label">SIZE</div>
         <div class="seg-group" id="sizeGroup">
-          <button class="seg-btn" data-size="1">sm</button>
-          <button class="seg-btn active" data-size="2">md</button>
-          <button class="seg-btn" data-size="4">lg</button>
+          <button class="seg-btn" data-size="320">320</button>
+          <button class="seg-btn active" data-size="640">640</button>
+          <button class="seg-btn" data-size="1280">1280</button>
         </div>
       </div>
       <div class="modal-actions">
@@ -1186,7 +1186,7 @@
     }
 
     // === SAVE MODAL ===
-    let exportScale = 2;
+    let exportSize = 640;
 
     function refreshModalPreview() {
       // Always render at scale=1 for preview consistency
@@ -1196,17 +1196,12 @@
       preview.height = out.height;
       preview.getContext('2d').drawImage(out, 0, 0);
 
-      // Update size button labels with actual pixel dimensions
-      document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => {
-        const sc = parseInt(b.dataset.size);
-        b.textContent = `${out.width * sc}×${out.height * sc}`;
-      });
     }
 
     document.getElementById('saveOpenBtn').onclick = () => {
-      exportScale = 2;
+      exportSize = 640;
       document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => {
-        b.classList.toggle('active', parseInt(b.dataset.size) === exportScale);
+        b.classList.toggle('active', parseInt(b.dataset.size) === exportSize);
       });
       refreshModalPreview();
       document.getElementById('saveModal').style.display = 'flex';
@@ -1219,10 +1214,9 @@
     document.getElementById('sizeGroup').addEventListener('click', e => {
       const btn = e.target.closest('.seg-btn');
       if (!btn) return;
-      exportScale = parseInt(btn.dataset.size);
+      exportSize = parseInt(btn.dataset.size);
       document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      // Preview is fixed at scale=1; only exportScale changes for actual save
     });
 
     document.getElementById('modalTextBtn').onclick = async () => {
@@ -1240,8 +1234,20 @@
 
     async function getExportBlob() {
       return new Promise(resolve => {
-        const out = buildAACanvas(exportScale);
-        out.toBlob(resolve, 'image/png');
+        // Render at a scale that meets or exceeds exportSize, then scale down
+        const cols = currentCols;
+        const { w: srcW, h: srcH } = getSourceDimensions();
+        const rows = Math.max(1, Math.round(cols / (srcW / srcH) * (CHAR_W / CHAR_H)));
+        const natW = cols * CHAR_W;
+        const natH = rows * CHAR_H;
+        const charScale = Math.max(1, Math.ceil(exportSize / Math.max(natW, natH)));
+        const src = buildAACanvas(charScale);
+        const ratio = exportSize / Math.max(src.width, src.height);
+        const ex = document.createElement('canvas');
+        ex.width  = Math.round(src.width  * ratio);
+        ex.height = Math.round(src.height * ratio);
+        ex.getContext('2d').drawImage(src, 0, 0, ex.width, ex.height);
+        ex.toBlob(resolve, 'image/png');
       });
     }
 
