@@ -665,7 +665,7 @@
 
     // === STATE ===
     let currentCharSet = 'standard';
-    let currentCols = 80;
+    let currentCols = 20;
     let currentScheme = 'dark';
     let brightness = 0;
     let contrast = 1;
@@ -805,14 +805,24 @@
       ];
     }
 
-    function buildAACanvas(charScale) {
-      // charScale: multiplier for char size (1=base, 2=2x, 4=4x)
+    function buildAACanvas(charScale = null) {
+      // charScale: explicit multiplier for export; null = auto-fit preview container
       const cols = currentCols;
       const { w: srcW, h: srcH } = getSourceDimensions();
       const aspect = srcW / srcH;
 
       // Rows accounting for char aspect ratio
       const rows = Math.max(1, Math.round(cols / aspect * (CHAR_W / CHAR_H)));
+
+      if (charScale === null) {
+        // Scale chars so the canvas fills (or exceeds) the preview container
+        const wrap = document.getElementById('canvasWrap');
+        const wrapW = (wrap ? wrap.clientWidth  : 0) || 388;
+        const wrapH = (wrap ? wrap.clientHeight : 0) || 388;
+        charScale = Math.max(1, Math.ceil(
+          Math.min(wrapW / (cols * CHAR_W), wrapH / (rows * CHAR_H))
+        ));
+      }
 
       // Sample the source into cols×rows
       sampleCanvas.width  = cols;
@@ -889,7 +899,7 @@
       if (!mode) return;
       if (frozen) return;
 
-      const out = buildAACanvas(1);
+      const out = buildAACanvas();
       aaCanvas.width  = out.width;
       aaCanvas.height = out.height;
       ctx.drawImage(out, 0, 0);
@@ -901,7 +911,7 @@
 
     function renderSingle() {
       // Single render (image mode, or frozen cam)
-      const out = buildAACanvas(1);
+      const out = buildAACanvas();
       aaCanvas.width  = out.width;
       aaCanvas.height = out.height;
       ctx.drawImage(out, 0, 0);
