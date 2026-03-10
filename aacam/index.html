@@ -651,6 +651,7 @@
     let invertMode = false;
     let mode = null;          // 'cam' | 'img'
     let frozen = false;
+    let frozenFrame = null;   // canvas snapshot of video when frozen
     let facingMode = 'environment';
     let stream = null;
     let animFrameId = null;
@@ -780,6 +781,7 @@
       sampleCtx.save();
 
       if (mode === 'cam') {
+        const src = (frozen && frozenFrame) ? frozenFrame : video;
         const isFront = facingMode === 'user';
         if (isFront) {
           sampleCtx.translate(cols, 0);
@@ -789,7 +791,7 @@
         const srcSize = Math.min(srcW, srcH);
         const sx = (srcW - srcSize) / 2;
         const sy = (srcH - srcSize) / 2;
-        sampleCtx.drawImage(video, sx, sy, srcSize, srcSize, 0, 0, cols, rows);
+        sampleCtx.drawImage(src, sx, sy, srcSize, srcSize, 0, 0, cols, rows);
       } else {
         // Image mode with crop/zoom
         const srcSize = Math.min(srcW, srcH) / cropZoom;
@@ -880,8 +882,9 @@
         });
         video.srcObject = stream;
         await video.play();
-        mode   = 'cam';
-        frozen = false;
+        mode        = 'cam';
+        frozen      = false;
+        frozenFrame = null;
         startScreen.style.display = 'none';
         statusEl.textContent = 'LIVE';
         document.getElementById('freezeBtn').textContent = 'FREEZE';
@@ -917,10 +920,16 @@
       }
       frozen = !frozen;
       if (frozen) {
+        // Capture current video frame so subsequent renders are consistent
+        frozenFrame = document.createElement('canvas');
+        frozenFrame.width  = video.videoWidth;
+        frozenFrame.height = video.videoHeight;
+        frozenFrame.getContext('2d').drawImage(video, 0, 0);
         cancelAnimationFrame(animFrameId);
         statusEl.textContent = 'FROZEN';
         document.getElementById('freezeBtn').textContent = 'RESUME';
       } else {
+        frozenFrame = null;
         statusEl.textContent = 'LIVE';
         document.getElementById('freezeBtn').textContent = 'FREEZE';
         animFrameId = requestAnimationFrame(renderFrame);
@@ -1070,10 +1079,11 @@
       sampleCtx.save();
 
       if (mode === 'cam') {
+        const src = (frozen && frozenFrame) ? frozenFrame : video;
         const isFront = facingMode === 'user';
         if (isFront) { sampleCtx.translate(cols, 0); sampleCtx.scale(-1, 1); }
         const srcSize = Math.min(srcW, srcH);
-        sampleCtx.drawImage(video, (srcW-srcSize)/2, (srcH-srcSize)/2, srcSize, srcSize, 0, 0, cols, rows);
+        sampleCtx.drawImage(src, (srcW-srcSize)/2, (srcH-srcSize)/2, srcSize, srcSize, 0, 0, cols, rows);
       } else {
         const srcSize = Math.min(srcW, srcH) / cropZoom;
         sampleCtx.drawImage(loadedImage, cropCenterX*srcW - srcSize/2, cropCenterY*srcH - srcSize/2, srcSize, srcSize, 0, 0, cols, rows);
@@ -1104,7 +1114,8 @@
     let exportScale = 2;
 
     function refreshModalPreview() {
-      const out     = buildAACanvas(exportScale);
+      // Always render at scale=1 for preview consistency
+      const out     = buildAACanvas(1);
       const preview = document.getElementById('modalPreview');
       preview.width  = out.width;
       preview.height = out.height;
@@ -1130,7 +1141,7 @@
       exportScale = parseInt(btn.dataset.size);
       document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      refreshModalPreview();
+      // Preview is fixed at scale=1; only exportScale changes for actual save
     });
 
     document.getElementById('modalTextBtn').onclick = async () => {
