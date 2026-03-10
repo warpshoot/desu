@@ -513,10 +513,26 @@ edgeToggle.addEventListener('change', () => {
 
 // Download button handler
 downloadBtn.addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.download = 'desu_tone_' + Date.now() + '.png';
-    link.href = outputCanvas.toDataURL();
-    link.click();
+    const filename = 'desu_tone_' + Date.now() + '.png';
+    outputCanvas.toBlob(async (blob) => {
+        if (navigator.canShare) {
+            const file = new File([blob], filename, { type: 'image/png' });
+            try {
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file] });
+                    return;
+                }
+            } catch (e) {
+                if (e.name === 'AbortError') return;
+            }
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+    }, 'image/png');
 });
 
 // Reset button handler
