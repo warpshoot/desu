@@ -243,16 +243,16 @@ a.credit-val {
 
 @media (hover: hover) {
     .track-ctrls button:hover {
-        background: #333;
-        color: #fff;
-        border-color: #666;
+        background: var(--unicorn-btn-hover, #f0f0f0);
+        color: var(--unicorn-text, #333);
+        border-color: var(--unicorn-border, #ccc);
     }
 }
 
 .track-ctrls button:active {
-    background: #333;
-    color: #fff;
-    border-color: #666;
+    background: var(--unicorn-btn-hover, #f0f0f0);
+    color: var(--unicorn-text, #333);
+    border-color: var(--unicorn-border, #ccc);
 }
 
 .track-ctrls button.active.mute-btn {
@@ -269,9 +269,9 @@ a.credit-val {
 
 @media (hover: hover) {
     .track-icon:hover {
-        border-color: #666;
+        border-color: var(--unicorn-border, #ccc);
         transform: scale(1.05);
-        background: #222;
+        background: var(--unicorn-btn-hover, #f0f0f0);
     }
 }
 
@@ -564,9 +564,9 @@ a.credit-val {
 
 @media (hover: hover) {
     .reset-btn:hover {
-        border-color: #666;
-        color: #fff;
-        background: #222;
+        border-color: var(--unicorn-border, #ccc);
+        color: var(--unicorn-text, #333);
+        background: var(--unicorn-btn-hover, #f0f0f0);
     }
 }
 
@@ -644,8 +644,8 @@ a.credit-val {
 
 @media (hover: hover) {
     .control-btn:hover {
-        border-color: #666;
-        background: #222;
+        border-color: var(--unicorn-border, #666);
+        background: var(--unicorn-btn-hover, #222);
     }
 }
 
@@ -710,8 +710,8 @@ a.credit-val {
 
 @media (hover: hover) {
     .control-btn-sm:hover {
-        border-color: #666;
-        background: #222;
+        border-color: var(--unicorn-border, #666);
+        background: var(--unicorn-btn-hover, #222);
     }
 }
 
@@ -788,11 +788,11 @@ a.credit-val {
 .bpm-picker {
     position: fixed;
     transform: translateX(-50%);
-    background: #1a1a1a;
-    border: 2px solid #444;
+    background: var(--unicorn-btn-bg, #fff);
+    border: 2px solid var(--unicorn-border, #ccc);
     width: 80px;
     overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .bpm-picker-list {
@@ -801,8 +801,8 @@ a.credit-val {
     scroll-snap-type: y mandatory;
     -ms-overflow-style: none;
     scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 25%, black 42%, black 58%, rgba(0,0,0,0.4) 75%, transparent 100%);
-    mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 25%, black 42%, black 58%, rgba(0,0,0,0.4) 75%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.4) 25%, black 42%, black 58%, rgba(0, 0, 0, 0.4) 75%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.4) 25%, black 42%, black 58%, rgba(0, 0, 0, 0.4) 75%, transparent 100%);
 }
 
 .bpm-picker-list::-webkit-scrollbar {
@@ -825,7 +825,7 @@ a.credit-val {
 }
 
 .bpm-picker-item-selected {
-    color: #fff;
+    color: var(--unicorn-text, #333);
     font-size: 16px;
 }
 
@@ -836,8 +836,8 @@ a.credit-val {
     right: 8px;
     height: 36px;
     transform: translateY(-50%);
-    border-top: 1px solid #555;
-    border-bottom: 1px solid #555;
+    border-top: 1px solid var(--unicorn-border, #ccc);
+    border-bottom: 1px solid var(--unicorn-border, #ccc);
     pointer-events: none;
 }
 
@@ -899,8 +899,8 @@ a.credit-val {
 
 #roll-menu {
     position: fixed;
-    background: #1a1a1a;
-    border: 2px solid #fff;
+    background: var(--unicorn-btn-bg, #fff);
+    border: 2px solid var(--unicorn-border, #ccc);
     display: flex;
     z-index: 2000;
     pointer-events: auto;
@@ -915,10 +915,11 @@ a.credit-val {
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
-    border-right: 1px solid #333;
+    border-right: 1px solid var(--unicorn-border, #ccc);
     min-width: 32px;
     text-align: center;
     transition: background 0.1s ease;
+    color: var(--unicorn-text, #333);
 }
 
 .roll-option:last-child {
@@ -927,13 +928,13 @@ a.credit-val {
 
 @media (hover: hover) {
     .roll-option:hover {
-        background: #333;
+        background: var(--unicorn-btn-hover, #f0f0f0);
     }
 }
 
 .roll-option.active {
-    background: #fff;
-    color: #000;
+    background: var(--unicorn-active, #ccc);
+    color: var(--unicorn-btn-bg, #fff);
 }
 
 .hidden {
@@ -1759,9 +1760,9 @@ a.credit-val {
     flex: none;
     width: 48px;
     height: 48px;
-    background: rgba(0, 0, 0, 0.8);
-    border: 1px solid #444;
-    color: #666;
+    background: var(--unicorn-btn-bg, #fff);
+    border: 2px solid var(--unicorn-border, #ccc);
+    color: var(--unicorn-text, #333);
     font-family: monospace;
     font-size: 11px;
     font-weight: bold;
@@ -1775,15 +1776,16 @@ a.credit-val {
 
 @media (hover: hover) {
     .dj-fx-btn:hover {
-        border-color: #888;
-        color: #aaa;
+        border-color: var(--unicorn-border, #ccc);
+        color: var(--unicorn-text, #333);
+        background: var(--unicorn-btn-hover, #f0f0f0);
     }
 }
 
 .dj-fx-btn:active {
-    background: #333;
-    border-color: #666;
-    color: #fff;
+    background: var(--unicorn-btn-hover, #f0f0f0);
+    border-color: var(--unicorn-border, #ccc);
+    color: var(--unicorn-text, #333);
 }
 
 .dj-fx-btn.active {
@@ -1794,9 +1796,9 @@ a.credit-val {
 
 /* Automated state (outline only) */
 .dj-fx-btn.automated {
-    border-color: #fff;
-    color: #fff;
-    box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.2);
+    border-color: var(--unicorn-active, #ff80ab);
+    color: var(--unicorn-active, #ff80ab);
+    box-shadow: inset 0 0 10px var(--unicorn-shadow, rgba(149, 117, 205, 0.2));
 }
 
 /* CIRCULAR SPECIAL BUTTONS (AUTO, CLR) */
@@ -1811,9 +1813,9 @@ a.credit-val {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.8);
-    border: 1px solid #444;
-    color: #666;
+    background: var(--unicorn-btn-bg, #fff);
+    border: 2px solid var(--unicorn-border, #ccc);
+    color: var(--unicorn-text, #333);
     font-family: monospace;
     font-weight: bold;
     letter-spacing: 0.1em;
@@ -1832,6 +1834,16 @@ a.credit-val {
     margin-left: 0;
 }
 
+@media (hover: hover) {
+
+    #dj-auto-rec:hover,
+    #dj-clr-btn:hover {
+        border-color: var(--unicorn-border, #ccc);
+        color: var(--unicorn-text, #333);
+        background: var(--unicorn-btn-hover, #f0f0f0);
+    }
+}
+
 #dj-auto-rec.active {
     background: #f00 !important;
     color: #fff !important;
@@ -1840,16 +1852,16 @@ a.credit-val {
 }
 
 #dj-auto-rec.playing {
-    background: rgba(255, 255, 255, 0.8);
-    color: #000;
-    border-color: #fff;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    background: var(--unicorn-btn-bg, #fff);
+    color: var(--unicorn-text, #333);
+    border-color: var(--unicorn-border, #ccc);
+    box-shadow: 0 0 10px var(--unicorn-shadow, rgba(149, 117, 205, 0.3));
 }
 
 #dj-clr-btn:active {
-    background: #333;
-    border-color: #666;
-    color: #fff;
+    background: var(--unicorn-btn-hover, #f0f0f0);
+    border-color: var(--unicorn-border, #ccc);
+    color: var(--unicorn-text, #333);
 }
 
 /* DJ XY Pad */
@@ -2104,8 +2116,8 @@ body.playing .pattern-pad.has-data {
 /* Context Menu (shared) */
 .context-menu {
     position: fixed;
-    background: #1a1a1a;
-    border: 2px solid #fff;
+    background: var(--unicorn-btn-bg, #fff);
+    border: 2px solid var(--unicorn-border, #ccc);
     display: flex;
     z-index: 2000;
     pointer-events: auto;
@@ -2122,12 +2134,12 @@ body.playing .pattern-pad.has-data {
 
 .context-menu .menu-item {
     padding: 8px 14px;
-    color: #fff;
+    color: var(--unicorn-text, #333);
     cursor: pointer;
     font-size: 12px;
     font-weight: bold;
     letter-spacing: 0.05em;
-    border-right: 1px solid #333;
+    border-right: 1px solid var(--unicorn-border, #ccc);
     transition: background 0.1s ease;
 }
 
@@ -2137,12 +2149,12 @@ body.playing .pattern-pad.has-data {
 
 @media (hover: hover) {
     .context-menu .menu-item:hover {
-        background: #333;
+        background: var(--unicorn-btn-hover, #f0f0f0);
     }
 }
 
 .context-menu .menu-item.disabled {
-    color: #444;
+    color: #999;
     pointer-events: none;
 }
 
@@ -3064,8 +3076,8 @@ body.playing .control-btn.active#play-pause-btn {
 /* Popup Menu */
 .popup-menu {
     position: absolute;
-    background: rgba(0, 0, 0, 0.9);
-    border: 1px solid #444;
+    background: var(--unicorn-btn-bg, #fff);
+    border: 1px solid var(--unicorn-border, #ccc);
     border-radius: 4px;
     padding: 5px 0;
     z-index: 1000;
@@ -3078,14 +3090,14 @@ body.playing .control-btn.active#play-pause-btn {
 
 .popup-menu .menu-item {
     padding: 8px 16px;
-    color: #fff;
+    color: var(--unicorn-text, #333);
     cursor: pointer;
     font-size: 14px;
 }
 
 @media (hover: hover) {
     .popup-menu .menu-item:hover {
-        background: #444;
+        background: var(--unicorn-btn-hover, #f0f0f0);
     }
 }
 

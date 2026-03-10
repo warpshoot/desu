@@ -64,9 +64,9 @@ export class Controls {
 
         this.scaleSelect = document.createElement('select');
         this.scaleSelect.id = 'scale-select'; // ADDED ID
-        this.scaleSelect.style.background = '#333';
-        this.scaleSelect.style.color = '#fff';
-        this.scaleSelect.style.border = '1px solid #555';
+        this.scaleSelect.style.background = 'var(--unicorn-btn-bg, #fff)';
+        this.scaleSelect.style.color = 'var(--unicorn-text, #333)';
+        this.scaleSelect.style.border = '2px solid var(--unicorn-border, #ccc)';
         this.scaleSelect.style.borderRadius = '4px';
         this.scaleSelect.style.padding = '2px 4px';
         this.scaleSelect.style.fontSize = '11px';

@@ -136,8 +136,8 @@ function init() {
             if (currentState === 0) {
                 startPrompt.classList.add('show');
             }
-        }, 2000);
-    }, 500);
+        }, 800);
+    }, 200);
 
     // クリックイベント
     document.body.addEventListener('click', handleClick);
@@ -165,7 +165,7 @@ function init() {
                 textWindow.classList.remove('overlay-mode');
                 setTimeout(() => {
                     textWindow.classList.add('empty');
-                }, 500);
+                }, 300);
             }
             currentState = 4;
             hideSubScreen(toolsScreen, 4);
@@ -227,7 +227,7 @@ function init() {
                 characterIcons.forEach(i => i.classList.remove('active'));
                 setTimeout(() => {
                     textWindow.classList.add('empty');
-                }, 500);
+                }, 300);
             }
             currentState = 6;
             hideSubScreen(charactersScreen, 6);
@@ -293,7 +293,7 @@ function handleClick(e) {
             textWindow.classList.add('empty');
             textWindow.classList.remove('overlay-mode');
             currentState = 4; // ツール画面の待機状態へ戻る
-        }, 500);
+        }, 300);
     } else if (currentState === 12) {
         // キャラクター説明完了後、テキストウィンドウと画像を閉じる
         continueIcon.classList.remove('show');
@@ -304,7 +304,7 @@ function handleClick(e) {
             textWindow.classList.add('empty');
             textWindow.classList.remove('overlay-mode');
             currentState = 6; // 記録画面の待機状態へ戻る
-        }, 500);
+        }, 300);
     }
 }
 
@@ -394,7 +394,7 @@ function showMenu() {
     // 背景を暗くしてメニューを表示
     setTimeout(() => {
         menuScreen.classList.add('show');
-    }, 500);
+    }, 200);
 }
 
 function startPartingDialogue() {
@@ -407,7 +407,7 @@ function startPartingDialogue() {
         currentState = 7;
         const randomText = partingDialogues[Math.floor(Math.random() * partingDialogues.length)];
         startDialogue(randomText, 7);
-    }, 600);
+    }, 300);
 }
 
 function startToolInfoDialogue(text) {
@@ -444,10 +444,11 @@ function startCharacterInfoDialogue(charInfo) {
     characterLargeImage.src = charInfo.image;
     characterDisplay.style.display = 'flex';
 
-    // アニメーションを再トリガーして常にフワッと出させる
-    characterLargeImage.style.animation = 'none';
-    characterLargeImage.offsetHeight; /* リフロー強制 */
-    characterLargeImage.style.animation = 'fadeIn 0.4s ease-out';
+    // クラスを付け直してアニメーションを再トリガー
+    characterDisplay.classList.remove('animating');
+    // リフロー強制して確実にクラス着脱を反映させる
+    void characterDisplay.offsetWidth;
+    characterDisplay.classList.add('animating');
 
     textWindow.classList.add('overlay-mode');
 
@@ -483,8 +484,8 @@ function resetToInitialState() {
             if (currentState === 0) {
                 startPrompt.classList.add('show');
             }
-        }, 1000);
-    }, 500);
+        }, 500);
+    }, 300);
 }
 
 function showSubScreen(screenElement, targetState) {
@@ -537,7 +538,7 @@ window.addEventListener('pageshow', (event) => {
                 if (currentState === 0) {
                     startPrompt.classList.add('show');
                 }
-            }, 2000);
-        }, 500);
+            }, 800);
+        }, 200);
     }
 });

@@ -103,17 +103,12 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: center;
 }
 
 /* 名前表示 */
 .name-display {
-    font-size: 20px;
-    font-weight: bold;
-    margin-bottom: 10px;
-    min-height: 24px;
-    color: #fff;
-    /* デフォルトは白 */
+    display: none;
 }
 
 /* テキスト内容 */
@@ -121,6 +116,7 @@ body {
     font-size: 18px;
     line-height: 1.8;
     color: #ffffff;
+    padding-top: 10px;
 }
 
 /* 進行可能マーク */

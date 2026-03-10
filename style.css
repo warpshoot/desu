@@ -52,7 +52,7 @@ body {
     z-index: 10;
     pointer-events: none;
     opacity: 1;
-    transition: opacity 2s ease-in-out;
+    transition: opacity 0.8s ease-in-out;
 }
 
 .fade-overlay.fade-out {
@@ -66,30 +66,68 @@ body {
 /* スタートプロンプト */
 .start-prompt {
     position: absolute;
-    bottom: calc(25% + env(safe-area-inset-bottom, 0px));
-    left: 50%;
-    transform: translate(-50%, 50%);
-    font-size: 20px;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    transform: translateY(-50%);
+    font-size: 28px;
+    font-weight: 300;
     color: #ffffff;
-    letter-spacing: 2px;
+    letter-spacing: 8px;
+    text-indent: 8px;
     cursor: pointer;
     z-index: 20;
+    padding: 20px 0;
     background-color: rgba(0, 0, 0, 0.6);
-    padding: 10px 20px;
+    text-align: center;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 1s ease-in-out, transform 0.3s ease;
+    transition: color 0.3s ease, opacity 0.4s ease-in-out;
+}
+
+.start-prompt span {
+    position: relative;
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+
+.start-prompt span::before {
+    content: "";
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 1px;
+    background-color: #fff;
+    transition: width 0.3s ease;
+    opacity: 0.7;
 }
 
 .start-prompt.show {
     opacity: 1;
     pointer-events: auto;
+}
+
+.start-prompt.show span {
     animation: promptBlink 3s 1s infinite ease-in-out;
     /* 1s delay: transitionのフェードイン(0→1)が完了してからアニメーション開始 */
 }
 
 .start-prompt:hover {
-    transform: translate(-50%, 50%) scale(1.05);
+    color: #ddd;
+}
+
+.start-prompt:hover span {
+    transform: scale(1.05);
+}
+
+.start-prompt:hover span::before {
+    width: 60%;
+}
+
+.start-prompt:active span {
+    transform: scale(1.0);
 }
 
 @keyframes promptBlink {
@@ -161,16 +199,12 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: center;
 }
 
 /* 名前表示 */
 .name-display {
-    font-size: 20px;
-    font-weight: bold;
-    margin-bottom: 10px;
-    min-height: 24px;
-    color: #fff;
+    display: none;
 }
 
 /* テキスト内容 */
@@ -178,6 +212,7 @@ body {
     font-size: 18px;
     line-height: 1.8;
     color: #ffffff;
+    padding-top: 10px;
 }
 
 /* 進行可能マーク */
@@ -225,7 +260,7 @@ body {
     z-index: 15;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 1s ease-in-out;
+    transition: opacity 0.3s ease-in-out;
 }
 
 .menu-screen.show {
@@ -250,27 +285,39 @@ body {
     flex-direction: column;
     gap: 40px;
     align-items: center;
+    width: 100%;
     transform: translateY(-5vh);
     /* Shift upwards consistently based on viewport */
 }
 
 .menu-button {
+    display: block;
+    width: 100%;
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.6);
     font-size: 28px;
     color: #fff;
     text-decoration: none;
     letter-spacing: 8px;
+    text-indent: 8px;
     cursor: pointer;
     /* Slightly spread out the characters */
-    padding: 10px 20px;
+    padding: 20px 0;
     position: relative;
     transition: color 0.3s ease, transform 0.3s;
     font-weight: 300;
 }
 
-.menu-button::before {
+.menu-button span {
+    position: relative;
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+
+.menu-button span::before {
     content: "";
     position: absolute;
-    bottom: 0;
+    bottom: -5px;
     left: 50%;
     transform: translateX(-50%);
     width: 0;
@@ -282,14 +329,17 @@ body {
 
 .menu-button:hover {
     color: #ddd;
+}
+
+.menu-button:hover span {
     transform: scale(1.05);
 }
 
-.menu-button:hover::before {
+.menu-button:hover span::before {
     width: 60%;
 }
 
-.menu-button:active {
+.menu-button:active span {
     transform: scale(1.0);
 }
 
@@ -308,7 +358,7 @@ body {
     z-index: 20;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.6s ease-in-out;
+    transition: opacity 0.2s ease-in-out;
 }
 
 .sub-screen.show {
@@ -345,13 +395,70 @@ body {
     /* Match main menu alignment */
 }
 
+/* List items initial hidden state for animation */
+.sub-container>* {
+    opacity: 0;
+    transform: translateX(-40px);
+    transition: opacity 0.4s ease-out, transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Trigger animation when screen is shown */
+.sub-screen.show .sub-container>* {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Staggering delays for up to 10 items */
+.sub-screen.show .sub-container>*:nth-child(1) {
+    transition-delay: 0.1s;
+}
+
+.sub-screen.show .sub-container>*:nth-child(2) {
+    transition-delay: 0.2s;
+}
+
+.sub-screen.show .sub-container>*:nth-child(3) {
+    transition-delay: 0.3s;
+}
+
+.sub-screen.show .sub-container>*:nth-child(4) {
+    transition-delay: 0.4s;
+}
+
+.sub-screen.show .sub-container>*:nth-child(5) {
+    transition-delay: 0.5s;
+}
+
+.sub-screen.show .sub-container>*:nth-child(6) {
+    transition-delay: 0.6s;
+}
+
+.sub-screen.show .sub-container>*:nth-child(7) {
+    transition-delay: 0.7s;
+}
+
+.sub-screen.show .sub-container>*:nth-child(8) {
+    transition-delay: 0.8s;
+}
+
+.sub-screen.show .sub-container>*:nth-child(9) {
+    transition-delay: 0.9s;
+}
+
+.sub-screen.show .sub-container>*:nth-child(10) {
+    transition-delay: 1.0s;
+}
+
 .list-item {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 15px;
+    justify-content: center;
 }
 
 .tool-info-btn {
+    position: absolute;
+    left: calc(100% + 15px);
     font-size: 14px;
     color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
@@ -373,42 +480,47 @@ body {
 }
 
 .list-button {
-    font-size: 24px;
-    /* Matched closer to main menu (28px) */
+    font-size: 20px;
     color: rgba(255, 255, 255, 0.8);
     text-decoration: none;
-    letter-spacing: 8px;
-    /* Matched main menu letter spacing */
+    letter-spacing: 6px;
     cursor: pointer;
-    padding: 8px 15px;
+    padding: 12px 24px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    width: 360px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     position: relative;
-    transition: color 0.3s ease, transform 0.3s;
+    transition: all 0.3s ease;
     font-weight: 300;
+    background-color: rgba(0, 0, 0, 0.6);
 }
 
-.list-button::before {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 1px;
-    background-color: rgba(255, 255, 255, 0.5);
-    transition: width 0.3s ease;
+.list-button::after {
+    content: "→";
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.4);
+    transition: all 0.3s ease;
+    transform: translateX(-5px);
 }
 
 .list-button:hover {
     color: #fff;
-    transform: scale(1.05);
+    border-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
 }
 
-.list-button:hover::before {
-    width: 80%;
+.list-button:hover::after {
+    color: #fff;
+    transform: translateX(3px);
 }
 
 .list-button:active {
-    transform: scale(1.0);
+    background-color: rgba(255, 255, 255, 0.2);
+    box-shadow: none;
 }
 
 .characters-content {
@@ -444,9 +556,11 @@ body {
     border: 2px solid transparent;
     cursor: pointer;
     padding: 0;
-    transition: transform 0.3s, border-color 0.3s;
+    transition: transform 0.3s, border-color 0.3s, filter 0.3s, opacity 0.3s;
     background: none;
     overflow: hidden;
+    filter: grayscale(100%);
+    opacity: 0.6;
 }
 
 .character-icon img {
@@ -457,10 +571,47 @@ body {
 
 .character-icon:hover {
     transform: scale(1.1);
+    filter: grayscale(0%);
+    opacity: 1;
+    z-index: 10;
 }
 
 .character-icon.active {
     border-color: rgba(255, 255, 255, 0.8);
+    filter: grayscale(0%);
+    opacity: 1;
+}
+
+.sub-screen.show .character-icon {
+    animation: cascadeReveal 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+.sub-screen.show .character-icon:nth-child(1) {
+    animation-delay: 0.10s;
+}
+
+.sub-screen.show .character-icon:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.sub-screen.show .character-icon:nth-child(3) {
+    animation-delay: 0.20s;
+}
+
+.sub-screen.show .character-icon:nth-child(4) {
+    animation-delay: 0.25s;
+}
+
+.sub-screen.show .character-icon:nth-child(5) {
+    animation-delay: 0.30s;
+}
+
+@keyframes cascadeReveal {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.8);
+        filter: blur(4px) grayscale(100%);
+    }
 }
 
 .character-display {
@@ -474,18 +625,50 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    animation: fadeIn 0.4s ease-out;
+    position: relative;
+    overflow: hidden;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
+.character-display.animating::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background-color: #fff;
+    transform: translate(-50%, -50%);
+    animation: drawLine 0.15s ease-out forwards;
+    z-index: 5;
+}
+
+.character-display.animating .character-image {
+    animation: revealImage 0.3s 0.1s ease-out forwards;
+    opacity: 0;
+}
+
+@keyframes drawLine {
+    0% {
+        width: 0;
     }
 
-    to {
+    100% {
+        width: 100%;
+        opacity: 0;
+    }
+}
+
+@keyframes revealImage {
+    0% {
+        opacity: 0;
+        transform: scaleY(0);
+        filter: brightness(2) contrast(2);
+    }
+
+    100% {
         opacity: 1;
-        transform: translateY(0);
+        transform: scaleY(1);
+        filter: brightness(1) contrast(1);
     }
 }
 
@@ -564,5 +747,9 @@ body {
     .menu-button {
         font-size: 24px;
         letter-spacing: 6px;
+    }
+
+    .list-button {
+        width: 80vw;
     }
 }

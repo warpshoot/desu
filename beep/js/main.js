@@ -810,14 +810,19 @@ class Sequencer {
     }
 
     initMenuCloseHandler() {
-        document.addEventListener('click', (e) => {
-            // Close any open context menus on outside click
+        const closeMenus = (e) => {
+            // Close any open context menus on outside interaction
             document.querySelectorAll('.context-menu:not(.hidden)').forEach(menu => {
                 if (!menu.contains(e.target)) {
                     menu.classList.add('hidden');
                 }
             });
-        });
+        };
+
+        // Use mousedown and touchstart instead of click. 
+        // This prevents the menu from immediately closing if the user drags slightly off the button during a long press and then releases the mouse, triggering a document click.
+        document.addEventListener('mousedown', closeMenus);
+        document.addEventListener('touchstart', closeMenus, { passive: true });
     }
 
 

@@ -178,6 +178,7 @@ export class PatternBank {
         this.patternMenu.style.top = `${rect.top - this.patternMenu.offsetHeight - 4}px`;
         this.patternMenu.classList.remove('hidden');
         this._menuOpenTime = Date.now();
+        this.patternMenu.dataset.openTime = this._menuOpenTime;
     }
 
     hideMenu() {
