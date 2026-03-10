@@ -399,10 +399,10 @@
       background: rgba(0, 0, 0, 0.8);
       backdrop-filter: blur(4px);
       display: flex;
-      align-items: flex-end;
+      align-items: flex-start;
       justify-content: center;
       z-index: 300;
-      padding: 0 16px 16px;
+      padding: 16px 16px 0;
     }
 
     .modal {
@@ -615,9 +615,9 @@
       <div class="modal-row">
         <div class="modal-label">SIZE</div>
         <div class="seg-group" id="sizeGroup">
-          <button class="seg-btn" data-size="1">sm</button>
-          <button class="seg-btn active" data-size="2">md</button>
-          <button class="seg-btn" data-size="4">lg</button>
+          <button class="seg-btn" data-size="320">320</button>
+          <button class="seg-btn active" data-size="640">640</button>
+          <button class="seg-btn" data-size="1280">1280</button>
         </div>
       </div>
       <div class="modal-actions">
@@ -665,7 +665,7 @@
 
     // === STATE ===
     let currentCharSet = 'standard';
-    let currentCols = 80;
+    let currentCols = 60;
     let currentScheme = 'dark';
     let brightness = 0;
     let contrast = 1;
@@ -805,14 +805,23 @@
       ];
     }
 
-    function buildAACanvas(charScale) {
-      // charScale: multiplier for char size (1=base, 2=2x, 4=4x)
+    function buildAACanvas(charScale = null) {
+      // charScale: explicit multiplier for export; null = auto-fit preview container
       const cols = currentCols;
       const { w: srcW, h: srcH } = getSourceDimensions();
-      const aspect = srcW / srcH;
 
-      // Rows accounting for char aspect ratio
-      const rows = Math.max(1, Math.round(cols / aspect * (CHAR_W / CHAR_H)));
+      // Crop is always square, so rows is fixed by char aspect ratio
+      const rows = Math.max(1, Math.round(cols * CHAR_W / CHAR_H));
+
+      if (charScale === null) {
+        // Scale chars so the canvas fills (or exceeds) the preview container
+        const wrap = document.getElementById('canvasWrap');
+        const wrapW = (wrap ? wrap.clientWidth  : 0) || 388;
+        const wrapH = (wrap ? wrap.clientHeight : 0) || 388;
+        charScale = Math.max(1, Math.ceil(
+          Math.min(wrapW / (cols * CHAR_W), wrapH / (rows * CHAR_H))
+        ));
+      }
 
       // Sample the source into cols×rows
       sampleCanvas.width  = cols;
@@ -889,7 +898,7 @@
       if (!mode) return;
       if (frozen) return;
 
-      const out = buildAACanvas(1);
+      const out = buildAACanvas();
       aaCanvas.width  = out.width;
       aaCanvas.height = out.height;
       ctx.drawImage(out, 0, 0);
@@ -901,7 +910,7 @@
 
     function renderSingle() {
       // Single render (image mode, or frozen cam)
-      const out = buildAACanvas(1);
+      const out = buildAACanvas();
       aaCanvas.width  = out.width;
       aaCanvas.height = out.height;
       ctx.drawImage(out, 0, 0);
@@ -1136,8 +1145,7 @@
     function buildAAText() {
       const cols = currentCols;
       const { w: srcW, h: srcH } = getSourceDimensions();
-      const aspect = srcW / srcH;
-      const rows = Math.max(1, Math.round(cols / aspect * (CHAR_W / CHAR_H)));
+      const rows = Math.max(1, Math.round(cols * CHAR_W / CHAR_H));
 
       sampleCanvas.width  = cols;
       sampleCanvas.height = rows;
@@ -1176,7 +1184,7 @@
     }
 
     // === SAVE MODAL ===
-    let exportScale = 2;
+    let exportSize = 640;
 
     function refreshModalPreview() {
       // Always render at scale=1 for preview consistency
@@ -1185,12 +1193,13 @@
       preview.width  = out.width;
       preview.height = out.height;
       preview.getContext('2d').drawImage(out, 0, 0);
+
     }
 
     document.getElementById('saveOpenBtn').onclick = () => {
-      exportScale = 2;
+      exportSize = 640;
       document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => {
-        b.classList.toggle('active', parseInt(b.dataset.size) === exportScale);
+        b.classList.toggle('active', parseInt(b.dataset.size) === exportSize);
       });
       refreshModalPreview();
       document.getElementById('saveModal').style.display = 'flex';
@@ -1203,10 +1212,9 @@
     document.getElementById('sizeGroup').addEventListener('click', e => {
       const btn = e.target.closest('.seg-btn');
       if (!btn) return;
-      exportScale = parseInt(btn.dataset.size);
+      exportSize = parseInt(btn.dataset.size);
       document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      // Preview is fixed at scale=1; only exportScale changes for actual save
     });
 
     document.getElementById('modalTextBtn').onclick = async () => {
@@ -1224,8 +1232,19 @@
 
     async function getExportBlob() {
       return new Promise(resolve => {
-        const out = buildAACanvas(exportScale);
-        out.toBlob(resolve, 'image/png');
+        // Render at a scale that meets or exceeds exportSize, then scale down
+        const cols = currentCols;
+        const rows = Math.max(1, Math.round(cols * CHAR_W / CHAR_H));
+        const natW = cols * CHAR_W;
+        const natH = rows * CHAR_H;
+        const charScale = Math.max(1, Math.ceil(exportSize / Math.max(natW, natH)));
+        const src = buildAACanvas(charScale);
+        const ratio = exportSize / Math.max(src.width, src.height);
+        const ex = document.createElement('canvas');
+        ex.width  = Math.round(src.width  * ratio);
+        ex.height = Math.round(src.height * ratio);
+        ex.getContext('2d').drawImage(src, 0, 0, ex.width, ex.height);
+        ex.toBlob(resolve, 'image/png');
       });
     }
 
