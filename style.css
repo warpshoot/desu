@@ -368,22 +368,22 @@ body {
 
 .close-container {
     position: absolute;
-    top: 30px;
-    right: 30px;
+    top: 20px;
+    right: 20px;
 }
 
 .close-button {
-    font-size: 40px;
+    font-size: 32px;
     font-weight: 300;
-    color: #fff;
+    color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
-    transition: transform 0.3s ease, color 0.3s;
+    transition: color 0.2s ease;
     line-height: 1;
+    user-select: none;
 }
 
 .close-button:hover {
-    color: #ccc;
-    transform: scale(1.1) rotate(90deg);
+    color: #fff;
 }
 
 .sub-container {
@@ -703,6 +703,36 @@ body {
 
 .footer a:hover {
     color: #999999;
+}
+
+/* グローバルミュートボタン */
+.mute-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    background: transparent;
+    border: none;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.mute-btn svg {
+    fill: rgba(255, 255, 255, 0.5);
+    width: 28px;
+    height: 28px;
+    transition: fill 0.2s ease, transform 0.3s ease;
+    display: block;
+}
+
+.mute-btn:hover svg {
+    fill: #ffffff;
 }
 
 /* レスポンシブ対応 */

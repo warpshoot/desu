@@ -1,13 +1,16 @@
+const DESU_SETTINGS_KEY = 'desuSettings';
+let isMuted = false;
+
 // 台詞データ
 // fade: false を指定すると、その背景切り替え時にフェード効果なしで即座に切り替わります
 // fade を省略した場合はデフォルトでフェード効果ありになります
 const dialogues = [
     { speaker: 'shi', text: 'Sが1本で、5万ね', background: 'images/mdgc_nomi.jpg' },
-    { speaker: 'shi', text: 'はい', background: 'images/mdgc_kane.jpg' , fade: false},
+    { speaker: 'shi', text: 'はい', background: 'images/mdgc_kane.jpg', fade: false },
     { speaker: 'desu', text: 'どうも', },
-    { speaker: 'desu', text: 'あ、ホーレムもらえますか' , background: 'images/mdgc_nomi.jpg' , fade: false},
-    { speaker: 'shi', text: '…ホーレム？\nああ、ガラね'},
-    { speaker: 'shi', text: 'はい', background: 'images/mdgc_holem.jpg' , fade: false},
+    { speaker: 'desu', text: 'あ、ホーレムもらえますか', background: 'images/mdgc_nomi.jpg', fade: false },
+    { speaker: 'shi', text: '…ホーレム？\nああ、ガラね' },
+    { speaker: 'shi', text: 'はい', background: 'images/mdgc_holem.jpg', fade: false },
     { speaker: 'desu', text: 'どうも' },
     { speaker: 'sakana', text: 'おつかれさん', background: 'images/kkj.jpg' },
     { speaker: 'desu', text: 'うん キミも' },
@@ -36,6 +39,9 @@ const continueIcon = document.getElementById('continueIcon');
 const replayScreen = document.getElementById('replayScreen');
 const replayButton = document.getElementById('replayButton');
 const closeBtnTop = document.getElementById('closeBtnTop');
+const globalMuteBtn = document.getElementById('globalMuteBtn');
+const muteIcon = globalMuteBtn.querySelector('.mute-icon');
+const unmuteIcon = globalMuteBtn.querySelector('.unmute-icon');
 
 // 状態管理
 let currentDialogueIndex = -1;
@@ -67,8 +73,46 @@ const faceIcons = {
 // AudioContextを1つだけ作成（再利用）
 let audioContext = null;
 
+function loadSettings() {
+    const saved = localStorage.getItem(DESU_SETTINGS_KEY);
+    if (saved) {
+        try {
+            const settings = JSON.parse(saved);
+            isMuted = !!settings.isMuted;
+        } catch (e) {
+            console.error('Failed to parse settings:', e);
+        }
+    }
+}
+
+function saveSettings() {
+    const settings = {
+        isMuted: isMuted
+    };
+    localStorage.setItem(DESU_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function toggleMute(e) {
+    if (e) e.stopPropagation();
+    isMuted = !isMuted;
+    saveSettings();
+    updateMuteUI();
+}
+
+function updateMuteUI() {
+    if (isMuted) {
+        muteIcon.style.display = 'none';
+        unmuteIcon.style.display = 'block';
+    } else {
+        muteIcon.style.display = 'block';
+        unmuteIcon.style.display = 'none';
+    }
+}
+
 // テキスト表示音を再生
 function playTextSound(speaker) {
+    if (isMuted) return; // ミュート時は再生しない
+
     try {
         // 初回のみAudioContextを作成
         if (!audioContext) {
@@ -101,8 +145,14 @@ function playTextSound(speaker) {
 
 // 初期化
 function init() {
+    loadSettings();
+    updateMuteUI();
+
     // クリックイベント
     document.body.addEventListener('click', handleClick);
+
+    // ミュートボタン
+    globalMuteBtn.addEventListener('click', toggleMute);
 
     // エンド画面のイベントリスナー
     replayButton.addEventListener('click', (e) => {

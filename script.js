@@ -2,8 +2,12 @@
 const INITIAL_BACKGROUND = 'images/kkj.jpg';
 const SHI_ICON = 'images/shi_icon.jpg';
 
+const DESU_STORAGE_KEY = 'desuGameData';
+const DESU_SETTINGS_KEY = 'desuSettings';
+
+// DOM要素
 const fadeOverlay = document.getElementById('fadeOverlay');
-const backgroundImage = document.getElementById('backgroundImage');
+const bgImage = document.getElementById('backgroundImage');
 const textWindow = document.getElementById('textWindow');
 const faceIcon = document.getElementById('faceIcon');
 const nameDisplay = document.getElementById('nameDisplay');
@@ -29,6 +33,10 @@ const closeToolsButton = document.getElementById('closeToolsButton');
 const characterIcons = document.querySelectorAll('.character-icon');
 const characterDisplay = document.getElementById('characterDisplay');
 const characterLargeImage = document.getElementById('characterLargeImage');
+
+const globalMuteBtn = document.getElementById('globalMuteBtn');
+const muteIcon = globalMuteBtn.querySelector('.mute-icon');
+const unmuteIcon = globalMuteBtn.querySelector('.unmute-icon');
 
 // キャラクター定義
 const characterDescriptions = {
@@ -58,6 +66,16 @@ const characterDescriptions = {
         desc: 'wpy。支給品はすべてこいつが作ってる。'
     }
 };
+
+let isMuted = false;
+let currentBgm = null; // 現在再生中のBGM Audioオブジェクト
+let currentOscillator = null; // 現在再生中のbeep音のオシレーター
+
+// 音楽ファイルリスト (仮のデータ、実際にはBGMのパスが入る)
+const bgmFiles = [
+    // 'audio/bgm1.mp3',
+    // 'audio/bgm2.mp3',
+];
 
 // セリフバリエーション
 const dialogues = [
@@ -91,8 +109,10 @@ let typingTimeout = null;
 
 let audioContext = null;
 
-// テキスト表示音（ep_garaに合わせた実装）
+// テキスト表示音を再生
 function playTextSound(speaker) {
+    if (isMuted) return; // ミュート時は再生しない
+
     try {
         if (!audioContext) {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -116,15 +136,104 @@ function playTextSound(speaker) {
 
         oscillator.start();
         oscillator.stop(audioContext.currentTime + 0.03);
+        currentOscillator = oscillator; // 現在のオシレーターを保存
+        oscillator.onended = () => {
+            if (currentOscillator === oscillator) {
+                currentOscillator = null;
+            }
+        };
     } catch (e) {
         console.warn('Web Audio API not supported');
     }
 }
 
+// -------------------------
+// 設定・ミュート管理
+// -------------------------
+function loadSettings() {
+    const saved = localStorage.getItem(DESU_SETTINGS_KEY);
+    if (saved) {
+        try {
+            const settings = JSON.parse(saved);
+            isMuted = !!settings.isMuted;
+        } catch (e) {
+            console.error('Failed to parse settings:', e);
+        }
+    }
+}
+
+function saveSettings() {
+    const settings = {
+        isMuted: isMuted
+    };
+    localStorage.setItem(DESU_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function toggleMute() {
+    isMuted = !isMuted;
+    saveSettings();
+    updateMuteUI();
+
+    if (isMuted) {
+        stopBgm();
+        // 如果正在播放beep，也停止
+        if (currentOscillator) {
+            currentOscillator.stop();
+            currentOscillator = null;
+        }
+    } else {
+        // 如果ゲームが開始されている場合、BGMを再開
+        // ここではゲーム開始状態をcurrentStateで判断するが、より厳密なフラグが必要かもしれない
+        if (currentState !== 0 && !currentBgm) {
+            playRandomBgm();
+        }
+    }
+}
+
+function updateMuteUI() {
+    if (isMuted) {
+        muteIcon.style.display = 'none';
+        unmuteIcon.style.display = 'block';
+    } else {
+        muteIcon.style.display = 'block';
+        unmuteIcon.style.display = 'none';
+    }
+}
+
+function playRandomBgm() {
+    if (isMuted || bgmFiles.length === 0) return;
+
+    if (currentBgm) {
+        currentBgm.pause();
+        currentBgm.currentTime = 0;
+    }
+
+    const randomIndex = Math.floor(Math.random() * bgmFiles.length);
+    currentBgm = new Audio(bgmFiles[randomIndex]);
+    currentBgm.loop = true;
+    currentBgm.volume = 0.5; // 適宜調整
+    currentBgm.play().catch(e => console.error("BGM playback failed:", e));
+}
+
+function stopBgm() {
+    if (currentBgm) {
+        currentBgm.pause();
+        currentBgm.currentTime = 0;
+        currentBgm = null;
+    }
+}
+
+// -------------------------
+// システム機能群
+// -------------------------
 // 初期化
 function init() {
+    // 設定をロード
+    loadSettings();
+    updateMuteUI();
+
     // 初期背景設定
-    backgroundImage.src = INITIAL_BACKGROUND;
+    bgImage.src = INITIAL_BACKGROUND;
 
     // 1秒後に黒フェードアウトして背景を見せる
     setTimeout(() => {
@@ -147,6 +256,9 @@ function init() {
         e.stopPropagation();
         startPartingDialogue();
     });
+
+    // ミュートボタン
+    globalMuteBtn.addEventListener('click', toggleMute);
 
     // ツール画面のイベント
     toolsLink.addEventListener('click', (e) => {
@@ -274,7 +386,8 @@ function handleClick(e) {
         const randomText = dialogues[Math.floor(Math.random() * dialogues.length)];
         // テキスト表示開始
         startDialogue(randomText, 1);
-    } else if ((currentState === 1 || currentState === 7 || currentState === 9) && isTyping) {
+        playRandomBgm(); // ゲーム開始時にBGMを再生
+    } else if ((currentState === 1 || currentState === 7 || currentState === 9 || currentState === 11) && isTyping) {
         // タイピング即時完了
         skipTyping();
     } else if (currentState === 2) {

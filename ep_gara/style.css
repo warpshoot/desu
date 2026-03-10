@@ -243,6 +243,36 @@ body {
     opacity: 0.7;
 }
 
+/* グローバルミュートボタン */
+.mute-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    background: transparent;
+    border: none;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.mute-btn svg {
+    fill: rgba(255, 255, 255, 0.5);
+    width: 28px;
+    height: 28px;
+    transition: fill 0.2s ease, transform 0.3s ease;
+    display: block;
+}
+
+.mute-btn:hover svg {
+    fill: #ffffff;
+}
+
 /* レスポンシブ対応 */
 
 /* モバイル */

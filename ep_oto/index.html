@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>DESU™︎ ep. 下</title>
+    <title>DESU™︎ ep. 音</title>
     <link rel="stylesheet" href="style.css">
     <script src="/desu/favicon.js"></script>
 </head>
@@ -25,22 +25,19 @@
 
         <!-- タイトル画面 -->
         <div class="title-screen" id="titleScreen">
-            <div class="title-text">DESU™︎<br>ep. 下</div>
+            <div class="title-text">DESU™︎<br>ep. 音</div>
         </div>
 
-        <!-- 背景動画 -->
-        <video class="background" autoplay loop muted playsinline>
-            <source src="images/desu01.mp4" type="video/mp4">
-        </video>
+        <!-- 固定背景画像 -->
+        <img class="background" src="images/bg.jpg" alt="">
+        <div class="bg-overlay"></div>
 
         <!-- フェード用オーバーレイ -->
         <div class="fade-overlay" id="fadeOverlay"></div>
 
         <!-- テキストウィンドウ -->
         <div class="text-window" id="textWindow">
-            <img class="face-icon" id="faceIcon" src="" alt="キャラクター">
             <div class="text-area">
-                <div class="name-display" id="nameDisplay"></div>
                 <div class="text-content" id="textContent"></div>
             </div>
             <div class="continue-icon" id="continueIcon">▼</div>

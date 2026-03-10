@@ -1,3 +1,6 @@
+const DESU_SETTINGS_KEY = 'desuSettings';
+let isMuted = false;
+
 // 台詞データ
 const dialogues = [
     { speaker: 'sakana', text: 'このまま少し行けば現場だ' },
@@ -26,6 +29,9 @@ const continueIcon = document.getElementById('continueIcon');
 const replayScreen = document.getElementById('replayScreen');
 const replayButton = document.getElementById('replayButton');
 const closeBtnTop = document.getElementById('closeBtnTop');
+const globalMuteBtn = document.getElementById('globalMuteBtn');
+const muteIcon = globalMuteBtn.querySelector('.mute-icon');
+const unmuteIcon = globalMuteBtn.querySelector('.unmute-icon');
 
 // 状態管理
 let currentDialogueIndex = 0;
@@ -50,8 +56,46 @@ const faceIcons = {
 // AudioContextを1つだけ作成（再利用）
 let audioContext = null;
 
+function loadSettings() {
+    const saved = localStorage.getItem(DESU_SETTINGS_KEY);
+    if (saved) {
+        try {
+            const settings = JSON.parse(saved);
+            isMuted = !!settings.isMuted;
+        } catch (e) {
+            console.error('Failed to parse settings:', e);
+        }
+    }
+}
+
+function saveSettings() {
+    const settings = {
+        isMuted: isMuted
+    };
+    localStorage.setItem(DESU_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function toggleMute(e) {
+    if (e) e.stopPropagation();
+    isMuted = !isMuted;
+    saveSettings();
+    updateMuteUI();
+}
+
+function updateMuteUI() {
+    if (isMuted) {
+        muteIcon.style.display = 'none';
+        unmuteIcon.style.display = 'block';
+    } else {
+        muteIcon.style.display = 'block';
+        unmuteIcon.style.display = 'none';
+    }
+}
+
 // テキスト表示音を再生
 function playTextSound(speaker) {
+    if (isMuted) return; // ミュート時は再生しない
+
     try {
         // 初回のみAudioContextを作成
         if (!audioContext) {
@@ -81,8 +125,14 @@ function playTextSound(speaker) {
 
 // 初期化
 function init() {
+    loadSettings();
+    updateMuteUI();
+
     // クリックイベント
     document.body.addEventListener('click', handleClick);
+
+    // ミュートボタン
+    globalMuteBtn.addEventListener('click', toggleMute);
 
     // エンド画面のイベントリスナー
     replayButton.addEventListener('click', (e) => {

@@ -28,17 +28,26 @@ body {
     overflow: hidden;
 }
 
-/* 背景動画 */
+/* 背景画像 */
 .background {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    object-fit: contain;
-    object-position: center 20%;
-    background-color: #000;
+    object-fit: cover;
     z-index: 1;
+}
+
+/* 背景上の半透明黒オーバーレイ */
+.bg-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 2;
 }
 
 /* フェード用オーバーレイ */
@@ -66,65 +75,55 @@ body {
 /* テキストウィンドウ */
 .text-window {
     position: absolute;
-    bottom: env(safe-area-inset-bottom, 0);
-    left: 0;
-    width: 100%;
-    height: 30%;
-    background-color: rgba(0, 0, 0, 0.7);
+    bottom: 25%;
+    /* 画面中央やや下寄り */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 400px;
     z-index: 5;
-    padding: 20px 40px;
     display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    /* center → flex-start（上寄せ） */
-    gap: 20px;
+    flex-direction: column;
+    align-items: center;
     opacity: 0;
     pointer-events: none;
+    transition: opacity 1s ease-in-out;
 }
 
-/* セリフがある状態 */
 .text-window.active {
     opacity: 1;
     pointer-events: auto;
 }
 
-/* 顔アイコン */
-.face-icon {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    flex-shrink: 0;
-}
-
-/* テキストエリア */
 .text-area {
-    flex: 1;
+    width: 100%;
     display: flex;
-    flex-direction: column;
+    align-items: flex-start;
     justify-content: center;
-}
-
-/* 名前表示 */
-.name-display {
-    display: none;
+    min-height: 80px;
+    /* ガタつき防止用の最低高さ */
 }
 
 /* テキスト内容 */
 .text-content {
-    font-size: 18px;
-    line-height: 1.8;
+    font-size: 16px;
+    /* モバイル優先だと16px〜18px */
+    line-height: 2.0;
+    /* ゆったりとした行間 */
     color: #ffffff;
-    padding-top: 10px;
+    width: 100%;
+    text-align: left;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.text-content.show {
+    opacity: 1;
 }
 
 /* 進行可能マーク */
 .continue-icon {
-    position: absolute;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
+    margin-top: 30px;
     font-size: 24px;
     color: #ffffff;
     opacity: 0;
@@ -262,8 +261,6 @@ body {
 }
 
 /* レスポンシブ対応 */
-
-/* モバイル */
 @media (max-width: 768px) {
     body {
         align-items: flex-start;
@@ -279,29 +276,17 @@ body {
     }
 
     .text-window {
-        height: 35%;
+        bottom: max(15%, env(safe-area-inset-bottom, 15px));
         padding: 15px 20px;
-        padding-bottom: max(15px, env(safe-area-inset-bottom, 15px));
-        gap: 15px;
-    }
-
-    .face-icon {
-        width: 70px;
-        height: 70px;
-        border-width: 2px;
-    }
-
-    .name-display {
-        font-size: 16px;
     }
 
     .text-content {
-        font-size: 14px;
+        font-size: 16px;
     }
 
     .continue-icon {
+        margin-top: 20px;
         font-size: 20px;
-        right: 15px;
     }
 
     .title-text {
