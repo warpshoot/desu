@@ -572,6 +572,14 @@
         </div>
       </div>
 
+      <!-- Color scheme -->
+      <div class="control-row">
+        <div class="control-label">SCHEME</div>
+        <div class="select-wrap">
+          <select id="schemeSelect" class="styled-select"></select>
+        </div>
+      </div>
+
       <!-- Bottom row: COLOR toggle, INVERT toggle, cam switch -->
       <div class="bottom-row">
         <div class="toggle-row">
@@ -579,7 +587,7 @@
           <div class="toggle-label">COLOR</div>
         </div>
         <div class="toggle-row">
-          <div class="toggle" id="invertToggle"></div>
+          <div class="toggle on" id="invertToggle"></div>
           <div class="toggle-label">INVERT</div>
         </div>
         <div class="spacer"></div>
@@ -642,13 +650,27 @@
 
     const COLS_OPTIONS = [20, 60, 100];
 
+    // === COLOR SCHEMES ===
+    // darkBg: true → invertMode auto-on (bright pixels → dense chars)
+    const SCHEMES = {
+      dark:  { label: 'DARK',   bg: '#0a0a0a', fg: '#cccccc', darkBg: true  },
+      green: { label: 'GREEN',  bg: '#0a0a0a', fg: '#7fff6a', darkBg: true  },
+      amber: { label: 'AMBER',  bg: '#0c0800', fg: '#ffb300', darkBg: true  },
+      cyan:  { label: 'CYAN',   bg: '#000c0f', fg: '#00e5ff', darkBg: true  },
+      blue:  { label: 'BLUE',   bg: '#000820', fg: '#6699ff', darkBg: true  },
+      red:   { label: 'RED',    bg: '#0f0000', fg: '#ff4444', darkBg: true  },
+      paper: { label: 'PAPER',  bg: '#f5f0e8', fg: '#2a2a2a', darkBg: false },
+      white: { label: 'WHITE',  bg: '#ffffff', fg: '#111111', darkBg: false },
+    };
+
     // === STATE ===
     let currentCharSet = 'standard';
     let currentCols = 80;
+    let currentScheme = 'dark';
     let brightness = 0;
     let contrast = 1;
     let colorMode = false;
-    let invertMode = false;
+    let invertMode = true;  // default: dark scheme → bright pixels → dense chars
     let mode = null;          // 'cam' | 'img'
     let frozen = false;
     let frozenFrame = null;   // canvas snapshot of video when frozen
@@ -719,6 +741,23 @@
     document.getElementById('contrast').addEventListener('input', e => {
       contrast = parseFloat(e.target.value);
       document.getElementById('contVal').textContent = contrast.toFixed(1);
+    });
+
+    // Scheme select
+    const schemeSelect = document.getElementById('schemeSelect');
+    Object.entries(SCHEMES).forEach(([key, s]) => {
+      const opt   = document.createElement('option');
+      opt.value   = key;
+      opt.text    = s.label;
+      if (key === currentScheme) opt.selected = true;
+      schemeSelect.appendChild(opt);
+    });
+    schemeSelect.addEventListener('change', e => {
+      currentScheme = e.target.value;
+      // Auto-set invertMode to match the scheme's natural look
+      invertMode = SCHEMES[currentScheme].darkBg;
+      document.getElementById('invertToggle').classList.toggle('on', invertMode);
+      maybeRender();
     });
 
     document.getElementById('colorToggle').addEventListener('click', function () {
@@ -813,7 +852,7 @@
       const oc   = out.getContext('2d');
 
       // Background
-      oc.fillStyle = invertMode ? '#f0f0f0' : '#0a0a0a';
+      oc.fillStyle = SCHEMES[currentScheme].bg;
       oc.fillRect(0, 0, out.width, out.height);
 
       oc.font         = `${cH}px 'DM Mono', monospace`;
@@ -836,7 +875,7 @@
           if (colorMode) {
             oc.fillStyle = `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
           } else {
-            oc.fillStyle = invertMode ? '#111' : '#ccc';
+            oc.fillStyle = SCHEMES[currentScheme].fg;
           }
 
           oc.fillText(ch, col * cW, row * cH);
