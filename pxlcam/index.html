@@ -1059,6 +1059,20 @@
       let pinchStartDist = 0, pinchStartZoom = 1;
       let lastTapTime = 0;
 
+      function zoomAround(newZoom, nx, ny) {
+        if (!loadedImage) return;
+        const { width: iw, height: ih } = loadedImage;
+        const srcMin = Math.min(iw, ih);
+        const oldSize = srcMin / cropZoom;
+        const imgX = cropCenterX * iw + (nx - 0.5) * oldSize;
+        const imgY = cropCenterY * ih + (ny - 0.5) * oldSize;
+        cropZoom = Math.max(CROP_ZOOM_MIN, Math.min(CROP_ZOOM_MAX, newZoom));
+        const newSize = srcMin / cropZoom;
+        cropCenterX = (imgX - (nx - 0.5) * newSize) / iw;
+        cropCenterY = (imgY - (ny - 0.5) * newSize) / ih;
+        clampCrop();
+      }
+
       function clampCrop() {
         if (!loadedImage) return;
         const { width: iw, height: ih } = loadedImage;
@@ -1113,8 +1127,10 @@
         } else if (ptrs.size === 2) {
           const [a, b] = [...ptrs.values()];
           const dist = Math.hypot(b.x - a.x, b.y - a.y);
-          cropZoom = Math.max(CROP_ZOOM_MIN, Math.min(CROP_ZOOM_MAX, pinchStartZoom * dist / pinchStartDist));
-          clampCrop();
+          const rect = canvas.getBoundingClientRect();
+          const nx = ((a.x + b.x) / 2 - rect.left) / rect.width;
+          const ny = ((a.y + b.y) / 2 - rect.top)  / rect.height;
+          zoomAround(pinchStartZoom * dist / pinchStartDist, nx, ny);
           renderFrame();
         }
       }, { passive: false });
@@ -1126,8 +1142,10 @@
       canvas.addEventListener('wheel', e => {
         if (mode !== 'img' || !loadedImage) return;
         e.preventDefault();
-        cropZoom = Math.max(CROP_ZOOM_MIN, Math.min(CROP_ZOOM_MAX, cropZoom * (e.deltaY > 0 ? 0.9 : 1.1)));
-        clampCrop();
+        const rect = canvas.getBoundingClientRect();
+        const nx = (e.clientX - rect.left) / rect.width;
+        const ny = (e.clientY - rect.top)  / rect.height;
+        zoomAround(cropZoom * (e.deltaY > 0 ? 0.9 : 1.1), nx, ny);
         renderFrame();
       }, { passive: false });
     })();
