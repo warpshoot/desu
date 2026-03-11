@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>DESU&trade; aacam</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --border: #222;
+      --text: #ccc;
+      --text-dim: #666;
+      --accent: #7fff6a;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 420px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 100dvh;
+    }
+
+    .header {
+      display: flex;
+      align-items: baseline;
+      justify-content: flex-end;
+      padding: 4px 0;
+    }
+
+    .status {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+    }
+
+    /* Credit Button */
+    #credit-btn {
+      position: fixed;
+      top: max(12px, env(safe-area-inset-top));
+      left: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(20, 20, 20, 0.9);
+      backdrop-filter: blur(8px);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      transition: border-color 0.15s;
+    }
+
+    #credit-btn:hover { border-color: var(--accent); }
+
+    /* Credit Panel */
+    .credit-panel {
+      position: fixed;
+      top: max(52px, calc(env(safe-area-inset-top) + 40px));
+      left: 12px;
+      background: rgba(20, 20, 20, 0.95);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 11px;
+      z-index: 200;
+      min-width: 160px;
+      display: none;
+    }
+
+    .credit-panel.open { display: block; }
+
+    .credit-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 3px 0;
+    }
+
+    .credit-key { color: var(--text-dim); }
+    .credit-val { color: var(--text); text-decoration: none; }
+    .credit-val:hover { color: var(--accent); }
+    .credit-divider { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
+    .credit-manual-link { color: var(--accent); text-decoration: none; font-size: 11px; }
+    .credit-manual-link:hover { text-decoration: underline; }
+
+    /* Canvas area */
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #aaCanvas {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .corner-mark {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-color: var(--accent);
+      border-style: solid;
+      opacity: 0.6;
+    }
+
+    .corner-mark.tl { top: 6px; left: 6px; border-width: 1px 0 0 1px; }
+    .corner-mark.tr { top: 6px; right: 6px; border-width: 1px 1px 0 0; }
+    .corner-mark.bl { bottom: 6px; left: 6px; border-width: 0 0 1px 1px; }
+    .corner-mark.br { bottom: 6px; right: 6px; border-width: 0 1px 1px 0; }
+
+    /* Start screen */
+    .start-screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      background: var(--surface);
+    }
+
+    .start-logo {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+    }
+
+    .start-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .start-btn {
+      padding: 10px 20px;
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .start-btn:hover, .start-btn:active { background: var(--accent); color: #000; }
+    .start-btn.secondary { border-color: var(--text-dim); color: var(--text-dim); }
+    .start-btn.secondary:hover, .start-btn.secondary:active { border-color: var(--text); background: var(--text); color: #000; }
+
+    /* Actions bar */
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 10px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .btn:hover { border-color: var(--text-dim); }
+    .btn:active { opacity: 0.7; }
+    .btn:disabled { opacity: 0.3; pointer-events: none; }
+    .btn.primary { border-color: var(--accent); color: var(--accent); }
+    .btn.primary:hover { background: var(--accent); color: #000; }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px;
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-label {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      min-width: 52px;
+    }
+
+    .select-wrap {
+      flex: 1;
+      position: relative;
+    }
+
+    .styled-select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      padding: 5px 8px;
+      border-radius: 3px;
+      appearance: none;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+    }
+
+    .styled-select:focus { outline: none; border-color: var(--text-dim); }
+
+    /* Slider */
+    .slider-row {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      width: 14px;
+      height: 14px;
+    }
+
+    .slider-val {
+      font-size: 10px;
+      color: var(--text-dim);
+      min-width: 32px;
+      text-align: right;
+    }
+
+    /* Bottom row (toggles + cam switch) */
+    .bottom-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 2px;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .toggle {
+      width: 28px;
+      height: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      cursor: pointer;
+      position: relative;
+      transition: background 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .toggle.on {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      top: 2px;
+      left: 2px;
+      transition: transform 0.15s, background 0.15s;
+    }
+
+    .toggle.on::after {
+      transform: translateX(12px);
+      background: #000;
+    }
+
+    .toggle-label {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      cursor: pointer;
+    }
+
+    .spacer { flex: 1; }
+
+    .cam-switch {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .cam-switch svg { width: 14px; height: 14px; }
+    .cam-switch:hover { border-color: var(--text); color: var(--text); }
+
+    /* Segmented controls */
+    .seg-group {
+      display: flex;
+      gap: 4px;
+    }
+
+    .seg-btn {
+      padding: 5px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: all 0.12s;
+    }
+
+    .seg-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(127, 255, 106, 0.08);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      z-index: 300;
+      padding: 16px 16px 0;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 420px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 2px 6px;
+      line-height: 1;
+    }
+
+    .modal-close:hover { color: var(--text); }
+
+    .modal-preview-wrap {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #modalPreview {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .modal-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-label {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      min-width: 52px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .modal-actions .btn {
+      flex: 1;
+      min-width: 70px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <button id="credit-btn" title="About">i</button>
+  <div class="credit-panel" id="creditPanel">
+    <div class="credit-row">
+      <span class="credit-key">tool</span>
+      <span class="credit-val">DESU&trade; aacam</span>
+    </div>
+    <div class="credit-row">
+      <span class="credit-key">ver</span>
+      <span class="credit-val">1.0.0</span>
+    </div>
+    <div class="credit-row">
+      <span class="credit-key">by</span>
+      <a href="https://warpshoot.github.io/" target="_blank" class="credit-val">wpy</a>
+    </div>
+  </div>
+
+  <div class="app">
+    <div class="header">
+      <div class="status" id="status">STANDBY</div>
+    </div>
+
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="aaCanvas" width="320" height="320" style="touch-action:none;"></canvas>
+      <div class="corner-mark tl"></div>
+      <div class="corner-mark tr"></div>
+      <div class="corner-mark bl"></div>
+      <div class="corner-mark br"></div>
+      <div class="start-screen" id="startScreen">
+        <div class="start-logo">DESU&trade; aacam</div>
+        <div class="start-buttons">
+          <button class="start-btn" id="startBtn">CAM</button>
+          <button class="start-btn secondary" id="loadImgBtn">IMG</button>
+        </div>
+      </div>
+    </div>
+
+    <video id="videoFeed" playsinline autoplay muted style="display:none;"></video>
+    <canvas id="sampleCanvas" style="display:none;"></canvas>
+    <input type="file" id="fileInput" accept="image/*" style="display:none;">
+
+    <div class="actions">
+      <button class="btn" id="freezeBtn">FREEZE</button>
+      <button class="btn" id="loadAnotherBtn">LOAD IMG</button>
+      <button class="btn" id="saveOpenBtn" disabled>SAVE</button>
+    </div>
+
+    <div class="controls">
+      <!-- Char set -->
+      <div class="control-row">
+        <div class="control-label">CHARS</div>
+        <div class="select-wrap">
+          <select id="charSetSelect" class="styled-select"></select>
+        </div>
+      </div>
+
+      <!-- Columns (resolution) -->
+      <div class="control-row">
+        <div class="control-label">COLS</div>
+        <div class="select-wrap">
+          <select id="colsSelect" class="styled-select"></select>
+        </div>
+      </div>
+
+      <!-- Brightness -->
+      <div class="control-row">
+        <div class="control-label">BRIGHT</div>
+        <div class="slider-row">
+          <input type="range" id="brightness" min="-100" max="100" value="0">
+          <div class="slider-val" id="brightVal">0</div>
+        </div>
+      </div>
+
+      <!-- Contrast -->
+      <div class="control-row">
+        <div class="control-label">CONTST</div>
+        <div class="slider-row">
+          <input type="range" id="contrast" min="0.5" max="3" value="1" step="0.1">
+          <div class="slider-val" id="contVal">1.0</div>
+        </div>
+      </div>
+
+      <!-- Color scheme -->
+      <div class="control-row">
+        <div class="control-label">SCHEME</div>
+        <div class="select-wrap">
+          <select id="schemeSelect" class="styled-select"></select>
+        </div>
+      </div>
+
+      <!-- Bottom row: COLOR toggle, INVERT toggle, cam switch -->
+      <div class="bottom-row">
+        <div class="toggle-row">
+          <div class="toggle" id="colorToggle"></div>
+          <div class="toggle-label">COLOR</div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle on" id="invertToggle"></div>
+          <div class="toggle-label">INVERT</div>
+        </div>
+        <div class="spacer"></div>
+        <button class="cam-switch" id="camSwitch" title="Switch camera">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path
+              d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8m0 0V3m0 5h5m-5 4a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16m0 0h-5m5 0v5" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Modal -->
+  <div class="modal-overlay" id="saveModal" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">EXPORT</span>
+        <button class="modal-close" id="modalClose">x</button>
+      </div>
+      <div class="modal-preview-wrap">
+        <canvas id="modalPreview"></canvas>
+      </div>
+      <div class="modal-row">
+        <div class="modal-label">SIZE</div>
+        <div class="seg-group" id="sizeGroup">
+          <button class="seg-btn" data-size="320">320</button>
+          <button class="seg-btn active" data-size="640">640</button>
+          <button class="seg-btn" data-size="1280">1280</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="modalTextBtn">TEXT</button>
+        <button class="btn" id="modalCopyBtn">COPY</button>
+        <button class="btn primary" id="modalSaveBtn">SAVE</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // === CHARACTER SETS ===
+    const CHAR_SETS = {
+      standard:  ' .:-=+*#%@',
+      fine:      ' `.-\':_,^=;><+!rcxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
+      blocks:    ' ░▒▓█',
+      simple:    ' .+#@',
+      braille:   ' ⠁⠃⠇⡇⣇⣧⣷⣿',
+      jp:        ' ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ',
+    };
+
+    const CHAR_SET_LABELS = {
+      standard: 'STANDARD',
+      fine:     'FINE',
+      blocks:   'BLOCKS',
+      simple:   'SIMPLE',
+      braille:  'BRAILLE',
+      jp:       'KATAKANA',
+    };
+
+    const COLS_OPTIONS = [20, 60, 100];
+
+    // === COLOR SCHEMES ===
+    // darkBg: true → invertMode auto-on (bright pixels → dense chars)
+    const SCHEMES = {
+      dark:  { label: 'DARK',   bg: '#0a0a0a', fg: '#cccccc', darkBg: true  },
+      green: { label: 'GREEN',  bg: '#0a0a0a', fg: '#7fff6a', darkBg: true  },
+      amber: { label: 'AMBER',  bg: '#0c0800', fg: '#ffb300', darkBg: true  },
+      cyan:  { label: 'CYAN',   bg: '#000c0f', fg: '#00e5ff', darkBg: true  },
+      blue:  { label: 'BLUE',   bg: '#000820', fg: '#6699ff', darkBg: true  },
+      red:   { label: 'RED',    bg: '#0f0000', fg: '#ff4444', darkBg: true  },
+      paper: { label: 'PAPER',  bg: '#f5f0e8', fg: '#2a2a2a', darkBg: false },
+      white: { label: 'WHITE',  bg: '#ffffff', fg: '#111111', darkBg: false },
+    };
+
+    // === STATE ===
+    let currentCharSet = 'standard';
+    let currentCols = 60;
+    let currentScheme = 'dark';
+    let brightness = 0;
+    let contrast = 1;
+    let colorMode = false;
+    let invertMode = true;  // default: dark scheme → bright pixels → dense chars
+    let mode = null;          // 'cam' | 'img'
+    let frozen = false;
+    let frozenFrame = null;   // canvas snapshot of video when frozen
+    let facingMode = 'environment';
+    let stream = null;
+    let animFrameId = null;
+
+    // Image mode state
+    let loadedImage = null;
+    let cropCenterX = 0.5;
+    let cropCenterY = 0.5;
+    let cropZoom = 1;
+
+    // Font metrics (set after fonts load)
+    let CHAR_W = 7;
+    const CHAR_H = 12;
+
+    // === DOM ===
+    const aaCanvas     = document.getElementById('aaCanvas');
+    const ctx          = aaCanvas.getContext('2d');
+    const sampleCanvas = document.getElementById('sampleCanvas');
+    const sampleCtx    = sampleCanvas.getContext('2d');
+    const video        = document.getElementById('videoFeed');
+    const startScreen  = document.getElementById('startScreen');
+    const statusEl     = document.getElementById('status');
+
+    // === MEASURE FONT ===
+    function measureCharWidth() {
+      const tmp = document.createElement('canvas');
+      const tc  = tmp.getContext('2d');
+      tc.font   = `${CHAR_H}px 'DM Mono', monospace`;
+      CHAR_W    = tc.measureText('M').width;
+    }
+
+    // Wait for fonts, then measure
+    document.fonts.ready.then(measureCharWidth);
+
+    // === INIT CONTROLS ===
+    const charSetSelect = document.getElementById('charSetSelect');
+    Object.entries(CHAR_SET_LABELS).forEach(([key, label]) => {
+      const opt   = document.createElement('option');
+      opt.value   = key;
+      opt.text    = label;
+      if (key === currentCharSet) opt.selected = true;
+      charSetSelect.appendChild(opt);
+    });
+    charSetSelect.addEventListener('change', e => {
+      currentCharSet = e.target.value;
+    });
+
+    const colsSelect = document.getElementById('colsSelect');
+    COLS_OPTIONS.forEach(c => {
+      const opt   = document.createElement('option');
+      opt.value   = c;
+      opt.text    = `${c} COLS`;
+      if (c === currentCols) opt.selected = true;
+      colsSelect.appendChild(opt);
+    });
+    colsSelect.addEventListener('change', e => {
+      currentCols = parseInt(e.target.value);
+    });
+
+    document.getElementById('brightness').addEventListener('input', e => {
+      brightness = parseInt(e.target.value);
+      document.getElementById('brightVal').textContent = brightness;
+    });
+
+    document.getElementById('contrast').addEventListener('input', e => {
+      contrast = parseFloat(e.target.value);
+      document.getElementById('contVal').textContent = contrast.toFixed(1);
+    });
+
+    // Scheme select
+    const schemeSelect = document.getElementById('schemeSelect');
+    Object.entries(SCHEMES).forEach(([key, s]) => {
+      const opt   = document.createElement('option');
+      opt.value   = key;
+      opt.text    = s.label;
+      if (key === currentScheme) opt.selected = true;
+      schemeSelect.appendChild(opt);
+    });
+    schemeSelect.addEventListener('change', e => {
+      currentScheme = e.target.value;
+      // Auto-set invertMode to match the scheme's natural look
+      invertMode = SCHEMES[currentScheme].darkBg;
+      document.getElementById('invertToggle').classList.toggle('on', invertMode);
+      maybeRender();
+    });
+
+    document.getElementById('colorToggle').addEventListener('click', function () {
+      colorMode = !colorMode;
+      this.classList.toggle('on', colorMode);
+    });
+
+    document.getElementById('invertToggle').addEventListener('click', function () {
+      invertMode = !invertMode;
+      this.classList.toggle('on', invertMode);
+    });
+
+    // Credit panel
+    document.getElementById('credit-btn').addEventListener('click', () => {
+      document.getElementById('creditPanel').classList.toggle('open');
+    });
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#credit-btn') && !e.target.closest('#creditPanel')) {
+        document.getElementById('creditPanel').classList.remove('open');
+      }
+    });
+
+    // === SAVE BUTTON STATE ===
+    function updateSaveBtn() {
+      const canSave = mode !== null;
+      document.getElementById('saveOpenBtn').disabled = !canSave;
+    }
+
+    // === RENDERING ===
+    function getSourceDimensions() {
+      if (mode === 'cam') return { w: video.videoWidth || 1, h: video.videoHeight || 1 };
+      if (mode === 'img') return { w: loadedImage.naturalWidth, h: loadedImage.naturalHeight };
+      return { w: 1, h: 1 };
+    }
+
+    function applyBrightnessContrast(r, g, b) {
+      // Contrast around mid-gray (128)
+      r = (r - 128) * contrast + 128 + brightness;
+      g = (g - 128) * contrast + 128 + brightness;
+      b = (b - 128) * contrast + 128 + brightness;
+      return [
+        Math.max(0, Math.min(255, r)),
+        Math.max(0, Math.min(255, g)),
+        Math.max(0, Math.min(255, b)),
+      ];
+    }
+
+    function buildAACanvas(charScale = null) {
+      // charScale: explicit multiplier for export; null = auto-fit preview container
+      const cols = currentCols;
+      const { w: srcW, h: srcH } = getSourceDimensions();
+
+      // Crop is always square, so rows is fixed by char aspect ratio
+      const rows = Math.max(1, Math.round(cols * CHAR_W / CHAR_H));
+
+      if (charScale === null) {
+        // Scale chars so the canvas fills (or exceeds) the preview container
+        const wrap = document.getElementById('canvasWrap');
+        const wrapW = (wrap ? wrap.clientWidth  : 0) || 388;
+        const wrapH = (wrap ? wrap.clientHeight : 0) || 388;
+        charScale = Math.max(1, Math.ceil(
+          Math.min(wrapW / (cols * CHAR_W), wrapH / (rows * CHAR_H))
+        ));
+      }
+
+      // Sample the source into cols×rows (black for out-of-bounds)
+      sampleCanvas.width  = cols;
+      sampleCanvas.height = rows;
+      sampleCtx.save();
+      sampleCtx.fillStyle = '#000';
+      sampleCtx.fillRect(0, 0, cols, rows);
+
+      if (mode === 'cam') {
+        const src = (frozen && frozenFrame) ? frozenFrame : video;
+        const isFront = facingMode === 'user';
+        if (isFront) {
+          sampleCtx.translate(cols, 0);
+          sampleCtx.scale(-1, 1);
+        }
+        // Crop to square from center
+        const srcSize = Math.min(srcW, srcH);
+        const sx = (srcW - srcSize) / 2;
+        const sy = (srcH - srcSize) / 2;
+        sampleCtx.drawImage(src, sx, sy, srcSize, srcSize, 0, 0, cols, rows);
+      } else {
+        // Image mode with crop/zoom — clamp source rect, offset dest to match (pxlcam style)
+        const srcSize = Math.min(srcW, srcH) / cropZoom;
+        const scale   = cols / srcSize;
+        const srcL = cropCenterX * srcW - srcSize / 2;
+        const srcT = cropCenterY * srcH - srcSize / 2;
+        const cL = Math.max(0, srcL), cT = Math.max(0, srcT);
+        const cR = Math.min(srcW, srcL + srcSize), cB = Math.min(srcH, srcT + srcSize);
+        if (cR > cL && cB > cT) {
+          sampleCtx.drawImage(loadedImage,
+            cL, cT, cR - cL, cB - cT,
+            (cL - srcL) * scale, (cT - srcT) * scale,
+            (cR - cL) * scale, (cB - cT) * scale
+          );
+        }
+      }
+      sampleCtx.restore();
+
+      const imgData = sampleCtx.getImageData(0, 0, cols, rows).data;
+      const chars   = CHAR_SETS[currentCharSet];
+
+      // Build output canvas
+      const cW = Math.round(CHAR_W * charScale);
+      const cH = Math.round(CHAR_H * charScale);
+      const out = document.createElement('canvas');
+      out.width  = cols * cW;
+      out.height = rows * cH;
+      const oc   = out.getContext('2d');
+
+      // Background
+      oc.fillStyle = SCHEMES[currentScheme].bg;
+      oc.fillRect(0, 0, out.width, out.height);
+
+      oc.font         = `${cH}px 'DM Mono', monospace`;
+      oc.textBaseline = 'top';
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const i = (row * cols + col) * 4;
+          let [r, g, b] = applyBrightnessContrast(imgData[i], imgData[i+1], imgData[i+2]);
+
+          const lum   = 0.299 * r + 0.587 * g + 0.114 * b;
+          const norm  = lum / 255;
+          const ci    = invertMode
+            ? Math.floor(norm * (chars.length - 1))
+            : Math.floor((1 - norm) * (chars.length - 1));
+          const ch    = chars[Math.max(0, Math.min(chars.length - 1, ci))];
+
+          if (ch === ' ') continue; // background already fills spaces
+
+          if (colorMode) {
+            oc.fillStyle = `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+          } else {
+            oc.fillStyle = SCHEMES[currentScheme].fg;
+          }
+
+          oc.fillText(ch, col * cW, row * cH);
+        }
+      }
+
+      return out;
+    }
+
+    function renderFrame() {
+      if (!mode) return;
+      if (frozen) return;
+
+      const out = buildAACanvas();
+      aaCanvas.width  = out.width;
+      aaCanvas.height = out.height;
+      ctx.drawImage(out, 0, 0);
+
+      if (mode === 'cam') {
+        animFrameId = requestAnimationFrame(renderFrame);
+      }
+    }
+
+    function renderSingle() {
+      // Single render (image mode, or frozen cam)
+      const out = buildAACanvas();
+      aaCanvas.width  = out.width;
+      aaCanvas.height = out.height;
+      ctx.drawImage(out, 0, 0);
+    }
+
+    // === CAMERA ===
+    async function startCamera() {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+      try {
+        statusEl.textContent = 'CONNECTING...';
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode, width: { ideal: 1280 }, height: { ideal: 1280 } },
+          audio: false,
+        });
+        video.srcObject = stream;
+        await video.play();
+        mode        = 'cam';
+        frozen      = false;
+        frozenFrame = null;
+        startScreen.style.display = 'none';
+        statusEl.textContent = 'LIVE';
+        document.getElementById('freezeBtn').textContent = 'FREEZE';
+        updateSaveBtn();
+        animFrameId = requestAnimationFrame(renderFrame);
+      } catch (e) {
+        statusEl.textContent = 'CAM ERROR';
+        console.error(e);
+      }
+    }
+
+    document.getElementById('startBtn').onclick = startCamera;
+
+    document.getElementById('camSwitch').onclick = () => {
+      facingMode = facingMode === 'environment' ? 'user' : 'environment';
+      if (mode === 'cam') startCamera();
+    };
+
+    document.getElementById('freezeBtn').onclick = () => {
+      if (mode === 'img') {
+        // Switch back to cam
+        mode = 'cam';
+        frozen = false;
+        startScreen.style.display = 'none';
+        statusEl.textContent = 'LIVE';
+        document.getElementById('freezeBtn').textContent = 'FREEZE';
+        if (stream) {
+          animFrameId = requestAnimationFrame(renderFrame);
+        } else {
+          startCamera();
+        }
+        return;
+      }
+      frozen = !frozen;
+      if (frozen) {
+        // Capture current video frame so subsequent renders are consistent
+        frozenFrame = document.createElement('canvas');
+        frozenFrame.width  = video.videoWidth;
+        frozenFrame.height = video.videoHeight;
+        frozenFrame.getContext('2d').drawImage(video, 0, 0);
+        cancelAnimationFrame(animFrameId);
+        statusEl.textContent = 'FROZEN';
+        document.getElementById('freezeBtn').textContent = 'RESUME';
+      } else {
+        frozenFrame = null;
+        statusEl.textContent = 'LIVE';
+        document.getElementById('freezeBtn').textContent = 'FREEZE';
+        animFrameId = requestAnimationFrame(renderFrame);
+      }
+    };
+
+    // === IMAGE LOADING ===
+    function openFilePicker() {
+      document.getElementById('fileInput').click();
+    }
+
+    document.getElementById('loadImgBtn').onclick    = openFilePicker;
+    document.getElementById('loadAnotherBtn').onclick = openFilePicker;
+
+    document.getElementById('fileInput').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const url  = URL.createObjectURL(file);
+      const img  = new Image();
+      img.onload = () => {
+        loadedImage  = img;
+        cropCenterX  = 0.5;
+        cropCenterY  = 0.5;
+        cropZoom     = 1;
+        mode         = 'img';
+        frozen       = false;
+        cancelAnimationFrame(animFrameId);
+        startScreen.style.display = 'none';
+        statusEl.textContent = 'IMAGE';
+        document.getElementById('freezeBtn').textContent = 'CAM';
+        updateSaveBtn();
+        renderSingle();
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+      e.target.value = '';
+    });
+
+    // === IMAGE GESTURES (pinch/drag/wheel) ===
+
+    // Convert screen drag delta to normalized image center delta.
+    // Accounts for image aspect ratio so pan speed is 1:1 with finger.
+    function panDelta(dxScreen, dyScreen, rect) {
+      const { w: srcW, h: srcH } = getSourceDimensions();
+      const srcMin = Math.min(srcW, srcH);
+      return {
+        dx: dxScreen / rect.width  / cropZoom * srcMin / srcW,
+        dy: dyScreen / rect.height / cropZoom * srcMin / srcH,
+      };
+    }
+
+    // Zoom around a focal point (nx, ny) in normalized display coords [0,1].
+    function zoomAround(newZoom, nx, ny) {
+      const { w: srcW, h: srcH } = getSourceDimensions();
+      const srcMin = Math.min(srcW, srcH);
+      const oldSrcSize = srcMin / cropZoom;
+      const imgX = cropCenterX * srcW + (nx - 0.5) * oldSrcSize;
+      const imgY = cropCenterY * srcH + (ny - 0.5) * oldSrcSize;
+      cropZoom = Math.max(0.25, Math.min(8, newZoom));
+      const newSrcSize = srcMin / cropZoom;
+      cropCenterX = (imgX - (nx - 0.5) * newSrcSize) / srcW;
+      cropCenterY = (imgY - (ny - 0.5) * newSrcSize) / srcH;
+    }
+
+    // === Pointer Events (touch + mouse + pen unified, matching pxlcam) ===
+    const ptrs = new Map();
+    let pinchStartDist = null, pinchStartZoom = 1;
+    let lastDragX = 0, lastDragY = 0;
+    let lastTapTime = 0;
+
+    aaCanvas.addEventListener('pointerdown', e => {
+      if (mode !== 'img') return;
+      e.preventDefault();
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (ptrs.size === 1) {
+        lastDragX = e.clientX; lastDragY = e.clientY;
+        // Double-tap to reset
+        const now = Date.now();
+        if (now - lastTapTime < 300) {
+          cropCenterX = 0.5; cropCenterY = 0.5; cropZoom = 1;
+          renderSingle();
+        }
+        lastTapTime = now;
+      } else if (ptrs.size === 2) {
+        const [a, b] = [...ptrs.values()];
+        pinchStartDist = Math.hypot(b.x - a.x, b.y - a.y);
+        pinchStartZoom = cropZoom;
+      }
+    }, { passive: false });
+
+    aaCanvas.addEventListener('pointermove', e => {
+      if (mode !== 'img' || !ptrs.has(e.pointerId)) return;
+      e.preventDefault();
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (ptrs.size === 1) {
+        const rect = aaCanvas.getBoundingClientRect();
+        const { dx, dy } = panDelta(e.clientX - lastDragX, e.clientY - lastDragY, rect);
+        cropCenterX -= dx;
+        cropCenterY -= dy;
+        lastDragX = e.clientX; lastDragY = e.clientY;
+        renderSingle();
+      } else if (ptrs.size === 2) {
+        const [a, b] = [...ptrs.values()];
+        const dist = Math.hypot(b.x - a.x, b.y - a.y);
+        const rect = aaCanvas.getBoundingClientRect();
+        const nx = ((a.x + b.x) / 2 - rect.left) / rect.width;
+        const ny = ((a.y + b.y) / 2 - rect.top)  / rect.height;
+        zoomAround(pinchStartZoom * dist / pinchStartDist, nx, ny);
+        renderSingle();
+      }
+    }, { passive: false });
+
+    const endPtr = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinchStartDist = null; };
+    aaCanvas.addEventListener('pointerup',     endPtr);
+    aaCanvas.addEventListener('pointercancel', endPtr);
+
+    // Wheel zoom around cursor
+    aaCanvas.addEventListener('wheel', e => {
+      if (mode !== 'img') return;
+      e.preventDefault();
+      const rect = aaCanvas.getBoundingClientRect();
+      const nx = (e.clientX - rect.left) / rect.width;
+      const ny = (e.clientY - rect.top)  / rect.height;
+      zoomAround(cropZoom * (e.deltaY > 0 ? 0.9 : 1.1), nx, ny);
+      renderSingle();
+    }, { passive: false });
+
+    // Re-render when controls change (image mode, or frozen cam)
+    function maybeRender() {
+      if (mode === 'img' || (mode === 'cam' && frozen)) renderSingle();
+    }
+    ['charSetSelect', 'colsSelect', 'brightness', 'contrast'].forEach(id => {
+      document.getElementById(id).addEventListener('input', maybeRender);
+      document.getElementById(id).addEventListener('change', maybeRender);
+    });
+    document.getElementById('colorToggle').addEventListener('click', maybeRender);
+    document.getElementById('invertToggle').addEventListener('click', maybeRender);
+
+    // === BUILD TEXT (for TEXT export) ===
+    function buildAAText() {
+      const cols = currentCols;
+      const { w: srcW, h: srcH } = getSourceDimensions();
+      const rows = Math.max(1, Math.round(cols * CHAR_W / CHAR_H));
+
+      sampleCanvas.width  = cols;
+      sampleCanvas.height = rows;
+      sampleCtx.save();
+      sampleCtx.fillStyle = '#000';
+      sampleCtx.fillRect(0, 0, cols, rows);
+
+      if (mode === 'cam') {
+        const src = (frozen && frozenFrame) ? frozenFrame : video;
+        const isFront = facingMode === 'user';
+        if (isFront) { sampleCtx.translate(cols, 0); sampleCtx.scale(-1, 1); }
+        const srcSize = Math.min(srcW, srcH);
+        sampleCtx.drawImage(src, (srcW-srcSize)/2, (srcH-srcSize)/2, srcSize, srcSize, 0, 0, cols, rows);
+      } else {
+        const srcSize = Math.min(srcW, srcH) / cropZoom;
+        const scale   = cols / srcSize;
+        const srcL = cropCenterX * srcW - srcSize / 2;
+        const srcT = cropCenterY * srcH - srcSize / 2;
+        const cL = Math.max(0, srcL), cT = Math.max(0, srcT);
+        const cR = Math.min(srcW, srcL + srcSize), cB = Math.min(srcH, srcT + srcSize);
+        if (cR > cL && cB > cT) {
+          sampleCtx.drawImage(loadedImage,
+            cL, cT, cR - cL, cB - cT,
+            (cL - srcL) * scale, (cT - srcT) * scale,
+            (cR - cL) * scale, (cB - cT) * scale
+          );
+        }
+      }
+      sampleCtx.restore();
+
+      const imgData = sampleCtx.getImageData(0, 0, cols, rows).data;
+      const chars   = CHAR_SETS[currentCharSet];
+      let text = '';
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const i = (row * cols + col) * 4;
+          let [r, g, b] = applyBrightnessContrast(imgData[i], imgData[i+1], imgData[i+2]);
+          const lum  = 0.299 * r + 0.587 * g + 0.114 * b;
+          const norm = lum / 255;
+          const ci   = invertMode
+            ? Math.floor(norm * (chars.length - 1))
+            : Math.floor((1 - norm) * (chars.length - 1));
+          text += chars[Math.max(0, Math.min(chars.length - 1, ci))];
+        }
+        text += '\n';
+      }
+      return text;
+    }
+
+    // === SAVE MODAL ===
+    let exportSize = 640;
+
+    function refreshModalPreview() {
+      // Always render at scale=1 for preview consistency
+      const out     = buildAACanvas(1);
+      const preview = document.getElementById('modalPreview');
+      preview.width  = out.width;
+      preview.height = out.height;
+      preview.getContext('2d').drawImage(out, 0, 0);
+
+    }
+
+    document.getElementById('saveOpenBtn').onclick = () => {
+      exportSize = 640;
+      document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => {
+        b.classList.toggle('active', parseInt(b.dataset.size) === exportSize);
+      });
+      refreshModalPreview();
+      document.getElementById('saveModal').style.display = 'flex';
+    };
+
+    document.getElementById('modalClose').onclick = () => {
+      document.getElementById('saveModal').style.display = 'none';
+    };
+
+    document.getElementById('sizeGroup').addEventListener('click', e => {
+      const btn = e.target.closest('.seg-btn');
+      if (!btn) return;
+      exportSize = parseInt(btn.dataset.size);
+      document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+
+    document.getElementById('modalTextBtn').onclick = async () => {
+      const text = buildAAText();
+      try {
+        await navigator.clipboard.writeText(text);
+        const btn = document.getElementById('modalTextBtn');
+        const orig = btn.textContent;
+        btn.textContent = 'COPIED!';
+        setTimeout(() => btn.textContent = orig, 1500);
+      } catch (e) {
+        console.error('Text copy failed', e);
+      }
+    };
+
+    async function getExportBlob() {
+      return new Promise(resolve => {
+        // Render at a scale that meets or exceeds exportSize, then scale down
+        const cols = currentCols;
+        const rows = Math.max(1, Math.round(cols * CHAR_W / CHAR_H));
+        const natW = cols * CHAR_W;
+        const natH = rows * CHAR_H;
+        const charScale = Math.max(1, Math.ceil(exportSize / Math.max(natW, natH)));
+        const src = buildAACanvas(charScale);
+        const ratio = exportSize / Math.max(src.width, src.height);
+        const ex = document.createElement('canvas');
+        ex.width  = Math.round(src.width  * ratio);
+        ex.height = Math.round(src.height * ratio);
+        ex.getContext('2d').drawImage(src, 0, 0, ex.width, ex.height);
+        ex.toBlob(resolve, 'image/png');
+      });
+    }
+
+    document.getElementById('modalCopyBtn').onclick = async () => {
+      try {
+        const blob = await getExportBlob();
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        const btn = document.getElementById('modalCopyBtn');
+        const orig = btn.textContent;
+        btn.textContent = 'COPIED!';
+        setTimeout(() => btn.textContent = orig, 1500);
+      } catch (e) {
+        console.error('Copy failed', e);
+      }
+    };
+
+    document.getElementById('modalSaveBtn').onclick = async () => {
+      const blob = await getExportBlob();
+      const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const name = `aacam_${ts}.png`;
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], name, { type: 'image/png' })] })) {
+        try {
+          await navigator.share({ files: [new File([blob], name, { type: 'image/png' })] });
+          return;
+        } catch (e) {
+          if (e.name === 'AbortError') return;
+        }
+      }
+
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    // Close modal on overlay click
+    document.getElementById('saveModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('saveModal')) {
+        document.getElementById('saveModal').style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

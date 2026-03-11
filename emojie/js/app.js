@@ -940,15 +940,28 @@ function saveAll() {
     closeSaveUI();
 }
 
+async function shareOrDownloadBlob(blob, filename) {
+    if (navigator.canShare) {
+        const file = new File([blob], filename, { type: blob.type });
+        try {
+            if (navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file] });
+                return;
+            }
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+        }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 function downloadCanvas(canvas, filename) {
-    canvas.toBlob(blob => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-    });
+    canvas.toBlob(blob => shareOrDownloadBlob(blob, filename));
 }
 
 async function copyToClipboard(canvas) {
