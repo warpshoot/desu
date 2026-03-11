@@ -37,6 +37,14 @@ body {
     height: 100%;
     object-fit: cover;
     z-index: 1;
+    filter: blur(0px);
+    transition: filter 2s ease-in-out;
+}
+
+.background.blurred {
+    filter: blur(3px);
+    transform: scale(1.03);
+    /* エッジ欠けを補正 */
 }
 
 /* 背景上の半透明黒オーバーレイ */

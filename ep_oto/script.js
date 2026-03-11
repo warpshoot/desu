@@ -51,6 +51,7 @@ let isMuted = false;
 // DOM要素
 const titleScreen = document.getElementById('titleScreen');
 const fadeOverlay = document.getElementById('fadeOverlay');
+const backgroundImg = document.querySelector('.background');
 const textWindow = document.getElementById('textWindow');
 const textContent = document.getElementById('textContent');
 const continueIcon = document.getElementById('continueIcon');
@@ -224,6 +225,7 @@ function startGame() {
     // 余韻を残して暗転を解く
     setTimeout(() => {
         fadeOverlay.classList.add('fade-out');
+        backgroundImg.classList.add('blurred'); // 背景にブラーをかける
         startRain(); // 雨の音スタート
 
         // オーバーレイが消えた後、テキスト表示スタート
@@ -307,6 +309,7 @@ function handleReplay() {
         textContent.classList.remove('show');
 
         titleScreen.classList.remove('hidden');
+        backgroundImg.classList.remove('blurred'); // ブラーをリセット
         fadeOverlay.classList.remove('fade-in');
         fadeOverlay.classList.add('fade-out');
 
