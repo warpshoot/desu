@@ -80,7 +80,9 @@
       transition: border-color 0.15s;
     }
 
-    #credit-btn:hover { border-color: var(--accent); }
+    #credit-btn:hover {
+      border-color: var(--accent);
+    }
 
     /* Credit Panel */
     .credit-panel {
@@ -98,7 +100,9 @@
       display: none;
     }
 
-    .credit-panel.open { display: block; }
+    .credit-panel.open {
+      display: block;
+    }
 
     .credit-row {
       display: flex;
@@ -107,12 +111,34 @@
       padding: 3px 0;
     }
 
-    .credit-key { color: var(--text-dim); }
-    .credit-val { color: var(--text); text-decoration: none; }
-    .credit-val:hover { color: var(--accent); }
-    .credit-divider { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
-    .credit-manual-link { color: var(--accent); text-decoration: none; font-size: 11px; }
-    .credit-manual-link:hover { text-decoration: underline; }
+    .credit-key {
+      color: var(--text-dim);
+    }
+
+    .credit-val {
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .credit-val:hover {
+      color: var(--accent);
+    }
+
+    .credit-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 6px 0;
+    }
+
+    .credit-manual-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 11px;
+    }
+
+    .credit-manual-link:hover {
+      text-decoration: underline;
+    }
 
     /* Canvas area */
     .canvas-wrap {
@@ -145,10 +171,29 @@
       opacity: 0.6;
     }
 
-    .corner-mark.tl { top: 6px; left: 6px; border-width: 1px 0 0 1px; }
-    .corner-mark.tr { top: 6px; right: 6px; border-width: 1px 1px 0 0; }
-    .corner-mark.bl { bottom: 6px; left: 6px; border-width: 0 0 1px 1px; }
-    .corner-mark.br { bottom: 6px; right: 6px; border-width: 0 1px 1px 0; }
+    .corner-mark.tl {
+      top: 6px;
+      left: 6px;
+      border-width: 1px 0 0 1px;
+    }
+
+    .corner-mark.tr {
+      top: 6px;
+      right: 6px;
+      border-width: 1px 1px 0 0;
+    }
+
+    .corner-mark.bl {
+      bottom: 6px;
+      left: 6px;
+      border-width: 0 0 1px 1px;
+    }
+
+    .corner-mark.br {
+      bottom: 6px;
+      right: 6px;
+      border-width: 0 1px 1px 0;
+    }
 
     /* Start screen */
     .start-screen {
@@ -188,9 +233,23 @@
       transition: background 0.15s, color 0.15s;
     }
 
-    .start-btn:hover, .start-btn:active { background: var(--accent); color: #000; }
-    .start-btn.secondary { border-color: var(--text-dim); color: var(--text-dim); }
-    .start-btn.secondary:hover, .start-btn.secondary:active { border-color: var(--text); background: var(--text); color: #000; }
+    .start-btn:hover,
+    .start-btn:active {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .start-btn.secondary {
+      border-color: var(--text-dim);
+      color: var(--text-dim);
+    }
+
+    .start-btn.secondary:hover,
+    .start-btn.secondary:active {
+      border-color: var(--text);
+      background: var(--text);
+      color: #000;
+    }
 
     /* Actions bar */
     .actions {
@@ -213,11 +272,28 @@
       transition: border-color 0.15s, color 0.15s;
     }
 
-    .btn:hover { border-color: var(--text-dim); }
-    .btn:active { opacity: 0.7; }
-    .btn:disabled { opacity: 0.3; pointer-events: none; }
-    .btn.primary { border-color: var(--accent); color: var(--accent); }
-    .btn.primary:hover { background: var(--accent); color: #000; }
+    .btn:hover {
+      border-color: var(--text-dim);
+    }
+
+    .btn:active {
+      opacity: 0.7;
+    }
+
+    .btn:disabled {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .btn.primary {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn.primary:hover {
+      background: var(--accent);
+      color: #000;
+    }
 
     /* Controls */
     .controls {
@@ -262,7 +338,10 @@
       letter-spacing: 0.05em;
     }
 
-    .styled-select:focus { outline: none; border-color: var(--text-dim); }
+    .styled-select:focus {
+      outline: none;
+      border-color: var(--text-dim);
+    }
 
     /* Slider */
     .slider-row {
@@ -347,7 +426,9 @@
       cursor: pointer;
     }
 
-    .spacer { flex: 1; }
+    .spacer {
+      flex: 1;
+    }
 
     .cam-switch {
       width: 30px;
@@ -364,8 +445,15 @@
       transition: border-color 0.15s, color 0.15s;
     }
 
-    .cam-switch svg { width: 14px; height: 14px; }
-    .cam-switch:hover { border-color: var(--text); color: var(--text); }
+    .cam-switch svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .cam-switch:hover {
+      border-color: var(--text);
+      color: var(--text);
+    }
 
     /* Segmented controls */
     .seg-group {
@@ -441,7 +529,9 @@
       line-height: 1;
     }
 
-    .modal-close:hover { color: var(--text); }
+    .modal-close:hover {
+      color: var(--text);
+    }
 
     .modal-preview-wrap {
       width: 100%;
@@ -631,21 +721,21 @@
   <script>
     // === CHARACTER SETS ===
     const CHAR_SETS = {
-      standard:  ' .:-=+*#%@',
-      fine:      ' `.-\':_,^=;><+!rcxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
-      blocks:    ' ░▒▓█',
-      simple:    ' .+#@',
-      braille:   ' ⠁⠃⠇⡇⣇⣧⣷⣿',
-      jp:        ' ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ',
+      standard: ' .:-=+*#%@',
+      fine: ' `.-\':_,^=;><+!rcxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
+      blocks: ' ░▒▓█',
+      simple: ' .+#@',
+      braille: ' ⠁⠃⠇⡇⣇⣧⣷⣿',
+      jp: ' ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ',
     };
 
     const CHAR_SET_LABELS = {
       standard: 'STANDARD',
-      fine:     'FINE',
-      blocks:   'BLOCKS',
-      simple:   'SIMPLE',
-      braille:  'BRAILLE',
-      jp:       'KATAKANA',
+      fine: 'FINE',
+      blocks: 'BLOCKS',
+      simple: 'SIMPLE',
+      braille: 'BRAILLE',
+      jp: 'KATAKANA',
     };
 
     const COLS_OPTIONS = [20, 60, 100];
@@ -653,14 +743,14 @@
     // === COLOR SCHEMES ===
     // darkBg: true → invertMode auto-on (bright pixels → dense chars)
     const SCHEMES = {
-      dark:  { label: 'DARK',   bg: '#0a0a0a', fg: '#cccccc', darkBg: true  },
-      green: { label: 'GREEN',  bg: '#0a0a0a', fg: '#7fff6a', darkBg: true  },
-      amber: { label: 'AMBER',  bg: '#0c0800', fg: '#ffb300', darkBg: true  },
-      cyan:  { label: 'CYAN',   bg: '#000c0f', fg: '#00e5ff', darkBg: true  },
-      blue:  { label: 'BLUE',   bg: '#000820', fg: '#6699ff', darkBg: true  },
-      red:   { label: 'RED',    bg: '#0f0000', fg: '#ff4444', darkBg: true  },
-      paper: { label: 'PAPER',  bg: '#f5f0e8', fg: '#2a2a2a', darkBg: false },
-      white: { label: 'WHITE',  bg: '#ffffff', fg: '#111111', darkBg: false },
+      dark: { label: 'DARK', bg: '#0a0a0a', fg: '#cccccc', darkBg: true },
+      green: { label: 'GREEN', bg: '#0a0a0a', fg: '#7fff6a', darkBg: true },
+      amber: { label: 'AMBER', bg: '#0c0800', fg: '#ffb300', darkBg: true },
+      cyan: { label: 'CYAN', bg: '#000c0f', fg: '#00e5ff', darkBg: true },
+      blue: { label: 'BLUE', bg: '#000820', fg: '#6699ff', darkBg: true },
+      red: { label: 'RED', bg: '#0f0000', fg: '#ff4444', darkBg: true },
+      paper: { label: 'PAPER', bg: '#f5f0e8', fg: '#2a2a2a', darkBg: false },
+      white: { label: 'WHITE', bg: '#ffffff', fg: '#111111', darkBg: false },
     };
 
     // === STATE ===
@@ -689,20 +779,20 @@
     const CHAR_H = 12;
 
     // === DOM ===
-    const aaCanvas     = document.getElementById('aaCanvas');
-    const ctx          = aaCanvas.getContext('2d');
+    const aaCanvas = document.getElementById('aaCanvas');
+    const ctx = aaCanvas.getContext('2d');
     const sampleCanvas = document.getElementById('sampleCanvas');
-    const sampleCtx    = sampleCanvas.getContext('2d');
-    const video        = document.getElementById('videoFeed');
-    const startScreen  = document.getElementById('startScreen');
-    const statusEl     = document.getElementById('status');
+    const sampleCtx = sampleCanvas.getContext('2d');
+    const video = document.getElementById('videoFeed');
+    const startScreen = document.getElementById('startScreen');
+    const statusEl = document.getElementById('status');
 
     // === MEASURE FONT ===
     function measureCharWidth() {
       const tmp = document.createElement('canvas');
-      const tc  = tmp.getContext('2d');
-      tc.font   = `${CHAR_H}px 'DM Mono', monospace`;
-      CHAR_W    = tc.measureText('M').width;
+      const tc = tmp.getContext('2d');
+      tc.font = `${CHAR_H}px 'DM Mono', monospace`;
+      CHAR_W = tc.measureText('M').width;
     }
 
     // Wait for fonts, then measure
@@ -711,9 +801,9 @@
     // === INIT CONTROLS ===
     const charSetSelect = document.getElementById('charSetSelect');
     Object.entries(CHAR_SET_LABELS).forEach(([key, label]) => {
-      const opt   = document.createElement('option');
-      opt.value   = key;
-      opt.text    = label;
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.text = label;
       if (key === currentCharSet) opt.selected = true;
       charSetSelect.appendChild(opt);
     });
@@ -723,9 +813,9 @@
 
     const colsSelect = document.getElementById('colsSelect');
     COLS_OPTIONS.forEach(c => {
-      const opt   = document.createElement('option');
-      opt.value   = c;
-      opt.text    = `${c} COLS`;
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.text = `${c} COLS`;
       if (c === currentCols) opt.selected = true;
       colsSelect.appendChild(opt);
     });
@@ -746,9 +836,9 @@
     // Scheme select
     const schemeSelect = document.getElementById('schemeSelect');
     Object.entries(SCHEMES).forEach(([key, s]) => {
-      const opt   = document.createElement('option');
-      opt.value   = key;
-      opt.text    = s.label;
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.text = s.label;
       if (key === currentScheme) opt.selected = true;
       schemeSelect.appendChild(opt);
     });
@@ -816,7 +906,7 @@
       if (charScale === null) {
         // Scale chars so the canvas fills (or exceeds) the preview container
         const wrap = document.getElementById('canvasWrap');
-        const wrapW = (wrap ? wrap.clientWidth  : 0) || 388;
+        const wrapW = (wrap ? wrap.clientWidth : 0) || 388;
         const wrapH = (wrap ? wrap.clientHeight : 0) || 388;
         charScale = Math.max(1, Math.ceil(
           Math.min(wrapW / (cols * CHAR_W), wrapH / (rows * CHAR_H))
@@ -824,7 +914,7 @@
       }
 
       // Sample the source into cols×rows (black for out-of-bounds)
-      sampleCanvas.width  = cols;
+      sampleCanvas.width = cols;
       sampleCanvas.height = rows;
       sampleCtx.save();
       sampleCtx.fillStyle = '#000';
@@ -845,7 +935,8 @@
       } else {
         // Image mode with crop/zoom — clamp source rect, offset dest to match (pxlcam style)
         const srcSize = Math.min(srcW, srcH) / cropZoom;
-        const scale   = cols / srcSize;
+        const scaleX = cols / srcSize;
+        const scaleY = rows / srcSize;
         const srcL = cropCenterX * srcW - srcSize / 2;
         const srcT = cropCenterY * srcH - srcSize / 2;
         const cL = Math.max(0, srcL), cT = Math.max(0, srcT);
@@ -853,42 +944,42 @@
         if (cR > cL && cB > cT) {
           sampleCtx.drawImage(loadedImage,
             cL, cT, cR - cL, cB - cT,
-            (cL - srcL) * scale, (cT - srcT) * scale,
-            (cR - cL) * scale, (cB - cT) * scale
+            (cL - srcL) * scaleX, (cT - srcT) * scaleY,
+            (cR - cL) * scaleX, (cB - cT) * scaleY
           );
         }
       }
       sampleCtx.restore();
 
       const imgData = sampleCtx.getImageData(0, 0, cols, rows).data;
-      const chars   = CHAR_SETS[currentCharSet];
+      const chars = CHAR_SETS[currentCharSet];
 
       // Build output canvas
       const cW = Math.round(CHAR_W * charScale);
       const cH = Math.round(CHAR_H * charScale);
       const out = document.createElement('canvas');
-      out.width  = cols * cW;
+      out.width = cols * cW;
       out.height = rows * cH;
-      const oc   = out.getContext('2d');
+      const oc = out.getContext('2d');
 
       // Background
       oc.fillStyle = SCHEMES[currentScheme].bg;
       oc.fillRect(0, 0, out.width, out.height);
 
-      oc.font         = `${cH}px 'DM Mono', monospace`;
+      oc.font = `${cH}px 'DM Mono', monospace`;
       oc.textBaseline = 'top';
 
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
           const i = (row * cols + col) * 4;
-          let [r, g, b] = applyBrightnessContrast(imgData[i], imgData[i+1], imgData[i+2]);
+          let [r, g, b] = applyBrightnessContrast(imgData[i], imgData[i + 1], imgData[i + 2]);
 
-          const lum   = 0.299 * r + 0.587 * g + 0.114 * b;
-          const norm  = lum / 255;
-          const ci    = invertMode
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          const norm = lum / 255;
+          const ci = invertMode
             ? Math.floor(norm * (chars.length - 1))
             : Math.floor((1 - norm) * (chars.length - 1));
-          const ch    = chars[Math.max(0, Math.min(chars.length - 1, ci))];
+          const ch = chars[Math.max(0, Math.min(chars.length - 1, ci))];
 
           if (ch === ' ') continue; // background already fills spaces
 
@@ -910,7 +1001,7 @@
       if (frozen) return;
 
       const out = buildAACanvas();
-      aaCanvas.width  = out.width;
+      aaCanvas.width = out.width;
       aaCanvas.height = out.height;
       ctx.drawImage(out, 0, 0);
 
@@ -922,7 +1013,7 @@
     function renderSingle() {
       // Single render (image mode, or frozen cam)
       const out = buildAACanvas();
-      aaCanvas.width  = out.width;
+      aaCanvas.width = out.width;
       aaCanvas.height = out.height;
       ctx.drawImage(out, 0, 0);
     }
@@ -941,8 +1032,8 @@
         });
         video.srcObject = stream;
         await video.play();
-        mode        = 'cam';
-        frozen      = false;
+        mode = 'cam';
+        frozen = false;
         frozenFrame = null;
         startScreen.style.display = 'none';
         statusEl.textContent = 'LIVE';
@@ -981,7 +1072,7 @@
       if (frozen) {
         // Capture current video frame so subsequent renders are consistent
         frozenFrame = document.createElement('canvas');
-        frozenFrame.width  = video.videoWidth;
+        frozenFrame.width = video.videoWidth;
         frozenFrame.height = video.videoHeight;
         frozenFrame.getContext('2d').drawImage(video, 0, 0);
         cancelAnimationFrame(animFrameId);
@@ -1000,21 +1091,21 @@
       document.getElementById('fileInput').click();
     }
 
-    document.getElementById('loadImgBtn').onclick    = openFilePicker;
+    document.getElementById('loadImgBtn').onclick = openFilePicker;
     document.getElementById('loadAnotherBtn').onclick = openFilePicker;
 
     document.getElementById('fileInput').addEventListener('change', e => {
       const file = e.target.files[0];
       if (!file) return;
-      const url  = URL.createObjectURL(file);
-      const img  = new Image();
+      const url = URL.createObjectURL(file);
+      const img = new Image();
       img.onload = () => {
-        loadedImage  = img;
-        cropCenterX  = 0.5;
-        cropCenterY  = 0.5;
-        cropZoom     = 1;
-        mode         = 'img';
-        frozen       = false;
+        loadedImage = img;
+        cropCenterX = 0.5;
+        cropCenterY = 0.5;
+        cropZoom = 1;
+        mode = 'img';
+        frozen = false;
         cancelAnimationFrame(animFrameId);
         startScreen.style.display = 'none';
         statusEl.textContent = 'IMAGE';
@@ -1035,7 +1126,7 @@
       const { w: srcW, h: srcH } = getSourceDimensions();
       const srcMin = Math.min(srcW, srcH);
       return {
-        dx: dxScreen / rect.width  / cropZoom * srcMin / srcW,
+        dx: dxScreen / rect.width / cropZoom * srcMin / srcW,
         dy: dyScreen / rect.height / cropZoom * srcMin / srcH,
       };
     }
@@ -1096,14 +1187,14 @@
         const dist = Math.hypot(b.x - a.x, b.y - a.y);
         const rect = aaCanvas.getBoundingClientRect();
         const nx = ((a.x + b.x) / 2 - rect.left) / rect.width;
-        const ny = ((a.y + b.y) / 2 - rect.top)  / rect.height;
+        const ny = ((a.y + b.y) / 2 - rect.top) / rect.height;
         zoomAround(pinchStartZoom * dist / pinchStartDist, nx, ny);
         renderSingle();
       }
     }, { passive: false });
 
     const endPtr = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinchStartDist = null; };
-    aaCanvas.addEventListener('pointerup',     endPtr);
+    aaCanvas.addEventListener('pointerup', endPtr);
     aaCanvas.addEventListener('pointercancel', endPtr);
 
     // Wheel zoom around cursor
@@ -1112,7 +1203,7 @@
       e.preventDefault();
       const rect = aaCanvas.getBoundingClientRect();
       const nx = (e.clientX - rect.left) / rect.width;
-      const ny = (e.clientY - rect.top)  / rect.height;
+      const ny = (e.clientY - rect.top) / rect.height;
       zoomAround(cropZoom * (e.deltaY > 0 ? 0.9 : 1.1), nx, ny);
       renderSingle();
     }, { passive: false });
@@ -1134,7 +1225,7 @@
       const { w: srcW, h: srcH } = getSourceDimensions();
       const rows = Math.max(1, Math.round(cols * CHAR_W / CHAR_H));
 
-      sampleCanvas.width  = cols;
+      sampleCanvas.width = cols;
       sampleCanvas.height = rows;
       sampleCtx.save();
       sampleCtx.fillStyle = '#000';
@@ -1145,10 +1236,11 @@
         const isFront = facingMode === 'user';
         if (isFront) { sampleCtx.translate(cols, 0); sampleCtx.scale(-1, 1); }
         const srcSize = Math.min(srcW, srcH);
-        sampleCtx.drawImage(src, (srcW-srcSize)/2, (srcH-srcSize)/2, srcSize, srcSize, 0, 0, cols, rows);
+        sampleCtx.drawImage(src, (srcW - srcSize) / 2, (srcH - srcSize) / 2, srcSize, srcSize, 0, 0, cols, rows);
       } else {
         const srcSize = Math.min(srcW, srcH) / cropZoom;
-        const scale   = cols / srcSize;
+        const scaleX = cols / srcSize;
+        const scaleY = rows / srcSize;
         const srcL = cropCenterX * srcW - srcSize / 2;
         const srcT = cropCenterY * srcH - srcSize / 2;
         const cL = Math.max(0, srcL), cT = Math.max(0, srcT);
@@ -1156,24 +1248,24 @@
         if (cR > cL && cB > cT) {
           sampleCtx.drawImage(loadedImage,
             cL, cT, cR - cL, cB - cT,
-            (cL - srcL) * scale, (cT - srcT) * scale,
-            (cR - cL) * scale, (cB - cT) * scale
+            (cL - srcL) * scaleX, (cT - srcT) * scaleY,
+            (cR - cL) * scaleX, (cB - cT) * scaleY
           );
         }
       }
       sampleCtx.restore();
 
       const imgData = sampleCtx.getImageData(0, 0, cols, rows).data;
-      const chars   = CHAR_SETS[currentCharSet];
+      const chars = CHAR_SETS[currentCharSet];
       let text = '';
 
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
           const i = (row * cols + col) * 4;
-          let [r, g, b] = applyBrightnessContrast(imgData[i], imgData[i+1], imgData[i+2]);
-          const lum  = 0.299 * r + 0.587 * g + 0.114 * b;
+          let [r, g, b] = applyBrightnessContrast(imgData[i], imgData[i + 1], imgData[i + 2]);
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
           const norm = lum / 255;
-          const ci   = invertMode
+          const ci = invertMode
             ? Math.floor(norm * (chars.length - 1))
             : Math.floor((1 - norm) * (chars.length - 1));
           text += chars[Math.max(0, Math.min(chars.length - 1, ci))];
@@ -1188,9 +1280,9 @@
 
     function refreshModalPreview() {
       // Always render at scale=1 for preview consistency
-      const out     = buildAACanvas(1);
+      const out = buildAACanvas(1);
       const preview = document.getElementById('modalPreview');
-      preview.width  = out.width;
+      preview.width = out.width;
       preview.height = out.height;
       preview.getContext('2d').drawImage(out, 0, 0);
 
@@ -1241,7 +1333,7 @@
         const src = buildAACanvas(charScale);
         const ratio = exportSize / Math.max(src.width, src.height);
         const ex = document.createElement('canvas');
-        ex.width  = Math.round(src.width  * ratio);
+        ex.width = Math.round(src.width * ratio);
         ex.height = Math.round(src.height * ratio);
         ex.getContext('2d').drawImage(src, 0, 0, ex.width, ex.height);
         ex.toBlob(resolve, 'image/png');
@@ -1263,7 +1355,7 @@
 
     document.getElementById('modalSaveBtn').onclick = async () => {
       const blob = await getExportBlob();
-      const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       const name = `aacam_${ts}.png`;
 
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], name, { type: 'image/png' })] })) {
@@ -1275,9 +1367,9 @@
         }
       }
 
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href     = url;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
       a.download = name;
       a.click();
       URL.revokeObjectURL(url);
@@ -1291,4 +1383,5 @@
     });
   </script>
 </body>
+
 </html>
