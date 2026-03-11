@@ -1055,8 +1055,7 @@
     (function () {
       const canvas = pixelCanvas;
       const ptrs = new Map();
-      let lastDragX = 0, lastDragY = 0;
-      let pinchStartDist = 0, pinchStartZoom = 1;
+      let lastPinchDist = 1, lastPinchMidX = 0, lastPinchMidY = 0;
       let lastTapTime = 0;
 
       function zoomAround(newZoom, nx, ny) {
@@ -1094,8 +1093,6 @@
         canvas.setPointerCapture(e.pointerId);
 
         if (ptrs.size === 1) {
-          lastDragX = e.clientX;
-          lastDragY = e.clientY;
           const now = Date.now();
           if (now - lastTapTime < 300) {
             cropCenterX = 0.5; cropCenterY = 0.5; cropZoom = 1.0;
@@ -1104,8 +1101,10 @@
           lastTapTime = now;
         } else if (ptrs.size === 2) {
           const [a, b] = [...ptrs.values()];
-          pinchStartDist = Math.hypot(b.x - a.x, b.y - a.y);
-          pinchStartZoom = cropZoom;
+          const rect = canvas.getBoundingClientRect();
+          lastPinchDist = Math.hypot(b.x - a.x, b.y - a.y);
+          lastPinchMidX = ((a.x + b.x) / 2 - rect.left) / rect.width;
+          lastPinchMidY = ((a.y + b.y) / 2 - rect.top)  / rect.height;
         }
       }, { passive: false });
 
@@ -1114,23 +1113,23 @@
         e.preventDefault();
         ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-        if (ptrs.size === 1) {
-          const { width: iw, height: ih } = loadedImage;
-          const cropSide = Math.min(iw, ih) / cropZoom;
-          const rect = canvas.getBoundingClientRect();
-          cropCenterX -= (e.clientX - lastDragX) / rect.width * cropSide / iw;
-          cropCenterY -= (e.clientY - lastDragY) / rect.height * cropSide / ih;
-          clampCrop();
-          lastDragX = e.clientX;
-          lastDragY = e.clientY;
-          renderFrame();
-        } else if (ptrs.size === 2) {
+        if (ptrs.size === 2) {
           const [a, b] = [...ptrs.values()];
-          const dist = Math.hypot(b.x - a.x, b.y - a.y);
           const rect = canvas.getBoundingClientRect();
+          const dist = Math.hypot(b.x - a.x, b.y - a.y);
           const nx = ((a.x + b.x) / 2 - rect.left) / rect.width;
           const ny = ((a.y + b.y) / 2 - rect.top)  / rect.height;
-          zoomAround(pinchStartZoom * dist / pinchStartDist, nx, ny);
+          // zoom around current midpoint (differential: ratio vs previous frame)
+          zoomAround(cropZoom * dist / lastPinchDist, nx, ny);
+          // pan by midpoint movement
+          const { width: iw, height: ih } = loadedImage;
+          const cropSide = Math.min(iw, ih) / cropZoom;
+          cropCenterX -= (nx - lastPinchMidX) * cropSide / iw;
+          cropCenterY -= (ny - lastPinchMidY) * cropSide / ih;
+          clampCrop();
+          lastPinchDist = dist;
+          lastPinchMidX = nx;
+          lastPinchMidY = ny;
           renderFrame();
         }
       }, { passive: false });
