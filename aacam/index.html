@@ -823,10 +823,12 @@
         ));
       }
 
-      // Sample the source into cols×rows
+      // Sample the source into cols×rows (black for out-of-bounds)
       sampleCanvas.width  = cols;
       sampleCanvas.height = rows;
       sampleCtx.save();
+      sampleCtx.fillStyle = '#000';
+      sampleCtx.fillRect(0, 0, cols, rows);
 
       if (mode === 'cam') {
         const src = (frozen && frozenFrame) ? frozenFrame : video;
@@ -1031,16 +1033,6 @@
       };
     }
 
-    // Clamp cropCenter so the crop window stays fully within the source image.
-    function clampCrop() {
-      const { w: srcW, h: srcH } = getSourceDimensions();
-      const srcMin = Math.min(srcW, srcH);
-      const halfX = srcMin / (2 * cropZoom * srcW);
-      const halfY = srcMin / (2 * cropZoom * srcH);
-      cropCenterX = Math.max(halfX, Math.min(1 - halfX, cropCenterX));
-      cropCenterY = Math.max(halfY, Math.min(1 - halfY, cropCenterY));
-    }
-
     // Zoom around a focal point (nx, ny) in normalized display coords [0,1].
     function zoomAround(newZoom, nx, ny) {
       const { w: srcW, h: srcH } = getSourceDimensions();
@@ -1052,7 +1044,6 @@
       const newSrcSize = srcMin / cropZoom;
       cropCenterX = (imgX - (nx - 0.5) * newSrcSize) / srcW;
       cropCenterY = (imgY - (ny - 0.5) * newSrcSize) / srcH;
-      clampCrop();
     }
 
     document.getElementById('aaCanvas').addEventListener('touchstart', e => {
@@ -1077,7 +1068,6 @@
           const { dx, dy } = panDelta(t.clientX - old.x, t.clientY - old.y, rect);
           cropCenterX -= dx;
           cropCenterY -= dy;
-          clampCrop();
         }
         pointers[t.identifier] = { x: t.clientX, y: t.clientY };
       } else if (e.touches.length === 2) {
@@ -1137,7 +1127,6 @@
       const { dx, dy } = panDelta(e.clientX - mouseLast.x, e.clientY - mouseLast.y, rect);
       cropCenterX -= dx;
       cropCenterY -= dy;
-      clampCrop();
       mouseLast = { x: e.clientX, y: e.clientY };
       renderSingle();
     });
@@ -1163,6 +1152,8 @@
       sampleCanvas.width  = cols;
       sampleCanvas.height = rows;
       sampleCtx.save();
+      sampleCtx.fillStyle = '#000';
+      sampleCtx.fillRect(0, 0, cols, rows);
 
       if (mode === 'cam') {
         const src = (frozen && frozenFrame) ? frozenFrame : video;
