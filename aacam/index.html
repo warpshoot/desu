@@ -1031,6 +1031,16 @@
       };
     }
 
+    // Clamp cropCenter so the crop window stays fully within the source image.
+    function clampCrop() {
+      const { w: srcW, h: srcH } = getSourceDimensions();
+      const srcMin = Math.min(srcW, srcH);
+      const halfX = srcMin / (2 * cropZoom * srcW);
+      const halfY = srcMin / (2 * cropZoom * srcH);
+      cropCenterX = Math.max(halfX, Math.min(1 - halfX, cropCenterX));
+      cropCenterY = Math.max(halfY, Math.min(1 - halfY, cropCenterY));
+    }
+
     // Zoom around a focal point (nx, ny) in normalized display coords [0,1].
     function zoomAround(newZoom, nx, ny) {
       const { w: srcW, h: srcH } = getSourceDimensions();
@@ -1040,8 +1050,9 @@
       const imgY = cropCenterY * srcH + (ny - 0.5) * oldSrcSize;
       cropZoom = Math.max(0.25, Math.min(8, newZoom));
       const newSrcSize = srcMin / cropZoom;
-      cropCenterX = Math.max(0, Math.min(1, (imgX - (nx - 0.5) * newSrcSize) / srcW));
-      cropCenterY = Math.max(0, Math.min(1, (imgY - (ny - 0.5) * newSrcSize) / srcH));
+      cropCenterX = (imgX - (nx - 0.5) * newSrcSize) / srcW;
+      cropCenterY = (imgY - (ny - 0.5) * newSrcSize) / srcH;
+      clampCrop();
     }
 
     document.getElementById('aaCanvas').addEventListener('touchstart', e => {
@@ -1064,8 +1075,9 @@
         const old = pointers[t.identifier];
         if (old) {
           const { dx, dy } = panDelta(t.clientX - old.x, t.clientY - old.y, rect);
-          cropCenterX = Math.max(0, Math.min(1, cropCenterX - dx));
-          cropCenterY = Math.max(0, Math.min(1, cropCenterY - dy));
+          cropCenterX -= dx;
+          cropCenterY -= dy;
+          clampCrop();
         }
         pointers[t.identifier] = { x: t.clientX, y: t.clientY };
       } else if (e.touches.length === 2) {
@@ -1123,8 +1135,9 @@
       if (!mouseDragging || mode !== 'img') return;
       const rect = aaCanvas.getBoundingClientRect();
       const { dx, dy } = panDelta(e.clientX - mouseLast.x, e.clientY - mouseLast.y, rect);
-      cropCenterX = Math.max(0, Math.min(1, cropCenterX - dx));
-      cropCenterY = Math.max(0, Math.min(1, cropCenterY - dy));
+      cropCenterX -= dx;
+      cropCenterY -= dy;
+      clampCrop();
       mouseLast = { x: e.clientX, y: e.clientY };
       renderSingle();
     });
