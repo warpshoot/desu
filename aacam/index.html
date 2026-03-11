@@ -843,11 +843,20 @@
         const sy = (srcH - srcSize) / 2;
         sampleCtx.drawImage(src, sx, sy, srcSize, srcSize, 0, 0, cols, rows);
       } else {
-        // Image mode with crop/zoom
+        // Image mode with crop/zoom — clamp source rect, offset dest to match (pxlcam style)
         const srcSize = Math.min(srcW, srcH) / cropZoom;
-        const sx = cropCenterX * srcW - srcSize / 2;
-        const sy = cropCenterY * srcH - srcSize / 2;
-        sampleCtx.drawImage(loadedImage, sx, sy, srcSize, srcSize, 0, 0, cols, rows);
+        const scale   = cols / srcSize;
+        const srcL = cropCenterX * srcW - srcSize / 2;
+        const srcT = cropCenterY * srcH - srcSize / 2;
+        const cL = Math.max(0, srcL), cT = Math.max(0, srcT);
+        const cR = Math.min(srcW, srcL + srcSize), cB = Math.min(srcH, srcT + srcSize);
+        if (cR > cL && cB > cT) {
+          sampleCtx.drawImage(loadedImage,
+            cL, cT, cR - cL, cB - cT,
+            (cL - srcL) * scale, (cT - srcT) * scale,
+            (cR - cL) * scale, (cB - cT) * scale
+          );
+        }
       }
       sampleCtx.restore();
 
@@ -1019,8 +1028,6 @@
     });
 
     // === IMAGE GESTURES (pinch/drag/wheel) ===
-    let pointers = {};
-    let lastPinchDist = null;
 
     // Convert screen drag delta to normalized image center delta.
     // Accounts for image aspect ratio so pan speed is 1:1 with finger.
@@ -1046,64 +1053,61 @@
       cropCenterY = (imgY - (ny - 0.5) * newSrcSize) / srcH;
     }
 
-    document.getElementById('aaCanvas').addEventListener('touchstart', e => {
-      e.preventDefault();
+    // === Pointer Events (touch + mouse + pen unified, matching pxlcam) ===
+    const ptrs = new Map();
+    let pinchStartDist = null, pinchStartZoom = 1;
+    let lastDragX = 0, lastDragY = 0;
+    let lastTapTime = 0;
+
+    aaCanvas.addEventListener('pointerdown', e => {
       if (mode !== 'img') return;
-      for (const t of e.changedTouches) pointers[t.identifier] = { x: t.clientX, y: t.clientY };
-      if (e.touches.length === 2) {
-        const [a, b] = [...e.touches];
-        lastPinchDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      e.preventDefault();
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (ptrs.size === 1) {
+        lastDragX = e.clientX; lastDragY = e.clientY;
+        // Double-tap to reset
+        const now = Date.now();
+        if (now - lastTapTime < 300) {
+          cropCenterX = 0.5; cropCenterY = 0.5; cropZoom = 1;
+          renderSingle();
+        }
+        lastTapTime = now;
+      } else if (ptrs.size === 2) {
+        const [a, b] = [...ptrs.values()];
+        pinchStartDist = Math.hypot(b.x - a.x, b.y - a.y);
+        pinchStartZoom = cropZoom;
       }
     }, { passive: false });
 
-    document.getElementById('aaCanvas').addEventListener('touchmove', e => {
+    aaCanvas.addEventListener('pointermove', e => {
+      if (mode !== 'img' || !ptrs.has(e.pointerId)) return;
       e.preventDefault();
-      if (mode !== 'img') return;
-      const rect = aaCanvas.getBoundingClientRect();
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-      if (e.touches.length === 1) {
-        const t   = e.touches[0];
-        const old = pointers[t.identifier];
-        if (old) {
-          const { dx, dy } = panDelta(t.clientX - old.x, t.clientY - old.y, rect);
-          cropCenterX -= dx;
-          cropCenterY -= dy;
-        }
-        pointers[t.identifier] = { x: t.clientX, y: t.clientY };
-      } else if (e.touches.length === 2) {
-        const [a, b] = [...e.touches];
-        const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-        if (lastPinchDist) {
-          // Zoom around midpoint of the two fingers
-          const nx = ((a.clientX + b.clientX) / 2 - rect.left) / rect.width;
-          const ny = ((a.clientY + b.clientY) / 2 - rect.top)  / rect.height;
-          zoomAround(cropZoom * dist / lastPinchDist, nx, ny);
-        }
-        lastPinchDist = dist;
-        for (const t of e.touches) pointers[t.identifier] = { x: t.clientX, y: t.clientY };
-      }
-      renderSingle();
-    }, { passive: false });
-
-    document.getElementById('aaCanvas').addEventListener('touchend', e => {
-      for (const t of e.changedTouches) delete pointers[t.identifier];
-      if (e.touches.length < 2) lastPinchDist = null;
-    });
-
-    // Double-tap to reset crop
-    let lastTap = 0;
-    document.getElementById('aaCanvas').addEventListener('touchend', e => {
-      if (mode !== 'img') return;
-      const now = Date.now();
-      if (now - lastTap < 300 && e.touches.length === 0) {
-        cropCenterX = 0.5; cropCenterY = 0.5; cropZoom = 1;
+      if (ptrs.size === 1) {
+        const rect = aaCanvas.getBoundingClientRect();
+        const { dx, dy } = panDelta(e.clientX - lastDragX, e.clientY - lastDragY, rect);
+        cropCenterX -= dx;
+        cropCenterY -= dy;
+        lastDragX = e.clientX; lastDragY = e.clientY;
+        renderSingle();
+      } else if (ptrs.size === 2) {
+        const [a, b] = [...ptrs.values()];
+        const dist = Math.hypot(b.x - a.x, b.y - a.y);
+        const rect = aaCanvas.getBoundingClientRect();
+        const nx = ((a.x + b.x) / 2 - rect.left) / rect.width;
+        const ny = ((a.y + b.y) / 2 - rect.top)  / rect.height;
+        zoomAround(pinchStartZoom * dist / pinchStartDist, nx, ny);
         renderSingle();
       }
-      lastTap = now;
-    });
+    }, { passive: false });
+
+    const endPtr = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinchStartDist = null; };
+    aaCanvas.addEventListener('pointerup',     endPtr);
+    aaCanvas.addEventListener('pointercancel', endPtr);
 
     // Wheel zoom around cursor
-    document.getElementById('aaCanvas').addEventListener('wheel', e => {
+    aaCanvas.addEventListener('wheel', e => {
       if (mode !== 'img') return;
       e.preventDefault();
       const rect = aaCanvas.getBoundingClientRect();
@@ -1112,25 +1116,6 @@
       zoomAround(cropZoom * (e.deltaY > 0 ? 0.9 : 1.1), nx, ny);
       renderSingle();
     }, { passive: false });
-
-    // Mouse drag
-    let mouseDragging = false;
-    let mouseLast = null;
-    document.getElementById('aaCanvas').addEventListener('mousedown', e => {
-      if (mode !== 'img') return;
-      mouseDragging = true;
-      mouseLast = { x: e.clientX, y: e.clientY };
-    });
-    document.addEventListener('mousemove', e => {
-      if (!mouseDragging || mode !== 'img') return;
-      const rect = aaCanvas.getBoundingClientRect();
-      const { dx, dy } = panDelta(e.clientX - mouseLast.x, e.clientY - mouseLast.y, rect);
-      cropCenterX -= dx;
-      cropCenterY -= dy;
-      mouseLast = { x: e.clientX, y: e.clientY };
-      renderSingle();
-    });
-    document.addEventListener('mouseup', () => { mouseDragging = false; });
 
     // Re-render when controls change (image mode, or frozen cam)
     function maybeRender() {
@@ -1163,7 +1148,18 @@
         sampleCtx.drawImage(src, (srcW-srcSize)/2, (srcH-srcSize)/2, srcSize, srcSize, 0, 0, cols, rows);
       } else {
         const srcSize = Math.min(srcW, srcH) / cropZoom;
-        sampleCtx.drawImage(loadedImage, cropCenterX*srcW - srcSize/2, cropCenterY*srcH - srcSize/2, srcSize, srcSize, 0, 0, cols, rows);
+        const scale   = cols / srcSize;
+        const srcL = cropCenterX * srcW - srcSize / 2;
+        const srcT = cropCenterY * srcH - srcSize / 2;
+        const cL = Math.max(0, srcL), cT = Math.max(0, srcT);
+        const cR = Math.min(srcW, srcL + srcSize), cB = Math.min(srcH, srcT + srcSize);
+        if (cR > cL && cB > cT) {
+          sampleCtx.drawImage(loadedImage,
+            cL, cT, cR - cL, cB - cT,
+            (cL - srcL) * scale, (cT - srcT) * scale,
+            (cR - cL) * scale, (cB - cT) * scale
+          );
+        }
       }
       sampleCtx.restore();
 
