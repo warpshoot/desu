@@ -480,6 +480,74 @@
       background: rgba(127, 255, 106, 0.08);
     }
 
+    /* Color Swatch Radio Buttons */
+    .color-swatches {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      flex: 1;
+      padding: 2px 0;
+    }
+
+    .swatch-label {
+      cursor: pointer;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .swatch-input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .swatch-display {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-clip: padding-box;
+    }
+
+    .swatch-input:checked + .swatch-display {
+      border-color: var(--text);
+      transform: scale(1.1);
+    }
+    
+    .swatch-input:hover + .swatch-display {
+      border-color: var(--text-dim);
+    }
+    
+    .swatch-input:checked:hover + .swatch-display {
+      border-color: var(--text);
+    }
+
+    .swatch-display::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--bg);
+      opacity: 0;
+      transition: opacity 0.1s;
+    }
+
+    .swatch-input:checked + .swatch-display::after {
+      opacity: 0.8;
+    }
+    
+    .swatch-input:focus-visible + .swatch-display {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
     /* Modal */
     .modal-overlay {
       position: fixed;
@@ -576,6 +644,10 @@
       flex: 1;
       min-width: 70px;
     }
+
+    body.x2 .app, body.x2 .modal {
+      max-width: 840px;
+    }
   </style>
 </head>
 
@@ -599,17 +671,13 @@
 
   <div class="app">
     <div class="header">
+      <button id="sizeToggle" style="background:transparent; border:1px solid var(--border); color:var(--text-dim); font-family:'DM Mono', monospace; font-size:11px; padding:2px 6px; border-radius:3px; cursor:pointer; margin-right:auto; letter-spacing:0.1em; transition:all 0.15s;" title="Toggle UI Size">x1</button>
       <div class="status" id="status">STANDBY</div>
     </div>
 
     <div class="canvas-wrap" id="canvasWrap">
       <canvas id="aaCanvas" width="320" height="320" style="touch-action:none;"></canvas>
-      <div class="corner-mark tl"></div>
-      <div class="corner-mark tr"></div>
-      <div class="corner-mark bl"></div>
-      <div class="corner-mark br"></div>
       <div class="start-screen" id="startScreen">
-        <div class="start-logo">DESU&trade; aacam</div>
         <div class="start-buttons">
           <button class="start-btn" id="startBtn">CAM</button>
           <button class="start-btn secondary" id="loadImgBtn">IMG</button>
@@ -639,8 +707,9 @@
       <!-- Columns (resolution) -->
       <div class="control-row">
         <div class="control-label">COLS</div>
-        <div class="select-wrap">
-          <select id="colsSelect" class="styled-select"></select>
+        <div class="slider-row">
+          <input type="range" id="cols" min="20" max="120" value="60" step="10">
+          <div class="slider-val" id="colsVal">60</div>
         </div>
       </div>
 
@@ -665,8 +734,7 @@
       <!-- Color scheme -->
       <div class="control-row">
         <div class="control-label">SCHEME</div>
-        <div class="select-wrap">
-          <select id="schemeSelect" class="styled-select"></select>
+        <div class="color-swatches" id="schemeSwatches">
         </div>
       </div>
 
@@ -719,7 +787,6 @@
   </div>
 
   <script>
-    // === CHARACTER SETS ===
     const CHAR_SETS = {
       standard: ' .:-=+*#%@',
       fine: ' `.-\':_,^=;><+!rcxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
@@ -727,6 +794,11 @@
       simple: ' .+#@',
       braille: ' ⠁⠃⠇⡇⣇⣧⣷⣿',
       jp: ' ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ',
+      math: ' +-=÷±∑√∞∫',
+      circles: ' ・◦○◎◉●',
+      matrix: ' 10ﾘｸｼｽﾄﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓ',
+      glitch: ' ░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╚╔╩╦╠═╬╧',
+      kanji: ' 九上代医吶阪励後峨荳偵溘翫薙縺縲繧繝譚',
     };
 
     const CHAR_SET_LABELS = {
@@ -736,19 +808,22 @@
       simple: 'SIMPLE',
       braille: 'BRAILLE',
       jp: 'KATAKANA',
+      math: 'MATH',
+      circles: 'CIRCLES',
+      matrix: 'MATRIX',
+      glitch: 'GLITCH',
+      kanji: 'MOJIBAKE',
     };
-
-    const COLS_OPTIONS = [20, 60, 100];
 
     // === COLOR SCHEMES ===
     // darkBg: true → invertMode auto-on (bright pixels → dense chars)
     const SCHEMES = {
-      dark: { label: 'DARK', bg: '#0a0a0a', fg: '#cccccc', darkBg: true },
-      green: { label: 'GREEN', bg: '#0a0a0a', fg: '#7fff6a', darkBg: true },
-      amber: { label: 'AMBER', bg: '#0c0800', fg: '#ffb300', darkBg: true },
-      cyan: { label: 'CYAN', bg: '#000c0f', fg: '#00e5ff', darkBg: true },
-      blue: { label: 'BLUE', bg: '#000820', fg: '#6699ff', darkBg: true },
-      red: { label: 'RED', bg: '#0f0000', fg: '#ff4444', darkBg: true },
+      dark: { label: 'DARK', bg: '#000000', fg: '#cccccc', darkBg: true },
+      green: { label: 'GREEN', bg: '#000000', fg: '#7fff6a', darkBg: true },
+      amber: { label: 'AMBER', bg: '#000000', fg: '#ffb300', darkBg: true },
+      cyan: { label: 'CYAN', bg: '#000000', fg: '#00e5ff', darkBg: true },
+      blue: { label: 'BLUE', bg: '#000000', fg: '#6699ff', darkBg: true },
+      red: { label: 'RED', bg: '#000000', fg: '#ff4444', darkBg: true },
       paper: { label: 'PAPER', bg: '#f5f0e8', fg: '#2a2a2a', darkBg: false },
       white: { label: 'WHITE', bg: '#ffffff', fg: '#111111', darkBg: false },
     };
@@ -811,16 +886,9 @@
       currentCharSet = e.target.value;
     });
 
-    const colsSelect = document.getElementById('colsSelect');
-    COLS_OPTIONS.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c;
-      opt.text = `${c} COLS`;
-      if (c === currentCols) opt.selected = true;
-      colsSelect.appendChild(opt);
-    });
-    colsSelect.addEventListener('change', e => {
+    document.getElementById('cols').addEventListener('input', e => {
       currentCols = parseInt(e.target.value);
+      document.getElementById('colsVal').textContent = currentCols;
     });
 
     document.getElementById('brightness').addEventListener('input', e => {
@@ -833,21 +901,37 @@
       document.getElementById('contVal').textContent = contrast.toFixed(1);
     });
 
-    // Scheme select
-    const schemeSelect = document.getElementById('schemeSelect');
+    // Scheme swatches
+    const schemeSwatches = document.getElementById('schemeSwatches');
     Object.entries(SCHEMES).forEach(([key, s]) => {
-      const opt = document.createElement('option');
-      opt.value = key;
-      opt.text = s.label;
-      if (key === currentScheme) opt.selected = true;
-      schemeSelect.appendChild(opt);
-    });
-    schemeSelect.addEventListener('change', e => {
-      currentScheme = e.target.value;
-      // Auto-set invertMode to match the scheme's natural look
-      invertMode = SCHEMES[currentScheme].darkBg;
-      document.getElementById('invertToggle').classList.toggle('on', invertMode);
-      maybeRender();
+      const label = document.createElement('label');
+      label.className = 'swatch-label';
+      label.title = s.label;
+      
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'scheme';
+      input.value = key;
+      input.className = 'swatch-input';
+      if (key === currentScheme) input.checked = true;
+      
+      // Update scheme on change
+      input.addEventListener('change', e => {
+        if (e.target.checked) {
+          currentScheme = e.target.value;
+          invertMode = SCHEMES[currentScheme].darkBg;
+          document.getElementById('invertToggle').classList.toggle('on', invertMode);
+          maybeRender();
+        }
+      });
+
+      const display = document.createElement('div');
+      display.className = 'swatch-display';
+      display.style.backgroundColor = s.fg;
+
+      label.appendChild(input);
+      label.appendChild(display);
+      schemeSwatches.appendChild(label);
     });
 
     document.getElementById('colorToggle').addEventListener('click', function () {
@@ -876,6 +960,16 @@
       document.getElementById('saveOpenBtn').disabled = !canSave;
     }
 
+    // UI Size Toggle
+    document.getElementById('sizeToggle').addEventListener('click', function() {
+      document.body.classList.toggle('x2');
+      const isX2 = document.body.classList.contains('x2');
+      this.textContent = isX2 ? 'x2' : 'x1';
+      this.style.color = isX2 ? 'var(--accent)' : 'var(--text-dim)';
+      this.style.borderColor = isX2 ? 'var(--accent)' : 'var(--border)';
+      if (mode === 'img' || (mode === 'cam' && frozen)) renderSingle();
+    });
+
     // === RENDERING ===
     function getSourceDimensions() {
       if (mode === 'cam') return { w: video.videoWidth || 1, h: video.videoHeight || 1 };
@@ -897,11 +991,13 @@
 
     function buildAACanvas(charScale = null) {
       // charScale: explicit multiplier for export; null = auto-fit preview container
-      const cols = currentCols;
+      const isX2 = document.body.classList.contains('x2');
+      const cols = currentCols * (isX2 ? 2 : 1);
       const { w: srcW, h: srcH } = getSourceDimensions();
+      const cellW = ['kanji', 'circles'].includes(currentCharSet) ? CHAR_H : CHAR_W;
 
       // Crop is always square, so rows is fixed by char aspect ratio
-      const rows = Math.max(1, Math.round(cols * CHAR_W / CHAR_H));
+      const rows = Math.max(1, Math.round(cols * cellW / CHAR_H));
 
       if (charScale === null) {
         // Scale chars so the canvas fills (or exceeds) the preview container
@@ -909,7 +1005,7 @@
         const wrapW = (wrap ? wrap.clientWidth : 0) || 388;
         const wrapH = (wrap ? wrap.clientHeight : 0) || 388;
         charScale = Math.max(1, Math.ceil(
-          Math.min(wrapW / (cols * CHAR_W), wrapH / (rows * CHAR_H))
+          Math.min(wrapW / (cols * cellW), wrapH / (rows * CHAR_H))
         ));
       }
 
@@ -955,7 +1051,7 @@
       const chars = CHAR_SETS[currentCharSet];
 
       // Build output canvas
-      const cW = Math.round(CHAR_W * charScale);
+      const cW = Math.round(cellW * charScale);
       const cH = Math.round(CHAR_H * charScale);
       const out = document.createElement('canvas');
       out.width = cols * cW;
@@ -1212,7 +1308,7 @@
     function maybeRender() {
       if (mode === 'img' || (mode === 'cam' && frozen)) renderSingle();
     }
-    ['charSetSelect', 'colsSelect', 'brightness', 'contrast'].forEach(id => {
+    ['charSetSelect', 'cols', 'brightness', 'contrast'].forEach(id => {
       document.getElementById(id).addEventListener('input', maybeRender);
       document.getElementById(id).addEventListener('change', maybeRender);
     });
@@ -1221,9 +1317,11 @@
 
     // === BUILD TEXT (for TEXT export) ===
     function buildAAText() {
-      const cols = currentCols;
+      const isX2 = document.body.classList.contains('x2');
+      const cols = currentCols * (isX2 ? 2 : 1);
       const { w: srcW, h: srcH } = getSourceDimensions();
-      const rows = Math.max(1, Math.round(cols * CHAR_W / CHAR_H));
+      const cellW = ['kanji', 'circles'].includes(currentCharSet) ? CHAR_H : CHAR_W;
+      const rows = Math.max(1, Math.round(cols * cellW / CHAR_H));
 
       sampleCanvas.width = cols;
       sampleCanvas.height = rows;
@@ -1325,9 +1423,11 @@
     async function getExportBlob() {
       return new Promise(resolve => {
         // Render at a scale that meets or exceeds exportSize, then scale down
-        const cols = currentCols;
-        const rows = Math.max(1, Math.round(cols * CHAR_W / CHAR_H));
-        const natW = cols * CHAR_W;
+        const isX2 = document.body.classList.contains('x2');
+        const cols = currentCols * (isX2 ? 2 : 1);
+        const cellW = ['kanji', 'circles'].includes(currentCharSet) ? CHAR_H : CHAR_W;
+        const rows = Math.max(1, Math.round(cols * cellW / CHAR_H));
+        const natW = cols * cellW;
         const natH = rows * CHAR_H;
         const charScale = Math.max(1, Math.ceil(exportSize / Math.max(natW, natH)));
         const src = buildAACanvas(charScale);
