@@ -633,18 +633,23 @@
         </div>
       </div>
 
+      <!-- Smooth -->
+      <div class="control-row">
+        <div class="control-label">SMOOTH</div>
+        <div class="slider-row">
+          <input type="range" id="smooth" min="0" max="8" value="0" step="1">
+          <div class="slider-val" id="smoothVal">0</div>
+        </div>
+      </div>
+
       <!-- Line color -->
       <div class="control-row">
         <div class="control-label">COLOR</div>
         <div class="color-swatches" id="colorSwatches"></div>
       </div>
 
-      <!-- Bottom row: BLUR toggle, cam switch -->
+      <!-- Bottom row: cam switch -->
       <div class="bottom-row">
-        <div class="toggle-row">
-          <div class="toggle" id="blurToggle"></div>
-          <div class="toggle-label">BLUR</div>
-        </div>
         <div class="spacer"></div>
         <button class="cam-switch" id="camSwitch" title="Switch camera">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
@@ -698,7 +703,7 @@
     let currentLevels = 8;
     let currentRes = 256;
     let currentColor = 'white';
-    let blurMode = false;
+    let currentSmooth = 0;
     let mode = null;       // 'cam' | 'img'
     let frozen = false;
     let frozenFrame = null;
@@ -732,6 +737,11 @@
       document.getElementById('resVal').textContent = currentRes;
     });
 
+    document.getElementById('smooth').addEventListener('input', e => {
+      currentSmooth = parseInt(e.target.value);
+      document.getElementById('smoothVal').textContent = currentSmooth;
+    });
+
     // Color swatches
     const colorSwatches = document.getElementById('colorSwatches');
     Object.entries(LINE_COLORS).forEach(([key, c]) => {
@@ -760,12 +770,6 @@
       label.appendChild(input);
       label.appendChild(display);
       colorSwatches.appendChild(label);
-    });
-
-    document.getElementById('blurToggle').addEventListener('click', function () {
-      blurMode = !blurMode;
-      this.classList.toggle('on', blurMode);
-      maybeRender();
     });
 
     // Credit panel
@@ -800,6 +804,36 @@
       return { w: 1, h: 1 };
     }
 
+    // Separable box blur on a Float32Array luminance grid
+    function boxBlur(grid, w, h, radius) {
+      if (radius === 0) return grid;
+      const tmp = new Float32Array(w * h);
+      const out = new Float32Array(w * h);
+      // Horizontal pass
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          let sum = 0, count = 0;
+          for (let dx = -radius; dx <= radius; dx++) {
+            const nx = x + dx;
+            if (nx >= 0 && nx < w) { sum += grid[y * w + nx]; count++; }
+          }
+          tmp[y * w + x] = sum / count;
+        }
+      }
+      // Vertical pass
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          let sum = 0, count = 0;
+          for (let dy = -radius; dy <= radius; dy++) {
+            const ny = y + dy;
+            if (ny >= 0 && ny < h) { sum += tmp[ny * w + x]; count++; }
+          }
+          out[y * w + x] = sum / count;
+        }
+      }
+      return out;
+    }
+
     function buildContourCanvas(pixelScale = null) {
       const isX2 = document.body.classList.contains('x2');
       const res = currentRes * (isX2 ? 2 : 1);
@@ -816,11 +850,6 @@
       sampleCanvas.width = res;
       sampleCanvas.height = res;
       sampleCtx.save();
-
-      if (blurMode) {
-        sampleCtx.filter = 'blur(2px)';
-      }
-
       sampleCtx.fillStyle = '#000';
       sampleCtx.fillRect(0, 0, res, res);
 
@@ -856,11 +885,16 @@
       // --- Compute luminance grid ---
       const imgData = sampleCtx.getImageData(0, 0, res, res).data;
       const levels = currentLevels;
-      const lumGrid = new Uint8Array(res * res);
+      let rawLum = new Float32Array(res * res);
       for (let i = 0; i < res * res; i++) {
         const r = imgData[i * 4], g = imgData[i * 4 + 1], b = imgData[i * 4 + 2];
-        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-        lumGrid[i] = Math.floor(lum / 256 * levels);
+        rawLum[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+      }
+      // Apply box blur to smooth luminance before quantization
+      const smoothed = boxBlur(rawLum, res, res, currentSmooth);
+      const lumGrid = new Uint8Array(res * res);
+      for (let i = 0; i < res * res; i++) {
+        lumGrid[i] = Math.floor(smoothed[i] / 256 * levels);
       }
 
       // --- Build output via ImageData (fast: single putImageData) ---
@@ -1108,7 +1142,7 @@
       if (mode === 'img' || (mode === 'cam' && frozen)) renderSingle();
     }
 
-    ['levels', 'res'].forEach(id => {
+    ['levels', 'res', 'smooth'].forEach(id => {
       document.getElementById(id).addEventListener('input', maybeRender);
       document.getElementById(id).addEventListener('change', maybeRender);
     });
