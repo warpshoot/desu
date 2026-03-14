@@ -144,8 +144,8 @@
 
     #contourCanvas {
       display: block;
-      max-width: 100%;
-      max-height: 100%;
+      width: 100%;
+      height: 100%;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
       touch-action: none;
@@ -834,17 +834,10 @@
       return out;
     }
 
-    function buildContourCanvas(pixelScale = null) {
+    function buildContourCanvas(pixelScale = 1) {
       const isX2 = document.body.classList.contains('x2');
       const res = currentRes * (isX2 ? 2 : 1);
       const { w: srcW, h: srcH } = getSourceDimensions();
-
-      // Determine display pixel scale
-      if (pixelScale === null) {
-        const wrap = document.getElementById('canvasWrap');
-        const wrapW = (wrap ? wrap.clientWidth : 0) || 388;
-        pixelScale = Math.max(1, Math.floor(wrapW / res));
-      }
 
       // --- Sample source into res×res ---
       sampleCanvas.width = res;
@@ -944,9 +937,7 @@
       contourCanvas.height = out.height;
       ctx.drawImage(out, 0, 0);
 
-      if (mode === 'cam') {
-        animFrameId = requestAnimationFrame(renderFrame);
-      }
+      if (mode === 'cam') animFrameId = requestAnimationFrame(renderFrame);
     }
 
     function renderSingle() {
