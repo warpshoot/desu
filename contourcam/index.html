@@ -221,6 +221,17 @@
       background: rgba(127, 255, 106, 0.08);
     }
 
+    .btn.recording {
+      border-color: #ff4444;
+      color: #ff4444;
+      animation: rec-blink 1s step-start infinite;
+    }
+
+    @keyframes rec-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
     .btn:disabled {
       opacity: 0.3;
       cursor: default;
@@ -600,20 +611,18 @@
         <div class="start-buttons">
           <button class="start-btn" id="startBtn">CAM</button>
           <button class="start-btn secondary" id="loadImgBtn">IMG</button>
-          <button class="start-btn secondary" id="loadVidBtn">VID</button>
         </div>
       </div>
     </div>
 
-    <video id="videoFeed" playsinline autoplay muted loop style="display:none;"></video>
+    <video id="videoFeed" playsinline autoplay muted style="display:none;"></video>
     <canvas id="sampleCanvas" style="display:none;"></canvas>
     <input type="file" id="fileInput" accept="image/*" style="display:none;">
-    <input type="file" id="videoFileInput" accept="video/*" style="display:none;">
 
     <div class="actions">
       <button class="btn" id="freezeBtn">FREEZE</button>
       <button class="btn" id="loadAnotherBtn">LOAD IMG</button>
-      <button class="btn" id="loadAnotherVidBtn">LOAD VID</button>
+      <button class="btn" id="recBtn" disabled>REC</button>
       <button class="btn" id="saveOpenBtn" disabled>SAVE</button>
     </div>
 
@@ -707,8 +716,7 @@
     let currentRes = 256;
     let currentColor = 'white';
     let currentSmooth = 0;
-    let mode = null;       // 'cam' | 'img' | 'vid'
-    let videoBlobUrl = null;
+    let mode = null;       // 'cam' | 'img'
     let frozen = false;
     let frozenFrame = null;
     let facingMode = 'environment';
@@ -721,6 +729,11 @@
     let cropCenterY = 0.5;
     let cropZoom = 1;
 
+    // Recording state
+    let isRecording = false;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+
     // === DOM ===
     const contourCanvas = document.getElementById('contourCanvas');
     const ctx = contourCanvas.getContext('2d');
@@ -729,6 +742,7 @@
     const video = document.getElementById('videoFeed');
     const startScreen = document.getElementById('startScreen');
     const statusEl = document.getElementById('status');
+    const recBtn = document.getElementById('recBtn');
 
     // === INIT CONTROLS ===
     document.getElementById('levels').addEventListener('input', e => {
@@ -786,9 +800,10 @@
       }
     });
 
-    // === SAVE BUTTON STATE ===
-    function updateSaveBtn() {
+    // === BUTTON STATES ===
+    function updateActionBtns() {
       document.getElementById('saveOpenBtn').disabled = (mode === null);
+      recBtn.disabled = (mode !== 'cam' || frozen);
     }
 
     // UI Size Toggle
@@ -798,12 +813,12 @@
       this.textContent = isX2 ? 'x2' : 'x1';
       this.style.color = isX2 ? 'var(--accent)' : 'var(--text-dim)';
       this.style.borderColor = isX2 ? 'var(--accent)' : 'var(--border)';
-      if (mode === 'img' || (mode === 'cam' && frozen) || (mode === 'vid' && frozen)) renderSingle();
+      if (mode === 'img' || (mode === 'cam' && frozen)) renderSingle();
     });
 
     // === RENDERING ===
     function getSourceDimensions() {
-      if (mode === 'cam' || mode === 'vid') return { w: video.videoWidth || 1, h: video.videoHeight || 1 };
+      if (mode === 'cam') return { w: video.videoWidth || 1, h: video.videoHeight || 1 };
       if (mode === 'img') return { w: loadedImage.naturalWidth, h: loadedImage.naturalHeight };
       return { w: 1, h: 1 };
     }
@@ -857,12 +872,6 @@
           sampleCtx.translate(res, 0);
           sampleCtx.scale(-1, 1);
         }
-        const srcSize = Math.min(srcW, srcH);
-        const sx = (srcW - srcSize) / 2;
-        const sy = (srcH - srcSize) / 2;
-        sampleCtx.drawImage(src, sx, sy, srcSize, srcSize, 0, 0, res, res);
-      } else if (mode === 'vid') {
-        const src = (frozen && frozenFrame) ? frozenFrame : video;
         const srcSize = Math.min(srcW, srcH);
         const sx = (srcW - srcSize) / 2;
         const sy = (srcH - srcSize) / 2;
@@ -947,7 +956,7 @@
       contourCanvas.height = out.height;
       ctx.drawImage(out, 0, 0);
 
-      if (mode === 'cam' || mode === 'vid') animFrameId = requestAnimationFrame(renderFrame);
+      if (mode === 'cam') animFrameId = requestAnimationFrame(renderFrame);
     }
 
     function renderSingle() {
@@ -977,7 +986,7 @@
         startScreen.style.display = 'none';
         statusEl.textContent = 'LIVE';
         document.getElementById('freezeBtn').textContent = 'FREEZE';
-        updateSaveBtn();
+        updateActionBtns();
         animFrameId = requestAnimationFrame(renderFrame);
       } catch (e) {
         statusEl.textContent = 'CAM ERROR';
@@ -999,6 +1008,7 @@
         startScreen.style.display = 'none';
         statusEl.textContent = 'LIVE';
         document.getElementById('freezeBtn').textContent = 'FREEZE';
+        updateActionBtns();
         if (stream) {
           animFrameId = requestAnimationFrame(renderFrame);
         } else {
@@ -1013,21 +1023,65 @@
         frozenFrame.height = video.videoHeight;
         frozenFrame.getContext('2d').drawImage(video, 0, 0);
         cancelAnimationFrame(animFrameId);
-        if (mode === 'vid') video.pause();
         statusEl.textContent = 'FROZEN';
         document.getElementById('freezeBtn').textContent = 'RESUME';
       } else {
         frozenFrame = null;
-        if (mode === 'vid') {
-          video.play();
-          statusEl.textContent = 'VID';
-        } else {
-          statusEl.textContent = 'LIVE';
-        }
+        statusEl.textContent = 'LIVE';
         document.getElementById('freezeBtn').textContent = 'FREEZE';
         animFrameId = requestAnimationFrame(renderFrame);
       }
+      updateActionBtns();
     };
+
+    // === RECORDING ===
+    recBtn.onclick = () => {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    };
+
+    function startRecording() {
+      if (!contourCanvas.captureStream) return;
+      recordedChunks = [];
+      const canvasStream = contourCanvas.captureStream(30);
+
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : 'video/webm';
+
+      mediaRecorder = new MediaRecorder(canvasStream, { mimeType });
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `contourcam_${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        recordedChunks = [];
+      };
+
+      mediaRecorder.start();
+      isRecording = true;
+      recBtn.textContent = 'STOP';
+      recBtn.classList.add('recording');
+      statusEl.textContent = 'REC';
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      isRecording = false;
+      recBtn.textContent = 'REC';
+      recBtn.classList.remove('recording');
+      statusEl.textContent = 'LIVE';
+    }
 
     // === IMAGE LOADING ===
     function openFilePicker() {
@@ -1053,65 +1107,12 @@
         startScreen.style.display = 'none';
         statusEl.textContent = 'IMAGE';
         document.getElementById('freezeBtn').textContent = 'CAM';
-        updateSaveBtn();
+        updateActionBtns();
         renderSingle();
         URL.revokeObjectURL(url);
       };
       img.src = url;
       e.target.value = '';
-    });
-
-    // === VIDEO LOADING ===
-    function openVideoFilePicker() {
-      document.getElementById('videoFileInput').click();
-    }
-
-    document.getElementById('loadVidBtn').onclick = openVideoFilePicker;
-    document.getElementById('loadAnotherVidBtn').onclick = openVideoFilePicker;
-
-    document.getElementById('videoFileInput').addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      e.target.value = '';
-
-      // Stop any existing camera stream
-      if (stream) {
-        stream.getTracks().forEach(t => t.stop());
-        stream = null;
-      }
-      cancelAnimationFrame(animFrameId);
-
-      // Revoke previous video blob URL
-      if (videoBlobUrl) {
-        URL.revokeObjectURL(videoBlobUrl);
-        videoBlobUrl = null;
-      }
-
-      videoBlobUrl = URL.createObjectURL(file);
-      video.srcObject = null;
-      video.src = videoBlobUrl;
-      video.loop = true;
-      video.muted = true;
-
-      video.onloadedmetadata = async () => {
-        try {
-          await video.play();
-          mode = 'vid';
-          frozen = false;
-          frozenFrame = null;
-          startScreen.style.display = 'none';
-          statusEl.textContent = 'VID';
-          document.getElementById('freezeBtn').textContent = 'FREEZE';
-          updateSaveBtn();
-          animFrameId = requestAnimationFrame(renderFrame);
-        } catch (err) {
-          statusEl.textContent = 'VID ERROR';
-          console.error(err);
-        }
-      };
-      video.onerror = () => {
-        statusEl.textContent = 'VID ERROR';
-      };
     });
 
     // === IMAGE GESTURES ===
@@ -1199,7 +1200,7 @@
 
     // Re-render on control change (image mode or frozen cam)
     function maybeRender() {
-      if (mode === 'img' || (mode === 'cam' && frozen) || (mode === 'vid' && frozen)) renderSingle();
+      if (mode === 'img' || (mode === 'cam' && frozen)) renderSingle();
     }
 
     ['levels', 'res', 'smooth'].forEach(id => {
