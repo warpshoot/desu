@@ -221,6 +221,17 @@
       background: rgba(127, 255, 106, 0.08);
     }
 
+    .btn.recording {
+      border-color: #ff4444;
+      color: #ff4444;
+      animation: rec-blink 1s step-start infinite;
+    }
+
+    @keyframes rec-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
     .btn:disabled {
       opacity: 0.3;
       cursor: default;
@@ -580,7 +591,7 @@
     </div>
     <div class="credit-row">
       <span class="credit-key">ver</span>
-      <span class="credit-val">1.0.0</span>
+      <span class="credit-val">1.1.0</span>
     </div>
     <div class="credit-row">
       <span class="credit-key">by</span>
@@ -611,6 +622,7 @@
     <div class="actions">
       <button class="btn" id="freezeBtn">FREEZE</button>
       <button class="btn" id="loadAnotherBtn">LOAD IMG</button>
+      <button class="btn" id="recBtn" disabled>REC</button>
       <button class="btn" id="saveOpenBtn" disabled>SAVE</button>
     </div>
 
@@ -717,6 +729,11 @@
     let cropCenterY = 0.5;
     let cropZoom = 1;
 
+    // Recording state
+    let isRecording = false;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+
     // === DOM ===
     const contourCanvas = document.getElementById('contourCanvas');
     const ctx = contourCanvas.getContext('2d');
@@ -725,6 +742,7 @@
     const video = document.getElementById('videoFeed');
     const startScreen = document.getElementById('startScreen');
     const statusEl = document.getElementById('status');
+    const recBtn = document.getElementById('recBtn');
 
     // === INIT CONTROLS ===
     document.getElementById('levels').addEventListener('input', e => {
@@ -782,9 +800,10 @@
       }
     });
 
-    // === SAVE BUTTON STATE ===
-    function updateSaveBtn() {
+    // === BUTTON STATES ===
+    function updateActionBtns() {
       document.getElementById('saveOpenBtn').disabled = (mode === null);
+      recBtn.disabled = (mode !== 'cam' || frozen);
     }
 
     // UI Size Toggle
@@ -967,7 +986,7 @@
         startScreen.style.display = 'none';
         statusEl.textContent = 'LIVE';
         document.getElementById('freezeBtn').textContent = 'FREEZE';
-        updateSaveBtn();
+        updateActionBtns();
         animFrameId = requestAnimationFrame(renderFrame);
       } catch (e) {
         statusEl.textContent = 'CAM ERROR';
@@ -989,6 +1008,7 @@
         startScreen.style.display = 'none';
         statusEl.textContent = 'LIVE';
         document.getElementById('freezeBtn').textContent = 'FREEZE';
+        updateActionBtns();
         if (stream) {
           animFrameId = requestAnimationFrame(renderFrame);
         } else {
@@ -1011,7 +1031,57 @@
         document.getElementById('freezeBtn').textContent = 'FREEZE';
         animFrameId = requestAnimationFrame(renderFrame);
       }
+      updateActionBtns();
     };
+
+    // === RECORDING ===
+    recBtn.onclick = () => {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    };
+
+    function startRecording() {
+      if (!contourCanvas.captureStream) return;
+      recordedChunks = [];
+      const canvasStream = contourCanvas.captureStream(30);
+
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : 'video/webm';
+
+      mediaRecorder = new MediaRecorder(canvasStream, { mimeType });
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `contourcam_${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        recordedChunks = [];
+      };
+
+      mediaRecorder.start();
+      isRecording = true;
+      recBtn.textContent = 'STOP';
+      recBtn.classList.add('recording');
+      statusEl.textContent = 'REC';
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      isRecording = false;
+      recBtn.textContent = 'REC';
+      recBtn.classList.remove('recording');
+      statusEl.textContent = 'LIVE';
+    }
 
     // === IMAGE LOADING ===
     function openFilePicker() {
@@ -1037,7 +1107,7 @@
         startScreen.style.display = 'none';
         statusEl.textContent = 'IMAGE';
         document.getElementById('freezeBtn').textContent = 'CAM';
-        updateSaveBtn();
+        updateActionBtns();
         renderSingle();
         URL.revokeObjectURL(url);
       };
