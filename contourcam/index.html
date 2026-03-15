@@ -580,7 +580,7 @@
     </div>
     <div class="credit-row">
       <span class="credit-key">ver</span>
-      <span class="credit-val">1.0.0</span>
+      <span class="credit-val">1.1.0</span>
     </div>
     <div class="credit-row">
       <span class="credit-key">by</span>
@@ -600,17 +600,20 @@
         <div class="start-buttons">
           <button class="start-btn" id="startBtn">CAM</button>
           <button class="start-btn secondary" id="loadImgBtn">IMG</button>
+          <button class="start-btn secondary" id="loadVidBtn">VID</button>
         </div>
       </div>
     </div>
 
-    <video id="videoFeed" playsinline autoplay muted style="display:none;"></video>
+    <video id="videoFeed" playsinline autoplay muted loop style="display:none;"></video>
     <canvas id="sampleCanvas" style="display:none;"></canvas>
     <input type="file" id="fileInput" accept="image/*" style="display:none;">
+    <input type="file" id="videoFileInput" accept="video/*" style="display:none;">
 
     <div class="actions">
       <button class="btn" id="freezeBtn">FREEZE</button>
       <button class="btn" id="loadAnotherBtn">LOAD IMG</button>
+      <button class="btn" id="loadAnotherVidBtn">LOAD VID</button>
       <button class="btn" id="saveOpenBtn" disabled>SAVE</button>
     </div>
 
@@ -704,7 +707,8 @@
     let currentRes = 256;
     let currentColor = 'white';
     let currentSmooth = 0;
-    let mode = null;       // 'cam' | 'img'
+    let mode = null;       // 'cam' | 'img' | 'vid'
+    let videoBlobUrl = null;
     let frozen = false;
     let frozenFrame = null;
     let facingMode = 'environment';
@@ -794,12 +798,12 @@
       this.textContent = isX2 ? 'x2' : 'x1';
       this.style.color = isX2 ? 'var(--accent)' : 'var(--text-dim)';
       this.style.borderColor = isX2 ? 'var(--accent)' : 'var(--border)';
-      if (mode === 'img' || (mode === 'cam' && frozen)) renderSingle();
+      if (mode === 'img' || (mode === 'cam' && frozen) || (mode === 'vid' && frozen)) renderSingle();
     });
 
     // === RENDERING ===
     function getSourceDimensions() {
-      if (mode === 'cam') return { w: video.videoWidth || 1, h: video.videoHeight || 1 };
+      if (mode === 'cam' || mode === 'vid') return { w: video.videoWidth || 1, h: video.videoHeight || 1 };
       if (mode === 'img') return { w: loadedImage.naturalWidth, h: loadedImage.naturalHeight };
       return { w: 1, h: 1 };
     }
@@ -853,6 +857,12 @@
           sampleCtx.translate(res, 0);
           sampleCtx.scale(-1, 1);
         }
+        const srcSize = Math.min(srcW, srcH);
+        const sx = (srcW - srcSize) / 2;
+        const sy = (srcH - srcSize) / 2;
+        sampleCtx.drawImage(src, sx, sy, srcSize, srcSize, 0, 0, res, res);
+      } else if (mode === 'vid') {
+        const src = (frozen && frozenFrame) ? frozenFrame : video;
         const srcSize = Math.min(srcW, srcH);
         const sx = (srcW - srcSize) / 2;
         const sy = (srcH - srcSize) / 2;
@@ -937,7 +947,7 @@
       contourCanvas.height = out.height;
       ctx.drawImage(out, 0, 0);
 
-      if (mode === 'cam') animFrameId = requestAnimationFrame(renderFrame);
+      if (mode === 'cam' || mode === 'vid') animFrameId = requestAnimationFrame(renderFrame);
     }
 
     function renderSingle() {
@@ -1003,11 +1013,17 @@
         frozenFrame.height = video.videoHeight;
         frozenFrame.getContext('2d').drawImage(video, 0, 0);
         cancelAnimationFrame(animFrameId);
+        if (mode === 'vid') video.pause();
         statusEl.textContent = 'FROZEN';
         document.getElementById('freezeBtn').textContent = 'RESUME';
       } else {
         frozenFrame = null;
-        statusEl.textContent = 'LIVE';
+        if (mode === 'vid') {
+          video.play();
+          statusEl.textContent = 'VID';
+        } else {
+          statusEl.textContent = 'LIVE';
+        }
         document.getElementById('freezeBtn').textContent = 'FREEZE';
         animFrameId = requestAnimationFrame(renderFrame);
       }
@@ -1043,6 +1059,59 @@
       };
       img.src = url;
       e.target.value = '';
+    });
+
+    // === VIDEO LOADING ===
+    function openVideoFilePicker() {
+      document.getElementById('videoFileInput').click();
+    }
+
+    document.getElementById('loadVidBtn').onclick = openVideoFilePicker;
+    document.getElementById('loadAnotherVidBtn').onclick = openVideoFilePicker;
+
+    document.getElementById('videoFileInput').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      e.target.value = '';
+
+      // Stop any existing camera stream
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+      cancelAnimationFrame(animFrameId);
+
+      // Revoke previous video blob URL
+      if (videoBlobUrl) {
+        URL.revokeObjectURL(videoBlobUrl);
+        videoBlobUrl = null;
+      }
+
+      videoBlobUrl = URL.createObjectURL(file);
+      video.srcObject = null;
+      video.src = videoBlobUrl;
+      video.loop = true;
+      video.muted = true;
+
+      video.onloadedmetadata = async () => {
+        try {
+          await video.play();
+          mode = 'vid';
+          frozen = false;
+          frozenFrame = null;
+          startScreen.style.display = 'none';
+          statusEl.textContent = 'VID';
+          document.getElementById('freezeBtn').textContent = 'FREEZE';
+          updateSaveBtn();
+          animFrameId = requestAnimationFrame(renderFrame);
+        } catch (err) {
+          statusEl.textContent = 'VID ERROR';
+          console.error(err);
+        }
+      };
+      video.onerror = () => {
+        statusEl.textContent = 'VID ERROR';
+      };
     });
 
     // === IMAGE GESTURES ===
@@ -1130,7 +1199,7 @@
 
     // Re-render on control change (image mode or frozen cam)
     function maybeRender() {
-      if (mode === 'img' || (mode === 'cam' && frozen)) renderSingle();
+      if (mode === 'img' || (mode === 'cam' && frozen) || (mode === 'vid' && frozen)) renderSingle();
     }
 
     ['levels', 'res', 'smooth'].forEach(id => {
