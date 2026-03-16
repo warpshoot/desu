@@ -931,6 +931,9 @@ function saveAll() {
         tempCtx.font = `${emojiObj.size}px Arial`;
         tempCtx.textAlign = 'center';
         tempCtx.textBaseline = 'middle';
+        if (emojiObj.flipX) {
+            tempCtx.scale(-1, 1);
+        }
         tempCtx.fillText(emojiObj.emoji, 0, 0);
         tempCtx.restore();
     });
