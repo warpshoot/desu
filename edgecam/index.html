@@ -221,17 +221,6 @@
       background: rgba(127, 255, 106, 0.08);
     }
 
-    .btn.recording {
-      border-color: #ff4444;
-      color: #ff4444;
-      animation: rec-blink 1s step-start infinite;
-    }
-
-    @keyframes rec-blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
     .btn:disabled {
       opacity: 0.3;
       cursor: default;
@@ -625,7 +614,6 @@
     <div class="actions">
       <button class="btn" id="freezeBtn">FREEZE</button>
       <button class="btn" id="loadAnotherBtn">LOAD IMG</button>
-      <button class="btn" id="recBtn" disabled>REC</button>
       <button class="btn" id="saveOpenBtn" disabled>SAVE</button>
     </div>
 
@@ -661,6 +649,25 @@
       <div class="control-row">
         <div class="control-label">COLOR</div>
         <div class="color-swatches" id="colorSwatches"></div>
+      </div>
+
+      <!-- Mode toggles -->
+      <div class="control-row">
+        <div class="control-label">MODE</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; flex:1; padding:2px 0;">
+          <div class="toggle-row">
+            <div class="toggle" id="multiToggle"></div>
+            <span class="toggle-label" id="multiLabel">MULTI</span>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle" id="solidToggle"></div>
+            <span class="toggle-label" id="solidLabel">SOLID</span>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle" id="ghostToggle"></div>
+            <span class="toggle-label" id="ghostLabel">GHOST</span>
+          </div>
+        </div>
       </div>
 
       <!-- Bottom row: cam switch -->
@@ -742,10 +749,14 @@
     let cropCenterY = 0.5;
     let cropZoom = 1;
 
-    // Recording state
-    let isRecording = false;
-    let mediaRecorder = null;
-    let recordedChunks = [];
+    // Feature toggles
+    let multiColor = false;
+    let solidMode = false;
+    let ghostMode = false;
+
+    // Ghost ring buffer
+    const GHOST_MAX = 8;
+    let ghostBuffer = [];
 
     // === DOM ===
     const contourCanvas = document.getElementById('contourCanvas');
@@ -755,7 +766,6 @@
     const video = document.getElementById('videoFeed');
     const startScreen = document.getElementById('startScreen');
     const statusEl = document.getElementById('status');
-    const recBtn = document.getElementById('recBtn');
 
     // === INIT CONTROLS ===
     // Sync slider positions and display values from state (localStorage or defaults)
@@ -835,7 +845,6 @@
     // === BUTTON STATES ===
     function updateActionBtns() {
       document.getElementById('saveOpenBtn').disabled = (mode === null);
-      recBtn.disabled = (mode !== 'cam' || frozen);
     }
 
     // UI Size Toggle
@@ -883,6 +892,22 @@
         }
       }
       return out;
+    }
+
+    function hslToRgb(h, s, l) {
+      // h in [0,1], s in [0,1], l in [0,1]
+      const c = (1 - Math.abs(2 * l - 1)) * s;
+      const x = c * (1 - Math.abs((h * 6) % 2 - 1));
+      const m = l - c / 2;
+      let r, g, b;
+      const hi = Math.floor(h * 6) % 6;
+      if      (hi === 0) { r = c; g = x; b = 0; }
+      else if (hi === 1) { r = x; g = c; b = 0; }
+      else if (hi === 2) { r = 0; g = c; b = x; }
+      else if (hi === 3) { r = 0; g = x; b = c; }
+      else if (hi === 4) { r = x; g = 0; b = c; }
+      else               { r = c; g = 0; b = x; }
+      return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
     }
 
     function buildContourCanvas(pixelScale = 1) {
@@ -952,26 +977,38 @@
       const [lr, lg, lb] = LINE_COLORS[currentColor].rgb;
       const outImgData = oc.createImageData(outW, outH);
       const d = outImgData.data;
+      const maxLevel = Math.max(1, levels - 1);
 
       for (let y = 0; y < res; y++) {
         for (let x = 0; x < res; x++) {
           const cur = lumGrid[y * res + x];
           const right = x < res - 1 ? lumGrid[y * res + x + 1] : cur;
           const down  = y < res - 1 ? lumGrid[(y + 1) * res + x] : cur;
+          const isEdge = (cur !== right || cur !== down);
 
-          if (cur !== right || cur !== down) {
-            // Contour pixel: fill scaled block
-            for (let sy = 0; sy < pixelScale; sy++) {
-              for (let sx = 0; sx < pixelScale; sx++) {
-                const oi = ((y * pixelScale + sy) * outW + (x * pixelScale + sx)) * 4;
-                d[oi]     = lr;
-                d[oi + 1] = lg;
-                d[oi + 2] = lb;
-                d[oi + 3] = 255;
-              }
+          if (!solidMode && !isEdge) continue;
+
+          let pr, pg, pb;
+          if (multiColor) {
+            [pr, pg, pb] = hslToRgb(cur / maxLevel * (300 / 360), 1.0, 0.6);
+          } else if (solidMode) {
+            const t = cur / maxLevel;
+            pr = Math.round(lr * t);
+            pg = Math.round(lg * t);
+            pb = Math.round(lb * t);
+          } else {
+            pr = lr; pg = lg; pb = lb;
+          }
+
+          for (let sy = 0; sy < pixelScale; sy++) {
+            for (let sx = 0; sx < pixelScale; sx++) {
+              const oi = ((y * pixelScale + sy) * outW + (x * pixelScale + sx)) * 4;
+              d[oi]     = pr;
+              d[oi + 1] = pg;
+              d[oi + 2] = pb;
+              d[oi + 3] = 255;
             }
           }
-          // else: stays 0 (black, alpha 0 → transparent over black bg)
         }
       }
 
@@ -979,20 +1016,47 @@
       return out;
     }
 
+    function drawWithGhost(out) {
+      const w = out.width, h = out.height;
+      // Clear ghost buffer if canvas size changed
+      if (ghostBuffer.length > 0 && (ghostBuffer[0].width !== w || ghostBuffer[0].height !== h)) {
+        ghostBuffer = [];
+      }
+      ghostBuffer.push(out);
+      if (ghostBuffer.length > GHOST_MAX) ghostBuffer.shift();
+
+      contourCanvas.width = w;
+      contourCanvas.height = h;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, w, h);
+      const n = ghostBuffer.length;
+      for (let i = 0; i < n; i++) {
+        ctx.globalAlpha = (i + 1) / n;
+        ctx.drawImage(ghostBuffer[i], 0, 0, w, h);
+      }
+      ctx.globalAlpha = 1;
+    }
+
     function renderFrame() {
       if (!mode) return;
       if (frozen) return;
 
       const out = buildContourCanvas();
-      contourCanvas.width = out.width;
-      contourCanvas.height = out.height;
-      ctx.drawImage(out, 0, 0);
+      if (ghostMode) {
+        drawWithGhost(out);
+      } else {
+        ghostBuffer = [];
+        contourCanvas.width = out.width;
+        contourCanvas.height = out.height;
+        ctx.drawImage(out, 0, 0);
+      }
 
       if (mode === 'cam') animFrameId = requestAnimationFrame(renderFrame);
     }
 
     function renderSingle() {
       const out = buildContourCanvas();
+      ghostBuffer = [];
       contourCanvas.width = out.width;
       contourCanvas.height = out.height;
       ctx.drawImage(out, 0, 0);
@@ -1065,55 +1129,6 @@
       }
       updateActionBtns();
     };
-
-    // === RECORDING ===
-    recBtn.onclick = () => {
-      if (isRecording) {
-        stopRecording();
-      } else {
-        startRecording();
-      }
-    };
-
-    function startRecording() {
-      if (!contourCanvas.captureStream) return;
-      recordedChunks = [];
-      const canvasStream = contourCanvas.captureStream(30);
-
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : 'video/webm';
-
-      mediaRecorder = new MediaRecorder(canvasStream, { mimeType });
-      mediaRecorder.ondataavailable = e => {
-        if (e.data.size > 0) recordedChunks.push(e.data);
-      };
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `edgecam_${Date.now()}.webm`;
-        a.click();
-        URL.revokeObjectURL(a.href);
-        recordedChunks = [];
-      };
-
-      mediaRecorder.start();
-      isRecording = true;
-      recBtn.textContent = 'STOP';
-      recBtn.classList.add('recording');
-      statusEl.textContent = 'REC';
-    }
-
-    function stopRecording() {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-      }
-      isRecording = false;
-      recBtn.textContent = 'REC';
-      recBtn.classList.remove('recording');
-      statusEl.textContent = 'LIVE';
-    }
 
     // === IMAGE LOADING ===
     function openFilePicker() {
@@ -1240,6 +1255,23 @@
       document.getElementById(id).addEventListener('change', maybeRender);
     });
 
+    // === MODE TOGGLES ===
+    function makeToggle(id, getter, setter, onChange) {
+      const el = document.getElementById(id);
+      if (getter()) el.classList.add('on');
+      el.addEventListener('click', () => {
+        setter(!getter());
+        el.classList.toggle('on', getter());
+        if (onChange) onChange();
+      });
+    }
+    makeToggle('multiToggle', () => multiColor, v => { multiColor = v; }, maybeRender);
+    makeToggle('solidToggle', () => solidMode,  v => { solidMode = v; },  maybeRender);
+    makeToggle('ghostToggle', () => ghostMode,  v => {
+      ghostMode = v;
+      if (!v) ghostBuffer = [];
+    });
+
     // === SAVE MODAL ===
     let exportSize = 640;
 
@@ -1344,25 +1376,35 @@
         lumGrid[i] = Math.floor(smoothed[i] / 256 * currentLevels);
       }
 
-      const colorHex = LINE_COLORS[currentColor].hex;
+      const [lr, lg, lb] = LINE_COLORS[currentColor].rgb;
+      const maxLevel = Math.max(1, currentLevels - 1);
       const rects = [];
       for (let y = 0; y < res; y++) {
         for (let x = 0; x < res; x++) {
           const cur = lumGrid[y * res + x];
           const right = x < res - 1 ? lumGrid[y * res + x + 1] : cur;
           const down  = y < res - 1 ? lumGrid[(y + 1) * res + x] : cur;
-          if (cur !== right || cur !== down) {
-            rects.push(`<rect x="${x}" y="${y}" width="1" height="1"/>`);
+          const isEdge = (cur !== right || cur !== down);
+          if (!solidMode && !isEdge) continue;
+
+          let pr, pg, pb;
+          if (multiColor) {
+            [pr, pg, pb] = hslToRgb(cur / maxLevel * (300 / 360), 1.0, 0.6);
+          } else if (solidMode) {
+            const t = cur / maxLevel;
+            pr = Math.round(lr * t); pg = Math.round(lg * t); pb = Math.round(lb * t);
+          } else {
+            pr = lr; pg = lg; pb = lb;
           }
+          const hex = '#' + [pr, pg, pb].map(v => v.toString(16).padStart(2, '0')).join('');
+          rects.push(`<rect x="${x}" y="${y}" width="1" height="1" fill="${hex}"/>`);
         }
       }
 
       return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${res} ${res}" width="${res}" height="${res}" shape-rendering="crispEdges">
   <rect width="${res}" height="${res}" fill="#000000"/>
-  <g fill="${colorHex}">
-    ${rects.join('\n    ')}
-  </g>
+  ${rects.join('\n  ')}
 </svg>`;
     }
 
