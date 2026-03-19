@@ -1414,9 +1414,31 @@
     }
 
     document.getElementById('modalSaveBtn').onclick = () => {
-      const exp = buildExportCanvas();
-      exp.toBlob(blob => {
-        triggerDownload(URL.createObjectURL(blob), `edgecam_${Date.now()}.png`);
+      const btn = document.getElementById('modalSaveBtn');
+      const orig = btn.textContent;
+      const fileName = `edgecam_${Date.now()}.png`;
+      buildExportCanvas().toBlob(async (blob) => {
+        if (navigator.canShare) {
+          const file = new File([blob], fileName, { type: 'image/png' });
+          try {
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({ files: [file] });
+              btn.textContent = 'SAVED';
+              setTimeout(() => { btn.textContent = orig; }, 1200);
+              return;
+            }
+          } catch (e) {
+            if (e.name === 'AbortError') return;
+          }
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+        btn.textContent = 'SAVED';
+        setTimeout(() => { btn.textContent = orig; }, 1200);
       }, 'image/png');
     };
 
@@ -1444,10 +1466,32 @@
 </svg>`;
     }
 
-    document.getElementById('modalSvgBtn').onclick = () => {
-      const svg = buildSVG();
-      const blob = new Blob([svg], { type: 'image/svg+xml' });
-      triggerDownload(URL.createObjectURL(blob), `edgecam_${Date.now()}.svg`);
+    document.getElementById('modalSvgBtn').onclick = async () => {
+      const btn = document.getElementById('modalSvgBtn');
+      const orig = btn.textContent;
+      const fileName = `edgecam_${Date.now()}.svg`;
+      const blob = new Blob([buildSVG()], { type: 'image/svg+xml' });
+      if (navigator.canShare) {
+        const file = new File([blob], fileName, { type: 'image/svg+xml' });
+        try {
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+            btn.textContent = 'SAVED';
+            setTimeout(() => { btn.textContent = orig; }, 1200);
+            return;
+          }
+        } catch (e) {
+          if (e.name === 'AbortError') return;
+        }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+      btn.textContent = 'SAVED';
+      setTimeout(() => { btn.textContent = orig; }, 1200);
     };
 
     document.getElementById('modalCopyBtn').onclick = async () => {
