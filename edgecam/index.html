@@ -697,6 +697,7 @@
       </div>
       <div class="modal-actions">
         <button class="btn" id="modalCopyBtn">COPY</button>
+        <button class="btn" id="modalSvgBtn">SVG</button>
         <button class="btn primary" id="modalSaveBtn">SAVE</button>
       </div>
     </div>
@@ -1293,6 +1294,86 @@
         a.click();
         URL.revokeObjectURL(a.href);
       }, 'image/png');
+    };
+
+    function buildSVG() {
+      // Run same sampling/quantization logic as buildContourCanvas
+      const isX2 = document.body.classList.contains('x2');
+      const res = currentRes * (isX2 ? 2 : 1);
+      const { w: srcW, h: srcH } = getSourceDimensions();
+
+      sampleCanvas.width = res;
+      sampleCanvas.height = res;
+      sampleCtx.save();
+      sampleCtx.fillStyle = '#000';
+      sampleCtx.fillRect(0, 0, res, res);
+
+      if (mode === 'cam') {
+        const src = (frozen && frozenFrame) ? frozenFrame : video;
+        const isFront = facingMode === 'user';
+        if (isFront) { sampleCtx.translate(res, 0); sampleCtx.scale(-1, 1); }
+        const srcSize = Math.min(srcW, srcH);
+        const sx = (srcW - srcSize) / 2, sy = (srcH - srcSize) / 2;
+        sampleCtx.drawImage(src, sx, sy, srcSize, srcSize, 0, 0, res, res);
+      } else {
+        const srcSize = Math.min(srcW, srcH) / cropZoom;
+        const scaleX = res / srcSize, scaleY = res / srcSize;
+        const srcL = cropCenterX * srcW - srcSize / 2;
+        const srcT = cropCenterY * srcH - srcSize / 2;
+        const cL = Math.max(0, srcL), cT = Math.max(0, srcT);
+        const cR = Math.min(srcW, srcL + srcSize), cB = Math.min(srcH, srcT + srcSize);
+        if (cR > cL && cB > cT) {
+          sampleCtx.drawImage(loadedImage,
+            cL, cT, cR - cL, cB - cT,
+            (cL - srcL) * scaleX, (cT - srcT) * scaleY,
+            (cR - cL) * scaleX, (cB - cT) * scaleY
+          );
+        }
+      }
+      sampleCtx.restore();
+
+      const imgData = sampleCtx.getImageData(0, 0, res, res).data;
+      let rawLum = new Float32Array(res * res);
+      for (let i = 0; i < res * res; i++) {
+        const r = imgData[i * 4], g = imgData[i * 4 + 1], b = imgData[i * 4 + 2];
+        rawLum[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+      }
+      const smoothed = boxBlur(rawLum, res, res, currentSmooth);
+      const lumGrid = new Uint8Array(res * res);
+      for (let i = 0; i < res * res; i++) {
+        lumGrid[i] = Math.floor(smoothed[i] / 256 * currentLevels);
+      }
+
+      const colorHex = LINE_COLORS[currentColor].hex;
+      const rects = [];
+      for (let y = 0; y < res; y++) {
+        for (let x = 0; x < res; x++) {
+          const cur = lumGrid[y * res + x];
+          const right = x < res - 1 ? lumGrid[y * res + x + 1] : cur;
+          const down  = y < res - 1 ? lumGrid[(y + 1) * res + x] : cur;
+          if (cur !== right || cur !== down) {
+            rects.push(`<rect x="${x}" y="${y}" width="1" height="1"/>`);
+          }
+        }
+      }
+
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${res} ${res}" width="${res}" height="${res}" shape-rendering="crispEdges">
+  <rect width="${res}" height="${res}" fill="#000000"/>
+  <g fill="${colorHex}">
+    ${rects.join('\n    ')}
+  </g>
+</svg>`;
+    }
+
+    document.getElementById('modalSvgBtn').onclick = () => {
+      const svg = buildSVG();
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `edgecam_${Date.now()}.svg`;
+      a.click();
+      URL.revokeObjectURL(a.href);
     };
 
     document.getElementById('modalCopyBtn').onclick = async () => {
