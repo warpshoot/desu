@@ -660,6 +660,10 @@
             <span class="toggle-label" id="solidLabel">SOLID</span>
           </div>
           <div class="toggle-row">
+            <div class="toggle" id="bandToggle"></div>
+            <span class="toggle-label" id="bandLabel">BAND</span>
+          </div>
+          <div class="toggle-row">
             <div class="toggle" id="ghostToggle"></div>
             <span class="toggle-label" id="ghostLabel">GHOST</span>
           </div>
@@ -701,7 +705,7 @@
       <div class="modal-actions">
         <button class="btn" id="modalCopyBtn">COPY</button>
         <button class="btn" id="modalSvgBtn">SVG</button>
-        <button class="btn primary" id="modalSaveBtn">SAVE</button>
+        <button class="btn primary" id="modalSaveBtn">PNG</button>
       </div>
     </div>
   </div>
@@ -747,6 +751,7 @@
 
     // Feature toggles
     let solidMode = false;
+    let bandMode = false;
     let ghostMode = false;
 
     // Ghost canvas (persistence-of-vision)
@@ -1012,17 +1017,18 @@
           const down  = y < res - 1 ? lumGrid[(y + 1) * res + x] : cur;
           const isEdge = (cur !== right || cur !== down);
 
-          if (!solidMode && !isEdge) continue;
+          const isFill = (solidMode || (bandMode && cur % 2 === 0)) && !isEdge;
+          if (!isFill && !isEdge) continue;
 
           let pr, pg, pb;
           if (isMulti) {
             const hue = cur / maxLevel * (300 / 360);
-            if (solidMode && !isEdge) {
+            if (isFill) {
               [pr, pg, pb] = hslToRgb(hue, 0.9, 0.28);
             } else {
               [pr, pg, pb] = hslToRgb(hue, 1.0, 0.6);
             }
-          } else if (solidMode && !isEdge) {
+          } else if (isFill) {
             const t = cur / maxLevel * 0.55;
             pr = Math.round(lr * t);
             pg = Math.round(lg * t);
@@ -1061,7 +1067,7 @@
       }
 
       // Fade existing content toward black (persistence-of-vision)
-      ghostCtx.fillStyle = 'rgba(0,0,0,0.18)';
+      ghostCtx.fillStyle = 'rgba(0,0,0,0.06)';
       ghostCtx.fillRect(0, 0, w, h);
 
       // Draw new frame's edges (transparent bg, colored edges)
@@ -1301,6 +1307,7 @@
       });
     }
     makeToggle('solidToggle', () => solidMode, v => { solidMode = v; }, maybeRender);
+    makeToggle('bandToggle',  () => bandMode,  v => { bandMode = v; },  maybeRender);
     makeToggle('ghostToggle', () => ghostMode, v => {
       ghostMode = v;
       if (!v) { ghostCanvas = null; ghostCtx = null; }
@@ -1308,16 +1315,17 @@
 
     // === SAVE MODAL ===
     let exportSize = 640;
+    let cachedModalCanvas = null;
 
     function refreshModalPreview() {
-      const out = buildContourCanvas(1);
       const preview = document.getElementById('modalPreview');
-      preview.width = out.width;
-      preview.height = out.height;
-      preview.getContext('2d').drawImage(out, 0, 0);
+      preview.width = cachedModalCanvas.width;
+      preview.height = cachedModalCanvas.height;
+      preview.getContext('2d').drawImage(cachedModalCanvas, 0, 0);
     }
 
     document.getElementById('saveOpenBtn').onclick = () => {
+      cachedModalCanvas = buildContourCanvas(1);
       refreshModalPreview();
       document.getElementById('saveModal').style.display = 'flex';
     };
@@ -1336,18 +1344,17 @@
         document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
         exportSize = parseInt(this.dataset.size);
-        refreshModalPreview();
       });
     });
 
     function buildExportCanvas() {
-      const out = buildContourCanvas(1); // render at 1px per grid cell
+      const src = cachedModalCanvas;
       const result = document.createElement('canvas');
       result.width = exportSize;
       result.height = exportSize;
       const rc = result.getContext('2d');
       rc.imageSmoothingEnabled = false;
-      rc.drawImage(out, 0, 0, exportSize, exportSize);
+      rc.drawImage(src, 0, 0, exportSize, exportSize);
       return result;
     }
 
@@ -1420,17 +1427,18 @@
           const right = x < res - 1 ? lumGrid[y * res + x + 1] : cur;
           const down  = y < res - 1 ? lumGrid[(y + 1) * res + x] : cur;
           const isEdge = (cur !== right || cur !== down);
-          if (!solidMode && !isEdge) continue;
+          const isFill = (solidMode || (bandMode && cur % 2 === 0)) && !isEdge;
+          if (!isFill && !isEdge) continue;
 
           let pr, pg, pb;
           if (isMulti) {
             const hue = cur / maxLevel * (300 / 360);
-            if (solidMode && !isEdge) {
+            if (isFill) {
               [pr, pg, pb] = hslToRgb(hue, 0.9, 0.28);
             } else {
               [pr, pg, pb] = hslToRgb(hue, 1.0, 0.6);
             }
-          } else if (solidMode && !isEdge) {
+          } else if (isFill) {
             const t = cur / maxLevel * 0.55;
             pr = Math.round(lr * t); pg = Math.round(lg * t); pb = Math.round(lb * t);
           } else {
