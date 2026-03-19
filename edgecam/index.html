@@ -1396,14 +1396,27 @@
       return result;
     }
 
+    // iOS Safari では <a download> が効かないため新しいタブで開く
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    function triggerDownload(url, filename) {
+      if (isIOS) {
+        window.open(url, '_blank');
+        // blob URL は新しいタブが使うので revoke しない
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    }
+
     document.getElementById('modalSaveBtn').onclick = () => {
       const exp = buildExportCanvas();
       exp.toBlob(blob => {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `edgecam_${Date.now()}.png`;
-        a.click();
-        URL.revokeObjectURL(a.href);
+        triggerDownload(URL.createObjectURL(blob), `edgecam_${Date.now()}.png`);
       }, 'image/png');
     };
 
@@ -1434,11 +1447,7 @@
     document.getElementById('modalSvgBtn').onclick = () => {
       const svg = buildSVG();
       const blob = new Blob([svg], { type: 'image/svg+xml' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `edgecam_${Date.now()}.svg`;
-      a.click();
-      URL.revokeObjectURL(a.href);
+      triggerDownload(URL.createObjectURL(blob), `edgecam_${Date.now()}.svg`);
     };
 
     document.getElementById('modalCopyBtn').onclick = async () => {
