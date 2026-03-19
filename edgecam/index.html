@@ -702,6 +702,13 @@
           <button class="seg-btn" data-size="1280">1280</button>
         </div>
       </div>
+      <div class="modal-row">
+        <div class="modal-label">BG</div>
+        <div class="seg-group" id="bgGroup">
+          <button class="seg-btn active" data-bg="black">BLACK</button>
+          <button class="seg-btn" data-bg="clear">CLEAR</button>
+        </div>
+      </div>
       <div class="modal-actions">
         <button class="btn" id="modalCopyBtn">COPY</button>
         <button class="btn" id="modalSvgBtn">SVG</button>
@@ -1333,6 +1340,7 @@
 
     // === SAVE MODAL ===
     let exportSize = 640;
+    let exportTransparent = false;
     let cachedModalCanvas = null;
 
     function refreshModalPreview() {
@@ -1365,6 +1373,14 @@
       });
     });
 
+    document.querySelectorAll('#bgGroup .seg-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('#bgGroup .seg-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        exportTransparent = this.dataset.bg === 'clear';
+      });
+    });
+
     function buildExportCanvas() {
       const src = cachedModalCanvas;
       const result = document.createElement('canvas');
@@ -1372,6 +1388,10 @@
       result.height = exportSize;
       const rc = result.getContext('2d');
       rc.imageSmoothingEnabled = false;
+      if (!exportTransparent) {
+        rc.fillStyle = '#000';
+        rc.fillRect(0, 0, exportSize, exportSize);
+      }
       rc.drawImage(src, 0, 0, exportSize, exportSize);
       return result;
     }
@@ -1388,86 +1408,26 @@
     };
 
     function buildSVG() {
-      // Run same sampling/quantization logic as buildContourCanvas
-      const isX2 = document.body.classList.contains('x2');
-      const res = currentRes * (isX2 ? 2 : 1);
-      const { w: srcW, h: srcH } = getSourceDimensions();
+      // Read directly from the cached preview canvas for pixel-perfect consistency
+      const src = cachedModalCanvas;
+      const w = src.width, h = src.height;
+      const pixels = src.getContext('2d').getImageData(0, 0, w, h).data;
 
-      sampleCanvas.width = res;
-      sampleCanvas.height = res;
-      sampleCtx.save();
-      sampleCtx.fillStyle = '#000';
-      sampleCtx.fillRect(0, 0, res, res);
-
-      if (mode === 'cam') {
-        const src = (frozen && frozenFrame) ? frozenFrame : video;
-        const isFront = facingMode === 'user';
-        if (isFront) { sampleCtx.translate(res, 0); sampleCtx.scale(-1, 1); }
-        const srcSize = Math.min(srcW, srcH);
-        const sx = (srcW - srcSize) / 2, sy = (srcH - srcSize) / 2;
-        sampleCtx.drawImage(src, sx, sy, srcSize, srcSize, 0, 0, res, res);
-      } else {
-        const srcSize = Math.min(srcW, srcH) / cropZoom;
-        const scaleX = res / srcSize, scaleY = res / srcSize;
-        const srcL = cropCenterX * srcW - srcSize / 2;
-        const srcT = cropCenterY * srcH - srcSize / 2;
-        const cL = Math.max(0, srcL), cT = Math.max(0, srcT);
-        const cR = Math.min(srcW, srcL + srcSize), cB = Math.min(srcH, srcT + srcSize);
-        if (cR > cL && cB > cT) {
-          sampleCtx.drawImage(loadedImage,
-            cL, cT, cR - cL, cB - cT,
-            (cL - srcL) * scaleX, (cT - srcT) * scaleY,
-            (cR - cL) * scaleX, (cB - cT) * scaleY
-          );
-        }
-      }
-      sampleCtx.restore();
-
-      const imgData = sampleCtx.getImageData(0, 0, res, res).data;
-      let rawLum = new Float32Array(res * res);
-      for (let i = 0; i < res * res; i++) {
-        const r = imgData[i * 4], g = imgData[i * 4 + 1], b = imgData[i * 4 + 2];
-        rawLum[i] = 0.299 * r + 0.587 * g + 0.114 * b;
-      }
-      const smoothed = boxBlur(rawLum, res, res, currentSmooth);
-      const lumGrid = new Uint8Array(res * res);
-      for (let i = 0; i < res * res; i++) {
-        lumGrid[i] = Math.floor(smoothed[i] / 256 * currentLevels);
-      }
-
-      const isMulti = currentColor === 'multi';
-      const [lr, lg, lb] = isMulti ? [204, 204, 204] : LINE_COLORS[currentColor].rgb;
-      const maxLevel = Math.max(1, currentLevels - 1);
       const rects = [];
-      for (let y = 0; y < res; y++) {
-        for (let x = 0; x < res; x++) {
-          const cur = lumGrid[y * res + x];
-          const right = x < res - 1 ? lumGrid[y * res + x + 1] : cur;
-          const down  = y < res - 1 ? lumGrid[(y + 1) * res + x] : cur;
-          const isEdge = (cur !== right || cur !== down);
-          const isFill = (solidMode || (bandMode && cur % 2 === 0)) && !isEdge;
-          if (!isFill && !isEdge) continue;
-
-          const isDimFill = solidMode && isFill;
-          let pr, pg, pb;
-          if (isMulti) {
-            const hue = cur / maxLevel * (300 / 360);
-            [pr, pg, pb] = hslToRgb(hue, isDimFill ? 0.9 : 1.0, isDimFill ? 0.28 : 0.6);
-          } else if (isDimFill) {
-            const t = cur / maxLevel * 0.55;
-            pr = Math.round(lr * t); pg = Math.round(lg * t); pb = Math.round(lb * t);
-          } else {
-            pr = lr; pg = lg; pb = lb;
-          }
-          const hex = '#' + [pr, pg, pb].map(v => v.toString(16).padStart(2, '0')).join('');
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const i = (y * w + x) * 4;
+          if (pixels[i + 3] === 0) continue; // transparent = background
+          const hex = '#' + [pixels[i], pixels[i + 1], pixels[i + 2]]
+            .map(v => v.toString(16).padStart(2, '0')).join('');
           rects.push(`<rect x="${x}" y="${y}" width="1" height="1" fill="${hex}"/>`);
         }
       }
 
+      const bg = exportTransparent ? '' : `<rect width="${w}" height="${h}" fill="#000000"/>\n  `;
       return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${res} ${res}" width="${res}" height="${res}" shape-rendering="crispEdges">
-  <rect width="${res}" height="${res}" fill="#000000"/>
-  ${rects.join('\n  ')}
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" shape-rendering="crispEdges">
+  ${bg}${rects.join('\n  ')}
 </svg>`;
     }
 
