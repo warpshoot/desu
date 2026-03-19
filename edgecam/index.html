@@ -271,24 +271,27 @@
     .slider-row input[type=range] {
       flex: 1;
       -webkit-appearance: none;
-      height: 2px;
+      height: 3px;
       background: var(--border);
-      border-radius: 1px;
+      border-radius: 2px;
       outline: none;
+      cursor: pointer;
+      padding: 12px 0;
+      background-clip: content-box;
     }
 
     .slider-row input[type=range]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 12px;
-      height: 12px;
+      width: 22px;
+      height: 22px;
       border-radius: 50%;
       background: var(--text);
       cursor: pointer;
     }
 
     .slider-row input[type=range]::-moz-range-thumb {
-      width: 12px;
-      height: 12px;
+      width: 22px;
+      height: 22px;
       border-radius: 50%;
       background: var(--text);
       cursor: pointer;
@@ -649,7 +652,7 @@
       <div class="control-row">
         <div class="control-label">SMOOTH</div>
         <div class="slider-row">
-          <input type="range" id="smooth" min="0" max="8" value="0" step="1">
+          <input type="range" id="smooth" min="0" max="8" value="4" step="1">
           <div class="slider-val" id="smoothVal">0</div>
         </div>
       </div>
@@ -711,11 +714,20 @@
       pink:   { label: 'PINK',   hex: '#ff88cc', rgb: [255, 136, 204] },
     };
 
+    // === STORAGE ===
+    const STORAGE_KEYS = { levels: 'ecLevels', res: 'ecRes', smooth: 'ecSmooth', color: 'ecColor' };
+    const DEFAULTS = { levels: 8, res: 256, smooth: 4, color: 'white' };
+
+    function loadSetting(key, parse) {
+      const v = localStorage.getItem(STORAGE_KEYS[key]);
+      return v !== null ? parse(v) : DEFAULTS[key];
+    }
+
     // === STATE ===
-    let currentLevels = 8;
-    let currentRes = 256;
-    let currentColor = 'white';
-    let currentSmooth = 0;
+    let currentLevels = loadSetting('levels', parseInt);
+    let currentRes = loadSetting('res', parseInt);
+    let currentColor = loadSetting('color', String);
+    let currentSmooth = loadSetting('smooth', parseInt);
     let mode = null;       // 'cam' | 'img'
     let frozen = false;
     let frozenFrame = null;
@@ -745,19 +757,37 @@
     const recBtn = document.getElementById('recBtn');
 
     // === INIT CONTROLS ===
+    // Sync slider positions and display values from state (localStorage or defaults)
+    (function syncInitialUI() {
+      const levelsEl = document.getElementById('levels');
+      levelsEl.value = currentLevels;
+      document.getElementById('levelsVal').textContent = currentLevels;
+
+      const resEl = document.getElementById('res');
+      resEl.value = currentRes;
+      document.getElementById('resVal').textContent = currentRes;
+
+      const smoothEl = document.getElementById('smooth');
+      smoothEl.value = currentSmooth;
+      document.getElementById('smoothVal').textContent = currentSmooth;
+    })();
+
     document.getElementById('levels').addEventListener('input', e => {
       currentLevels = parseInt(e.target.value);
       document.getElementById('levelsVal').textContent = currentLevels;
+      localStorage.setItem(STORAGE_KEYS.levels, currentLevels);
     });
 
     document.getElementById('res').addEventListener('input', e => {
       currentRes = parseInt(e.target.value);
       document.getElementById('resVal').textContent = currentRes;
+      localStorage.setItem(STORAGE_KEYS.res, currentRes);
     });
 
     document.getElementById('smooth').addEventListener('input', e => {
       currentSmooth = parseInt(e.target.value);
       document.getElementById('smoothVal').textContent = currentSmooth;
+      localStorage.setItem(STORAGE_KEYS.smooth, currentSmooth);
     });
 
     // Color swatches
@@ -777,6 +807,7 @@
       input.addEventListener('change', e => {
         if (e.target.checked) {
           currentColor = e.target.value;
+          localStorage.setItem(STORAGE_KEYS.color, currentColor);
           maybeRender();
         }
       });
