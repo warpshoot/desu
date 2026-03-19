@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>DESU&trade; contourcam</title>
+  <title>DESU&trade; edgecam</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
 
@@ -587,7 +587,7 @@
   <div class="credit-panel" id="creditPanel">
     <div class="credit-row">
       <span class="credit-key">tool</span>
-      <span class="credit-val">DESU&trade; contourcam</span>
+      <span class="credit-val">DESU&trade; edgecam</span>
     </div>
     <div class="credit-row">
       <span class="credit-key">ver</span>
@@ -1060,7 +1060,7 @@
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `contourcam_${Date.now()}.webm`;
+        a.download = `edgecam_${Date.now()}.webm`;
         a.click();
         URL.revokeObjectURL(a.href);
         recordedChunks = [];
@@ -1258,7 +1258,7 @@
       exp.toBlob(blob => {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `contourcam_${Date.now()}.png`;
+        a.download = `edgecam_${Date.now()}.png`;
         a.click();
         URL.revokeObjectURL(a.href);
       }, 'image/png');
