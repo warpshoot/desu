@@ -656,10 +656,6 @@
         <div class="control-label">MODE</div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; flex:1; padding:2px 0;">
           <div class="toggle-row">
-            <div class="toggle" id="multiToggle"></div>
-            <span class="toggle-label" id="multiLabel">MULTI</span>
-          </div>
-          <div class="toggle-row">
             <div class="toggle" id="solidToggle"></div>
             <span class="toggle-label" id="solidLabel">SOLID</span>
           </div>
@@ -750,13 +746,12 @@
     let cropZoom = 1;
 
     // Feature toggles
-    let multiColor = false;
     let solidMode = false;
     let ghostMode = false;
 
-    // Ghost ring buffer
-    const GHOST_MAX = 8;
-    let ghostBuffer = [];
+    // Ghost canvas (persistence-of-vision)
+    let ghostCanvas = null;
+    let ghostCtx = null;
 
     // === DOM ===
     const contourCanvas = document.getElementById('contourCanvas');
@@ -831,6 +826,36 @@
       label.appendChild(display);
       colorSwatches.appendChild(label);
     });
+
+    // MULTI swatch
+    (() => {
+      const label = document.createElement('label');
+      label.className = 'swatch-label';
+      label.title = 'MULTI';
+
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'linecolor';
+      input.value = 'multi';
+      input.className = 'swatch-input';
+      if (currentColor === 'multi') input.checked = true;
+
+      input.addEventListener('change', e => {
+        if (e.target.checked) {
+          currentColor = 'multi';
+          localStorage.setItem(STORAGE_KEYS.color, 'multi');
+          maybeRender();
+        }
+      });
+
+      const display = document.createElement('div');
+      display.className = 'swatch-display';
+      display.style.background = 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)';
+
+      label.appendChild(input);
+      label.appendChild(display);
+      colorSwatches.appendChild(label);
+    })();
 
     // Credit panel
     document.getElementById('credit-btn').addEventListener('click', () => {
@@ -974,7 +999,8 @@
       out.height = outH;
       const oc = out.getContext('2d');
 
-      const [lr, lg, lb] = LINE_COLORS[currentColor].rgb;
+      const isMulti = currentColor === 'multi';
+      const [lr, lg, lb] = isMulti ? [204, 204, 204] : LINE_COLORS[currentColor].rgb;
       const outImgData = oc.createImageData(outW, outH);
       const d = outImgData.data;
       const maxLevel = Math.max(1, levels - 1);
@@ -989,10 +1015,15 @@
           if (!solidMode && !isEdge) continue;
 
           let pr, pg, pb;
-          if (multiColor) {
-            [pr, pg, pb] = hslToRgb(cur / maxLevel * (300 / 360), 1.0, 0.6);
-          } else if (solidMode) {
-            const t = cur / maxLevel;
+          if (isMulti) {
+            const hue = cur / maxLevel * (300 / 360);
+            if (solidMode && !isEdge) {
+              [pr, pg, pb] = hslToRgb(hue, 0.9, 0.28);
+            } else {
+              [pr, pg, pb] = hslToRgb(hue, 1.0, 0.6);
+            }
+          } else if (solidMode && !isEdge) {
+            const t = cur / maxLevel * 0.55;
             pr = Math.round(lr * t);
             pg = Math.round(lg * t);
             pb = Math.round(lb * t);
@@ -1018,23 +1049,28 @@
 
     function drawWithGhost(out) {
       const w = out.width, h = out.height;
-      // Clear ghost buffer if canvas size changed
-      if (ghostBuffer.length > 0 && (ghostBuffer[0].width !== w || ghostBuffer[0].height !== h)) {
-        ghostBuffer = [];
-      }
-      ghostBuffer.push(out);
-      if (ghostBuffer.length > GHOST_MAX) ghostBuffer.shift();
 
-      contourCanvas.width = w;
-      contourCanvas.height = h;
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, w, h);
-      const n = ghostBuffer.length;
-      for (let i = 0; i < n; i++) {
-        ctx.globalAlpha = (i + 1) / n;
-        ctx.drawImage(ghostBuffer[i], 0, 0, w, h);
+      // Init or reset ghost canvas on size change
+      if (!ghostCanvas || ghostCanvas.width !== w || ghostCanvas.height !== h) {
+        ghostCanvas = document.createElement('canvas');
+        ghostCanvas.width = w;
+        ghostCanvas.height = h;
+        ghostCtx = ghostCanvas.getContext('2d');
+        ghostCtx.fillStyle = '#000';
+        ghostCtx.fillRect(0, 0, w, h);
       }
-      ctx.globalAlpha = 1;
+
+      // Fade existing content toward black (persistence-of-vision)
+      ghostCtx.fillStyle = 'rgba(0,0,0,0.18)';
+      ghostCtx.fillRect(0, 0, w, h);
+
+      // Draw new frame's edges (transparent bg, colored edges)
+      ghostCtx.drawImage(out, 0, 0);
+
+      // Render ghost canvas to contourCanvas
+      if (contourCanvas.width !== w) contourCanvas.width = w;
+      if (contourCanvas.height !== h) contourCanvas.height = h;
+      ctx.drawImage(ghostCanvas, 0, 0);
     }
 
     function renderFrame() {
@@ -1045,7 +1081,6 @@
       if (ghostMode) {
         drawWithGhost(out);
       } else {
-        ghostBuffer = [];
         contourCanvas.width = out.width;
         contourCanvas.height = out.height;
         ctx.drawImage(out, 0, 0);
@@ -1056,7 +1091,7 @@
 
     function renderSingle() {
       const out = buildContourCanvas();
-      ghostBuffer = [];
+      ghostCanvas = null;
       contourCanvas.width = out.width;
       contourCanvas.height = out.height;
       ctx.drawImage(out, 0, 0);
@@ -1265,11 +1300,10 @@
         if (onChange) onChange();
       });
     }
-    makeToggle('multiToggle', () => multiColor, v => { multiColor = v; }, maybeRender);
-    makeToggle('solidToggle', () => solidMode,  v => { solidMode = v; },  maybeRender);
-    makeToggle('ghostToggle', () => ghostMode,  v => {
+    makeToggle('solidToggle', () => solidMode, v => { solidMode = v; }, maybeRender);
+    makeToggle('ghostToggle', () => ghostMode, v => {
       ghostMode = v;
-      if (!v) ghostBuffer = [];
+      if (!v) { ghostCanvas = null; ghostCtx = null; }
     });
 
     // === SAVE MODAL ===
@@ -1376,7 +1410,8 @@
         lumGrid[i] = Math.floor(smoothed[i] / 256 * currentLevels);
       }
 
-      const [lr, lg, lb] = LINE_COLORS[currentColor].rgb;
+      const isMulti = currentColor === 'multi';
+      const [lr, lg, lb] = isMulti ? [204, 204, 204] : LINE_COLORS[currentColor].rgb;
       const maxLevel = Math.max(1, currentLevels - 1);
       const rects = [];
       for (let y = 0; y < res; y++) {
@@ -1388,10 +1423,15 @@
           if (!solidMode && !isEdge) continue;
 
           let pr, pg, pb;
-          if (multiColor) {
-            [pr, pg, pb] = hslToRgb(cur / maxLevel * (300 / 360), 1.0, 0.6);
-          } else if (solidMode) {
-            const t = cur / maxLevel;
+          if (isMulti) {
+            const hue = cur / maxLevel * (300 / 360);
+            if (solidMode && !isEdge) {
+              [pr, pg, pb] = hslToRgb(hue, 0.9, 0.28);
+            } else {
+              [pr, pg, pb] = hslToRgb(hue, 1.0, 0.6);
+            }
+          } else if (solidMode && !isEdge) {
+            const t = cur / maxLevel * 0.55;
             pr = Math.round(lr * t); pg = Math.round(lg * t); pb = Math.round(lb * t);
           } else {
             pr = lr; pg = lg; pb = lb;
