@@ -701,7 +701,7 @@
       <div class="modal-actions">
         <button class="btn" id="modalCopyBtn">COPY</button>
         <button class="btn" id="modalSvgBtn">SVG</button>
-        <button class="btn primary" id="modalSaveBtn">SAVE</button>
+        <button class="btn primary" id="modalSaveBtn">PNG</button>
       </div>
     </div>
   </div>
@@ -1061,7 +1061,7 @@
       }
 
       // Fade existing content toward black (persistence-of-vision)
-      ghostCtx.fillStyle = 'rgba(0,0,0,0.18)';
+      ghostCtx.fillStyle = 'rgba(0,0,0,0.06)';
       ghostCtx.fillRect(0, 0, w, h);
 
       // Draw new frame's edges (transparent bg, colored edges)
@@ -1308,16 +1308,17 @@
 
     // === SAVE MODAL ===
     let exportSize = 640;
+    let cachedModalCanvas = null;
 
     function refreshModalPreview() {
-      const out = buildContourCanvas(1);
       const preview = document.getElementById('modalPreview');
-      preview.width = out.width;
-      preview.height = out.height;
-      preview.getContext('2d').drawImage(out, 0, 0);
+      preview.width = cachedModalCanvas.width;
+      preview.height = cachedModalCanvas.height;
+      preview.getContext('2d').drawImage(cachedModalCanvas, 0, 0);
     }
 
     document.getElementById('saveOpenBtn').onclick = () => {
+      cachedModalCanvas = buildContourCanvas(1);
       refreshModalPreview();
       document.getElementById('saveModal').style.display = 'flex';
     };
@@ -1336,18 +1337,17 @@
         document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
         exportSize = parseInt(this.dataset.size);
-        refreshModalPreview();
       });
     });
 
     function buildExportCanvas() {
-      const out = buildContourCanvas(1); // render at 1px per grid cell
+      const src = cachedModalCanvas;
       const result = document.createElement('canvas');
       result.width = exportSize;
       result.height = exportSize;
       const rc = result.getContext('2d');
       rc.imageSmoothingEnabled = false;
-      rc.drawImage(out, 0, 0, exportSize, exportSize);
+      rc.drawImage(src, 0, 0, exportSize, exportSize);
       return result;
     }
 
