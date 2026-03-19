@@ -758,6 +758,13 @@
     let ghostCanvas = null;
     let ghostCtx = null;
 
+    // Ghost snapshots (interval-based)
+    let ghostSnapshots = [];   // [{canvas, takenAt}]
+    let lastSnapshotTime = 0;
+    const GHOST_INTERVAL = 200;  // ms between snapshots
+    const GHOST_DURATION = 1600; // ms until fully faded
+    const GHOST_MAX_SNAPS = 8;
+
     // === DOM ===
     const contourCanvas = document.getElementById('contourCanvas');
     const ctx = contourCanvas.getContext('2d');
@@ -1020,15 +1027,13 @@
           const isFill = (solidMode || (bandMode && cur % 2 === 0)) && !isEdge;
           if (!isFill && !isEdge) continue;
 
+          // solidMode fill = dimmed; bandMode fill = same as line color
+          const isDimFill = solidMode && isFill;
           let pr, pg, pb;
           if (isMulti) {
             const hue = cur / maxLevel * (300 / 360);
-            if (isFill) {
-              [pr, pg, pb] = hslToRgb(hue, 0.9, 0.28);
-            } else {
-              [pr, pg, pb] = hslToRgb(hue, 1.0, 0.6);
-            }
-          } else if (isFill) {
+            [pr, pg, pb] = hslToRgb(hue, isDimFill ? 0.9 : 1.0, isDimFill ? 0.28 : 0.6);
+          } else if (isDimFill) {
             const t = cur / maxLevel * 0.55;
             pr = Math.round(lr * t);
             pg = Math.round(lg * t);
@@ -1054,29 +1059,42 @@
     }
 
     function drawWithGhost(out) {
+      const now = Date.now();
       const w = out.width, h = out.height;
 
-      // Init or reset ghost canvas on size change
-      if (!ghostCanvas || ghostCanvas.width !== w || ghostCanvas.height !== h) {
-        ghostCanvas = document.createElement('canvas');
-        ghostCanvas.width = w;
-        ghostCanvas.height = h;
-        ghostCtx = ghostCanvas.getContext('2d');
-        ghostCtx.fillStyle = '#000';
-        ghostCtx.fillRect(0, 0, w, h);
+      // Purge snapshots with wrong size
+      if (ghostSnapshots.length > 0 &&
+          (ghostSnapshots[0].canvas.width !== w || ghostSnapshots[0].canvas.height !== h)) {
+        ghostSnapshots = [];
+        lastSnapshotTime = 0;
       }
 
-      // Fade existing content toward black (persistence-of-vision)
-      ghostCtx.fillStyle = 'rgba(0,0,0,0.06)';
-      ghostCtx.fillRect(0, 0, w, h);
+      // Take snapshot every GHOST_INTERVAL ms
+      if (now - lastSnapshotTime >= GHOST_INTERVAL) {
+        const snap = document.createElement('canvas');
+        snap.width = w; snap.height = h;
+        snap.getContext('2d').drawImage(out, 0, 0);
+        ghostSnapshots.push({ canvas: snap, takenAt: now });
+        lastSnapshotTime = now;
+      }
 
-      // Draw new frame's edges (transparent bg, colored edges)
-      ghostCtx.drawImage(out, 0, 0);
+      // Discard fully faded snapshots
+      ghostSnapshots = ghostSnapshots.filter(s => now - s.takenAt < GHOST_DURATION);
+      if (ghostSnapshots.length > GHOST_MAX_SNAPS) ghostSnapshots.shift();
 
-      // Render ghost canvas to contourCanvas
+      // Render to contourCanvas
       if (contourCanvas.width !== w) contourCanvas.width = w;
       if (contourCanvas.height !== h) contourCanvas.height = h;
-      ctx.drawImage(ghostCanvas, 0, 0);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, w, h);
+
+      for (const snap of ghostSnapshots) {
+        const age = now - snap.takenAt;
+        ctx.globalAlpha = (1 - age / GHOST_DURATION) * 0.75;
+        ctx.drawImage(snap.canvas, 0, 0, w, h);
+      }
+      ctx.globalAlpha = 1;
+      ctx.drawImage(out, 0, 0, w, h);
     }
 
     function renderFrame() {
@@ -1310,7 +1328,7 @@
     makeToggle('bandToggle',  () => bandMode,  v => { bandMode = v; },  maybeRender);
     makeToggle('ghostToggle', () => ghostMode, v => {
       ghostMode = v;
-      if (!v) { ghostCanvas = null; ghostCtx = null; }
+      if (!v) { ghostSnapshots = []; lastSnapshotTime = 0; }
     });
 
     // === SAVE MODAL ===
@@ -1430,15 +1448,12 @@
           const isFill = (solidMode || (bandMode && cur % 2 === 0)) && !isEdge;
           if (!isFill && !isEdge) continue;
 
+          const isDimFill = solidMode && isFill;
           let pr, pg, pb;
           if (isMulti) {
             const hue = cur / maxLevel * (300 / 360);
-            if (isFill) {
-              [pr, pg, pb] = hslToRgb(hue, 0.9, 0.28);
-            } else {
-              [pr, pg, pb] = hslToRgb(hue, 1.0, 0.6);
-            }
-          } else if (isFill) {
+            [pr, pg, pb] = hslToRgb(hue, isDimFill ? 0.9 : 1.0, isDimFill ? 0.28 : 0.6);
+          } else if (isDimFill) {
             const t = cur / maxLevel * 0.55;
             pr = Math.round(lr * t); pg = Math.round(lg * t); pb = Math.round(lb * t);
           } else {
