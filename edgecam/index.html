@@ -702,10 +702,6 @@
             <div class="toggle" id="feedbackToggle"></div>
             <span class="toggle-label" id="feedbackLabel">FEEDBACK</span>
           </div>
-          <div class="toggle-row">
-            <div class="toggle" id="stutterToggle"></div>
-            <span class="toggle-label" id="stutterLabel">STUTTER</span>
-          </div>
         </div>
       </div>
 
@@ -808,10 +804,6 @@
     let feedbackMode = false;
     let feedbackCanvas = null;
     let feedbackCtx = null;
-    let stutterMode = false;
-    let stutterCanvas = null;
-    let stutterUntil = 0;
-    let stutterNextEligible = 0;
 
     // Ghost canvas (persistence-of-vision)
     let ghostCanvas = null;
@@ -1020,7 +1012,7 @@
       const t = Date.now();
       if (t >= glitchState.nextAt) {
         // 15% chance of near-zero "calm" moment, otherwise a random hard shift
-        glitchState.shift = Math.random() < 0.15 ? 1 : Math.floor(Math.random() * 12) + 2;
+        glitchState.shift = Math.floor(Math.random() * 3) + 1;
         glitchState.nextAt = t + Math.floor(Math.random() * 260) + 20;
       }
       const shift = glitchState.shift;
@@ -1033,7 +1025,7 @@
           bands.push({
             y: Math.floor(Math.random() * h),
             h: Math.floor(Math.random() * h * 0.05) + 1,
-            dx: Math.floor((Math.random() - 0.5) * w * 0.06),
+            dx: Math.floor((Math.random() - 0.5) * w * 0.02),
           });
         }
       }
@@ -1309,33 +1301,9 @@
       if (!mode) return;
       if (frozen) return;
 
-      const now = Date.now();
-
-      // STUTTER: replay frozen frame for the hold duration
-      if (stutterMode && now < stutterUntil && stutterCanvas) {
-        if (contourCanvas.width !== stutterCanvas.width) contourCanvas.width = stutterCanvas.width;
-        if (contourCanvas.height !== stutterCanvas.height) contourCanvas.height = stutterCanvas.height;
-        ctx.drawImage(stutterCanvas, 0, 0);
-        if (mode === 'cam') animFrameId = requestAnimationFrame(renderFrame);
-        return;
-      }
-
       const out = buildContourCanvas();
       if (glitchMode) applyGlitch(out);
       if (sortMode) applySort(out);
-
-      // STUTTER: maybe capture this frame and freeze it
-      if (stutterMode && now >= stutterNextEligible && Math.random() < 0.05) {
-        if (!stutterCanvas || stutterCanvas.width !== out.width || stutterCanvas.height !== out.height) {
-          stutterCanvas = document.createElement('canvas');
-          stutterCanvas.width = out.width;
-          stutterCanvas.height = out.height;
-        }
-        stutterCanvas.getContext('2d').drawImage(out, 0, 0);
-        const dur = Math.floor(Math.random() * 350) + 50;
-        stutterUntil = now + dur;
-        stutterNextEligible = now + dur + Math.floor(Math.random() * 2500) + 500;
-      }
 
       if (ghostMode) {
         drawWithGhost(out);
@@ -1606,10 +1574,6 @@
       feedbackMode = v;
       if (!v) { feedbackCanvas = null; feedbackCtx = null; }
     }, maybeRender);
-    makeToggle('stutterToggle', () => stutterMode, v => {
-      stutterMode = v;
-      if (!v) { stutterCanvas = null; stutterUntil = 0; stutterNextEligible = 0; }
-    });
     updateConflicts();
 
     // === SAVE MODAL ===
