@@ -1054,19 +1054,40 @@
       const w = canvas.width, h = canvas.height;
       const imgData = gc.getImageData(0, 0, w, h);
       const d = imgData.data;
-      const col = new Uint8Array(h * 4);
-      const lums = new Float32Array(h);
+      const THRESHOLD = 30; // pixels with lum > this get sorted; dark pixels stay put
+
       for (let x = 0; x < w; x++) {
-        for (let y = 0; y < h; y++) {
-          const i = (y * w + x) * 4;
-          col[y*4] = d[i]; col[y*4+1] = d[i+1]; col[y*4+2] = d[i+2];
-          lums[y] = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
-        }
-        // sort column indices by luminance: dark at top, bright sinks to bottom
-        const order = Array.from({length: h}, (_, i) => i).sort((a, b) => lums[a] - lums[b]);
-        for (let y = 0; y < h; y++) {
-          const s = order[y] * 4, oi = (y * w + x) * 4;
-          d[oi] = col[s]; d[oi+1] = col[s+1]; d[oi+2] = col[s+2]; d[oi+3] = 255;
+        let y = 0;
+        while (y < h) {
+          // find start of a bright run
+          const i0 = (y * w + x) * 4;
+          const lum0 = 0.299*d[i0] + 0.587*d[i0+1] + 0.114*d[i0+2];
+          if (lum0 <= THRESHOLD) { y++; continue; }
+
+          // extend the run while lum > threshold
+          const start = y;
+          while (y < h) {
+            const i = (y * w + x) * 4;
+            const lum = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+            if (lum <= THRESHOLD) break;
+            y++;
+          }
+          const end = y; // exclusive
+
+          // collect pixels in this run
+          const run = [];
+          for (let r = start; r < end; r++) {
+            const i = (r * w + x) * 4;
+            run.push({ r: d[i], g: d[i+1], b: d[i+2],
+                        lum: 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2] });
+          }
+          // sort bright-to-dark (bright stays at start, dark falls down)
+          run.sort((a, b) => b.lum - a.lum);
+          for (let r = start; r < end; r++) {
+            const i = (r * w + x) * 4;
+            d[i] = run[r-start].r; d[i+1] = run[r-start].g;
+            d[i+2] = run[r-start].b; d[i+3] = 255;
+          }
         }
       }
       gc.putImageData(imgData, 0, 0);
