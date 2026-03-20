@@ -795,6 +795,11 @@
     // Ghost snapshots (interval-based)
     let ghostSnapshots = [];   // [{canvas, takenAt}]
     let lastSnapshotTime = 0;
+
+    // Glitch irregular state
+    const glitchState = { shift: 4, nextAt: 0 };
+    // Pulse irregular state
+    const pulseState = { level: 0.8, nextAt: 0 };
     const GHOST_INTERVAL = 200;  // ms between snapshots
     const GHOST_DURATION = 1600; // ms until fully faded
     const GHOST_MAX_SNAPS = 8;
@@ -988,7 +993,12 @@
       const out = new Uint8ClampedArray(src.length);
 
       const t = Date.now();
-      const shift = Math.round(Math.abs(Math.sin(t * 0.008)) * 7 + 2); // 2-9 px RGB split
+      if (t >= glitchState.nextAt) {
+        // 15% chance of near-zero "calm" moment, otherwise a random hard shift
+        glitchState.shift = Math.random() < 0.15 ? 1 : Math.floor(Math.random() * 12) + 2;
+        glitchState.nextAt = t + Math.floor(Math.random() * 260) + 20;
+      }
+      const shift = glitchState.shift;
 
       // Random glitch bands (~30% chance per frame)
       const bands = [];
@@ -1075,8 +1085,15 @@
 
       // --- Compute luminance grid ---
       const imgData = sampleCtx.getImageData(0, 0, res, res).data;
+      if (pulseMode) {
+        const t = Date.now();
+        if (t >= pulseState.nextAt) {
+          pulseState.level = 0.2 + Math.random() * 0.8; // snap to 20%-100% of currentLevels
+          pulseState.nextAt = t + Math.floor(Math.random() * 650) + 80;
+        }
+      }
       const levels = pulseMode
-        ? Math.max(2, Math.round(currentLevels * (0.5 + 0.5 * Math.sin(Date.now() * 0.0025))))
+        ? Math.max(2, Math.round(currentLevels * pulseState.level))
         : currentLevels;
       let rawLum = new Float32Array(res * res);
       for (let i = 0; i < res * res; i++) {
@@ -1190,8 +1207,7 @@
       ctx.fillRect(0, 0, w, h);
 
       for (const snap of ghostSnapshots) {
-        const age = now - snap.takenAt;
-        ctx.globalAlpha = (1 - age / GHOST_DURATION) * 0.75;
+        ctx.globalAlpha = 0.5;
         ctx.drawImage(snap.canvas, 0, 0, w, h);
       }
       ctx.globalAlpha = 1;
