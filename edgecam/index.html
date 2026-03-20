@@ -798,11 +798,11 @@
 
     // Glitch irregular state
     const glitchState = { shift: 4, nextAt: 0 };
-    // Pulse irregular state
-    const pulseState = { level: 0.8, nextAt: 0 };
-    const GHOST_INTERVAL = 200;  // ms between snapshots
-    const GHOST_DURATION = 1600; // ms until fully faded
-    const GHOST_MAX_SNAPS = 8;
+    // Pulse irregular state (level = current, target = destination, speed = lerp factor)
+    const pulseState = { level: 0.8, target: 0.8, nextAt: 0, speed: 0.06 };
+    const GHOST_INTERVAL = 100;  // ms between snapshots
+    const GHOST_DURATION = 500;  // ms until snapshot pops off
+    const GHOST_MAX_SNAPS = 5;
 
     // === DOM ===
     const contourCanvas = document.getElementById('contourCanvas');
@@ -1087,10 +1087,13 @@
       const imgData = sampleCtx.getImageData(0, 0, res, res).data;
       if (pulseMode) {
         const t = Date.now();
-        if (t >= pulseState.nextAt) {
-          pulseState.level = 0.2 + Math.random() * 0.8; // snap to 20%-100% of currentLevels
-          pulseState.nextAt = t + Math.floor(Math.random() * 650) + 80;
+        // Pick a new random target (and lerp speed) at irregular intervals
+        if (t >= pulseState.nextAt || Math.abs(pulseState.level - pulseState.target) < 0.02) {
+          pulseState.target = 0.2 + Math.random() * 0.8;
+          pulseState.nextAt = t + Math.floor(Math.random() * 900) + 150;
+          pulseState.speed  = 0.03 + Math.random() * 0.09; // irregular approach speed
         }
+        pulseState.level += (pulseState.target - pulseState.level) * pulseState.speed;
       }
       const levels = pulseMode
         ? Math.max(2, Math.round(currentLevels * pulseState.level))
@@ -1207,7 +1210,7 @@
       ctx.fillRect(0, 0, w, h);
 
       for (const snap of ghostSnapshots) {
-        ctx.globalAlpha = 0.5;
+        ctx.globalAlpha = 0.9;
         ctx.drawImage(snap.canvas, 0, 0, w, h);
       }
       ctx.globalAlpha = 1;
