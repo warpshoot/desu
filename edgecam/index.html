@@ -341,6 +341,17 @@
       background: #000;
     }
 
+    .toggle.disabled {
+      opacity: 0.3;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .toggle-label.disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
     .toggle-label {
       font-size: 10px;
       letter-spacing: 0.1em;
@@ -583,7 +594,7 @@
     </div>
     <div class="credit-row">
       <span class="credit-key">ver</span>
-      <span class="credit-val">1.1.0</span>
+      <span class="credit-val">1.2.0</span>
     </div>
     <div class="credit-row">
       <span class="credit-key">by</span>
@@ -666,6 +677,18 @@
           <div class="toggle-row">
             <div class="toggle" id="ghostToggle"></div>
             <span class="toggle-label" id="ghostLabel">GHOST</span>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle" id="mirrorToggle"></div>
+            <span class="toggle-label" id="mirrorLabel">MIRROR</span>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle" id="glitchToggle"></div>
+            <span class="toggle-label" id="glitchLabel">GLITCH</span>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle" id="pulseToggle"></div>
+            <span class="toggle-label" id="pulseLabel">PULSE</span>
           </div>
         </div>
       </div>
@@ -760,6 +783,10 @@
     let solidMode = false;
     let bandMode = false;
     let ghostMode = false;
+    let mirrorMode = false;
+    let glitchMode = false;
+    let pulseMode = false;
+    let pulseAnimId = null;
 
     // Ghost canvas (persistence-of-vision)
     let ghostCanvas = null;
@@ -954,6 +981,57 @@
       return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
     }
 
+    function applyGlitch(canvas) {
+      const gc = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      const src = gc.getImageData(0, 0, w, h).data;
+      const out = new Uint8ClampedArray(src.length);
+
+      const t = Date.now();
+      const shift = Math.round(Math.abs(Math.sin(t * 0.008)) * 7 + 2); // 2-9 px RGB split
+
+      // Random glitch bands (~30% chance per frame)
+      const bands = [];
+      if (Math.random() < 0.30) {
+        const count = Math.floor(Math.random() * 3) + 1;
+        for (let i = 0; i < count; i++) {
+          bands.push({
+            y: Math.floor(Math.random() * h),
+            h: Math.floor(Math.random() * h * 0.05) + 1,
+            dx: Math.floor((Math.random() - 0.5) * w * 0.06),
+          });
+        }
+      }
+
+      for (let y = 0; y < h; y++) {
+        let bandDx = 0;
+        for (const b of bands) {
+          if (y >= b.y && y < b.y + b.h) { bandDx = b.dx; break; }
+        }
+        for (let x = 0; x < w; x++) {
+          const oi = (y * w + x) * 4;
+          const rx = Math.min(w - 1, Math.max(0, x - shift + bandDx));
+          const gx = Math.min(w - 1, Math.max(0, x + bandDx));
+          const bx = Math.min(w - 1, Math.max(0, x + shift + bandDx));
+          out[oi]     = src[(y * w + rx) * 4];
+          out[oi + 1] = src[(y * w + gx) * 4 + 1];
+          out[oi + 2] = src[(y * w + bx) * 4 + 2];
+          out[oi + 3] = 255;
+        }
+      }
+      gc.putImageData(new ImageData(out, w, h), 0, 0);
+    }
+
+    function startPulseLoop() {
+      if (pulseAnimId) return;
+      function tick() {
+        if (!pulseMode || (mode === 'cam' && !frozen)) { pulseAnimId = null; return; }
+        renderSingle();
+        pulseAnimId = requestAnimationFrame(tick);
+      }
+      pulseAnimId = requestAnimationFrame(tick);
+    }
+
     function buildContourCanvas(pixelScale = 1) {
       const isX2 = document.body.classList.contains('x2');
       const res = currentRes * (isX2 ? 2 : 1);
@@ -997,7 +1075,9 @@
 
       // --- Compute luminance grid ---
       const imgData = sampleCtx.getImageData(0, 0, res, res).data;
-      const levels = currentLevels;
+      const levels = pulseMode
+        ? Math.max(2, Math.round(currentLevels * (0.5 + 0.5 * Math.sin(Date.now() * 0.0025))))
+        : currentLevels;
       let rawLum = new Float32Array(res * res);
       for (let i = 0; i < res * res; i++) {
         const r = imgData[i * 4], g = imgData[i * 4 + 1], b = imgData[i * 4 + 2];
@@ -1008,6 +1088,20 @@
       const lumGrid = new Uint8Array(res * res);
       for (let i = 0; i < res * res; i++) {
         lumGrid[i] = Math.floor(smoothed[i] / 256 * levels);
+      }
+
+      // MIRROR: fold into 4-way symmetry using top-left quadrant as source
+      if (mirrorMode) {
+        const half = Math.floor(res / 2);
+        const mirrored = new Uint8Array(res * res);
+        for (let y = 0; y < res; y++) {
+          const sy = y < half ? y : res - 1 - y;
+          for (let x = 0; x < res; x++) {
+            const sx = x < half ? x : res - 1 - x;
+            mirrored[y * res + x] = lumGrid[sy * res + sx];
+          }
+        }
+        lumGrid.set(mirrored);
       }
 
       // --- Build output via ImageData (fast: single putImageData) ---
@@ -1109,6 +1203,7 @@
       if (frozen) return;
 
       const out = buildContourCanvas();
+      if (glitchMode) applyGlitch(out);
       if (ghostMode) {
         drawWithGhost(out);
       } else {
@@ -1122,6 +1217,7 @@
 
     function renderSingle() {
       const out = buildContourCanvas();
+      if (glitchMode) applyGlitch(out);
       ghostCanvas = null;
       contourCanvas.width = out.width;
       contourCanvas.height = out.height;
@@ -1187,6 +1283,7 @@
         cancelAnimationFrame(animFrameId);
         statusEl.textContent = 'FROZEN';
         document.getElementById('freezeBtn').textContent = 'RESUME';
+        if (pulseMode) startPulseLoop();
       } else {
         frozenFrame = null;
         statusEl.textContent = 'LIVE';
@@ -1221,7 +1318,7 @@
         statusEl.textContent = 'IMAGE';
         document.getElementById('freezeBtn').textContent = 'CAM';
         updateActionBtns();
-        renderSingle();
+        if (pulseMode) { startPulseLoop(); } else { renderSingle(); }
         URL.revokeObjectURL(url);
       };
       img.src = url;
@@ -1313,7 +1410,12 @@
 
     // Re-render on control change (image mode or frozen cam)
     function maybeRender() {
-      if (mode === 'img' || (mode === 'cam' && frozen)) renderSingle();
+      if (mode !== 'img' && !(mode === 'cam' && frozen)) return;
+      if (pulseMode) {
+        startPulseLoop();
+      } else {
+        renderSingle();
+      }
     }
 
     ['levels', 'res', 'smooth'].forEach(id => {
@@ -1322,12 +1424,33 @@
     });
 
     // === MODE TOGGLES ===
+    // Mutually exclusive pairs: enabling one grays out the other
+    const TOGGLE_CONFLICTS = [
+      ['solidToggle', 'bandToggle'],
+      ['glitchToggle', 'ghostToggle'],
+    ];
+
+    function updateConflicts() {
+      for (const [a, b] of TOGGLE_CONFLICTS) {
+        const aOn = document.getElementById(a).classList.contains('on');
+        const bOn = document.getElementById(b).classList.contains('on');
+        const aLabel = document.getElementById(a.replace('Toggle', 'Label'));
+        const bLabel = document.getElementById(b.replace('Toggle', 'Label'));
+        document.getElementById(a).classList.toggle('disabled', bOn);
+        aLabel.classList.toggle('disabled', bOn);
+        document.getElementById(b).classList.toggle('disabled', aOn);
+        bLabel.classList.toggle('disabled', aOn);
+      }
+    }
+
     function makeToggle(id, getter, setter, onChange) {
       const el = document.getElementById(id);
       if (getter()) el.classList.add('on');
       el.addEventListener('click', () => {
+        if (el.classList.contains('disabled')) return;
         setter(!getter());
         el.classList.toggle('on', getter());
+        updateConflicts();
         if (onChange) onChange();
       });
     }
@@ -1337,6 +1460,13 @@
       ghostMode = v;
       if (!v) { ghostSnapshots = []; lastSnapshotTime = 0; }
     });
+    makeToggle('mirrorToggle', () => mirrorMode, v => { mirrorMode = v; }, maybeRender);
+    makeToggle('glitchToggle', () => glitchMode, v => { glitchMode = v; }, maybeRender);
+    makeToggle('pulseToggle', () => pulseMode, v => {
+      pulseMode = v;
+      if (v && (mode === 'img' || (mode === 'cam' && frozen))) startPulseLoop();
+    });
+    updateConflicts();
 
     // === SAVE MODAL ===
     let exportSize = 640;
