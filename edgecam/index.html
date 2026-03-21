@@ -1152,6 +1152,9 @@
         sampleCtx.globalAlpha = 1;
       }
 
+      // SORT: apply pixel sort to source image before edge detection
+      if (sortMode) applySort(sampleCanvas);
+
       // --- Compute luminance grid ---
       const imgData = sampleCtx.getImageData(0, 0, res, res).data;
       if (pulseMode) {
@@ -1324,7 +1327,6 @@
 
       const out = buildContourCanvas();
       if (glitchMode) applyGlitch(out);
-      if (sortMode) applySort(out);
 
       if (ghostMode) {
         drawWithGhost(out);
@@ -1340,7 +1342,6 @@
     function renderSingle() {
       const out = buildContourCanvas();
       if (glitchMode) applyGlitch(out);
-      if (sortMode) applySort(out);
       ghostCanvas = null;
       contourCanvas.width = out.width;
       contourCanvas.height = out.height;
