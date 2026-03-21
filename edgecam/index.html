@@ -84,47 +84,75 @@
       border-color: var(--accent);
     }
 
-    /* Credit Panel */
-    .credit-panel {
-      position: fixed;
-      top: max(52px, calc(env(safe-area-inset-top) + 40px));
-      left: 12px;
-      background: rgba(20, 20, 20, 0.95);
-      backdrop-filter: blur(16px);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 16px;
-      font-size: 11px;
-      z-index: 200;
-      min-width: 160px;
+    /* Credit Modal */
+    #credit-modal {
       display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
     }
 
-    .credit-panel.open {
-      display: block;
+    #credit-modal.visible {
+      display: flex;
+    }
+
+    #credit-content {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 20px 24px;
+      font-family: 'DM Mono', monospace;
+      width: 300px;
+      max-width: calc(100vw - 40px);
     }
 
     .credit-row {
       display: flex;
-      gap: 8px;
-      margin-bottom: 4px;
-    }
-
-    .credit-row:last-child {
-      margin-bottom: 0;
+      gap: 12px;
+      line-height: 1.9;
     }
 
     .credit-key {
       color: var(--text-dim);
-      min-width: 32px;
+      font-size: 11px;
+      min-width: 4em;
+      flex-shrink: 0;
     }
 
     .credit-val {
+      font-size: 11px;
       color: var(--text);
       text-decoration: none;
     }
 
+    a.credit-val {
+      text-decoration: underline;
+    }
+
     a.credit-val:hover {
+      color: var(--accent);
+    }
+
+    .credit-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 12px 0;
+    }
+
+    .credit-manual-link {
+      font-size: 11px;
+      color: var(--text);
+      text-decoration: underline;
+      margin-right: 16px;
+    }
+
+    .credit-manual-link:hover {
       color: var(--accent);
     }
 
@@ -586,19 +614,26 @@
 
 <body>
 
-  <button id="credit-btn" title="About">i</button>
-  <div class="credit-panel" id="creditPanel">
-    <div class="credit-row">
-      <span class="credit-key">tool</span>
-      <span class="credit-val">DESU&trade; edgecam</span>
-    </div>
-    <div class="credit-row">
-      <span class="credit-key">ver</span>
-      <span class="credit-val">1.3.0</span>
-    </div>
-    <div class="credit-row">
-      <span class="credit-key">by</span>
-      <a href="https://warpshoot.github.io/" target="_blank" class="credit-val">wpy</a>
+  <div id="credit-btn">i</div>
+  <div id="credit-modal">
+    <div id="credit-content">
+      <div class="credit-row">
+        <span class="credit-key">名称</span>
+        <span class="credit-val">DESU&trade; edgecam</span>
+      </div>
+      <div class="credit-row">
+        <span class="credit-key">支給元</span>
+        <a href="https://warpshoot.github.io/desu/" target="_blank" class="credit-val">warpshoot.github.io/desu</a>
+      </div>
+      <div class="credit-row">
+        <span class="credit-key">製造</span>
+        <a href="https://warpshoot.github.io/" target="_blank" class="credit-val">wpy</a>
+      </div>
+      <hr class="credit-divider">
+      <div class="credit-row">
+        <span class="credit-key">説明書</span>
+        <a href="MANUAL.md" target="_blank" class="credit-manual-link">人間向け</a>
+      </div>
     </div>
   </div>
 
@@ -925,13 +960,14 @@
       colorSwatches.appendChild(label);
     })();
 
-    // Credit panel
-    document.getElementById('credit-btn').addEventListener('click', () => {
-      document.getElementById('creditPanel').classList.toggle('open');
+    // Credit modal
+    document.getElementById('credit-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('credit-modal').classList.add('visible');
     });
-    document.addEventListener('click', e => {
-      if (!e.target.closest('#credit-btn') && !e.target.closest('#creditPanel')) {
-        document.getElementById('creditPanel').classList.remove('open');
+    document.getElementById('credit-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'credit-modal') {
+        document.getElementById('credit-modal').classList.remove('visible');
       }
     });
 
