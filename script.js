@@ -30,9 +30,6 @@ const toolsScreen = document.getElementById('toolsScreen');
 const closeToolsButton = document.getElementById('closeToolsButton');
 
 const buyLink = document.getElementById('buyLink');
-const choicesContainer = document.getElementById('choicesContainer');
-const choiceYes = document.getElementById('choiceYes');
-const choiceNo = document.getElementById('choiceNo');
 
 // 名簿の切り替え用
 const characterIcons = document.querySelectorAll('.character-icon');
@@ -304,25 +301,6 @@ function init() {
         }, 300);
     });
 
-    // 選択肢（はい）イベント
-    choiceYes.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (currentState !== 14) return;
-        
-        window.open('https://minne.com/@warpshoot', '_blank');
-        choicesContainer.classList.remove('show');
-        resetToInitialState();
-    });
-
-    // 選択肢（いいえ）イベント
-    choiceNo.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (currentState !== 14) return;
-        
-        choicesContainer.classList.remove('show');
-        resetToInitialState();
-    });
-
     // ツール説明のイベント
     const toolInfoBtns = document.querySelectorAll('.tool-info-btn');
     toolInfoBtns.forEach(btn => {
@@ -438,8 +416,10 @@ function handleClick(e) {
         continueIcon.classList.remove('show');
         resetToInitialState();
     } else if (currentState === 14) {
-        // 選択待ちのため画面クリックでは何もしない
-        return;
+        // ショップへ別タブで飛び、初期状態へ戻る
+        window.open('https://minne.com/@warpshoot', '_blank');
+        continueIcon.classList.remove('show');
+        resetToInitialState();
     } else if (currentState === 10) {
         // ツール説明完了後、テキストウィンドウだけを閉じる
         continueIcon.classList.remove('show');
@@ -516,11 +496,7 @@ function typeText(text, speaker) {
 
             // 「…」の場合は少し長く待ってから進行可能にする
             setTimeout(() => {
-                if (currentState === 14) {
-                    choicesContainer.classList.add('show');
-                } else {
-                    continueIcon.classList.add('show');
-                }
+                continueIcon.classList.add('show');
             }, 800);
         }
     }
@@ -542,11 +518,7 @@ function skipTyping() {
     else if (currentState === 13) currentState = 14;
 
     textContent.textContent = textContent.dataset.currentText || '…';
-    if (currentState === 14) {
-        choicesContainer.classList.add('show');
-    } else {
-        continueIcon.classList.add('show');
-    }
+    continueIcon.classList.add('show');
 }
 
 function showMenu() {
@@ -639,7 +611,6 @@ function startCharacterInfoDialogue(charInfo) {
 function resetToInitialState() {
     // 全てを非表示にしてリセット
     textWindow.classList.remove('active');
-    choicesContainer.classList.remove('show');
 
     setTimeout(() => {
         textWindow.classList.add('empty'); // 中身を消す
@@ -696,7 +667,6 @@ window.addEventListener('pageshow', (event) => {
         textWindow.classList.remove('overlay-mode');
         textWindow.classList.add('empty');
         continueIcon.classList.remove('show');
-        choicesContainer.classList.remove('show');
 
         // 通常の初期化シーケンスを再実行
         setTimeout(() => {
