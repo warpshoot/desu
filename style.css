@@ -215,6 +215,57 @@ body {
     padding-top: 10px;
 }
 
+/* 選択肢表示 */
+.choices-container {
+    display: flex;
+    gap: 20px;
+    margin-top: 15px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.choices-container.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.choice-button {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    padding: 6px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    letter-spacing: 2px;
+}
+
+.choice-button:hover {
+    color: #fff;
+    border-color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.choice-button.with-arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.choice-button.with-arrow::after {
+    content: "→";
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.4);
+    transition: all 0.3s ease;
+    transform: translateX(-5px);
+}
+
+.choice-button.with-arrow:hover::after {
+    color: #fff;
+    transform: translateX(3px);
+}
+
 /* 進行可能マーク */
 .continue-icon {
     position: absolute;
@@ -706,7 +757,7 @@ body {
 }
 
 /* グローバルミュートボタン */
-.mute-btn {
+#globalMuteBtn {
     position: absolute;
     top: 20px;
     left: 20px;
@@ -723,7 +774,7 @@ body {
     transition: opacity 0.2s ease;
 }
 
-.mute-btn svg {
+#globalMuteBtn svg {
     fill: rgba(255, 255, 255, 0.5);
     width: 28px;
     height: 28px;
@@ -731,7 +782,7 @@ body {
     display: block;
 }
 
-.mute-btn:hover svg {
+#globalMuteBtn:hover svg {
     fill: #ffffff;
 }
 
