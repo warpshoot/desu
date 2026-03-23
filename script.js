@@ -29,6 +29,8 @@ const toolsLink = document.getElementById('toolsLink');
 const toolsScreen = document.getElementById('toolsScreen');
 const closeToolsButton = document.getElementById('closeToolsButton');
 
+const buyLink = document.getElementById('buyLink');
+
 // 名簿の切り替え用
 const characterIcons = document.querySelectorAll('.character-icon');
 const characterDisplay = document.getElementById('characterDisplay');
@@ -103,6 +105,10 @@ const partingDialogues = [
 // 8: 別れテキスト完了(待機中)
 // 9: ツール説明テキスト表示中
 // 10: ツール説明テキスト完了(待機中)
+// 11: 名簿テキスト表示中
+// 12: 名簿テキスト完了(待機中)
+// 13: 買い取りテキスト表示中
+// 14: 買い取りテキスト完了(待機中)
 let currentState = 0;
 let isTyping = false;
 let typingTimeout = null;
@@ -284,6 +290,17 @@ function init() {
         }
     });
 
+    // 購買リンクのイベント
+    buyLink.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentState !== 3) return;
+        
+        menuScreen.classList.remove('show');
+        setTimeout(() => {
+            startDialogue('…買い取りを希望か。', 13);
+        }, 300);
+    });
+
     // ツール説明のイベント
     const toolInfoBtns = document.querySelectorAll('.tool-info-btn');
     toolInfoBtns.forEach(btn => {
@@ -387,7 +404,7 @@ function handleClick(e) {
         // テキスト表示開始
         startDialogue(randomText, 1);
         playRandomBgm(); // ゲーム開始時にBGMを再生
-    } else if ((currentState === 1 || currentState === 7 || currentState === 9 || currentState === 11) && isTyping) {
+    } else if ((currentState === 1 || currentState === 7 || currentState === 9 || currentState === 11 || currentState === 13) && isTyping) {
         // タイピング即時完了
         skipTyping();
     } else if (currentState === 2) {
@@ -396,6 +413,11 @@ function handleClick(e) {
         showMenu();
     } else if (currentState === 8) {
         // 初期状態へ戻る
+        continueIcon.classList.remove('show');
+        resetToInitialState();
+    } else if (currentState === 14) {
+        // ショップへ別タブで飛び、初期状態へ戻る
+        window.open('https://minne.com/@warpshoot', '_blank');
         continueIcon.classList.remove('show');
         resetToInitialState();
     } else if (currentState === 10) {
@@ -470,6 +492,7 @@ function typeText(text, speaker) {
             else if (currentState === 7) currentState = 8;
             else if (currentState === 9) currentState = 10;
             else if (currentState === 11) currentState = 12;
+            else if (currentState === 13) currentState = 14;
 
             // 「…」の場合は少し長く待ってから進行可能にする
             setTimeout(() => {
@@ -492,6 +515,7 @@ function skipTyping() {
     else if (currentState === 7) currentState = 8;
     else if (currentState === 9) currentState = 10;
     else if (currentState === 11) currentState = 12;
+    else if (currentState === 13) currentState = 14;
 
     textContent.textContent = textContent.dataset.currentText || '…';
     continueIcon.classList.add('show');
