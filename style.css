@@ -368,7 +368,7 @@ body {
 
 .close-container {
     position: absolute;
-    top: 20px;
+    top: calc(20px + env(safe-area-inset-top, 0px));
     right: 20px;
 }
 
@@ -708,7 +708,7 @@ body {
 /* グローバルミュートボタン */
 #globalMuteBtn {
     position: absolute;
-    top: 20px;
+    top: calc(20px + env(safe-area-inset-top, 0px));
     left: 20px;
     z-index: 100;
     background: transparent;
