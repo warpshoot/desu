@@ -297,7 +297,7 @@ function init() {
         
         menuScreen.classList.remove('show');
         setTimeout(() => {
-            startDialogue('…買い取りを希望か。', 13);
+            startDialogue('…買い取り？　変わったやつだな', 13);
         }, 300);
     });
 
