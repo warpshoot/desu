@@ -45,27 +45,27 @@ const characterDescriptions = {
     'desu': {
         name: 'デス',
         image: './characters/desu.png',
-        desc: 'デスだ。うちで仕事を手伝ってもらってる。詳しいことは俺もよく知らない。'
+        desc: 'デスだ。うちで仕事を手伝ってもらってる。詳しいことは俺もよく知らない'
     },
     'sakana': {
         name: 'サカナ',
         image: './characters/sakana.png',
-        desc: 'サカナ。デスが連れてる魚だ。しゃべるぞ。'
+        desc: 'サカナ。デスが連れてる魚だ。しゃべるぞ'
     },
     'shi': {
         name: 'しーちゃん',
         image: './characters/shi.png',
-        desc: 'しーちゃんは、うちのマスコットキャラクターだ。意外と人気がある。'
+        desc: 'しーちゃんは、うちのマスコットキャラクターだ。意外と人気がある'
     },
     'holem': {
         name: 'ホーレム',
         image: './characters/holem.png',
-        desc: 'ガラか。ホーレムと呼ぶやつもいる。これについて詳しいことは話せない。'
+        desc: 'ガラか。ホーレムと呼ぶやつもいる。これについて詳しいことは話せない'
     },
     'wpy': {
         name: 'wpy',
         image: './characters/wpy.png',
-        desc: 'wpy。支給品はすべてこいつが作ってる。'
+        desc: 'wpy。支給品はすべてこいつが作ってる'
     }
 };
 
@@ -315,13 +315,13 @@ function init() {
 
             const toolName = btn.dataset.tool;
             const toolDescriptions = {
-                'DRAW': 'スケッチや図示に使うそうだ。現場で使ってる奴を見たことがある。',
-                'BEAT': 'リズムを組める。音の記録や暗号に使うのだろう。',
-                'BEEP': 'BEATの別型だ。こっちは音が軽い。',
-                'PATTERN': '図形を並べて模様を作るものらしい。用途はわからない。',
-                'EMOJIE': '絵文字で絵を作れる。それ以上でもそれ以下でもない。',
-                'TONE': '写真を白黒に加工できる。記録の処理用だろう。',
-                'NOISE': '画像にノイズをかける。なんのためのものなんだろうな。',
+                'DRAW': 'スケッチや図示に使うそうだ。現場で使ってる奴を見たことがある',
+                'BEAT': 'リズムを組める。音の記録や暗号に使うのだろう',
+                'BEEP': 'BEATの別型だ。こっちは音が軽い',
+                'PATTERN': '図形を並べて模様を作るものらしい。用途はわからない',
+                'EMOJIE': '絵文字で絵を作れる。それ以上でもそれ以下でもない',
+                'TONE': '写真を白黒に加工できる。記録の処理用だろう',
+                'NOISE': '画像にノイズをかける。なんのためのものなんだろうな',
             };
             startToolInfoDialogue(toolDescriptions[toolName] ?? `${toolName}だ。`);
         });
