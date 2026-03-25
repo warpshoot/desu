@@ -112,11 +112,12 @@ export async function redo() {
  * Restore canvas contents from a snapshot
  */
 function restoreSnapshot(snapshot) {
+    const dpr = window.devicePixelRatio || 1;
     for (const layer of layers) {
         const bitmap = snapshot.get(layer.id);
         if (bitmap) {
             layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
-            layer.ctx.drawImage(bitmap, 0, 0);
+            layer.ctx.drawImage(bitmap, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
         }
     }
 }
@@ -132,8 +133,9 @@ export function restoreLayer(layerId) {
     const layer = getLayer(layerId);
 
     if (bitmap && layer) {
+        const dpr = window.devicePixelRatio || 1;
         layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
-        layer.ctx.drawImage(bitmap, 0, 0);
+        layer.ctx.drawImage(bitmap, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
     }
 }
 
