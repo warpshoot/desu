@@ -112,7 +112,7 @@ body {
     display: flex;
     flex-direction: column;
     z-index: 300;
-    padding: 12px 8px 12px 12px; /* 左側を少し多めに */
+    padding: 8px 6px 8px 8px; /* コンパクト化 */
     background: rgba(255, 255, 255, 0.6);
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
@@ -245,14 +245,14 @@ body {
 #tool-panel, #aux-panel {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    margin-bottom: 12px;
+    gap: 2px;
+    margin-bottom: 8px;
     /* 背景と枠線は親のtoolbar-leftに集約するため削除 */
 }
 
 #tool-panel .tool-btn, #aux-panel .tool-btn {
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
 }
 
 /* ============================================
@@ -294,8 +294,8 @@ body {
 }
 
 .tool-icon {
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     object-fit: contain;
     pointer-events: none;
 }
@@ -552,10 +552,10 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 10px 4px;
-    margin-bottom: 12px;
-    width: 44px;
+    gap: 6px;
+    padding: 8px 4px;
+    margin-bottom: 8px;
+    width: 36px;
     transition: opacity 0.2s;
 }
 
@@ -577,7 +577,7 @@ body {
 #brushSize {
     -webkit-appearance: none;
     appearance: none;
-    width: 120px;
+    width: 96px;
     height: 3px;
     /* Track width 3px */
     background: #000;
@@ -586,7 +586,7 @@ body {
     /* No radius */
     transform: rotate(-90deg);
     transform-origin: center center;
-    margin: 57px 0;
+    margin: 46px 0;
 }
 
 #brushSize::-webkit-slider-thumb {
@@ -1678,15 +1678,15 @@ body.help-mode #tool-panel {
 #brush-palette {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    margin-top: 4px;
-    padding: 4px 0;
+    gap: 2px;
+    margin-top: 2px;
+    padding: 2px 0;
 }
 
 .brush-slot {
     position: relative;
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     border: 1px solid #ccc;
     background: #fff;
     display: flex;
@@ -1734,8 +1734,8 @@ body.help-mode #tool-panel {
 }
 
 .brush-swatch {
-    width: 28px;
-    height: 24px;
+    width: 22px;
+    height: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1753,7 +1753,7 @@ body.help-mode #tool-panel {
     color: #555;
     text-align: center;
     line-height: 1;
-    max-width: 44px;
+    max-width: 36px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
