@@ -22,6 +22,9 @@ import {
     startPenDrawing, drawPenLine, endPenDrawing
 } from './tools/pen.js';
 import {
+    startStippleDrawing, drawStippleLine, endStippleDrawing
+} from './tools/stipple.js';
+import {
     startLasso, updateLasso, finishLasso,
     fillPolygon, fillPolygonTransparent, floodFill, floodFillTransparent, floodFillSketch
 } from './tools/fill.js';
@@ -728,7 +731,7 @@ function updateBrushSizeVisibility() {
     // Show slider always, but disable for lasso-based tools (fill, tone, eraser-lasso)
     // Show slider always, but disable for lasso-based tools (fill, tone, eraser-lasso, sketch)
     // Only Pen tool needs slider.
-    const isPenMode = (state.currentTool === 'pen') && !state.isEraserActive;
+    const isPenMode = (state.currentTool === 'pen' || state.currentTool === 'stipple') && !state.isEraserActive;
     const isEraserPen = state.isEraserActive && state.currentEraser === 'pen';
 
     container.classList.toggle('disabled', !(isPenMode || isEraserPen));
@@ -1028,7 +1031,7 @@ async function handlePointerDown(e) {
         } else {
             if ((state.currentTool === 'fill' || state.currentTool === 'sketch' || state.currentTool === 'tone') && state.activePointers.size === 1) {
                 startLasso(e.clientX, e.clientY);
-            } else if (state.currentTool === 'pen') {
+            } else if (state.currentTool === 'pen' || state.currentTool === 'stipple') {
                 state.drawingPending = true;
                 await saveState();
                 if (!state.drawingPending) {
@@ -1036,7 +1039,11 @@ async function handlePointerDown(e) {
                     return;
                 }
                 state.drawingPending = false;
-                startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
+                if (state.currentTool === 'stipple') {
+                    startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
+                } else {
+                    startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
+                }
             }
         }
         state.strokeMade = true;
@@ -1166,7 +1173,11 @@ async function handlePointerMove(e) {
             const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
             for (const ev of events) {
                 const pt = getCanvasPoint(ev.clientX, ev.clientY);
-                drawPenLine(pt.x, pt.y, ev.pressure);
+                if (state.currentTool === 'stipple') {
+                    drawStippleLine(pt.x, pt.y, ev.pressure);
+                } else {
+                    drawPenLine(pt.x, pt.y, ev.pressure);
+                }
             }
         }
     }
@@ -1299,7 +1310,11 @@ async function handlePointerUp(e) {
                     updateLayerThumbnail(getActiveLayer());
                 }
             } else if (state.isPenDrawing) {
-                await endPenDrawing();
+                if (state.currentTool === 'stipple') {
+                    endStippleDrawing();
+                } else {
+                    await endPenDrawing();
+                }
                 updateLayerThumbnail(getActiveLayer());
             }
             state.drawingPointerId = null;
