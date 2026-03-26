@@ -278,7 +278,7 @@ export const state = {
 
     isPenDrawing: false,
     lastPenPoint: null,
-    isErasing: false,
+    // isErasing is defined as a getter above (line ~222) — do NOT redeclare here
 
     // Save Mode
     isSaveMode: false,
@@ -291,6 +291,7 @@ export const state = {
     // Brush Sizes
     penSize: 2,
     eraserSize: 5,
+    stippleSize: 3,
 
     // Tone Menu State
     isToneMenuPinned: false

@@ -589,10 +589,12 @@ function openFlyout(mode, anchorBtn) {
         menu.appendChild(item);
     });
 
-    // Position: flush to the right edge of the anchor button
-    const rect = anchorBtn.getBoundingClientRect();
-    menu.style.left = (rect.right + 2) + 'px';
-    menu.style.top = rect.top + 'px';
+    // Position: flush to the right edge of the toolbar, vertically aligned with the button
+    const toolbar = document.getElementById('toolbar-left');
+    const toolbarRect = toolbar.getBoundingClientRect();
+    const btnRect = anchorBtn.getBoundingClientRect();
+    menu.style.left = (toolbarRect.right + 2) + 'px';
+    menu.style.top = btnRect.top + 'px';
     menu.style.transform = 'none';
     menu.classList.remove('hidden');
 }
@@ -862,13 +864,16 @@ function updateBrushSizeSlider() {
     const slider = document.getElementById('brushSize');
     const display = document.getElementById('sizeDisplay');
 
+    let size;
     if (state.mode === 'eraser') {
-        slider.value = state.eraserSize;
-        display.textContent = state.eraserSize;
+        size = state.eraserSize;
+    } else if (state.mode === 'pen' && state.subTool === 'stipple') {
+        size = state.stippleSize;
     } else {
-        slider.value = state.activeBrush.size;
-        display.textContent = state.activeBrush.size;
+        size = state.activeBrush.size;
     }
+    slider.value = size;
+    display.textContent = size;
 }
 
 // ============================================
@@ -1099,7 +1104,7 @@ async function handlePointerDown(e) {
         state.initialPinchCenter = { ...state.lastPinchCenter };
 
         // Interrupt drawing if 2nd finger touches
-        if (state.isPenDrawing || state.isLassoing || state.isErasing || state.drawingPending) {
+        if (state.isPenDrawing || state.isLassoing || state.drawingPending) {
             // Check if 2nd finger came very quickly after 1st (likely a 2-finger tap intent)
             const timeSinceFirstFinger = Date.now() - state.touchStartTime;
             const isTwoFingerTapIntent = timeSinceFirstFinger < 150;
@@ -1194,7 +1199,7 @@ function cancelCurrentOperation() {
         // on start, so there's nothing to restore. Calling restoreLayer() would
         // restore to the state BEFORE the last completed operation.
     }
-    if (state.isPenDrawing || state.isErasing) {
+    if (state.isPenDrawing) {
         const layer = getActiveLayer();
         if (layer) restoreLayer(layer.id);
         // Remove the saveState() entry that was added when drawing started
@@ -1204,7 +1209,6 @@ function cancelCurrentOperation() {
         state.lastPenPoint = null;
     }
     state.drawingPointerId = null;
-    state.isErasing = false;
     state.isLassoing = false;
     state.strokeMade = false;
     state.didInteract = false;
@@ -1486,7 +1490,9 @@ function flashBrushSizePreview() {
         document.body.appendChild(_brushPreviewEl);
     }
 
-    const size = state.mode === 'eraser' ? state.eraserSize : state.activeBrush.size;
+    const size = state.mode === 'eraser' ? state.eraserSize
+        : (state.mode === 'pen' && state.subTool === 'stipple') ? state.stippleSize
+        : state.activeBrush.size;
     const displaySize = size * state.scale;
     _brushPreviewEl.style.width = `${displaySize}px`;
     _brushPreviewEl.style.height = `${displaySize}px`;
@@ -1545,6 +1551,8 @@ function setupColorPickers() {
 
         if (state.mode === 'eraser') {
             state.eraserSize = size;
+        } else if (state.mode === 'pen' && state.subTool === 'stipple') {
+            state.stippleSize = size;
         } else {
             state.activeBrush.size = size;
         }
