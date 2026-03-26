@@ -407,7 +407,18 @@ const _lastSubTool = { pen: 'pen', fill: 'fill', eraser: 'pen' };
 let _flyoutMode = null;      // which mode's flyout is open
 let _flyoutHoldTimer = null;
 let _flyoutStartPid = null;   // pointer id
-const FLYOUT_HOLD_MS = 250;
+let _flyoutHolding = false;   // true while holding (for animation feedback)
+const FLYOUT_HOLD_MS = 300;
+
+function _cancelHoldTimer() {
+    if (_flyoutHoldTimer) {
+        clearTimeout(_flyoutHoldTimer);
+        _flyoutHoldTimer = null;
+    }
+    _flyoutHolding = false;
+    // Remove hold animation from all mode buttons
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('holding'));
+}
 
 function setupToolPanel() {
     const modeButtons = document.querySelectorAll('.mode-btn');
@@ -418,9 +429,13 @@ function setupToolPanel() {
             e.preventDefault();
             e.stopPropagation();
             _flyoutStartPid = e.pointerId;
+            _flyoutHolding = true;
+            btn.classList.add('holding');
 
             _flyoutHoldTimer = setTimeout(() => {
                 _flyoutHoldTimer = null;
+                _flyoutHolding = false;
+                btn.classList.remove('holding');
                 openFlyout(btn.dataset.mode, btn);
             }, FLYOUT_HOLD_MS);
         });
@@ -430,10 +445,11 @@ function setupToolPanel() {
             e.preventDefault();
             e.stopPropagation();
 
-            // If hold timer is still running, it was a tap
-            if (_flyoutHoldTimer) {
-                clearTimeout(_flyoutHoldTimer);
-                _flyoutHoldTimer = null;
+            const wasHolding = _flyoutHolding;
+            _cancelHoldTimer();
+
+            // If hold timer was still running, it was a tap
+            if (wasHolding && !_flyoutMode) {
                 handleModeTap(btn.dataset.mode);
             }
             // If flyout is open, pointerup on the button itself → close without change
@@ -443,18 +459,24 @@ function setupToolPanel() {
         });
 
         btn.addEventListener('pointercancel', () => {
-            if (_flyoutHoldTimer) { clearTimeout(_flyoutHoldTimer); _flyoutHoldTimer = null; }
+            _cancelHoldTimer();
             closeFlyout();
+        });
+
+        btn.addEventListener('pointerleave', () => {
+            // If user drags off the button before hold fires, don't show holding animation
+            // but keep the timer — if they release elsewhere, global pointerup handles it
+            btn.classList.remove('holding');
         });
     });
 
-    // --- Global move/up for flyout drag-to-select ---
-    document.addEventListener('pointermove', (e) => {
-        if (!_flyoutMode) return;
-        updateFlyoutHover(e.clientX, e.clientY);
-    });
-
+    // --- Global pointerup: catches releases anywhere (flyout items, outside, etc.) ---
     document.addEventListener('pointerup', (e) => {
+        // Always cancel hold timer on any pointerup (fixes ghost flyout bug)
+        if (_flyoutHolding) {
+            _cancelHoldTimer();
+        }
+
         if (!_flyoutMode) return;
         // Find which flyout item the pointer is over
         const item = getFlyoutItemAt(e.clientX, e.clientY);
@@ -462,6 +484,12 @@ function setupToolPanel() {
             selectSubTool(_flyoutMode, item.dataset.sub);
         }
         closeFlyout();
+    });
+
+    // --- Global move for flyout drag-to-select ---
+    document.addEventListener('pointermove', (e) => {
+        if (!_flyoutMode) return;
+        updateFlyoutHover(e.clientX, e.clientY);
     });
 
     // Undo / Redo
@@ -524,13 +552,15 @@ function selectSubTool(mode, sub) {
     updateBrushSizeSlider();
 }
 
-// --- Update the mode button to show the selected sub-tool icon ---
+// --- Update the mode button to show the selected sub-tool icon + label ---
 function updateModeButtonIcon(mode, sub) {
     const btn = document.getElementById(`mode-${mode}`);
     if (!btn) return;
     btn.querySelectorAll('.mode-icon').forEach(img => {
         img.style.display = img.dataset.sub === sub ? '' : 'none';
     });
+    const label = btn.querySelector('.mode-sub-label');
+    if (label) label.textContent = sub;
 }
 
 // --- Flyout open/close ---
