@@ -349,26 +349,6 @@ body {
     to { width: 100%; }
 }
 
-/* サブツールラベル */
-.mode-sub-label {
-    position: absolute;
-    left: 50%;
-    top: 100%;
-    transform: translateX(-50%);
-    font-size: 7px;
-    letter-spacing: 0.5px;
-    color: rgba(0,0,0,0.35);
-    white-space: nowrap;
-    pointer-events: none;
-    line-height: 1;
-    margin-top: 1px;
-}
-
-.mode-btn.active .mode-sub-label {
-    color: rgba(0,0,0,0.7);
-    font-weight: bold;
-}
-
 /* ============================================
    Flyout Sub-tool Menu
    ============================================ */
@@ -378,11 +358,11 @@ body {
     backdrop-filter: blur(16px) saturate(180%);
     -webkit-backdrop-filter: blur(16px) saturate(180%);
     border: 1px solid rgba(0, 0, 0, 0.15);
-    padding: 6px;
+    padding: 2px;
     display: flex;
     flex-direction: row;
-    gap: 4px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    gap: 2px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
     z-index: 500;
     pointer-events: none;
 }

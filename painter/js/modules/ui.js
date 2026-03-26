@@ -428,6 +428,8 @@ function setupToolPanel() {
         btn.addEventListener('pointerdown', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            // タッチの暗黙キャプチャを解除 → pointermove/up が document に届くようにする
+            try { btn.releasePointerCapture(e.pointerId); } catch (_) {}
             _flyoutStartPid = e.pointerId;
             _flyoutHolding = true;
             btn.classList.add('holding');
@@ -552,15 +554,13 @@ function selectSubTool(mode, sub) {
     updateBrushSizeSlider();
 }
 
-// --- Update the mode button to show the selected sub-tool icon + label ---
+// --- Update the mode button to show the selected sub-tool icon ---
 function updateModeButtonIcon(mode, sub) {
     const btn = document.getElementById(`mode-${mode}`);
     if (!btn) return;
     btn.querySelectorAll('.mode-icon').forEach(img => {
         img.style.display = img.dataset.sub === sub ? '' : 'none';
     });
-    const label = btn.querySelector('.mode-sub-label');
-    if (label) label.textContent = sub;
 }
 
 // --- Flyout open/close ---
@@ -589,11 +589,11 @@ function openFlyout(mode, anchorBtn) {
         menu.appendChild(item);
     });
 
-    // Position: right of the anchor button
+    // Position: flush to the right edge of the anchor button
     const rect = anchorBtn.getBoundingClientRect();
-    menu.style.left = (rect.right + 8) + 'px';
-    menu.style.top = (rect.top + rect.height / 2) + 'px';
-    menu.style.transform = 'translateY(-50%)';
+    menu.style.left = (rect.right + 2) + 'px';
+    menu.style.top = rect.top + 'px';
+    menu.style.transform = 'none';
     menu.classList.remove('hidden');
 }
 
