@@ -589,11 +589,13 @@ function openFlyout(mode, anchorBtn) {
         menu.appendChild(item);
     });
 
-    // Position: flush to the right edge of the toolbar, vertically aligned with the button
-    const toolbar = document.getElementById('toolbar-left');
-    const toolbarRect = toolbar.getBoundingClientRect();
+    // Position: flush to the right edge of the tool-panel, aligned with button top
+    // Use tool-panel (not toolbar-left which includes slider/palette/undo)
+    // Active button has translateX(-5px) so we can't rely on btnRect.right
+    const toolPanel = document.getElementById('tool-panel');
+    const panelRect = toolPanel.getBoundingClientRect();
     const btnRect = anchorBtn.getBoundingClientRect();
-    menu.style.left = (toolbarRect.right + 2) + 'px';
+    menu.style.left = (panelRect.right + 2) + 'px';
     menu.style.top = btnRect.top + 'px';
     menu.style.transform = 'none';
     menu.classList.remove('hidden');
@@ -1560,15 +1562,17 @@ function setupColorPickers() {
         // 画面倍率を反映したサイズでプレビュー表示
         flashBrushSizePreview();
 
-        // パレット側のドットもリアルタイム更新
-        const activeIdx = state.activeBrushIndex;
-        const activeSlotDot = document.querySelector(`.brush-slot[data-idx="${activeIdx}"] .brush-dot-preview`);
-        if (activeSlotDot) {
-            const slotDotSize = Math.max(2, Math.min(24, size * 0.8));
-            activeSlotDot.style.width = `${slotDotSize}px`;
-            activeSlotDot.style.height = `${slotDotSize}px`;
-            // 不透明度も反映
-            activeSlotDot.style.opacity = state.activeBrush.opacity;
+        // パレット側のドットもリアルタイム更新 (ペンモードのpen時のみ)
+        if (state.mode === 'pen' && state.subTool === 'pen') {
+            const activeIdx = state.activeBrushIndex;
+            const activeSlotDot = document.querySelector(`.brush-slot[data-idx="${activeIdx}"] .brush-dot-preview`);
+            if (activeSlotDot) {
+                const slotDotSize = Math.max(2, Math.min(24, size * 0.8));
+                activeSlotDot.style.width = `${slotDotSize}px`;
+                activeSlotDot.style.height = `${slotDotSize}px`;
+                // 不透明度も反映
+                activeSlotDot.style.opacity = state.activeBrush.opacity;
+            }
         }
     });
 
