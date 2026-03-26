@@ -195,7 +195,7 @@ export const state = {
     canvasColor: '#ffffff',
 
     // Tool settings (decoupled from layers)
-    currentTool: 'pen',      // 'pen', 'fill', 'sketch', 'tone', 'stipple'
+    currentTool: 'pen',      // 'pen', 'fill', 'sketch', 'tone'
     currentEraser: 'pen',  // 'lasso', 'pen'
     isEraserActive: false,   // true when eraser tool is selected
     activeLayer: 1,          // ID of the currently active layer

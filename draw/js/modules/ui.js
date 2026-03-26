@@ -22,9 +22,6 @@ import {
     startPenDrawing, drawPenLine, endPenDrawing
 } from './tools/pen.js';
 import {
-    startStippleDrawing, drawStippleLine, endStippleDrawing
-} from './tools/stipple.js';
-import {
     startLasso, updateLasso, finishLasso,
     fillPolygon, fillPolygonTransparent, floodFill, floodFillTransparent, floodFillSketch
 } from './tools/fill.js';
@@ -449,7 +446,7 @@ function setupToolPanel() {
                     state.isErasing = true;
                 }
             } else {
-                if (!state.isEraserActive && state.currentTool !== 'stipple') {
+                if (!state.isEraserActive) {
                     // Toggle (only if draw tool is already active)
                     const currentIndex = toggleModes.indexOf(state.currentTool);
                     if (currentIndex !== -1) {
@@ -461,16 +458,11 @@ function setupToolPanel() {
                         updateToneMenuVisibility();
                     }
                 } else {
-                    // Activate (from eraser or stipple)
+                    // Activate
                     state.isEraserActive = false;
                     state.isErasing = false;
-                    // Restore to a draw mode if coming from stipple
-                    if (!toggleModes.includes(state.currentTool)) {
-                        state.currentTool = 'pen';
-                        updateDrawToolIcon();
-                    }
 
-                    // Explicitly update Tone menu visibility when switching
+                    // Explicitly update Tone menu visibility when switching from eraser
                     updateToneMenuVisibility();
                 }
             }
@@ -501,8 +493,6 @@ function setupToolPanel() {
 
             updateDrawToolIcon();
             updateToolButtonStates();
-            updateBrushSizeVisibility();
-            updateBrushSizeSlider();
             hideAllMenus();
         });
     });
@@ -534,24 +524,6 @@ function setupToolPanel() {
 
             hideAllMenus();
         });
-    });
-
-    // Stipple button (independent tool)
-    const stippleBtn = document.getElementById('stippleToolBtn');
-    stippleBtn.addEventListener('pointerdown', (e) => e.preventDefault());
-    stippleBtn.addEventListener('pointerup', () => {
-        hideAllMenus();
-        if (state.currentTool === 'stipple' && !state.isEraserActive) {
-            // Already active, no-op (single tool, no toggle)
-            return;
-        }
-        state.currentTool = 'stipple';
-        state.isEraserActive = false;
-        state.isErasing = false;
-        updateDrawToolIcon();
-        updateToolButtonStates();
-        updateBrushSizeVisibility();
-        updateBrushSizeSlider();
     });
 
     // Initial state
@@ -604,13 +576,8 @@ function updateEraserToolIcon() {
 function updateToolButtonStates() {
     const drawBtn = document.getElementById('drawToolBtn');
     const eraserBtn = document.getElementById('eraserToolBtn');
-    const stippleBtn = document.getElementById('stippleToolBtn');
 
-    const isStipple = state.currentTool === 'stipple' && !state.isEraserActive;
-    const isDraw = !state.isEraserActive && !isStipple;
-
-    drawBtn.classList.toggle('active', isDraw);
-    stippleBtn.classList.toggle('active', isStipple);
+    drawBtn.classList.toggle('active', !state.isEraserActive);
     eraserBtn.classList.toggle('active', state.isEraserActive);
 
     updateBrushSizeVisibility();
@@ -824,7 +791,7 @@ function updateBrushSizeVisibility() {
     // Show slider always, but disable for lasso-based tools (fill, tone, eraser-lasso)
     // Show slider always, but disable for lasso-based tools (fill, tone, eraser-lasso, sketch)
     // Only Pen tool needs slider.
-    const isPenMode = (state.currentTool === 'pen' || state.currentTool === 'stipple') && !state.isEraserActive;
+    const isPenMode = (state.currentTool === 'pen') && !state.isEraserActive;
     const isEraserPen = state.isEraserActive && state.currentEraser === 'pen';
 
     container.classList.toggle('disabled', !(isPenMode || isEraserPen));
@@ -1123,7 +1090,7 @@ async function handlePointerDown(e) {
         } else {
             if ((state.currentTool === 'fill' || state.currentTool === 'sketch' || state.currentTool === 'tone') && state.activePointers.size === 1) {
                 startLasso(e.clientX, e.clientY);
-            } else if (state.currentTool === 'pen' || state.currentTool === 'stipple') {
+            } else if (state.currentTool === 'pen') {
                 state.drawingPending = true;
                 await saveState();
                 if (!state.drawingPending) {
@@ -1131,11 +1098,7 @@ async function handlePointerDown(e) {
                     return;
                 }
                 state.drawingPending = false;
-                if (state.currentTool === 'stipple') {
-                    startStippleDrawing(canvasPoint.x, canvasPoint.y);
-                } else {
-                    startPenDrawing(canvasPoint.x, canvasPoint.y);
-                }
+                startPenDrawing(canvasPoint.x, canvasPoint.y);
             }
         }
         state.strokeMade = true;
@@ -1262,11 +1225,7 @@ async function handlePointerMove(e) {
         if (state.isLassoing) {
             updateLasso(e.clientX, e.clientY);
         } else if (state.isPenDrawing) {
-            if (state.currentTool === 'stipple') {
-                drawStippleLine(canvasPoint.x, canvasPoint.y);
-            } else {
-                drawPenLine(canvasPoint.x, canvasPoint.y);
-            }
+            drawPenLine(canvasPoint.x, canvasPoint.y);
         }
     }
 }
@@ -1398,11 +1357,7 @@ async function handlePointerUp(e) {
                     updateLayerThumbnail(getActiveLayer());
                 }
             } else if (state.isPenDrawing) {
-                if (state.currentTool === 'stipple') {
-                    endStippleDrawing();
-                } else {
-                    await endPenDrawing();
-                }
+                await endPenDrawing();
                 updateLayerThumbnail(getActiveLayer());
             }
             state.drawingPointerId = null;
