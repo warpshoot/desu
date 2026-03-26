@@ -51,7 +51,7 @@ function _scatterDots(cx, cy, pressure) {
     const ctx = getActiveLayerCtx();
     if (!ctx) return;
 
-    const radius = Math.max(1, state.activeBrush.size);
+    const radius = Math.max(1, state.stippleSize);
     // 筆圧でドット数を変える: 弱=1〜2, 強=4〜5
     const dotCount = Math.max(1, Math.round(1 + 4 * pressure));
 
