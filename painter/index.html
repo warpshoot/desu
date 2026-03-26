@@ -36,32 +36,26 @@
 
       <!-- 左下ツールバー: ツール選択のみ -->
     <div id="toolbar-left">
-        <!-- ツールパネル (独立表示) -->
+        <!-- ツールパネル — 3モード -->
         <div id="tool-panel">
-            <!-- 描画ツール -->
-            <div class="tool-btn draw-btn active" id="tool-pen" data-mode="pen" title="ペン">
-                <img src="icons/pen.png" class="tool-icon" alt="Pen">
+            <div class="mode-btn active" id="mode-pen" data-mode="pen" title="ペン">
+                <img src="icons/pen.png" class="tool-icon mode-icon" data-sub="pen" alt="Pen">
+                <img src="icons/stipple.svg" class="tool-icon mode-icon" data-sub="stipple" style="filter: brightness(0); display:none;" alt="Stipple">
             </div>
-            <div class="tool-btn draw-btn" id="tool-fill" data-mode="fill" title="塗りつぶし">
-                <img src="icons/bet.png" class="tool-icon" alt="Fill">
+            <div class="mode-btn" id="mode-fill" data-mode="fill" title="塗り">
+                <img src="icons/bet.png" class="tool-icon mode-icon" data-sub="fill" alt="Fill">
+                <img src="icons/tone.png" class="tool-icon mode-icon" data-sub="tone" style="display:none;" alt="Tone">
+                <img src="icons/ata.png" class="tool-icon mode-icon" data-sub="sketch" style="display:none;" alt="Sketch">
             </div>
-            <div class="tool-btn draw-btn" id="tool-tone" data-mode="tone" title="トーン">
-                <img src="icons/tone.png" class="tool-icon" alt="Tone">
+            <div class="mode-btn" id="mode-eraser" data-mode="eraser" title="消しゴム">
+                <img src="icons/er2.svg" class="tool-icon mode-icon" data-sub="pen" style="filter: brightness(0);" alt="Eraser Pen">
+                <img src="icons/er1.png" class="tool-icon mode-icon" data-sub="lasso" style="filter: brightness(0); display:none;" alt="Eraser Lasso">
             </div>
-            <div class="tool-btn draw-btn" id="tool-sketch" data-mode="sketch" title="スケッチ">
-                <img src="icons/ata.png" class="tool-icon" alt="Sketch">
-            </div>
-            <div class="tool-btn draw-btn" id="tool-stipple" data-mode="stipple" title="点描">
-                <img src="icons/stipple.svg" class="tool-icon" style="filter: brightness(0);" alt="Stipple">
-            </div>
+        </div>
 
-            <!-- 消しゴムツール -->
-            <div class="tool-btn eraser-btn" id="tool-eraser-pen" data-mode="pen" title="ペン消しゴム">
-                <img src="icons/er2.svg" class="tool-icon" style="filter: brightness(0);" alt="Eraser Pen">
-            </div>
-            <div class="tool-btn eraser-btn" id="tool-eraser-lasso" data-mode="lasso" title="投げ縄消しゴム">
-                <img src="icons/er1.png" class="tool-icon" style="filter: brightness(0);" alt="Eraser Lasso">
-            </div>
+        <!-- フライアウトサブツールメニュー (ホールド→ドラッグで選択) -->
+        <div id="flyout-menu" class="flyout-menu hidden">
+            <!-- JSで動的に生成 -->
         </div>
 
         <!-- 補助操作パネル (Undo / Redo) -->
@@ -220,37 +214,7 @@
         </div>
     </div>
 
-    <!-- 描画ツール選択メニュー (長押しポップオーバー) -->
-    <div id="draw-tool-menu" class="tool-menu hidden">
-        <div class="menu-item" data-mode="pen">
-            <img src="icons/pen.png" alt="Pen">
-        </div>
-        <div class="menu-item" data-mode="fill">
-            <img src="icons/bet.png" alt="Fill">
-        </div>
-        <div class="menu-item" data-mode="tone">
-            <img src="icons/tone.png" alt="Tone">
-        </div>
-        <div class="menu-item" data-mode="sketch">
-            <img src="icons/ata.png" alt="Sketch">
-        </div>
-    </div>
-
-    <!-- 消しゴムツール選択メニュー (長押しポップオーバー) -->
-    <div id="eraser-tool-menu" class="tool-menu hidden">
-        <div class="menu-item" data-mode="eraser_lasso">
-            <img src="icons/er1.png" alt="Eraser Lasso">
-        </div>
-        <div class="menu-item" data-mode="eraser_pen">
-            <img src="icons/er2.svg" alt="Eraser Pen">
-        </div>
-        <div class="menu-item eraser-clear" data-mode="layer_clear">
-            <svg viewBox="0 0 24 24" class="layer-clear-icon">
-                <path
-                    d="M12 4 L12 2 M12 22 L12 20 M4 12 L2 12 M22 12 L20 12 M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 M6.34 17.66 L4.93 19.07 M19.07 4.93 L17.66 6.34" />
-            </svg>
-        </div>
-    </div>
+    <!-- (旧ツール選択メニューは flyout-menu に統合済み) -->
 
     <!-- トーン選択メニュー (ツールバーの上に表示) -->
     <div id="tone-menu" class="tone-menu hidden">
