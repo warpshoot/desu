@@ -25,6 +25,11 @@ export function floodFill(startX, startY, fillColor) {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
+    // CSS座標を物理ピクセル座標に変換
+    const dpr = window.devicePixelRatio || 1;
+    startX = Math.round(startX * dpr);
+    startY = Math.round(startY * dpr);
+
     const w = canvas.width, h = canvas.height;
 
     if (startX < 0 || startX >= w || startY < 0 || startY >= h) return;
@@ -100,6 +105,11 @@ export function floodFillTransparent(startX, startY) {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
+    // CSS座標を物理ピクセル座標に変換
+    const dpr = window.devicePixelRatio || 1;
+    startX = Math.round(startX * dpr);
+    startY = Math.round(startY * dpr);
+
     const w = canvas.width, h = canvas.height;
 
     if (startX < 0 || startX >= w || startY < 0 || startY >= h) return;
@@ -174,7 +184,10 @@ export function fillPolygonTransparent(points) {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
-    const bounds = getBounds(points, canvas.width, canvas.height);
+    // getImageData/putImageData は物理ピクセル座標で動作するため dpr でスケーリング
+    const dpr = window.devicePixelRatio || 1;
+    const physicalPoints = points.map(p => ({ x: p.x * dpr, y: p.y * dpr }));
+    const bounds = getBounds(physicalPoints, canvas.width, canvas.height);
 
     if (bounds.width <= 0 || bounds.height <= 0) return;
 
@@ -186,7 +199,7 @@ export function fillPolygonTransparent(points) {
             const canvasX = bounds.minX + px;
             const canvasY = bounds.minY + py;
 
-            if (isPointInPolygon(canvasX, canvasY, points)) {
+            if (isPointInPolygon(canvasX, canvasY, physicalPoints)) {
                 const i = (py * bounds.width + px) * 4;
                 data[i + 3] = 0;
             }
@@ -203,7 +216,10 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
-    const bounds = getBounds(points, canvas.width, canvas.height);
+    // getImageData/putImageData は物理ピクセル座標で動作するため dpr でスケーリング
+    const dpr = window.devicePixelRatio || 1;
+    const physicalPoints = points.map(p => ({ x: p.x * dpr, y: p.y * dpr }));
+    const bounds = getBounds(physicalPoints, canvas.width, canvas.height);
 
     if (bounds.width <= 0 || bounds.height <= 0) return;
 
@@ -215,7 +231,7 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
             const canvasX = bounds.minX + px;
             const canvasY = bounds.minY + py;
 
-            if (isPointInPolygon(canvasX, canvasY, points)) {
+            if (isPointInPolygon(canvasX, canvasY, physicalPoints)) {
                 const i = (py * bounds.width + px) * 4;
 
                 const dr = data[i];
@@ -255,6 +271,11 @@ export function floodFillSketch(startX, startY) {
     if (!canvas || !ctx) {
         return;
     }
+
+    // CSS座標を物理ピクセル座標に変換
+    const dpr = window.devicePixelRatio || 1;
+    startX = Math.round(startX * dpr);
+    startY = Math.round(startY * dpr);
 
     const w = canvas.width, h = canvas.height;
     if (startX < 0 || startX >= w || startY < 0 || startY >= h) return;

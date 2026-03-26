@@ -67,6 +67,7 @@ export function loadLocalState() {
             }
 
             // Restore content
+            const dpr = window.devicePixelRatio || 1;
             let loadedCount = 0;
             data.layers.forEach((saved, index) => {
                 if (index >= layers.length) return;
@@ -88,7 +89,7 @@ export function loadLocalState() {
                 const img = new Image();
                 img.onload = () => {
                     layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
-                    layer.ctx.drawImage(img, 0, 0);
+                    layer.ctx.drawImage(img, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
                     loadedCount++;
                     if (loadedCount === data.layers.length) {
                         resolve(true);
@@ -180,6 +181,7 @@ export function importProject(file) {
                 }
 
                 // 3. Restore content
+                const dpr = window.devicePixelRatio || 1;
                 let loadedCount = 0;
                 data.layers.forEach((saved, index) => {
                     if (index >= layers.length) return;
@@ -193,7 +195,7 @@ export function importProject(file) {
                     const img = new Image();
                     img.onload = () => {
                         layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
-                        layer.ctx.drawImage(img, 0, 0);
+                        layer.ctx.drawImage(img, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
                         loadedCount++;
                         if (loadedCount === data.layers.length) {
                             resolve(true);
