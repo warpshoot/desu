@@ -913,6 +913,11 @@ function setupPointerEvents() {
 
     // Wheel for zoom
     eventCanvas.addEventListener('wheel', handleWheel, { passive: false });
+
+    // Prevent iOS Safari pinch-to-zoom (gesturestart/change/end are Safari-proprietary)
+    document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
+    document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
+    document.addEventListener('gestureend', (e) => e.preventDefault(), { passive: false });
 }
 
 async function handlePointerDown(e) {
