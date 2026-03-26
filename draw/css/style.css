@@ -262,6 +262,10 @@ body {
     filter: brightness(0);
 }
 
+#stippleToolBtn .tool-icon {
+    filter: brightness(0);
+}
+
 
 
 .tool-btn:active {

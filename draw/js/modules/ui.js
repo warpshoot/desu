@@ -409,7 +409,7 @@ function setupLayerPanel() {
 function setupToolPanel() {
     const drawBtn = document.getElementById('drawToolBtn');
     const eraserBtn = document.getElementById('eraserToolBtn');
-    const drawModes = ['pen', 'fill', 'tone', 'sketch', 'stipple'];
+    const drawModes = ['pen', 'fill', 'tone', 'sketch'];
     // Eraser modes for state (mapping from menu items handled separately or matched here)
     const eraserToggleModes = ['lasso', 'pen'];
 
@@ -449,7 +449,7 @@ function setupToolPanel() {
                     state.isErasing = true;
                 }
             } else {
-                if (!state.isEraserActive) {
+                if (!state.isEraserActive && state.currentTool !== 'stipple') {
                     // Toggle (only if draw tool is already active)
                     const currentIndex = toggleModes.indexOf(state.currentTool);
                     if (currentIndex !== -1) {
@@ -461,11 +461,16 @@ function setupToolPanel() {
                         updateToneMenuVisibility();
                     }
                 } else {
-                    // Activate
+                    // Activate (from eraser or stipple)
                     state.isEraserActive = false;
                     state.isErasing = false;
+                    // Restore to a draw mode if coming from stipple
+                    if (!toggleModes.includes(state.currentTool)) {
+                        state.currentTool = 'pen';
+                        updateDrawToolIcon();
+                    }
 
-                    // Explicitly update Tone menu visibility when switching from eraser
+                    // Explicitly update Tone menu visibility when switching
                     updateToneMenuVisibility();
                 }
             }
@@ -496,6 +501,8 @@ function setupToolPanel() {
 
             updateDrawToolIcon();
             updateToolButtonStates();
+            updateBrushSizeVisibility();
+            updateBrushSizeSlider();
             hideAllMenus();
         });
     });
@@ -529,6 +536,24 @@ function setupToolPanel() {
         });
     });
 
+    // Stipple button (independent tool)
+    const stippleBtn = document.getElementById('stippleToolBtn');
+    stippleBtn.addEventListener('pointerdown', (e) => e.preventDefault());
+    stippleBtn.addEventListener('pointerup', () => {
+        hideAllMenus();
+        if (state.currentTool === 'stipple' && !state.isEraserActive) {
+            // Already active, no-op (single tool, no toggle)
+            return;
+        }
+        state.currentTool = 'stipple';
+        state.isEraserActive = false;
+        state.isErasing = false;
+        updateDrawToolIcon();
+        updateToolButtonStates();
+        updateBrushSizeVisibility();
+        updateBrushSizeSlider();
+    });
+
     // Initial state
     updateToolButtonStates();
 
@@ -548,7 +573,6 @@ function updateDrawToolIcon() {
         case 'fill': selector = '.tool-fill'; break;
         case 'sketch': selector = '.tool-sketch'; break;
         case 'tone': selector = '.tool-tone'; break;
-        case 'stipple': selector = '.tool-stipple'; break;
         default: selector = '.tool-pen'; break;
     }
 
@@ -580,8 +604,13 @@ function updateEraserToolIcon() {
 function updateToolButtonStates() {
     const drawBtn = document.getElementById('drawToolBtn');
     const eraserBtn = document.getElementById('eraserToolBtn');
+    const stippleBtn = document.getElementById('stippleToolBtn');
 
-    drawBtn.classList.toggle('active', !state.isEraserActive);
+    const isStipple = state.currentTool === 'stipple' && !state.isEraserActive;
+    const isDraw = !state.isEraserActive && !isStipple;
+
+    drawBtn.classList.toggle('active', isDraw);
+    stippleBtn.classList.toggle('active', isStipple);
     eraserBtn.classList.toggle('active', state.isEraserActive);
 
     updateBrushSizeVisibility();
