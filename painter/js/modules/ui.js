@@ -1138,6 +1138,7 @@ async function handlePointerMove(e) {
             state.translateY += center.y - state.lastPinchCenter.y;
 
             applyTransform();
+            flashBrushSizePreview();
         }
 
         state.lastPinchDist = dist;
@@ -1366,6 +1367,48 @@ function handleWheel(e) {
     state.scale = newScale;
 
     applyTransform();
+    flashBrushSizePreview();
+}
+
+// ============================================
+// Brush Size Preview (module-level so zoom handlers can trigger it)
+// ============================================
+
+let _brushPreviewEl = null;
+let _brushPreviewTimeout;
+
+function flashBrushSizePreview() {
+    if (!_brushPreviewEl) {
+        _brushPreviewEl = document.createElement('div');
+        _brushPreviewEl.id = 'brush-size-preview';
+        _brushPreviewEl.style.position = 'fixed';
+        _brushPreviewEl.style.top = '50%';
+        _brushPreviewEl.style.left = '50%';
+        _brushPreviewEl.style.transform = 'translate(-50%, -50%)';
+        _brushPreviewEl.style.backgroundColor = 'rgba(0, 0, 0, 0.2)';
+        _brushPreviewEl.style.border = '1px solid rgba(0, 0, 0, 0.5)';
+        _brushPreviewEl.style.borderRadius = '50%';
+        _brushPreviewEl.style.pointerEvents = 'none';
+        _brushPreviewEl.style.zIndex = '9999';
+        _brushPreviewEl.style.display = 'none';
+        _brushPreviewEl.style.transition = 'opacity 0.15s';
+        document.body.appendChild(_brushPreviewEl);
+    }
+
+    const size = state.isEraserActive ? state.eraserSize : state.activeBrush.size;
+    const displaySize = size * state.scale;
+    _brushPreviewEl.style.width = `${displaySize}px`;
+    _brushPreviewEl.style.height = `${displaySize}px`;
+    _brushPreviewEl.style.display = 'block';
+    _brushPreviewEl.style.opacity = '1';
+
+    clearTimeout(_brushPreviewTimeout);
+    _brushPreviewTimeout = setTimeout(() => {
+        _brushPreviewEl.style.opacity = '0';
+        setTimeout(() => {
+            if (_brushPreviewEl && _brushPreviewEl.style.opacity === '0') _brushPreviewEl.style.display = 'none';
+        }, 200);
+    }, 800);
 }
 
 // ============================================
@@ -1405,24 +1448,6 @@ function setupColorPickers() {
     const brushSizeSlider = document.getElementById('brushSize');
     const sizeDisplay = document.getElementById('sizeDisplay');
 
-    // 画面中央に出すサイズプレビュー用要素
-    const brushPreview = document.createElement('div');
-    brushPreview.id = 'brush-size-preview';
-    brushPreview.style.position = 'fixed';
-    brushPreview.style.top = '50%';
-    brushPreview.style.left = '50%';
-    brushPreview.style.transform = 'translate(-50%, -50%)';
-    brushPreview.style.backgroundColor = 'rgba(0, 0, 0, 0.2)';
-    brushPreview.style.border = '1px solid rgba(0, 0, 0, 0.5)';
-    brushPreview.style.borderRadius = '50%';
-    brushPreview.style.pointerEvents = 'none';
-    brushPreview.style.zIndex = '9999';
-    brushPreview.style.display = 'none';
-    brushPreview.style.transition = 'opacity 0.15s';
-    document.body.appendChild(brushPreview);
-    
-    let previewTimeout;
-
     brushSizeSlider.addEventListener('input', (e) => {
         const size = parseInt(e.target.value);
         sizeDisplay.textContent = size;
@@ -1433,16 +1458,9 @@ function setupColorPickers() {
             state.activeBrush.size = size;
         }
 
-        // センタープレビューは常に正円
-        const displaySize = size * state.scale;
-        brushPreview.style.width = `${displaySize}px`;
-        brushPreview.style.height = `${displaySize}px`;
-        brushPreview.style.borderRadius = '50%';
-        brushPreview.style.backgroundColor = 'rgba(0, 0, 0, 0.2)';
+        // 画面倍率を反映したサイズでプレビュー表示
+        flashBrushSizePreview();
 
-        brushPreview.style.display = 'block';
-        brushPreview.style.opacity = '1';
-        
         // パレット側のドットもリアルタイム更新
         const activeIdx = state.activeBrushIndex;
         const activeSlotDot = document.querySelector(`.brush-slot[data-idx="${activeIdx}"] .brush-dot-preview`);
@@ -1453,14 +1471,6 @@ function setupColorPickers() {
             // 不透明度も反映
             activeSlotDot.style.opacity = state.activeBrush.opacity;
         }
-
-        clearTimeout(previewTimeout);
-        previewTimeout = setTimeout(() => {
-            brushPreview.style.opacity = '0';
-            setTimeout(() => {
-                if(brushPreview.style.opacity === '0') brushPreview.style.display = 'none';
-            }, 200);
-        }, 800);
     });
 
     // Prevent events from bubbling to canvas
@@ -1670,6 +1680,7 @@ function setupZoomControls() {
         state.translateX = 0;
         state.translateY = 0;
         applyTransform();
+        flashBrushSizePreview();
     });
 }
 
@@ -2140,11 +2151,13 @@ function setupKeyboardShortcuts() {
                 e.preventDefault();
                 state.scale = Math.min(state.scale * 1.2, 10);
                 applyTransform();
+                flashBrushSizePreview();
             }
             if (e.key === '-' || e.key === '_') {
                 e.preventDefault();
                 state.scale = Math.max(state.scale / 1.2, 0.1);
                 applyTransform();
+                flashBrushSizePreview();
             }
             if (e.key === '0') {
                 e.preventDefault();
@@ -2152,6 +2165,7 @@ function setupKeyboardShortcuts() {
                 state.translateX = 0;
                 state.translateY = 0;
                 applyTransform();
+                flashBrushSizePreview();
             }
         }
 
