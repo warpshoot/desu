@@ -203,10 +203,25 @@ export const state = {
     inkColor: '#000000',
     canvasColor: '#ffffff',
 
-    // Tool settings (decoupled from layers)
-    currentTool: 'pen',      // 'pen', 'fill', 'sketch', 'tone', 'stipple'
-    currentEraser: 'pen',  // 'lasso', 'pen'
-    isEraserActive: false,   // true when eraser tool is selected
+    // Tool settings — 3-mode architecture
+    // mode:    'pen' (freehand stroke) | 'fill' (lasso/bucket) | 'eraser' (erase)
+    // subTool: per-mode sub-tool selection
+    //   pen:    'pen' | 'stipple'
+    //   fill:   'fill' | 'tone' | 'sketch'
+    //   eraser: 'pen' | 'lasso'
+    mode: 'pen',
+    subTool: 'pen',
+
+    // Backward-compatible getters (used by pen.js, fill.js, ui.js internals)
+    get currentTool() {
+        if (this.mode === 'eraser') return this.mode;
+        return this.subTool;
+    },
+    get isEraserActive() { return this.mode === 'eraser'; },
+    get currentEraser() { return this.mode === 'eraser' ? this.subTool : 'pen'; },
+    get isErasing() { return this.mode === 'eraser' && this.subTool === 'pen'; },
+    set isErasing(_v) { /* no-op: derived from mode */ },
+
     activeLayer: 1,          // ID of the currently active layer
     pressureEnabled: true,   // toggle for smooth brush vs binary brush
 

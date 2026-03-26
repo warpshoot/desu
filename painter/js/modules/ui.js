@@ -383,58 +383,85 @@ function setupLayerPanel() {
 }
 
 // ============================================
-// Tool Panel (Draw + Eraser)
+// Tool Panel — 3-Mode Architecture
 // ============================================
 
-function setupToolPanel() {
-    const drawButtons = document.querySelectorAll('.draw-btn');
-    const eraserButtons = document.querySelectorAll('.eraser-btn');
+// Sub-tool definitions per mode
+const MODE_SUB_TOOLS = {
+    pen:    ['pen', 'stipple'],
+    fill:   ['fill', 'tone', 'sketch'],
+    eraser: ['pen', 'lasso']
+};
 
-    drawButtons.forEach(btn => {
+// Icon sources for flyout items
+const SUB_TOOL_ICONS = {
+    pen:     { pen: 'icons/pen.png', stipple: 'icons/stipple.svg' },
+    fill:    { fill: 'icons/bet.png', tone: 'icons/tone.png', sketch: 'icons/ata.png' },
+    eraser:  { pen: 'icons/er2.svg', lasso: 'icons/er1.png' }
+};
+
+// Track last selected sub-tool per mode (restored on mode switch)
+const _lastSubTool = { pen: 'pen', fill: 'fill', eraser: 'pen' };
+
+// Flyout gesture state
+let _flyoutMode = null;      // which mode's flyout is open
+let _flyoutHoldTimer = null;
+let _flyoutStartPid = null;   // pointer id
+const FLYOUT_HOLD_MS = 250;
+
+function setupToolPanel() {
+    const modeButtons = document.querySelectorAll('.mode-btn');
+
+    modeButtons.forEach(btn => {
+        // --- Hold detection: pointerdown starts timer ---
+        btn.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            _flyoutStartPid = e.pointerId;
+
+            _flyoutHoldTimer = setTimeout(() => {
+                _flyoutHoldTimer = null;
+                openFlyout(btn.dataset.mode, btn);
+            }, FLYOUT_HOLD_MS);
+        });
+
+        // --- Pointer up on the button: tap (no hold) ---
         btn.addEventListener('pointerup', (e) => {
             e.preventDefault();
             e.stopPropagation();
 
-            const mode = btn.dataset.mode;
-            const isToneButton = (mode === 'tone');
-            const isAlreadyActive = !state.isEraserActive && state.currentTool === mode;
-            
-            const menu = document.getElementById('tone-menu');
-            const wasMenuVisible = menu && !menu.classList.contains('hidden');
-
-            // 一旦すべてのメニューを閉じる
-            hideAllMenus();
-
-            // トーンツールの再タップ時かつ、メニューが表示されていた場合は
-            // そのまま閉じた状態（hideAllMenusの結果）を維持して終了
-            if (isToneButton && isAlreadyActive && wasMenuVisible) {
-                return;
+            // If hold timer is still running, it was a tap
+            if (_flyoutHoldTimer) {
+                clearTimeout(_flyoutHoldTimer);
+                _flyoutHoldTimer = null;
+                handleModeTap(btn.dataset.mode);
             }
+            // If flyout is open, pointerup on the button itself → close without change
+            if (_flyoutMode) {
+                closeFlyout();
+            }
+        });
 
-            // それ以外（新規切り替え、または閉じていたメニューを開く）
-            state.isEraserActive = false;
-            state.isErasing = false;
-            state.currentTool = mode;
-            
-            updateToolButtonStates();
-            updateToneMenuVisibility(); 
-            updateBrushSizeVisibility();
-            updateBrushSizeSlider();
+        btn.addEventListener('pointercancel', () => {
+            if (_flyoutHoldTimer) { clearTimeout(_flyoutHoldTimer); _flyoutHoldTimer = null; }
+            closeFlyout();
         });
     });
 
-    eraserButtons.forEach(btn => {
-        btn.addEventListener('pointerup', (e) => {
-            e.preventDefault();
-            hideAllMenus();
-            state.isEraserActive = true;
-            state.isErasing = true;
-            state.currentEraser = btn.dataset.mode;
-            updateToolButtonStates();
-            updateToneMenuVisibility();
-            updateBrushSizeVisibility();
-            updateBrushSizeSlider();
-        });
+    // --- Global move/up for flyout drag-to-select ---
+    document.addEventListener('pointermove', (e) => {
+        if (!_flyoutMode) return;
+        updateFlyoutHover(e.clientX, e.clientY);
+    });
+
+    document.addEventListener('pointerup', (e) => {
+        if (!_flyoutMode) return;
+        // Find which flyout item the pointer is over
+        const item = getFlyoutItemAt(e.clientX, e.clientY);
+        if (item) {
+            selectSubTool(_flyoutMode, item.dataset.sub);
+        }
+        closeFlyout();
     });
 
     // Undo / Redo
@@ -462,37 +489,136 @@ function setupToolPanel() {
     updateToneMenuVisibility();
 }
 
-function updateDrawToolIcon() { /* 廃止: 独立ボタンになったため不要 */ }
-function updateEraserToolIcon() { /* 廃止: 独立ボタンになったため不要 */ }
+// --- Tap: switch to this mode (keep previous sub-tool) ---
+function handleModeTap(mode) {
+    const toneMenu = document.getElementById('tone-menu');
+    const wasOnTone = state.mode === 'fill' && state.subTool === 'tone';
+    const wasToneMenuVisible = toneMenu && !toneMenu.classList.contains('hidden');
 
+    hideAllMenus();
+
+    // If tapping the same mode with tone menu visible → just close tone menu
+    if (mode === 'fill' && state.mode === 'fill' && wasOnTone && wasToneMenuVisible) {
+        return;
+    }
+
+    state.mode = mode;
+    state.subTool = _lastSubTool[mode];
+
+    updateToolButtonStates();
+    updateToneMenuVisibility();
+    updateBrushSizeVisibility();
+    updateBrushSizeSlider();
+}
+
+// --- Select a specific sub-tool ---
+function selectSubTool(mode, sub) {
+    state.mode = mode;
+    state.subTool = sub;
+    _lastSubTool[mode] = sub;
+
+    updateModeButtonIcon(mode, sub);
+    updateToolButtonStates();
+    updateToneMenuVisibility();
+    updateBrushSizeVisibility();
+    updateBrushSizeSlider();
+}
+
+// --- Update the mode button to show the selected sub-tool icon ---
+function updateModeButtonIcon(mode, sub) {
+    const btn = document.getElementById(`mode-${mode}`);
+    if (!btn) return;
+    btn.querySelectorAll('.mode-icon').forEach(img => {
+        img.style.display = img.dataset.sub === sub ? '' : 'none';
+    });
+}
+
+// --- Flyout open/close ---
+function openFlyout(mode, anchorBtn) {
+    _flyoutMode = mode;
+    const menu = document.getElementById('flyout-menu');
+    menu.innerHTML = '';
+
+    const subs = MODE_SUB_TOOLS[mode];
+    const icons = SUB_TOOL_ICONS[mode];
+
+    subs.forEach(sub => {
+        const item = document.createElement('div');
+        item.className = 'flyout-item';
+        item.dataset.sub = sub;
+        if (state.mode === mode && state.subTool === sub) {
+            item.classList.add('current');
+        }
+        const img = document.createElement('img');
+        img.src = icons[sub];
+        // Apply brightness(0) for SVG icons (eraser, stipple)
+        if (icons[sub].endsWith('.svg')) {
+            img.style.filter = 'brightness(0)';
+        }
+        item.appendChild(img);
+        menu.appendChild(item);
+    });
+
+    // Position: right of the anchor button
+    const rect = anchorBtn.getBoundingClientRect();
+    menu.style.left = (rect.right + 8) + 'px';
+    menu.style.top = (rect.top + rect.height / 2) + 'px';
+    menu.style.transform = 'translateY(-50%)';
+    menu.classList.remove('hidden');
+}
+
+function closeFlyout() {
+    _flyoutMode = null;
+    const menu = document.getElementById('flyout-menu');
+    if (menu) {
+        menu.classList.add('hidden');
+        // Clear hover states
+        menu.querySelectorAll('.flyout-item').forEach(el => el.classList.remove('hover'));
+    }
+}
+
+function updateFlyoutHover(clientX, clientY) {
+    const menu = document.getElementById('flyout-menu');
+    if (!menu) return;
+    menu.querySelectorAll('.flyout-item').forEach(item => {
+        const r = item.getBoundingClientRect();
+        const inside = clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
+        item.classList.toggle('hover', inside);
+    });
+}
+
+function getFlyoutItemAt(clientX, clientY) {
+    const menu = document.getElementById('flyout-menu');
+    if (!menu) return null;
+    for (const item of menu.querySelectorAll('.flyout-item')) {
+        const r = item.getBoundingClientRect();
+        if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
+            return item;
+        }
+    }
+    return null;
+}
+
+// --- Update active states on all mode buttons ---
 function updateToolButtonStates() {
-    document.querySelectorAll('.draw-btn').forEach(btn => {
-        if (!state.isEraserActive && state.currentTool === btn.dataset.mode) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        const isActive = state.mode === btn.dataset.mode;
+        btn.classList.toggle('active', isActive);
     });
 
-    document.querySelectorAll('.eraser-btn').forEach(btn => {
-        if (state.isEraserActive && state.currentEraser === btn.dataset.mode) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
-    
-    // ブラシパレット (ペン先) は「ペン」モードの時だけ有効
+    // Tone indicator on fill button
+    const fillBtn = document.getElementById('mode-fill');
+    if (fillBtn) {
+        fillBtn.classList.toggle('tone-active', state.mode === 'fill' && state.subTool === 'tone');
+    }
+
+    // ブラシパレット (ペン先) は「ペン」モードのpen時だけ有効
     const brushPalette = document.getElementById('brush-palette');
     const brushSettingsPanel = document.getElementById('brush-settings-panel');
-    const isPenMode = !state.isEraserActive && state.currentTool === 'pen';
+    const isPenMode = state.mode === 'pen' && state.subTool === 'pen';
 
     if (brushPalette) {
-        if (isPenMode) {
-            brushPalette.classList.remove('disabled');
-        } else {
-            brushPalette.classList.add('disabled');
-        }
+        brushPalette.classList.toggle('disabled', !isPenMode);
     }
 
     // ペン以外を選んだらブラシ設定パネルを閉じる
@@ -507,38 +633,7 @@ function updateToolButtonStates() {
 // Tool Menus (Long Press Popovers)
 // ============================================
 
-function showToolMenu(menuId, anchorBtn) {
-    hideAllMenus();
-
-    const menu = document.getElementById(menuId);
-    if (!menu) return;
-
-    // Remove active class from all menu items
-    menu.querySelectorAll('.menu-item').forEach(item => {
-        item.classList.remove('active');
-    });
-
-    // Add active class to current tool
-    if (menuId === 'draw-tool-menu') {
-        const activeMode = state.currentTool;
-        const activeItem = menu.querySelector(`[data-mode="${activeMode}"]`);
-        if (activeItem) activeItem.classList.add('active');
-    } else if (menuId === 'eraser-tool-menu') {
-        const activeMode = state.currentEraser === 'lasso' ? 'eraser_lasso' : 'eraser_pen';
-        const activeItem = menu.querySelector(`[data-mode="${activeMode}"]`);
-        if (activeItem) activeItem.classList.add('active');
-    }
-
-    const rect = anchorBtn.getBoundingClientRect();
-    menu.style.left = rect.right + 10 + 'px';
-    menu.style.top = rect.top + 'px';
-    menu.classList.remove('hidden');
-
-    // Close on outside click
-    setTimeout(() => {
-        document.addEventListener('pointerdown', handleOutsideClick);
-    }, 10);
-}
+// showToolMenu is no longer used — replaced by flyout system
 
 function showLayerMenu(anchorBtn) {
     hideAllMenus();
@@ -708,7 +803,7 @@ function hideAllMenus() {
 }
 
 function handleOutsideClick(e) {
-    if (!e.target.closest('.tool-menu') && !e.target.closest('.layer-btn') && !e.target.closest('.tool-btn')) {
+    if (!e.target.closest('.tool-menu') && !e.target.closest('.layer-btn') && !e.target.closest('.tool-btn') && !e.target.closest('.mode-btn')) {
         hideAllMenus();
     }
 }
@@ -728,20 +823,16 @@ function updateActiveLayerIndicator() {
 function updateBrushSizeVisibility() {
     const container = document.getElementById('size-slider-container');
 
-    // Show slider always, but disable for lasso-based tools (fill, tone, eraser-lasso)
-    // Show slider always, but disable for lasso-based tools (fill, tone, eraser-lasso, sketch)
-    // Only Pen tool needs slider.
-    const isPenMode = (state.currentTool === 'pen' || state.currentTool === 'stipple') && !state.isEraserActive;
-    const isEraserPen = state.isEraserActive && state.currentEraser === 'pen';
-
-    container.classList.toggle('disabled', !(isPenMode || isEraserPen));
+    // ペン系 (pen/stipple) と消しゴム・ペン時のみスライダー有効
+    const needsSize = state.mode === 'pen' || (state.mode === 'eraser' && state.subTool === 'pen');
+    container.classList.toggle('disabled', !needsSize);
 }
 
 function updateBrushSizeSlider() {
     const slider = document.getElementById('brushSize');
     const display = document.getElementById('sizeDisplay');
 
-    if (state.isEraserActive) {
+    if (state.mode === 'eraser') {
         slider.value = state.eraserSize;
         display.textContent = state.eraserSize;
     } else {
@@ -1014,36 +1105,37 @@ async function handlePointerDown(e) {
 
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
-        if (state.isEraserActive) {
-            if (state.currentEraser === 'lasso' && state.activePointers.size === 1) {
-                startLasso(e.clientX, e.clientY);
-            } else if (state.currentEraser === 'pen') {
-                state.drawingPending = true;
-                await saveState();
-                if (!state.drawingPending) {
-                    state.undoStack.pop(); // Revert save if aborted
-                    return;
-                }
-                state.drawingPending = false;
-                state.isErasing = true;
+        // --- Mode-based dispatch ---
+        if (state.mode === 'pen') {
+            // Pen mode: freehand stroke (pen or stipple)
+            state.drawingPending = true;
+            await saveState();
+            if (!state.drawingPending) {
+                state.undoStack.pop();
+                return;
+            }
+            state.drawingPending = false;
+            if (state.subTool === 'stipple') {
+                startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
+            } else {
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
-        } else {
-            if ((state.currentTool === 'fill' || state.currentTool === 'sketch' || state.currentTool === 'tone') && state.activePointers.size === 1) {
+        } else if (state.mode === 'fill') {
+            // Fill mode: lasso/bucket (fill, tone, sketch)
+            startLasso(e.clientX, e.clientY);
+        } else if (state.mode === 'eraser') {
+            if (state.subTool === 'lasso') {
                 startLasso(e.clientX, e.clientY);
-            } else if (state.currentTool === 'pen' || state.currentTool === 'stipple') {
+            } else {
+                // Eraser pen: freehand erase
                 state.drawingPending = true;
                 await saveState();
                 if (!state.drawingPending) {
-                    state.undoStack.pop(); // Revert save if aborted
+                    state.undoStack.pop();
                     return;
                 }
                 state.drawingPending = false;
-                if (state.currentTool === 'stipple') {
-                    startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
-                } else {
-                    startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
-                }
+                startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
         }
         state.strokeMade = true;
@@ -1173,7 +1265,7 @@ async function handlePointerMove(e) {
             const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
             for (const ev of events) {
                 const pt = getCanvasPoint(ev.clientX, ev.clientY);
-                if (state.currentTool === 'stipple') {
+                if (state.mode === 'pen' && state.subTool === 'stipple') {
                     drawStippleLine(pt.x, pt.y, ev.pressure);
                 } else {
                     drawPenLine(pt.x, pt.y, ev.pressure);
@@ -1247,62 +1339,37 @@ async function handlePointerUp(e) {
         };
         updateDebugDisplay();
 
-        // Handle Flood Fill Tap/Click
-
-        if (duration < 300 && !state.didInteract && !state.strokeMade && !state.wasPanning && !state.wasPinching && state.maxFingers === 1) {
-            const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
-
-            // Fill tool tap
-            if (state.currentTool === 'fill' && !state.isEraserActive) {
-                await saveState();
-                floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), hexToRgba(state.color));
-                updateLayerThumbnail(getActiveLayer());
-            } else if (state.currentTool === 'tone' && !state.isEraserActive) {
-                // Tone fill tap
-                await saveState();
-                floodFillTone(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
-                updateLayerThumbnail(getActiveLayer());
-            } else if (state.isEraserActive && state.currentEraser === 'lasso') {
-                // Eraser does not have tap fill (could add flood erase?)
-            }
-        }
-
         // Finish Drawing Actions
         if (e.pointerId === state.drawingPointerId) {
             if (state.isLassoing) {
                 const points = finishLasso();
-
-                // Check if this was a click (minimal movement) rather than a drag
                 const wasClick = pointer && pointer.totalMove < 5;
 
-
                 if (wasClick && duration < 300 && !state.wasPanning && !state.wasPinching) {
-                    // Click detected - trigger flood fill
+                    // Tap detected → flood fill
                     const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
+                    const fx = Math.floor(canvasPoint.x);
+                    const fy = Math.floor(canvasPoint.y);
 
-                    if (state.currentTool === 'fill' && !state.isEraserActive) {
-                        await saveState();
-                        floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), [0, 0, 0, 255]);
-                        updateLayerThumbnail(getActiveLayer());
-                    } else if (state.currentTool === 'tone' && !state.isEraserActive) {
-                        await saveState();
-                        floodFillTone(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
-                        updateLayerThumbnail(getActiveLayer());
-                    } else if (state.currentTool === 'sketch' && !state.isEraserActive) {
-                        await saveState();
-                        floodFillSketch(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
-                        updateLayerThumbnail(getActiveLayer());
-                    } else if (state.isEraserActive && state.currentEraser === 'lasso') {
-                        await saveState();
-                        floodFillTransparent(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
-                        updateLayerThumbnail(getActiveLayer());
-                    }
-                } else if (points && points.length >= 3 && !state.wasPanning && !state.wasPinching) {
-                    // Drag detected - normal polygon fill
                     await saveState();
-                    if (state.isEraserActive) {
+                    if (state.mode === 'fill') {
+                        if (state.subTool === 'fill') {
+                            floodFill(fx, fy, [0, 0, 0, 255]);
+                        } else if (state.subTool === 'tone') {
+                            floodFillTone(fx, fy);
+                        } else if (state.subTool === 'sketch') {
+                            floodFillSketch(fx, fy);
+                        }
+                    } else if (state.mode === 'eraser' && state.subTool === 'lasso') {
+                        floodFillTransparent(fx, fy);
+                    }
+                    updateLayerThumbnail(getActiveLayer());
+                } else if (points && points.length >= 3 && !state.wasPanning && !state.wasPinching) {
+                    // Drag detected → polygon fill
+                    await saveState();
+                    if (state.mode === 'eraser') {
                         fillPolygonTransparent(points);
-                    } else if (state.currentTool === 'tone') {
+                    } else if (state.subTool === 'tone') {
                         fillTone(points);
                     } else {
                         fillPolygon(points);
@@ -1310,7 +1377,7 @@ async function handlePointerUp(e) {
                     updateLayerThumbnail(getActiveLayer());
                 }
             } else if (state.isPenDrawing) {
-                if (state.currentTool === 'stipple') {
+                if (state.mode === 'pen' && state.subTool === 'stipple') {
                     endStippleDrawing();
                 } else {
                     await endPenDrawing();
@@ -1320,13 +1387,9 @@ async function handlePointerUp(e) {
             state.drawingPointerId = null;
         }
         // Clean up
-        state.isErasing = false;
         state.isPenDrawing = false;
         state.isLassoing = false;
         state.strokeMade = false;
-        // Note: Don't reset maxFingers here - it would break undo gesture
-        // if user taps 2 fingers immediately after pen drawing.
-        // maxFingers is already reset in handlePointerDown when first finger touches.
         updateDebugDisplay();
     }
 }
@@ -1393,7 +1456,7 @@ function flashBrushSizePreview() {
         document.body.appendChild(_brushPreviewEl);
     }
 
-    const size = state.isEraserActive ? state.eraserSize : state.activeBrush.size;
+    const size = state.mode === 'eraser' ? state.eraserSize : state.activeBrush.size;
     const displaySize = size * state.scale;
     _brushPreviewEl.style.width = `${displaySize}px`;
     _brushPreviewEl.style.height = `${displaySize}px`;
@@ -1450,7 +1513,7 @@ function setupColorPickers() {
         const size = parseInt(e.target.value);
         sizeDisplay.textContent = size;
 
-        if (state.isEraserActive) {
+        if (state.mode === 'eraser') {
             state.eraserSize = size;
         } else {
             state.activeBrush.size = size;
@@ -1743,13 +1806,13 @@ function updateToneMenuVisibility() {
     const menu = document.getElementById('tone-menu');
     if (!menu) return;
 
-    if (state.currentTool === 'tone' && !state.isEraserActive) {
+    if (state.mode === 'fill' && state.subTool === 'tone') {
         menu.classList.remove('hidden');
-        
-        // ボタンの真横に表示
-        const toneBtn = document.getElementById('tool-tone');
-        if (toneBtn) {
-            const rect = toneBtn.getBoundingClientRect();
+
+        // 塗りモードボタンの真横に表示
+        const fillBtn = document.getElementById('mode-fill');
+        if (fillBtn) {
+            const rect = fillBtn.getBoundingClientRect();
             const toolbarWidth = 64;
             menu.style.left = `${toolbarWidth}px`;
             menu.style.top = `${rect.top}px`;
@@ -2176,9 +2239,17 @@ function setupKeyboardShortcuts() {
         if (e.key === 'x' || e.key === 'X') {
             if (!e.target.matches('input, textarea')) {
                 e.preventDefault();
-                state.isEraserActive = !state.isEraserActive;
-                state.isErasing = state.isEraserActive;
+                if (state.mode === 'eraser') {
+                    // Return to pen mode
+                    state.mode = 'pen';
+                    state.subTool = _lastSubTool.pen;
+                } else {
+                    // Switch to eraser
+                    state.mode = 'eraser';
+                    state.subTool = _lastSubTool.eraser;
+                }
                 updateToolButtonStates();
+                updateToneMenuVisibility();
                 updateBrushSizeVisibility();
                 updateBrushSizeSlider();
             }

@@ -379,7 +379,7 @@ export function fillPolygon(points) {
     if (points.length < 3) return;
 
     // Use black for fill tool, semi-transparent grey with multiply for sketch tool
-    if (state.currentTool === 'sketch') {
+    if (state.subTool === 'sketch') {
         // Semi-transparent grey fill with multiply blend for sketch mode
         const ctx = getActiveLayerCtx();
         if (!ctx) return;
