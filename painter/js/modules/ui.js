@@ -1138,7 +1138,6 @@ async function handlePointerMove(e) {
             state.translateY += center.y - state.lastPinchCenter.y;
 
             applyTransform();
-            flashBrushSizePreview();
         }
 
         state.lastPinchDist = dist;
@@ -1367,7 +1366,6 @@ function handleWheel(e) {
     state.scale = newScale;
 
     applyTransform();
-    flashBrushSizePreview();
 }
 
 // ============================================
@@ -1680,7 +1678,6 @@ function setupZoomControls() {
         state.translateX = 0;
         state.translateY = 0;
         applyTransform();
-        flashBrushSizePreview();
     });
 }
 
@@ -2151,13 +2148,11 @@ function setupKeyboardShortcuts() {
                 e.preventDefault();
                 state.scale = Math.min(state.scale * 1.2, 10);
                 applyTransform();
-                flashBrushSizePreview();
             }
             if (e.key === '-' || e.key === '_') {
                 e.preventDefault();
                 state.scale = Math.max(state.scale / 1.2, 0.1);
                 applyTransform();
-                flashBrushSizePreview();
             }
             if (e.key === '0') {
                 e.preventDefault();
@@ -2165,7 +2160,6 @@ function setupKeyboardShortcuts() {
                 state.translateX = 0;
                 state.translateY = 0;
                 applyTransform();
-                flashBrushSizePreview();
             }
         }
 
