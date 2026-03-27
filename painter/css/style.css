@@ -305,24 +305,6 @@ body {
     z-index: 10;
 }
 
-/* サブツール存在インジケーター (右下の小三角) */
-.mode-btn::after {
-    content: '';
-    position: absolute;
-    right: 2px;
-    bottom: 2px;
-    width: 0;
-    height: 0;
-    border-style: solid;
-    border-width: 0 0 5px 5px;
-    border-color: transparent transparent rgba(0,0,0,0.3) transparent;
-    pointer-events: none;
-    z-index: 11;
-}
-
-.mode-btn.active::after {
-    border-color: transparent transparent rgba(0,0,0,0.6) transparent;
-}
 
 /* ホールド中のプログレスフィードバック */
 .mode-btn.holding {
@@ -1873,8 +1855,8 @@ body.help-mode #tool-panel {
 }
 
 .brush-swatch {
-    width: 22px;
-    height: 18px;
+    width: 34px;
+    height: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
