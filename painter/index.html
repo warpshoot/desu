@@ -56,11 +56,6 @@
             </div>
         </div>
 
-        <!-- フライアウトサブツールメニュー (ホールド→ドラッグで選択) -->
-        <div id="flyout-menu" class="flyout-menu hidden">
-            <!-- JSで動的に生成 -->
-        </div>
-
         <!-- 補助操作パネル (Undo / Redo) -->
         <div id="aux-panel">
             <div class="tool-btn" id="btn-undo" title="元に戻す">
@@ -81,6 +76,12 @@
         <div id="brush-palette">
             <!-- JSで動的生成 -->
         </div>
+    </div>
+
+    <!-- フライアウトサブツールメニュー (toolbar-leftの外に配置:
+         backdrop-filterがcontaining blockを作るためfixed配置が壊れる) -->
+    <div id="flyout-menu" class="flyout-menu hidden">
+        <!-- JSで動的に生成 -->
     </div>
 
     <!-- 右下レイヤーパネル -->
