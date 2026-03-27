@@ -1631,6 +1631,10 @@ function openBrushSettings(idx) {
     document.getElementById('bs-pen-pressure-row').style.display     = isStipple ? 'none' : '';
     document.getElementById('bs-binary-row').style.display           = isStipple ? 'none' : '';
 
+    // 2値時: 不透明度スライダーと筆圧→透明度をグレーアウト
+    document.getElementById('bs-opacity-row').classList.toggle('disabled', brush.binary);
+    document.getElementById('bs-pressure-opacity').closest('.bs-toggle-label').classList.toggle('disabled', brush.binary);
+
     panel.classList.remove('hidden');
     panel.style.display = ''; // インラインの残りカスを掃除
     
@@ -1690,6 +1694,10 @@ function setupBrushSettingsPanel() {
         document.getElementById('bs-opacity-row').style.display          = isStipple ? 'none' : '';
         document.getElementById('bs-pen-pressure-row').style.display     = isStipple ? 'none' : '';
         document.getElementById('bs-binary-row').style.display           = isStipple ? 'none' : '';
+
+        // 2値時: 不透明度スライダーと筆圧→透明度をグレーアウト
+        document.getElementById('bs-opacity-row').classList.toggle('disabled', b.binary);
+        document.getElementById('bs-pressure-opacity').closest('.bs-toggle-label').classList.toggle('disabled', b.binary);
 
         // このスロットがアクティブなら、モードボタンのサブツールも更新
         if (_editingBrushIdx === state.activeBrushIndex && state.mode === 'pen') {

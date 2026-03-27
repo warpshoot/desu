@@ -165,7 +165,6 @@ function _drawPen(ctx, pts, fromIdx, isStart, b) {
         const stamp = getPixelBrush(size, b.color);
         const half = size / 2;
         const startI = isStart ? 0 : Math.max(1, fromIdx);
-        ctx.globalAlpha = b.opacity;
         for (let i = startI; i < pts.length; i++) {
             const p1 = pts[Math.max(0, i - 1)];
             const p2 = pts[i];
@@ -178,7 +177,6 @@ function _drawPen(ctx, pts, fromIdx, isStart, b) {
                 ctx.drawImage(stamp, Math.floor(cx - half), Math.floor(cy - half));
             }
         }
-        ctx.globalAlpha = 1.0;
         return pts.length - 1;
     }
 
