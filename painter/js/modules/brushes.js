@@ -68,6 +68,16 @@ export function makeDefaultFillSlots() {
 }
 
 // =============================================
+// デフォルト消しゴムスロット定義
+// =============================================
+export function makeDefaultEraserSlots() {
+    return [
+        { id: 0, name: '1', subTool: 'pen' },
+        { id: 1, name: '2', subTool: 'lasso' },
+    ];
+}
+
+// =============================================
 // 2値ブラシスタンプキャッシュ
 // =============================================
 function getPixelBrush(size, hexColor) {
