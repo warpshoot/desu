@@ -589,14 +589,18 @@ function openFlyout(mode, anchorBtn) {
         menu.appendChild(item);
     });
 
-    // Position: flush to the right edge of the toolbar, vertically aligned with the button
-    const toolbar = document.getElementById('toolbar-left');
-    const toolbarRect = toolbar.getBoundingClientRect();
+    // Position: flush to the right edge of the tool-panel, vertically centered on button
+    const toolPanel = document.getElementById('tool-panel');
+    const panelRect = toolPanel.getBoundingClientRect();
     const btnRect = anchorBtn.getBoundingClientRect();
-    menu.style.left = (toolbarRect.right + 2) + 'px';
-    menu.style.top = btnRect.top + 'px';
-    menu.style.transform = 'none';
+    menu.style.left = (panelRect.right + 2) + 'px';
+    // Show menu first (hidden but in DOM) so we can measure its height
+    menu.style.visibility = 'hidden';
     menu.classList.remove('hidden');
+    const menuRect = menu.getBoundingClientRect();
+    const btnCenterY = btnRect.top + btnRect.height / 2;
+    menu.style.top = (btnCenterY - menuRect.height / 2) + 'px';
+    menu.style.visibility = '';
 }
 
 function closeFlyout() {
@@ -1560,15 +1564,17 @@ function setupColorPickers() {
         // 画面倍率を反映したサイズでプレビュー表示
         flashBrushSizePreview();
 
-        // パレット側のドットもリアルタイム更新
-        const activeIdx = state.activeBrushIndex;
-        const activeSlotDot = document.querySelector(`.brush-slot[data-idx="${activeIdx}"] .brush-dot-preview`);
-        if (activeSlotDot) {
-            const slotDotSize = Math.max(2, Math.min(24, size * 0.8));
-            activeSlotDot.style.width = `${slotDotSize}px`;
-            activeSlotDot.style.height = `${slotDotSize}px`;
-            // 不透明度も反映
-            activeSlotDot.style.opacity = state.activeBrush.opacity;
+        // パレット側のドットもリアルタイム更新 (ペンモードのpen時のみ)
+        if (state.mode === 'pen' && state.subTool === 'pen') {
+            const activeIdx = state.activeBrushIndex;
+            const activeSlotDot = document.querySelector(`.brush-slot[data-idx="${activeIdx}"] .brush-dot-preview`);
+            if (activeSlotDot) {
+                const slotDotSize = Math.max(2, Math.min(24, size * 0.8));
+                activeSlotDot.style.width = `${slotDotSize}px`;
+                activeSlotDot.style.height = `${slotDotSize}px`;
+                // 不透明度も反映
+                activeSlotDot.style.opacity = state.activeBrush.opacity;
+            }
         }
     });
 
