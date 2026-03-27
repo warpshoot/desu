@@ -273,10 +273,6 @@
             <button id="brush-settings-close">×</button>
         </div>
         <div id="brush-settings-body">
-            <div class="bs-row">
-                <label>名前</label>
-                <input type="text" id="bs-name" maxlength="10">
-            </div>
             <div class="bs-row" id="bs-subtool-row">
                 <label>サブツール</label>
                 <select id="bs-subtool">
@@ -285,21 +281,31 @@
                 </select>
             </div>
 
+            <!-- 点描専用設定 -->
             <div class="bs-row" id="bs-density-row">
                 <label>密度 <span id="bs-density-val">5</span></label>
                 <input type="range" id="bs-density" min="1" max="20" value="5">
             </div>
-            <div class="bs-row">
+            <div class="bs-row bs-toggles" id="bs-pressure-density-row">
+                <label class="bs-toggle-label">
+                    <input type="checkbox" id="bs-pressure-density" checked> 筆圧→密度
+                </label>
+            </div>
+
+            <!-- ペン専用設定 -->
+            <div class="bs-row" id="bs-opacity-row">
                 <label>不透明度 <span id="bs-opacity-val">100</span>%</label>
                 <input type="range" id="bs-opacity" min="1" max="100" value="100">
             </div>
-            <div class="bs-row bs-toggles">
+            <div class="bs-row bs-toggles" id="bs-pen-pressure-row">
                 <label class="bs-toggle-label">
                     <input type="checkbox" id="bs-pressure-size"> 筆圧→幅
                 </label>
                 <label class="bs-toggle-label">
                     <input type="checkbox" id="bs-pressure-opacity"> 筆圧→透明度
                 </label>
+            </div>
+            <div class="bs-row bs-toggles" id="bs-binary-row">
                 <label class="bs-toggle-label">
                     <input type="checkbox" id="bs-binary"> 2値ピクセル
                 </label>

@@ -1323,9 +1323,6 @@ function flashBrushSizePreview() {
         _brushPreviewEl = document.createElement('div');
         _brushPreviewEl.id = 'brush-size-preview';
         _brushPreviewEl.style.position = 'fixed';
-        _brushPreviewEl.style.top = '50%';
-        _brushPreviewEl.style.left = '50%';
-        _brushPreviewEl.style.transform = 'translate(-50%, -50%)';
         _brushPreviewEl.style.backgroundColor = 'rgba(0, 0, 0, 0.2)';
         _brushPreviewEl.style.border = '1px solid rgba(0, 0, 0, 0.5)';
         _brushPreviewEl.style.borderRadius = '50%';
@@ -1339,9 +1336,25 @@ function flashBrushSizePreview() {
     const size = state.mode === 'eraser' ? state.eraserSize
         : (state.mode === 'pen' && state.subTool === 'stipple') ? state.stippleSize
         : state.activeBrush.size;
-    const displaySize = size * state.scale;
+    const displaySize = Math.max(4, size * state.scale);
     _brushPreviewEl.style.width = `${displaySize}px`;
     _brushPreviewEl.style.height = `${displaySize}px`;
+
+    // サイズスライダーのすぐ右に表示
+    const sliderContainer = document.getElementById('size-slider-container');
+    if (sliderContainer) {
+        const rect = sliderContainer.getBoundingClientRect();
+        const x = rect.right + 12;
+        const y = rect.top + rect.height / 2;
+        _brushPreviewEl.style.left = `${x}px`;
+        _brushPreviewEl.style.top = `${y - displaySize / 2}px`;
+        _brushPreviewEl.style.transform = '';
+    } else {
+        _brushPreviewEl.style.top = '50%';
+        _brushPreviewEl.style.left = '50%';
+        _brushPreviewEl.style.transform = 'translate(-50%, -50%)';
+    }
+
     _brushPreviewEl.style.display = 'block';
     _brushPreviewEl.style.opacity = '1';
 
@@ -1406,16 +1419,18 @@ function setupColorPickers() {
         // 画面倍率を反映したサイズでプレビュー表示
         flashBrushSizePreview();
 
-        // パレット側のドットもリアルタイム更新 (ペンモードのpen時のみ)
-        if (state.mode === 'pen' && state.subTool === 'pen') {
+        // パレット側のドットもリアルタイム更新 (ペンモードのpen/stipple時)
+        if (state.mode === 'pen' && (state.subTool === 'pen' || state.subTool === 'stipple')) {
             const activeIdx = state.activeBrushIndex;
             const activeSlotDot = document.querySelector(`.brush-slot[data-idx="${activeIdx}"] .brush-dot-preview`);
             if (activeSlotDot) {
-                const slotDotSize = Math.max(2, Math.min(24, size * 0.8));
+                const slotDotSize = Math.max(2, Math.min(34, Math.round(size * 0.34)));
                 activeSlotDot.style.width = `${slotDotSize}px`;
                 activeSlotDot.style.height = `${slotDotSize}px`;
-                // 不透明度も反映
-                activeSlotDot.style.opacity = state.activeBrush.opacity;
+                // ペン時のみ不透明度を反映 (点描は常に不透明)
+                if (state.subTool === 'pen') {
+                    activeSlotDot.style.opacity = state.activeBrush.opacity;
+                }
             }
         }
     });
@@ -1455,12 +1470,7 @@ function renderBrushPalette() {
             swatch.className = 'brush-swatch';
             swatch.appendChild(_makeSlotIcon(SUB_TOOL_ICONS.fill[slot.subTool]));
 
-            const label = document.createElement('div');
-            label.className = 'brush-label';
-            label.textContent = slot.name;
-
             el.appendChild(swatch);
-            el.appendChild(label);
             palette.appendChild(el);
         });
         return;
@@ -1477,12 +1487,7 @@ function renderBrushPalette() {
             swatch.className = 'brush-swatch';
             swatch.appendChild(_makeSlotIcon(SUB_TOOL_ICONS.eraser[slot.subTool]));
 
-            const label = document.createElement('div');
-            label.className = 'brush-label';
-            label.textContent = slot.name;
-
             el.appendChild(swatch);
-            el.appendChild(label);
             palette.appendChild(el);
         });
         return;
@@ -1500,12 +1505,12 @@ function renderBrushPalette() {
 
         const dot = document.createElement('div');
         dot.className = 'brush-dot-preview';
-        const displaySize = Math.max(2, Math.min(24, brush.size * 0.8));
+        const displaySize = Math.max(2, Math.min(34, Math.round(brush.size * 0.34)));
         dot.style.width = `${displaySize}px`;
         dot.style.height = `${displaySize}px`;
         dot.style.backgroundColor = '#000';
         dot.style.borderRadius = '50%';
-        dot.style.opacity = brush.opacity;
+        dot.style.opacity = brush.subTool === 'stipple' ? 1 : brush.opacity;
         swatch.appendChild(dot);
 
         // サブツールアイコンをバッジとして右上に配置
@@ -1513,12 +1518,7 @@ function renderBrushPalette() {
         badge.className = 'slot-subtool-icon pen-slot-badge';
         slot.appendChild(badge);
 
-        const label = document.createElement('div');
-        label.className = 'brush-label';
-        label.textContent = brush.name;
-
         slot.appendChild(swatch);
-        slot.appendChild(label);
         palette.appendChild(slot);
     });
 }
@@ -1614,18 +1614,22 @@ function openBrushSettings(idx) {
 
     const isStipple = (brush.subTool === 'stipple');
     document.getElementById('brush-settings-name').textContent = `ブラシ ${idx + 1} 設定`;
-    document.getElementById('bs-name').value       = brush.name;
     document.getElementById('bs-subtool').value    = brush.subTool || 'pen';
     document.getElementById('bs-density').value    = brush.stippleDensity ?? 5;
     document.getElementById('bs-density-val').textContent = brush.stippleDensity ?? 5;
+    document.getElementById('bs-pressure-density').checked    = brush.pressureDensity ?? true;
     document.getElementById('bs-opacity').value    = Math.round(brush.opacity * 100);
     document.getElementById('bs-opacity-val').textContent = Math.round(brush.opacity * 100);
     document.getElementById('bs-pressure-size').checked    = brush.pressureSize;
     document.getElementById('bs-pressure-opacity').checked = brush.pressureOpacity;
     document.getElementById('bs-binary').checked           = brush.binary;
 
-    // 密度スライダーは点描サブツール時のみ表示
-    document.getElementById('bs-density-row').style.display = isStipple ? '' : 'none';
+    // 点描時: 密度・筆圧→密度を表示、不透明度・筆圧系・2値を非表示
+    document.getElementById('bs-density-row').style.display          = isStipple ? '' : 'none';
+    document.getElementById('bs-pressure-density-row').style.display = isStipple ? '' : 'none';
+    document.getElementById('bs-opacity-row').style.display          = isStipple ? 'none' : '';
+    document.getElementById('bs-pen-pressure-row').style.display     = isStipple ? 'none' : '';
+    document.getElementById('bs-binary-row').style.display           = isStipple ? 'none' : '';
 
     panel.classList.remove('hidden');
     panel.style.display = ''; // インラインの残りカスを掃除
@@ -1655,23 +1659,23 @@ function setupBrushSettingsPanel() {
     const panel = document.getElementById('brush-settings-panel');
     if (!panel) return;
 
-    const closeBtn       = document.getElementById('brush-settings-close');
-    const nameInput      = document.getElementById('bs-name');
-    const subToolSelect  = document.getElementById('bs-subtool');
-    const densitySlider  = document.getElementById('bs-density');
-    const densityVal     = document.getElementById('bs-density-val');
-    const densityRow     = document.getElementById('bs-density-row');
-    const opSlider       = document.getElementById('bs-opacity');
-    const opVal          = document.getElementById('bs-opacity-val');
-    const psizeCheck     = document.getElementById('bs-pressure-size');
-    const popCheck       = document.getElementById('bs-pressure-opacity');
-    const binaryCheck    = document.getElementById('bs-binary');
+    const closeBtn         = document.getElementById('brush-settings-close');
+    const subToolSelect    = document.getElementById('bs-subtool');
+    const densitySlider    = document.getElementById('bs-density');
+    const densityVal       = document.getElementById('bs-density-val');
+    const pdensityCheck    = document.getElementById('bs-pressure-density');
+    const opSlider         = document.getElementById('bs-opacity');
+    const opVal            = document.getElementById('bs-opacity-val');
+    const psizeCheck       = document.getElementById('bs-pressure-size');
+    const popCheck         = document.getElementById('bs-pressure-opacity');
+    const binaryCheck      = document.getElementById('bs-binary');
 
     const sync = () => {
         const b = state.brushes[_editingBrushIdx];
-        b.name            = nameInput.value;
+        const isStipple = subToolSelect.value === 'stipple';
         b.subTool         = subToolSelect.value;
         b.stippleDensity  = parseInt(densitySlider.value);
+        b.pressureDensity = pdensityCheck.checked;
         b.opacity         = parseInt(opSlider.value) / 100;
         b.pressureSize    = psizeCheck.checked;
         b.pressureOpacity = popCheck.checked;
@@ -1680,8 +1684,12 @@ function setupBrushSettingsPanel() {
         densityVal.textContent = b.stippleDensity;
         opVal.textContent = Math.round(b.opacity * 100);
 
-        // 密度行の表示をサブツールに合わせて切り替え
-        densityRow.style.display = b.subTool === 'stipple' ? '' : 'none';
+        // 行の表示をサブツールに合わせて切り替え
+        document.getElementById('bs-density-row').style.display          = isStipple ? '' : 'none';
+        document.getElementById('bs-pressure-density-row').style.display = isStipple ? '' : 'none';
+        document.getElementById('bs-opacity-row').style.display          = isStipple ? 'none' : '';
+        document.getElementById('bs-pen-pressure-row').style.display     = isStipple ? 'none' : '';
+        document.getElementById('bs-binary-row').style.display           = isStipple ? 'none' : '';
 
         // このスロットがアクティブなら、モードボタンのサブツールも更新
         if (_editingBrushIdx === state.activeBrushIndex && state.mode === 'pen') {
@@ -1692,17 +1700,19 @@ function setupBrushSettingsPanel() {
             updateBrushSizeSlider();
         }
 
-        // 不透明度変更時にパレットのドットも即時更新
-        const activeSlotDot = document.querySelector(`.brush-slot[data-idx="${_editingBrushIdx}"] .brush-dot-preview`);
-        if (activeSlotDot) {
-            activeSlotDot.style.opacity = b.opacity;
+        // 不透明度変更時にパレットのドットも即時更新 (ペンのみ)
+        if (!isStipple) {
+            const activeSlotDot = document.querySelector(`.brush-slot[data-idx="${_editingBrushIdx}"] .brush-dot-preview`);
+            if (activeSlotDot) {
+                activeSlotDot.style.opacity = b.opacity;
+            }
         }
 
         renderBrushPalette();
         if (_editingBrushIdx === state.activeBrushIndex) syncBrushSliders();
     };
 
-    [nameInput, subToolSelect, psizeCheck, popCheck, binaryCheck]
+    [subToolSelect, psizeCheck, popCheck, binaryCheck, pdensityCheck]
         .forEach(el => el.addEventListener('input', sync));
     opSlider.addEventListener('input', sync);
     densitySlider.addEventListener('input', sync);

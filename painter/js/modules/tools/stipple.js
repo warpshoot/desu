@@ -52,9 +52,10 @@ function _scatterDots(cx, cy, pressure) {
     if (!ctx) return;
 
     const radius = Math.max(1, state.stippleSize);
-    // 筆圧 × 密度設定でドット数を決定 (密度1〜20、デフォルト5)
+    // 密度設定でドット数を決定 (密度1〜20、デフォルト5)
     const density = state.activeBrush ? (state.activeBrush.stippleDensity ?? 5) : 5;
-    const dotCount = Math.max(1, Math.round(density * pressure));
+    const pressureDensity = state.activeBrush ? (state.activeBrush.pressureDensity ?? true) : true;
+    const dotCount = Math.max(1, Math.round(density * (pressureDensity ? pressure : 1.0)));
 
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = '#000000';
