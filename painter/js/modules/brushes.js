@@ -20,13 +20,14 @@ export function makeDefaultBrushes() {
         {
             id: 0,
             name: '1',
-            type: 'pen',       // binary-capable pen
-            subTool: 'pen',    // 使用サブツール: 'pen' | 'stipple'
+            type: 'pen',
+            subTool: 'pen',
             size: 3,
             opacity: 1.0,
-            pressureSize: true,   // 筆圧→線幅
+            pressureSize: true,
             pressureOpacity: false,
-            binary: false,        // true=2値ピクセルスタンプ
+            binary: false,
+            stippleDensity: 5,
             color: '#000000',
         },
         {
@@ -39,6 +40,7 @@ export function makeDefaultBrushes() {
             pressureSize: true,
             pressureOpacity: true,
             binary: false,
+            stippleDensity: 5,
             color: '#000000',
         },
         {
@@ -51,6 +53,7 @@ export function makeDefaultBrushes() {
             pressureSize: false,
             pressureOpacity: true,
             binary: false,
+            stippleDensity: 5,
             color: '#444444',
         }
     ];
@@ -129,6 +132,11 @@ export function drawBrushSegment(ctx, points, fromIdx, isStart, brush, isErasing
     // --- 消しゴムモード ---
     if (isErasing) {
         return _drawErase(ctx, points, fromIdx, isStart, brush);
+    }
+
+    // 2値ピクセルモードはブラシタイプに関わらず適用
+    if (brush.binary) {
+        return _drawPen(ctx, points, fromIdx, isStart, brush);
     }
 
     switch (brush.type) {
