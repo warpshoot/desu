@@ -21,6 +21,7 @@ export function makeDefaultBrushes() {
             id: 0,
             name: '1',
             type: 'pen',       // binary-capable pen
+            subTool: 'pen',    // 使用サブツール: 'pen' | 'stipple'
             size: 3,
             opacity: 1.0,
             pressureSize: true,   // 筆圧→線幅
@@ -32,6 +33,7 @@ export function makeDefaultBrushes() {
             id: 1,
             name: '2',
             type: 'ink',
+            subTool: 'pen',
             size: 6,
             opacity: 0.9,
             pressureSize: true,
@@ -43,6 +45,7 @@ export function makeDefaultBrushes() {
             id: 3,
             name: '3',
             type: 'sketch',
+            subTool: 'stipple',
             size: 4,
             opacity: 0.3,
             pressureSize: false,
@@ -50,6 +53,17 @@ export function makeDefaultBrushes() {
             binary: false,
             color: '#444444',
         }
+    ];
+}
+
+// =============================================
+// デフォルト塗りつぶし（投げ縄）スロット定義
+// =============================================
+export function makeDefaultFillSlots() {
+    return [
+        { id: 0, name: '1', subTool: 'fill' },
+        { id: 1, name: '2', subTool: 'tone' },
+        { id: 2, name: '3', subTool: 'sketch' },
     ];
 }
 

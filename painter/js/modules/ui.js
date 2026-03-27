@@ -533,12 +533,22 @@ function handleModeTap(mode) {
     }
 
     state.mode = mode;
-    state.subTool = _lastSubTool[mode];
+    if (mode === 'pen') {
+        const activeSlot = state.brushes[state.activeBrushIndex];
+        state.subTool = activeSlot ? activeSlot.subTool : _lastSubTool[mode];
+    } else if (mode === 'fill') {
+        const activeSlot = state.fillSlots[state.activeFillSlotIndex];
+        state.subTool = activeSlot ? activeSlot.subTool : _lastSubTool[mode];
+    } else {
+        state.subTool = _lastSubTool[mode];
+    }
+    _lastSubTool[mode] = state.subTool;
 
     updateToolButtonStates();
     updateToneMenuVisibility();
     updateBrushSizeVisibility();
     updateBrushSizeSlider();
+    renderBrushPalette();
 }
 
 // --- Select a specific sub-tool ---
@@ -547,11 +557,19 @@ function selectSubTool(mode, sub) {
     state.subTool = sub;
     _lastSubTool[mode] = sub;
 
+    // フライアウトで選んだサブツールを、アクティブスロットに同期
+    if (mode === 'pen') {
+        state.brushes[state.activeBrushIndex].subTool = sub;
+    } else if (mode === 'fill') {
+        state.fillSlots[state.activeFillSlotIndex].subTool = sub;
+    }
+
     updateModeButtonIcon(mode, sub);
     updateToolButtonStates();
     updateToneMenuVisibility();
     updateBrushSizeVisibility();
     updateBrushSizeSlider();
+    renderBrushPalette();
 }
 
 // --- Update the mode button to show the selected sub-tool icon ---
@@ -648,17 +666,17 @@ function updateToolButtonStates() {
         fillBtn.classList.toggle('tone-active', state.mode === 'fill' && state.subTool === 'tone');
     }
 
-    // ブラシパレット (ペン先) は「ペン」モードのpen時だけ有効
+    // ブラシパレットはペンモード・塗りモードで有効
     const brushPalette = document.getElementById('brush-palette');
     const brushSettingsPanel = document.getElementById('brush-settings-panel');
-    const isPenMode = state.mode === 'pen' && state.subTool === 'pen';
+    const isPaletteMode = state.mode === 'pen' || state.mode === 'fill';
 
     if (brushPalette) {
-        brushPalette.classList.toggle('disabled', !isPenMode);
+        brushPalette.classList.toggle('disabled', !isPaletteMode);
     }
 
-    // ペン以外を選んだらブラシ設定パネルを閉じる
-    if (!isPenMode && brushSettingsPanel) {
+    // ペンモード以外ではブラシ設定パネルを閉じる
+    if (state.mode !== 'pen' && brushSettingsPanel) {
         brushSettingsPanel.classList.add('hidden');
     }
 
@@ -1589,20 +1607,53 @@ function setupColorPickers() {
 
 const BRUSH_TYPE_ICONS = ['✒️', '🖋️', '🖌️', '✏️', '💧'];
 
+// 塗りサブツールの略称ラベル
+const FILL_SLOT_LABELS = { fill: '塗', tone: '網', sketch: 'ス' };
+
 function renderBrushPalette() {
     const palette = document.getElementById('brush-palette');
     if (!palette) return;
     palette.innerHTML = '';
 
+    if (state.mode === 'fill') {
+        // 投げ縄/塗りカテゴリスロットを表示
+        state.fillSlots.forEach((slot, idx) => {
+            const el = document.createElement('div');
+            el.className = 'brush-slot' + (idx === state.activeFillSlotIndex ? ' active' : '');
+            el.dataset.idx = idx;
+            el.dataset.category = 'fill';
+
+            const swatch = document.createElement('div');
+            swatch.className = 'brush-swatch';
+
+            const icon = document.createElement('div');
+            icon.className = 'fill-slot-icon';
+            icon.textContent = FILL_SLOT_LABELS[slot.subTool] || slot.subTool;
+
+            swatch.appendChild(icon);
+
+            const label = document.createElement('div');
+            label.className = 'brush-label';
+            label.textContent = slot.name;
+
+            el.appendChild(swatch);
+            el.appendChild(label);
+            palette.appendChild(el);
+        });
+        return;
+    }
+
+    // ペンカテゴリスロットを表示
     state.brushes.forEach((brush, idx) => {
         const slot = document.createElement('div');
         slot.className = 'brush-slot' + (idx === state.activeBrushIndex ? ' active' : '');
         slot.dataset.idx = idx;
+        slot.dataset.category = 'pen';
 
         // ドット表示用のコンテナ
         const swatch = document.createElement('div');
         swatch.className = 'brush-swatch';
-        
+
         // 実際の太さを反映した黒い丸
         const dot = document.createElement('div');
         dot.className = 'brush-dot-preview';
@@ -1613,8 +1664,16 @@ function renderBrushPalette() {
         dot.style.backgroundColor = '#000';
         dot.style.borderRadius = '50%';
         dot.style.opacity = brush.opacity; // 不透明度を反映
-        
+
         swatch.appendChild(dot);
+
+        // サブツール略称 (stipple の場合)
+        if (brush.subTool === 'stipple') {
+            const badge = document.createElement('div');
+            badge.className = 'pen-slot-subtool-badge';
+            badge.textContent = '点';
+            slot.appendChild(badge);
+        }
 
         // Name label
         const label = document.createElement('div');
@@ -1638,23 +1697,47 @@ function setupBrushPalette() {
         const slot = e.target.closest('.brush-slot');
         if (!slot) return;
         const idx = parseInt(slot.dataset.idx);
+        const category = slot.dataset.category || 'pen';
 
-        // ブラシ切り替え
-        if (state.activeBrushIndex === idx) {
-            // すでに選択中のブラシをもう一度タップしたらトグル
-            const panel = document.getElementById('brush-settings-panel');
-            const isVisible = panel && !panel.classList.contains('hidden');
-            if (isVisible && _editingBrushIdx === idx) {
-                hideAllMenus();
-            } else {
-                openBrushSettings(idx);
-            }
-        } else {
-            // 他のブラシ（ペン先）を選んだら、前のパネルは閉じておく
+        if (category === 'fill') {
+            // 塗りカテゴリスロットの切り替え
+            if (state.activeFillSlotIndex === idx) return;
             hideAllMenus();
-            state.activeBrushIndex = idx;
+            state.activeFillSlotIndex = idx;
+            const fillSlot = state.fillSlots[idx];
+            state.subTool = fillSlot.subTool;
+            _lastSubTool.fill = fillSlot.subTool;
+            updateModeButtonIcon('fill', fillSlot.subTool);
+            updateToolButtonStates();
+            updateToneMenuVisibility();
+            updateBrushSizeVisibility();
             renderBrushPalette();
-            syncBrushSliders();
+        } else {
+            // ペンカテゴリスロットの切り替え
+            if (state.activeBrushIndex === idx) {
+                // すでに選択中のブラシをもう一度タップしたらトグル
+                const panel = document.getElementById('brush-settings-panel');
+                const isVisible = panel && !panel.classList.contains('hidden');
+                if (isVisible && _editingBrushIdx === idx) {
+                    hideAllMenus();
+                } else {
+                    openBrushSettings(idx);
+                }
+            } else {
+                // 他のブラシ（ペン先）を選んだら、前のパネルは閉じておく
+                hideAllMenus();
+                state.activeBrushIndex = idx;
+                const brush = state.brushes[idx];
+                // スロットに設定されたサブツールへ切り替え
+                state.subTool = brush.subTool || 'pen';
+                _lastSubTool.pen = state.subTool;
+                updateModeButtonIcon('pen', state.subTool);
+                updateToolButtonStates();
+                updateBrushSizeVisibility();
+                updateBrushSizeSlider();
+                renderBrushPalette();
+                syncBrushSliders();
+            }
         }
     });
 
@@ -1663,7 +1746,9 @@ function setupBrushPalette() {
 }
 
 function syncBrushSliders() {
+    if (state.mode === 'fill') return; // 塗りスロットにブラシサイズはない
     const brush = state.activeBrush;
+    if (!brush) return;
     const slider = document.getElementById('brushSize');
     const display = document.getElementById('sizeDisplay');
     if (slider) { slider.value = brush.size; }
@@ -1684,6 +1769,7 @@ function openBrushSettings(idx) {
 
     document.getElementById('brush-settings-name').textContent = `ブラシ ${idx + 1} 設定`;
     document.getElementById('bs-name').value       = brush.name;
+    document.getElementById('bs-subtool').value    = brush.subTool || 'pen';
     document.getElementById('bs-opacity').value    = Math.round(brush.opacity * 100);
     document.getElementById('bs-opacity-val').textContent = Math.round(brush.opacity * 100);
     document.getElementById('bs-pressure-size').checked    = brush.pressureSize;
@@ -1718,24 +1804,35 @@ function setupBrushSettingsPanel() {
     const panel = document.getElementById('brush-settings-panel');
     if (!panel) return;
 
-
-    const closeBtn    = document.getElementById('brush-settings-close');
-    const nameInput   = document.getElementById('bs-name');
-    const opSlider    = document.getElementById('bs-opacity');
-    const opVal       = document.getElementById('bs-opacity-val');
-    const psizeCheck  = document.getElementById('bs-pressure-size');
-    const popCheck    = document.getElementById('bs-pressure-opacity');
-    const binaryCheck = document.getElementById('bs-binary');
+    const closeBtn      = document.getElementById('brush-settings-close');
+    const nameInput     = document.getElementById('bs-name');
+    const subToolSelect = document.getElementById('bs-subtool');
+    const opSlider      = document.getElementById('bs-opacity');
+    const opVal         = document.getElementById('bs-opacity-val');
+    const psizeCheck    = document.getElementById('bs-pressure-size');
+    const popCheck      = document.getElementById('bs-pressure-opacity');
+    const binaryCheck   = document.getElementById('bs-binary');
     const sync = () => {
         const b = state.brushes[_editingBrushIdx];
-        b.name           = nameInput.value;
-        b.opacity        = parseInt(opSlider.value) / 100;
-        b.pressureSize   = psizeCheck.checked;
-        b.pressureOpacity= popCheck.checked;
-        b.binary         = binaryCheck.checked;
-        b.color          = '#000000';
+        b.name            = nameInput.value;
+        b.subTool         = subToolSelect.value;
+        b.opacity         = parseInt(opSlider.value) / 100;
+        b.pressureSize    = psizeCheck.checked;
+        b.pressureOpacity = popCheck.checked;
+        b.binary          = binaryCheck.checked;
+        b.color           = '#000000';
         opVal.textContent = Math.round(b.opacity * 100);
-        
+
+        // このスロットがアクティブなら、モードボタンのサブツールも更新
+        if (_editingBrushIdx === state.activeBrushIndex && state.mode === 'pen') {
+            state.subTool = b.subTool;
+            _lastSubTool.pen = b.subTool;
+            updateModeButtonIcon('pen', b.subTool);
+            updateToolButtonStates();
+            updateBrushSizeVisibility();
+            updateBrushSizeSlider();
+        }
+
         // 詳細パネルの不透明度スライダーからも、直接ドットを更新させる
         const activeSlotDot = document.querySelector(`.brush-slot[data-idx="${_editingBrushIdx}"] .brush-dot-preview`);
         if (activeSlotDot) {
@@ -1746,7 +1843,7 @@ function setupBrushSettingsPanel() {
         if (_editingBrushIdx === state.activeBrushIndex) syncBrushSliders();
     };
 
-    [nameInput, psizeCheck, popCheck, binaryCheck]
+    [nameInput, subToolSelect, psizeCheck, popCheck, binaryCheck]
         .forEach(el => el.addEventListener('input', sync));
     opSlider.addEventListener('input', sync);
 
@@ -2299,14 +2396,33 @@ function setupKeyboardShortcuts() {
             }
         }
 
-        // Brush slot shortcuts: 1-5 (no modifier)
+        // Brush slot shortcuts: 1-N (no modifier)
         if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.target.matches('input, textarea, select')) {
             const num = parseInt(e.key);
-            if (num >= 1 && num <= 5) {
-                e.preventDefault();
-                state.activeBrushIndex = num - 1;
-                renderBrushPalette();
-                syncBrushSliders();
+            if (num >= 1) {
+                if (state.mode === 'fill' && num <= state.fillSlots.length) {
+                    e.preventDefault();
+                    state.activeFillSlotIndex = num - 1;
+                    const fillSlot = state.fillSlots[num - 1];
+                    state.subTool = fillSlot.subTool;
+                    _lastSubTool.fill = fillSlot.subTool;
+                    updateModeButtonIcon('fill', fillSlot.subTool);
+                    updateToolButtonStates();
+                    updateToneMenuVisibility();
+                    renderBrushPalette();
+                } else if (state.mode === 'pen' && num <= state.brushes.length) {
+                    e.preventDefault();
+                    state.activeBrushIndex = num - 1;
+                    const brush = state.brushes[num - 1];
+                    state.subTool = brush.subTool || 'pen';
+                    _lastSubTool.pen = state.subTool;
+                    updateModeButtonIcon('pen', state.subTool);
+                    updateToolButtonStates();
+                    updateBrushSizeVisibility();
+                    updateBrushSizeSlider();
+                    renderBrushPalette();
+                    syncBrushSliders();
+                }
             }
         }
     });
