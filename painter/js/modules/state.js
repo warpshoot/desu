@@ -1,4 +1,4 @@
-import { makeDefaultBrushes } from './brushes.js';
+import { makeDefaultBrushes, makeDefaultFillSlots } from './brushes.js';
 // ============================================
 // DOM Elements - Utility Canvases (always present)
 // ============================================
@@ -225,10 +225,15 @@ export const state = {
     activeLayer: 1,          // ID of the currently active layer
     pressureEnabled: true,   // toggle for smooth brush vs binary brush
 
-    // Brush Palette
-    brushes: makeDefaultBrushes(),  // 5 brush slots
-    activeBrushIndex: 0,            // currently selected brush slot
+    // Brush Palette — ペンカテゴリスロット
+    brushes: makeDefaultBrushes(),  // ペンカテゴリスロット (各スロットに subTool 属性あり)
+    activeBrushIndex: 0,            // 現在選択中のペンスロット番号
     get activeBrush() { return this.brushes[this.activeBrushIndex]; },
+
+    // 塗り/投げ縄カテゴリスロット
+    fillSlots: makeDefaultFillSlots(),
+    activeFillSlotIndex: 0,
+    get activeFillSlot() { return this.fillSlots[this.activeFillSlotIndex]; },
 
     // Zoom & Pan
     scale: 1,

@@ -1902,6 +1902,30 @@ body.help-mode #tool-panel {
     white-space: nowrap;
 }
 
+/* 塗りスロットのサブツールアイコン */
+.fill-slot-icon {
+    font-size: 13px;
+    font-weight: bold;
+    color: #333;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 18px;
+}
+
+/* ペンスロットのstipple識別バッジ */
+.pen-slot-subtool-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 7px;
+    color: #666;
+    line-height: 1;
+    pointer-events: none;
+}
+
 /* ============================================
    Brush Settings Panel
    ============================================ */
