@@ -1902,28 +1902,23 @@ body.help-mode #tool-panel {
     white-space: nowrap;
 }
 
-/* 塗りスロットのサブツールアイコン */
-.fill-slot-icon {
-    font-size: 13px;
-    font-weight: bold;
-    color: #333;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 18px;
+/* 塗り・消しゴムスロットのサブツールアイコン */
+.slot-subtool-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
 }
 
-/* ペンスロットのstipple識別バッジ */
-.pen-slot-subtool-badge {
+/* ペンスロット右上のサブツールバッジ */
+.pen-slot-badge {
     position: absolute;
     top: 2px;
     right: 2px;
-    font-size: 7px;
-    color: #666;
-    line-height: 1;
-    pointer-events: none;
+    width: 11px;
+    height: 11px;
+    opacity: 0.5;
 }
 
 /* ============================================

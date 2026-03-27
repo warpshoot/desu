@@ -386,112 +386,29 @@ function setupLayerPanel() {
 // Tool Panel — 3-Mode Architecture
 // ============================================
 
-// Sub-tool definitions per mode
-const MODE_SUB_TOOLS = {
-    pen:    ['pen', 'stipple'],
-    fill:   ['fill', 'tone', 'sketch'],
-    eraser: ['pen', 'lasso']
-};
-
-// Icon sources for flyout items
+// スロットアイコン (flyout から流用)
 const SUB_TOOL_ICONS = {
     pen:     { pen: 'icons/pen.png', stipple: 'icons/stipple.svg' },
     fill:    { fill: 'icons/bet.png', tone: 'icons/tone.png', sketch: 'icons/ata.png' },
     eraser:  { pen: 'icons/er2.svg', lasso: 'icons/er1.png' }
 };
 
-// Track last selected sub-tool per mode (restored on mode switch)
-const _lastSubTool = { pen: 'pen', fill: 'fill', eraser: 'pen' };
-
-// Flyout gesture state
-let _flyoutMode = null;      // which mode's flyout is open
-let _flyoutHoldTimer = null;
-let _flyoutStartPid = null;   // pointer id
-let _flyoutHolding = false;   // true while holding (for animation feedback)
-const FLYOUT_HOLD_MS = 300;
-
-function _cancelHoldTimer() {
-    if (_flyoutHoldTimer) {
-        clearTimeout(_flyoutHoldTimer);
-        _flyoutHoldTimer = null;
-    }
-    _flyoutHolding = false;
-    // Remove hold animation from all mode buttons
-    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('holding'));
-}
-
 function setupToolPanel() {
     const modeButtons = document.querySelectorAll('.mode-btn');
 
     modeButtons.forEach(btn => {
-        // --- Hold detection: pointerdown starts timer ---
         btn.addEventListener('pointerdown', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            // タッチの暗黙キャプチャを解除 → pointermove/up が document に届くようにする
-            try { btn.releasePointerCapture(e.pointerId); } catch (_) {}
-            _flyoutStartPid = e.pointerId;
-            _flyoutHolding = true;
-            btn.classList.add('holding');
-
-            _flyoutHoldTimer = setTimeout(() => {
-                _flyoutHoldTimer = null;
-                _flyoutHolding = false;
-                btn.classList.remove('holding');
-                openFlyout(btn.dataset.mode, btn);
-            }, FLYOUT_HOLD_MS);
         });
 
-        // --- Pointer up on the button: tap (no hold) ---
         btn.addEventListener('pointerup', (e) => {
             e.preventDefault();
             e.stopPropagation();
-
-            const wasHolding = _flyoutHolding;
-            _cancelHoldTimer();
-
-            // If hold timer was still running, it was a tap
-            if (wasHolding && !_flyoutMode) {
-                handleModeTap(btn.dataset.mode);
-            }
-            // If flyout is open, pointerup on the button itself → close without change
-            if (_flyoutMode) {
-                closeFlyout();
-            }
+            handleModeTap(btn.dataset.mode);
         });
 
-        btn.addEventListener('pointercancel', () => {
-            _cancelHoldTimer();
-            closeFlyout();
-        });
-
-        btn.addEventListener('pointerleave', () => {
-            // If user drags off the button before hold fires, don't show holding animation
-            // but keep the timer — if they release elsewhere, global pointerup handles it
-            btn.classList.remove('holding');
-        });
-    });
-
-    // --- Global pointerup: catches releases anywhere (flyout items, outside, etc.) ---
-    document.addEventListener('pointerup', (e) => {
-        // Always cancel hold timer on any pointerup (fixes ghost flyout bug)
-        if (_flyoutHolding) {
-            _cancelHoldTimer();
-        }
-
-        if (!_flyoutMode) return;
-        // Find which flyout item the pointer is over
-        const item = getFlyoutItemAt(e.clientX, e.clientY);
-        if (item) {
-            selectSubTool(_flyoutMode, item.dataset.sub);
-        }
-        closeFlyout();
-    });
-
-    // --- Global move for flyout drag-to-select ---
-    document.addEventListener('pointermove', (e) => {
-        if (!_flyoutMode) return;
-        updateFlyoutHover(e.clientX, e.clientY);
+        btn.addEventListener('pointercancel', () => {});
     });
 
     // Undo / Redo
@@ -534,37 +451,17 @@ function handleModeTap(mode) {
 
     state.mode = mode;
     if (mode === 'pen') {
-        const activeSlot = state.brushes[state.activeBrushIndex];
-        state.subTool = activeSlot ? activeSlot.subTool : _lastSubTool[mode];
+        const slot = state.brushes[state.activeBrushIndex];
+        state.subTool = slot ? slot.subTool : 'pen';
     } else if (mode === 'fill') {
-        const activeSlot = state.fillSlots[state.activeFillSlotIndex];
-        state.subTool = activeSlot ? activeSlot.subTool : _lastSubTool[mode];
-    } else {
-        state.subTool = _lastSubTool[mode];
-    }
-    _lastSubTool[mode] = state.subTool;
-
-    updateToolButtonStates();
-    updateToneMenuVisibility();
-    updateBrushSizeVisibility();
-    updateBrushSizeSlider();
-    renderBrushPalette();
-}
-
-// --- Select a specific sub-tool ---
-function selectSubTool(mode, sub) {
-    state.mode = mode;
-    state.subTool = sub;
-    _lastSubTool[mode] = sub;
-
-    // フライアウトで選んだサブツールを、アクティブスロットに同期
-    if (mode === 'pen') {
-        state.brushes[state.activeBrushIndex].subTool = sub;
-    } else if (mode === 'fill') {
-        state.fillSlots[state.activeFillSlotIndex].subTool = sub;
+        const slot = state.fillSlots[state.activeFillSlotIndex];
+        state.subTool = slot ? slot.subTool : 'fill';
+    } else if (mode === 'eraser') {
+        const slot = state.eraserSlots[state.activeEraserSlotIndex];
+        state.subTool = slot ? slot.subTool : 'pen';
     }
 
-    updateModeButtonIcon(mode, sub);
+    updateModeButtonIcon(mode, state.subTool);
     updateToolButtonStates();
     updateToneMenuVisibility();
     updateBrushSizeVisibility();
@@ -581,78 +478,6 @@ function updateModeButtonIcon(mode, sub) {
     });
 }
 
-// --- Flyout open/close ---
-function openFlyout(mode, anchorBtn) {
-    _flyoutMode = mode;
-    const menu = document.getElementById('flyout-menu');
-    menu.innerHTML = '';
-
-    const subs = MODE_SUB_TOOLS[mode];
-    const icons = SUB_TOOL_ICONS[mode];
-
-    subs.forEach(sub => {
-        const item = document.createElement('div');
-        item.className = 'flyout-item';
-        item.dataset.sub = sub;
-        if (state.mode === mode && state.subTool === sub) {
-            item.classList.add('current');
-        }
-        const img = document.createElement('img');
-        img.src = icons[sub];
-        // Apply brightness(0) for SVG icons (eraser, stipple)
-        if (icons[sub].endsWith('.svg')) {
-            img.style.filter = 'brightness(0)';
-        }
-        item.appendChild(img);
-        menu.appendChild(item);
-    });
-
-    // Position: flush to the right edge of the tool-panel, vertically centered on button
-    const toolPanel = document.getElementById('tool-panel');
-    const panelRect = toolPanel.getBoundingClientRect();
-    const btnRect = anchorBtn.getBoundingClientRect();
-    menu.style.left = (panelRect.right + 2) + 'px';
-    // Show menu first (hidden but in DOM) so we can measure its height
-    menu.style.visibility = 'hidden';
-    menu.classList.remove('hidden');
-    const menuRect = menu.getBoundingClientRect();
-    const btnCenterY = btnRect.top + btnRect.height / 2;
-    menu.style.top = (btnCenterY - menuRect.height / 2) + 'px';
-    menu.style.visibility = '';
-}
-
-function closeFlyout() {
-    _flyoutMode = null;
-    const menu = document.getElementById('flyout-menu');
-    if (menu) {
-        menu.classList.add('hidden');
-        // Clear hover states
-        menu.querySelectorAll('.flyout-item').forEach(el => el.classList.remove('hover'));
-    }
-}
-
-function updateFlyoutHover(clientX, clientY) {
-    const menu = document.getElementById('flyout-menu');
-    if (!menu) return;
-    menu.querySelectorAll('.flyout-item').forEach(item => {
-        const r = item.getBoundingClientRect();
-        const inside = clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
-        item.classList.toggle('hover', inside);
-    });
-}
-
-function getFlyoutItemAt(clientX, clientY) {
-    const menu = document.getElementById('flyout-menu');
-    if (!menu) return null;
-    for (const item of menu.querySelectorAll('.flyout-item')) {
-        const r = item.getBoundingClientRect();
-        if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
-            return item;
-        }
-    }
-    return null;
-}
-
 // --- Update active states on all mode buttons ---
 function updateToolButtonStates() {
     document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -666,13 +491,12 @@ function updateToolButtonStates() {
         fillBtn.classList.toggle('tone-active', state.mode === 'fill' && state.subTool === 'tone');
     }
 
-    // ブラシパレットはペンモード・塗りモードで有効
+    // ブラシパレットは全モードで有効
     const brushPalette = document.getElementById('brush-palette');
     const brushSettingsPanel = document.getElementById('brush-settings-panel');
-    const isPaletteMode = state.mode === 'pen' || state.mode === 'fill';
 
     if (brushPalette) {
-        brushPalette.classList.toggle('disabled', !isPaletteMode);
+        brushPalette.classList.remove('disabled');
     }
 
     // ペンモード以外ではブラシ設定パネルを閉じる
@@ -1607,8 +1431,13 @@ function setupColorPickers() {
 
 const BRUSH_TYPE_ICONS = ['✒️', '🖋️', '🖌️', '✏️', '💧'];
 
-// 塗りサブツールの略称ラベル
-const FILL_SLOT_LABELS = { fill: '塗', tone: '網', sketch: 'ス' };
+function _makeSlotIcon(src) {
+    const img = document.createElement('img');
+    img.src = src;
+    img.className = 'slot-subtool-icon';
+    if (src.endsWith('.svg')) img.style.filter = 'brightness(0)';
+    return img;
+}
 
 function renderBrushPalette() {
     const palette = document.getElementById('brush-palette');
@@ -1616,7 +1445,6 @@ function renderBrushPalette() {
     palette.innerHTML = '';
 
     if (state.mode === 'fill') {
-        // 投げ縄/塗りカテゴリスロットを表示
         state.fillSlots.forEach((slot, idx) => {
             const el = document.createElement('div');
             el.className = 'brush-slot' + (idx === state.activeFillSlotIndex ? ' active' : '');
@@ -1625,12 +1453,7 @@ function renderBrushPalette() {
 
             const swatch = document.createElement('div');
             swatch.className = 'brush-swatch';
-
-            const icon = document.createElement('div');
-            icon.className = 'fill-slot-icon';
-            icon.textContent = FILL_SLOT_LABELS[slot.subTool] || slot.subTool;
-
-            swatch.appendChild(icon);
+            swatch.appendChild(_makeSlotIcon(SUB_TOOL_ICONS.fill[slot.subTool]));
 
             const label = document.createElement('div');
             label.className = 'brush-label';
@@ -1643,39 +1466,53 @@ function renderBrushPalette() {
         return;
     }
 
-    // ペンカテゴリスロットを表示
+    if (state.mode === 'eraser') {
+        state.eraserSlots.forEach((slot, idx) => {
+            const el = document.createElement('div');
+            el.className = 'brush-slot' + (idx === state.activeEraserSlotIndex ? ' active' : '');
+            el.dataset.idx = idx;
+            el.dataset.category = 'eraser';
+
+            const swatch = document.createElement('div');
+            swatch.className = 'brush-swatch';
+            swatch.appendChild(_makeSlotIcon(SUB_TOOL_ICONS.eraser[slot.subTool]));
+
+            const label = document.createElement('div');
+            label.className = 'brush-label';
+            label.textContent = slot.name;
+
+            el.appendChild(swatch);
+            el.appendChild(label);
+            palette.appendChild(el);
+        });
+        return;
+    }
+
+    // ペンカテゴリスロット
     state.brushes.forEach((brush, idx) => {
         const slot = document.createElement('div');
         slot.className = 'brush-slot' + (idx === state.activeBrushIndex ? ' active' : '');
         slot.dataset.idx = idx;
         slot.dataset.category = 'pen';
 
-        // ドット表示用のコンテナ
         const swatch = document.createElement('div');
         swatch.className = 'brush-swatch';
 
-        // 実際の太さを反映した黒い丸
         const dot = document.createElement('div');
         dot.className = 'brush-dot-preview';
-        // 表示上の最大サイズに収まるようにスケーリング (スロットが40px想定)
         const displaySize = Math.max(2, Math.min(24, brush.size * 0.8));
         dot.style.width = `${displaySize}px`;
         dot.style.height = `${displaySize}px`;
         dot.style.backgroundColor = '#000';
         dot.style.borderRadius = '50%';
-        dot.style.opacity = brush.opacity; // 不透明度を反映
-
+        dot.style.opacity = brush.opacity;
         swatch.appendChild(dot);
 
-        // サブツール略称 (stipple の場合)
-        if (brush.subTool === 'stipple') {
-            const badge = document.createElement('div');
-            badge.className = 'pen-slot-subtool-badge';
-            badge.textContent = '点';
-            slot.appendChild(badge);
-        }
+        // サブツールアイコンをバッジとして右上に配置
+        const badge = _makeSlotIcon(SUB_TOOL_ICONS.pen[brush.subTool] || SUB_TOOL_ICONS.pen.pen);
+        badge.className = 'slot-subtool-icon pen-slot-badge';
+        slot.appendChild(badge);
 
-        // Name label
         const label = document.createElement('div');
         label.className = 'brush-label';
         label.textContent = brush.name;
@@ -1700,22 +1537,32 @@ function setupBrushPalette() {
         const category = slot.dataset.category || 'pen';
 
         if (category === 'fill') {
-            // 塗りカテゴリスロットの切り替え
             if (state.activeFillSlotIndex === idx) return;
             hideAllMenus();
             state.activeFillSlotIndex = idx;
             const fillSlot = state.fillSlots[idx];
             state.subTool = fillSlot.subTool;
-            _lastSubTool.fill = fillSlot.subTool;
             updateModeButtonIcon('fill', fillSlot.subTool);
             updateToolButtonStates();
             updateToneMenuVisibility();
             updateBrushSizeVisibility();
             renderBrushPalette();
+
+        } else if (category === 'eraser') {
+            if (state.activeEraserSlotIndex === idx) return;
+            hideAllMenus();
+            state.activeEraserSlotIndex = idx;
+            const eraserSlot = state.eraserSlots[idx];
+            state.subTool = eraserSlot.subTool;
+            updateModeButtonIcon('eraser', eraserSlot.subTool);
+            updateToolButtonStates();
+            updateBrushSizeVisibility();
+            updateBrushSizeSlider();
+            renderBrushPalette();
+
         } else {
-            // ペンカテゴリスロットの切り替え
+            // ペンカテゴリスロット
             if (state.activeBrushIndex === idx) {
-                // すでに選択中のブラシをもう一度タップしたらトグル
                 const panel = document.getElementById('brush-settings-panel');
                 const isVisible = panel && !panel.classList.contains('hidden');
                 if (isVisible && _editingBrushIdx === idx) {
@@ -1724,13 +1571,10 @@ function setupBrushPalette() {
                     openBrushSettings(idx);
                 }
             } else {
-                // 他のブラシ（ペン先）を選んだら、前のパネルは閉じておく
                 hideAllMenus();
                 state.activeBrushIndex = idx;
                 const brush = state.brushes[idx];
-                // スロットに設定されたサブツールへ切り替え
                 state.subTool = brush.subTool || 'pen';
-                _lastSubTool.pen = state.subTool;
                 updateModeButtonIcon('pen', state.subTool);
                 updateToolButtonStates();
                 updateBrushSizeVisibility();
@@ -1746,7 +1590,8 @@ function setupBrushPalette() {
 }
 
 function syncBrushSliders() {
-    if (state.mode === 'fill') return; // 塗りスロットにブラシサイズはない
+    if (state.mode === 'fill') return;   // 塗りスロットにブラシサイズはない
+    if (state.mode === 'eraser') return; // 消しゴムサイズはスライダーとは別管理
     const brush = state.activeBrush;
     if (!brush) return;
     const slider = document.getElementById('brushSize');
@@ -2405,17 +2250,25 @@ function setupKeyboardShortcuts() {
                     state.activeFillSlotIndex = num - 1;
                     const fillSlot = state.fillSlots[num - 1];
                     state.subTool = fillSlot.subTool;
-                    _lastSubTool.fill = fillSlot.subTool;
                     updateModeButtonIcon('fill', fillSlot.subTool);
                     updateToolButtonStates();
                     updateToneMenuVisibility();
+                    renderBrushPalette();
+                } else if (state.mode === 'eraser' && num <= state.eraserSlots.length) {
+                    e.preventDefault();
+                    state.activeEraserSlotIndex = num - 1;
+                    const eraserSlot = state.eraserSlots[num - 1];
+                    state.subTool = eraserSlot.subTool;
+                    updateModeButtonIcon('eraser', eraserSlot.subTool);
+                    updateToolButtonStates();
+                    updateBrushSizeVisibility();
+                    updateBrushSizeSlider();
                     renderBrushPalette();
                 } else if (state.mode === 'pen' && num <= state.brushes.length) {
                     e.preventDefault();
                     state.activeBrushIndex = num - 1;
                     const brush = state.brushes[num - 1];
                     state.subTool = brush.subTool || 'pen';
-                    _lastSubTool.pen = state.subTool;
                     updateModeButtonIcon('pen', state.subTool);
                     updateToolButtonStates();
                     updateBrushSizeVisibility();

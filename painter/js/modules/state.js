@@ -1,4 +1,4 @@
-import { makeDefaultBrushes, makeDefaultFillSlots } from './brushes.js';
+import { makeDefaultBrushes, makeDefaultFillSlots, makeDefaultEraserSlots } from './brushes.js';
 // ============================================
 // DOM Elements - Utility Canvases (always present)
 // ============================================
@@ -234,6 +234,11 @@ export const state = {
     fillSlots: makeDefaultFillSlots(),
     activeFillSlotIndex: 0,
     get activeFillSlot() { return this.fillSlots[this.activeFillSlotIndex]; },
+
+    // 消しゴムカテゴリスロット
+    eraserSlots: makeDefaultEraserSlots(),
+    activeEraserSlotIndex: 0,
+    get activeEraserSlot() { return this.eraserSlots[this.activeEraserSlotIndex]; },
 
     // Zoom & Pan
     scale: 1,
