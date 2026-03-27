@@ -589,16 +589,18 @@ function openFlyout(mode, anchorBtn) {
         menu.appendChild(item);
     });
 
-    // Position: flush to the right edge of the tool-panel, aligned with button top
-    // Use tool-panel (not toolbar-left which includes slider/palette/undo)
-    // Active button has translateX(-5px) so we can't rely on btnRect.right
+    // Position: flush to the right edge of the tool-panel, vertically centered on button
     const toolPanel = document.getElementById('tool-panel');
     const panelRect = toolPanel.getBoundingClientRect();
     const btnRect = anchorBtn.getBoundingClientRect();
     menu.style.left = (panelRect.right + 2) + 'px';
-    menu.style.top = btnRect.top + 'px';
-    menu.style.transform = 'none';
+    // Show menu first (hidden but in DOM) so we can measure its height
+    menu.style.visibility = 'hidden';
     menu.classList.remove('hidden');
+    const menuRect = menu.getBoundingClientRect();
+    const btnCenterY = btnRect.top + btnRect.height / 2;
+    menu.style.top = (btnCenterY - menuRect.height / 2) + 'px';
+    menu.style.visibility = '';
 }
 
 function closeFlyout() {
