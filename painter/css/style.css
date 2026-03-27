@@ -735,17 +735,13 @@ body {
 #brushSize::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    /* Rotated: CSS width = Visual Height (8px), CSS height = Visual Width (24px) */
-    width: 8px;
-    /* Visual Height */
-    height: 24px;
-    /* Visual Width */
+    /* 回転済み: CSS width = 視覚上の高さ, CSS height = 視覚上の幅 */
+    width: 12px;
+    height: 32px;
     background: #000;
-    /* Thumb color Black */
-    border-radius: 0;
-    /* Rectangular */
+    border-radius: 3px;
     border: none;
-    /* No border */
+    cursor: pointer;
 }
 
 
@@ -1999,8 +1995,46 @@ body.help-mode #tool-panel {
 
 .bs-row input[type="range"] {
     flex: 1;
-    height: 3px;
+    /* タッチ領域を広げるため高さを確保（見た目のトラックは accent-color で制御） */
+    height: 28px;
     accent-color: #333;
+    cursor: pointer;
+    /* WebKit: サム(つまみ)を大きくして掴みやすく */
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+}
+
+.bs-row input[type="range"]::-webkit-slider-runnable-track {
+    height: 3px;
+    background: #ccc;
+    border-radius: 2px;
+}
+
+.bs-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #333;
+    margin-top: -7.5px; /* (18px - 3px) / 2 を上にオフセット */
+    cursor: pointer;
+}
+
+.bs-row input[type="range"]::-moz-range-track {
+    height: 3px;
+    background: #ccc;
+    border-radius: 2px;
+}
+
+.bs-row input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #333;
+    border: none;
+    cursor: pointer;
 }
 
 .bs-row input[type="color"] {
