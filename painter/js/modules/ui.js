@@ -152,6 +152,7 @@ export function initUI() {
     setupBrushPalette();
     setupBrushSettingsPanel();
     setupFillSettingsPanel();
+    setupEraserSettingsPanel();
     setupZoomControls();
     setupSaveUI();
     setupFileUI();
@@ -383,7 +384,7 @@ function setupLayerPanel() {
 const SUB_TOOL_ICONS = {
     pen:     { pen: 'icons/pen.png', stipple: 'icons/stipple.svg' },
     fill:    { fill: 'icons/bet.png', tone: 'icons/tone.png' },
-    eraser:  { pen: 'icons/er2.svg', lasso: 'icons/er1.png' }
+    eraser:  { pen: 'icons/er2.svg', lasso: 'icons/er1.png', clear: null }
 };
 
 function setupToolPanel() {
@@ -655,6 +656,10 @@ function hideAllMenus() {
     const fillSettingsPanel = document.getElementById('fill-settings-panel');
     if (fillSettingsPanel) {
         fillSettingsPanel.classList.add('hidden');
+    }
+    const eraserSettingsPanel = document.getElementById('eraser-settings-panel');
+    if (eraserSettingsPanel) {
+        eraserSettingsPanel.classList.add('hidden');
     }
 
     // トーンメニュー（固定されていない場合）も閉じる
@@ -1018,7 +1023,10 @@ async function handlePointerDown(e) {
         } else if (state.mode === 'fill') {
             startLasso(e.clientX, e.clientY);
         } else if (state.mode === 'eraser') {
-            if (state.subTool === 'lasso') {
+            if (state.subTool === 'clear') {
+                // clear は pointerDown でレイヤークリア実行
+                await executeClearLayer();
+            } else if (state.subTool === 'lasso') {
                 startLasso(e.clientX, e.clientY);
             } else {
                 await saveState();
@@ -1247,7 +1255,9 @@ async function handlePointerUp(e) {
                 if (wasClick && duration < 300 && !state.wasPanning && !state.wasPinching) {
                     // Tap detected → bucket fill (バケツ)
                     const fillSlot = state.mode === 'fill' ? state.fillSlots[state.activeFillSlotIndex] : null;
-                    const bucketEnabled = fillSlot ? (fillSlot.bucketEnabled !== false) : true;
+                    const eraserSlot = state.mode === 'eraser' ? state.eraserSlots[state.activeEraserSlotIndex] : null;
+                    const bucketEnabled = fillSlot ? (fillSlot.bucketEnabled !== false)
+                        : eraserSlot ? (eraserSlot.bucketEnabled !== false) : true;
 
                     if (bucketEnabled) {
                         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
@@ -1256,15 +1266,17 @@ async function handlePointerUp(e) {
 
                         await saveState();
                         if (state.mode === 'fill') {
+                            const tolerance = fillSlot.bucketTolerance || 'normal';
                             if (state.subTool === 'tone') {
-                                floodFillTone(fx, fy);
+                                floodFillTone(fx, fy, tolerance);
                             } else {
                                 // 統一バケツ: 黒 + スロットの不透明度
                                 const slotOpacity = fillSlot.opacity ?? 1.0;
-                                floodFill(fx, fy, [0, 0, 0, Math.round(slotOpacity * 255)]);
+                                floodFill(fx, fy, [0, 0, 0, Math.round(slotOpacity * 255)], tolerance);
                             }
                         } else if (state.mode === 'eraser' && state.subTool === 'lasso') {
-                            floodFillTransparent(fx, fy);
+                            const tolerance = eraserSlot.bucketTolerance || 'normal';
+                            floodFillTransparent(fx, fy, tolerance);
                         }
                         updateLayerThumbnail(getActiveLayer());
                     }
@@ -1470,7 +1482,20 @@ function setupColorPickers() {
 
 const BRUSH_TYPE_ICONS = ['✒️', '🖋️', '🖌️', '✏️', '💧'];
 
+function _makeClearIcon() {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.className = 'slot-subtool-icon';
+    svg.innerHTML = '<path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/><path d="M9 7V4h6v3"/>';
+    return svg;
+}
+
 function _makeSlotIcon(src) {
+    if (!src) return _makeClearIcon();
     const img = document.createElement('img');
     img.src = src;
     img.className = 'slot-subtool-icon';
@@ -1584,11 +1609,25 @@ function setupBrushPalette() {
             renderBrushPalette();
 
         } else if (category === 'eraser') {
-            if (state.activeEraserSlotIndex === idx) return;
+            if (state.activeEraserSlotIndex === idx) {
+                // 同じスロットを再タップ → 設定パネル開閉
+                const panel = document.getElementById('eraser-settings-panel');
+                const isVisible = panel && !panel.classList.contains('hidden');
+                if (isVisible && _editingEraserSlotIdx === idx) {
+                    hideAllMenus();
+                } else {
+                    openEraserSettings(idx);
+                }
+                return;
+            }
             hideAllMenus();
             state.activeEraserSlotIndex = idx;
             const eraserSlot = state.eraserSlots[idx];
             state.subTool = eraserSlot.subTool;
+            // clear サブツールは即座にレイヤークリア実行
+            if (eraserSlot.subTool === 'clear') {
+                executeClearLayer();
+            }
             updateModeButtonIcon('eraser', eraserSlot.subTool);
             updateToolButtonStates();
             updateBrushSizeVisibility();
@@ -1787,6 +1826,11 @@ function openFillSettings(idx) {
     document.getElementById('fs-opacity').value = Math.round((slot.opacity ?? 1.0) * 100);
     document.getElementById('fs-opacity-val').textContent = Math.round((slot.opacity ?? 1.0) * 100);
     document.getElementById('fs-bucket').checked = slot.bucketEnabled !== false;
+    document.getElementById('fs-tolerance').value = slot.bucketTolerance || 'normal';
+
+    // バケツ有効時のみ許容値表示
+    const bucketOn = slot.bucketEnabled !== false;
+    document.getElementById('fs-tolerance-row').style.display = bucketOn ? '' : 'none';
 
     // トーン時: 不透明度は非表示 (トーンは2値パターン)
     const isTone = slot.subTool === 'tone';
@@ -1825,16 +1869,19 @@ function setupFillSettingsPanel() {
     const opSlider     = document.getElementById('fs-opacity');
     const opVal        = document.getElementById('fs-opacity-val');
     const bucketCheck  = document.getElementById('fs-bucket');
+    const toleranceSel = document.getElementById('fs-tolerance');
 
     const sync = () => {
         const slot = state.fillSlots[_editingFillSlotIdx];
-        slot.subTool       = subToolSel.value;
-        slot.opacity       = parseInt(opSlider.value) / 100;
-        slot.bucketEnabled = bucketCheck.checked;
-        opVal.textContent  = Math.round(slot.opacity * 100);
+        slot.subTool        = subToolSel.value;
+        slot.opacity        = parseInt(opSlider.value) / 100;
+        slot.bucketEnabled  = bucketCheck.checked;
+        slot.bucketTolerance = toleranceSel.value;
+        opVal.textContent   = Math.round(slot.opacity * 100);
 
         const isTone = slot.subTool === 'tone';
         document.getElementById('fs-opacity-row').style.display = isTone ? 'none' : '';
+        document.getElementById('fs-tolerance-row').style.display = bucketCheck.checked ? '' : 'none';
 
         // アクティブスロットならモード反映
         if (_editingFillSlotIdx === state.activeFillSlotIndex && state.mode === 'fill') {
@@ -1850,11 +1897,110 @@ function setupFillSettingsPanel() {
     subToolSel.addEventListener('input', sync);
     opSlider.addEventListener('input', sync);
     bucketCheck.addEventListener('input', sync);
+    toleranceSel.addEventListener('input', sync);
 
     panel.addEventListener('pointerdown', (e) => e.stopPropagation());
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
 
     closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+}
+
+// =============================================
+// Eraser Settings Panel (消しゴム設定パネル)
+// =============================================
+
+let _editingEraserSlotIdx = 0;
+
+function openEraserSettings(idx) {
+    _editingEraserSlotIdx = idx;
+    const slot = state.eraserSlots[idx];
+    const panel = document.getElementById('eraser-settings-panel');
+    if (!panel) return;
+
+    document.getElementById('eraser-settings-name').textContent = `消しゴム ${idx + 1} 設定`;
+    document.getElementById('es-subtool').value = slot.subTool || 'pen';
+    document.getElementById('es-bucket').checked = slot.bucketEnabled !== false;
+    document.getElementById('es-tolerance').value = slot.bucketTolerance || 'normal';
+
+    // lasso のみバケツ設定を表示
+    const isLasso = slot.subTool === 'lasso';
+    document.getElementById('es-bucket-row').style.display = isLasso ? '' : 'none';
+    const bucketOn = isLasso && slot.bucketEnabled !== false;
+    document.getElementById('es-tolerance-row').style.display = bucketOn ? '' : 'none';
+
+    panel.classList.remove('hidden');
+    panel.style.display = '';
+
+    const activeSlot = document.querySelector(`.brush-slot[data-idx="${idx}"][data-category="eraser"]`);
+    if (activeSlot) {
+        const rect = activeSlot.getBoundingClientRect();
+        const toolbarWidth = 64;
+        panel.style.left = `${toolbarWidth}px`;
+
+        const panelHeight = 200;
+        let topPos = rect.top - 60;
+        const winHeight = window.innerHeight;
+        if (topPos + panelHeight > winHeight - 12) {
+            topPos = winHeight - panelHeight - 12;
+        }
+        if (topPos < 12) topPos = 12;
+        panel.style.top = `${topPos}px`;
+        panel.style.bottom = 'auto';
+    }
+}
+
+function setupEraserSettingsPanel() {
+    const panel = document.getElementById('eraser-settings-panel');
+    if (!panel) return;
+
+    const closeBtn     = document.getElementById('eraser-settings-close');
+    const subToolSel   = document.getElementById('es-subtool');
+    const bucketCheck  = document.getElementById('es-bucket');
+    const toleranceSel = document.getElementById('es-tolerance');
+
+    const sync = () => {
+        const slot = state.eraserSlots[_editingEraserSlotIdx];
+        slot.subTool         = subToolSel.value;
+        slot.bucketEnabled   = bucketCheck.checked;
+        slot.bucketTolerance = toleranceSel.value;
+
+        const isLasso = slot.subTool === 'lasso';
+        document.getElementById('es-bucket-row').style.display = isLasso ? '' : 'none';
+        document.getElementById('es-tolerance-row').style.display = (isLasso && bucketCheck.checked) ? '' : 'none';
+
+        // アクティブスロットならモード反映
+        if (_editingEraserSlotIdx === state.activeEraserSlotIndex && state.mode === 'eraser') {
+            state.subTool = slot.subTool;
+            updateModeButtonIcon('eraser', slot.subTool);
+            updateToolButtonStates();
+            updateBrushSizeVisibility();
+        }
+
+        renderBrushPalette();
+    };
+
+    subToolSel.addEventListener('input', sync);
+    bucketCheck.addEventListener('input', sync);
+    toleranceSel.addEventListener('input', sync);
+
+    panel.addEventListener('pointerdown', (e) => e.stopPropagation());
+    panel.addEventListener('pointermove', (e) => e.stopPropagation());
+
+    closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+}
+
+// =============================================
+// Execute Clear Layer (消しゴム: 全消し)
+// =============================================
+
+async function executeClearLayer() {
+    await saveState();
+    const layer = getActiveLayer();
+    if (layer) {
+        layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+        updateLayerThumbnail(layer);
+    }
+    await saveState();
 }
 
 // ============================================
@@ -2467,6 +2613,9 @@ function setupKeyboardShortcuts() {
                     state.activeEraserSlotIndex = num - 1;
                     const eraserSlot = state.eraserSlots[num - 1];
                     state.subTool = eraserSlot.subTool;
+                    if (eraserSlot.subTool === 'clear') {
+                        executeClearLayer();
+                    }
                     updateModeButtonIcon('eraser', eraserSlot.subTool);
                     updateToolButtonStates();
                     updateBrushSizeVisibility();

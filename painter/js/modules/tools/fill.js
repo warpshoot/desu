@@ -19,12 +19,30 @@ function getActiveContextAndCanvas() {
 
 // ============================================
 // 塗りつぶし（スキャンライン法）
-// モノクロ2値前提:
-//   透明タップ → 完全不透明(255)以外は全て塗りつぶし対象
-//   不透明タップ → 同じアルファ値(±許容)の領域を塗りつぶし
+// tolerance: 'strict' | 'normal' | 'loose'
+//   strict: 完全一致のみ
+//   normal: 完全不透明(255)のみ壁 (デフォルト)
+//   loose:  alpha >= 192 が壁
 // ============================================
 
-export function floodFill(startX, startY, fillColor) {
+export function _makeMatchFn(data, targetA, tolerance) {
+    if (tolerance === 'strict') {
+        // 完全一致
+        return (i) => data[i + 3] === targetA;
+    }
+    if (tolerance === 'loose') {
+        // 192以上が壁 (太い線のみブロック)
+        return targetA < 192
+            ? (i) => data[i + 3] < 192
+            : (i) => data[i + 3] >= 192;
+    }
+    // normal: 255のみ壁
+    return targetA < 255
+        ? (i) => data[i + 3] < 255
+        : (i) => data[i + 3] === 255;
+}
+
+export function floodFill(startX, startY, fillColor, tolerance = 'normal') {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
@@ -46,11 +64,7 @@ export function floodFill(startX, startY, fillColor) {
     if (data[idx] === fillColor[0] && data[idx + 1] === fillColor[1] &&
         data[idx + 2] === fillColor[2] && data[idx + 3] === fillColor[3]) return;
 
-    // 透明タップ: alpha < 255 を全てマッチ (完全不透明のみが壁)
-    // 不透明タップ: 同アルファ値(±30)をマッチ
-    const matchTarget = targetA < 255
-        ? (i) => data[i + 3] < 255
-        : (i) => data[i + 3] === 255;
+    const matchTarget = _makeMatchFn(data, targetA, tolerance);
     const setPixel = (i) => {
         data[i] = fillColor[0];
         data[i + 1] = fillColor[1];
@@ -111,7 +125,7 @@ export function floodFill(startX, startY, fillColor) {
 }
 
 // 透明で塗りつぶし (トレランス付き)
-export function floodFillTransparent(startX, startY) {
+export function floodFillTransparent(startX, startY, tolerance = 'normal') {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
@@ -131,11 +145,7 @@ export function floodFillTransparent(startX, startY) {
 
     if (targetA === 0) return;
 
-    // 透明タップ: alpha < 255 を全てマッチ
-    // 不透明タップ: alpha === 255 をマッチ
-    const matchTarget = targetA < 255
-        ? (i) => data[i + 3] < 255
-        : (i) => data[i + 3] === 255;
+    const matchTarget = _makeMatchFn(data, targetA, tolerance);
     const setPixel = (i) => {
         data[i] = 0; data[i + 1] = 0; data[i + 2] = 0; data[i + 3] = 0;
     };
@@ -291,9 +301,7 @@ export function floodFillSketch(startX, startY) {
     const idx = (startY * w + startX) * 4;
     const targetA = data[idx + 3];
 
-    const matchTarget = targetA < 255
-        ? (i) => data[i + 3] < 255
-        : (i) => data[i + 3] === 255;
+    const matchTarget = _makeMatchFn(data, targetA, 'normal');
 
     const mask = new Uint8Array(w * h);
     const stack = [[startX, startY]];

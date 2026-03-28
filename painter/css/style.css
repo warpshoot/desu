@@ -1914,7 +1914,8 @@ body.help-mode #tool-panel {
    Brush Settings Panel
    ============================================ */
 #brush-settings-panel,
-#fill-settings-panel {
+#fill-settings-panel,
+#eraser-settings-panel {
     position: fixed;
     left: 72px;
     bottom: max(12px, env(safe-area-inset-bottom));
@@ -1929,12 +1930,14 @@ body.help-mode #tool-panel {
 }
 
 #brush-settings-panel.hidden,
-#fill-settings-panel.hidden {
+#fill-settings-panel.hidden,
+#eraser-settings-panel.hidden {
     display: none;
 }
 
 #brush-settings-header,
-#fill-settings-header {
+#fill-settings-header,
+#eraser-settings-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1947,7 +1950,8 @@ body.help-mode #tool-panel {
 }
 
 #brush-settings-close,
-#fill-settings-close {
+#fill-settings-close,
+#eraser-settings-close {
     background: none;
     border: none;
     font-size: 16px;
@@ -1958,7 +1962,8 @@ body.help-mode #tool-panel {
 }
 
 #brush-settings-body,
-#fill-settings-body {
+#fill-settings-body,
+#eraser-settings-body {
     padding: 10px 12px;
     display: flex;
     flex-direction: column;
