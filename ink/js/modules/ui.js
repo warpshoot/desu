@@ -1823,6 +1823,7 @@ function setupBrushSettingsPanel() {
         densityVal.textContent   = b.stippleDensity;
         opVal.textContent        = Math.round(b.opacity * 100);
         curveVal.textContent     = b.pressureCurve.toFixed(1);
+        stabDistVal.textContent  = b.stabilizerDistance;
         // 表示/非表示の同期
         const densityRow      = document.getElementById('bs-density-row');
         const pdensityRow     = document.getElementById('bs-pressure-density-row');

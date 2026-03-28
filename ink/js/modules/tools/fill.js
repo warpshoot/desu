@@ -301,34 +301,27 @@ function _getLassoStab() {
 
 /**
  * 手ぶれ補正の「糸」をlassoCanvas上に描画 (投げ縄パス描画後に重ね描き)
+ * cursorX/Y, anchorX/Y はスクリーン座標 (lassoCanvas = スクリーンサイズ)
  */
 function _drawLassoStabString(cursorX, cursorY, anchorX, anchorY) {
-    const s = state.scale;
-    const tx = state.translateX;
-    const ty = state.translateY;
-    const sx1 = cursorX * s + tx;
-    const sy1 = cursorY * s + ty;
-    const sx2 = anchorX * s + tx;
-    const sy2 = anchorY * s + ty;
-
     lassoCtx.save();
     lassoCtx.lineWidth = 3;
     lassoCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
     lassoCtx.beginPath();
-    lassoCtx.moveTo(sx1, sy1);
-    lassoCtx.lineTo(sx2, sy2);
+    lassoCtx.moveTo(cursorX, cursorY);
+    lassoCtx.lineTo(anchorX, anchorY);
     lassoCtx.stroke();
 
     lassoCtx.lineWidth = 1.5;
     lassoCtx.strokeStyle = 'rgba(60, 130, 255, 0.85)';
     lassoCtx.beginPath();
-    lassoCtx.moveTo(sx1, sy1);
-    lassoCtx.lineTo(sx2, sy2);
+    lassoCtx.moveTo(cursorX, cursorY);
+    lassoCtx.lineTo(anchorX, anchorY);
     lassoCtx.stroke();
 
     // アンカー円
     lassoCtx.beginPath();
-    lassoCtx.arc(sx2, sy2, 4, 0, Math.PI * 2);
+    lassoCtx.arc(anchorX, anchorY, 4, 0, Math.PI * 2);
     lassoCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     lassoCtx.fill();
     lassoCtx.lineWidth = 1.5;
@@ -337,7 +330,7 @@ function _drawLassoStabString(cursorX, cursorY, anchorX, anchorY) {
 
     // カーソル小円
     lassoCtx.beginPath();
-    lassoCtx.arc(sx1, sy1, 2.5, 0, Math.PI * 2);
+    lassoCtx.arc(cursorX, cursorY, 2.5, 0, Math.PI * 2);
     lassoCtx.fillStyle = 'rgba(60, 130, 255, 0.7)';
     lassoCtx.fill();
 

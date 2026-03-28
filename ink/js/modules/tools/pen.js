@@ -35,7 +35,8 @@ function _drawStabString(cursorX, cursorY, brushX, brushY, brush) {
     const sy2 = brushY * s + ty;
 
     lassoCtx.save();
-    const stabDist = (brush.stabilizerDistance ?? 20) * s;
+    // stabilizerDistance はスクリーンpx単位 — scale 依存なし
+    const stabDist = brush.stabilizerDistance ?? 20;
     const showGuide  = brush.stabShowGuide ?? true;
 
     // 糸の描画 (白縁 + 青線で視認性向上)
@@ -252,12 +253,14 @@ export function drawPenLine(x, y, pressure = 0.5) {
             _drawStabString(x, y, _stabAnchorX, _stabAnchorY, brush);
         }
 
-        const stabDist = brush.stabilizerDistance ?? 20;
+        // stabilizerDistance はスクリーン座標系 (px) で扱う
+        // drawPenLine の x,y はキャンバス座標なので scale で割って換算
+        const stabDistCanvas = (brush.stabilizerDistance ?? 20) / state.scale;
         const dx = x - _stabAnchorX;
         const dy = y - _stabAnchorY;
         const d = Math.hypot(dx, dy);
-        if (d <= stabDist) return; // ブラシは動かない
-        const ratio = (d - stabDist) / d;
+        if (d <= stabDistCanvas) return; // ブラシは動かない
+        const ratio = (d - stabDistCanvas) / d;
         _stabAnchorX += dx * ratio;
         _stabAnchorY += dy * ratio;
         x = _stabAnchorX;
