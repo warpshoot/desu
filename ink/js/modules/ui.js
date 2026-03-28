@@ -325,6 +325,24 @@ document.addEventListener('desu:state-loaded', () => {
     updateBrushSizeSlider();
     renderBrushPalette();
     syncBrushSliders();
+
+    // アクティブな設定パネルが開いている場合、その表示内容を最新の状態にリフレッシュする
+    const brushPanel = document.getElementById('brush-settings-panel');
+    if (brushPanel && !brushPanel.classList.contains('hidden')) {
+        openBrushSettings(_editingBrushIdx);
+    }
+    const eraserPanel = document.getElementById('eraser-settings-panel');
+    if (eraserPanel && !eraserPanel.classList.contains('hidden')) {
+        openEraserSettings(_editingEraserSlotIdx);
+    }
+    const tonePanel = document.getElementById('tone-settings-panel');
+    if (tonePanel && !tonePanel.classList.contains('hidden')) {
+        openToneSettings(_editingToneIdx);
+    }
+    const fillPanel = document.getElementById('fill-settings-panel');
+    if (fillPanel && !fillPanel.classList.contains('hidden')) {
+        openFillSettings(_editingFillSlotIdx);
+    }
 });
 
 // ============================================
