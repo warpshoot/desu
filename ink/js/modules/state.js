@@ -212,7 +212,7 @@ export const state = {
     // mode:    'pen' (freehand stroke) | 'fill' (lasso/bucket) | 'eraser' (erase)
     // subTool: per-mode sub-tool selection
     //   pen:    'pen' | 'stipple'
-    //   fill:   'fill' | 'tone' | 'sketch'
+    //   fill:   'fill' | 'tone'
     //   eraser: 'pen' | 'lasso'
     mode: 'pen',
     subTool: 'pen',

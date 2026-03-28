@@ -3,7 +3,7 @@
  *
  * モノクロ専用: 色は黒固定、濃淡は不透明度のみで表現。
  * 全スロットが同一の描画ロジックを使用。
- * 挙動はブラシ設定 (pressureSize, pressureOpacity, binary, etc.) で制御。
+ * 挙動はブラシ設定 (pressureSize, binary, etc.) で制御。
  */
 
 // インク色: 黒固定 (モノクロツール)
@@ -25,7 +25,6 @@ export function makeDefaultBrushes() {
             size: 3,
             opacity: 1.0,
             pressureSize: true,
-            pressureOpacity: false, // 未使用: スタンプ重畳で正しく動作しないため無効
             pressureDensity: false,
             binary: false,
             stippleDensity: 5,
@@ -42,7 +41,6 @@ export function makeDefaultBrushes() {
             size: 6,
             opacity: 0.9,
             pressureSize: true,
-            pressureOpacity: true,
             pressureDensity: false,
             binary: false,
             stippleDensity: 5,
@@ -59,7 +57,6 @@ export function makeDefaultBrushes() {
             size: 4,
             opacity: 0.3,
             pressureSize: false,
-            pressureOpacity: false, // 未使用: スタンプ重畳で正しく動作しないため無効
             pressureDensity: true,
             binary: false,
             stippleDensity: 5,
@@ -85,9 +82,9 @@ export function applyPressureCurve(pressure, gamma) {
 // =============================================
 export function makeDefaultFillSlots() {
     return [
-        { id: 0, name: '1', subTool: 'fill', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', binary: true },
-        { id: 1, name: '2', subTool: 'tone', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', binary: true },
-        { id: 2, name: '3', subTool: 'fill', opacity: 0.5, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', binary: true },
+        { id: 0, name: '1', subTool: 'fill', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1' },
+        { id: 1, name: '2', subTool: 'tone', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1' },
+        { id: 2, name: '3', subTool: 'fill', opacity: 0.5, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1' },
     ];
 }
 
@@ -96,8 +93,8 @@ export function makeDefaultFillSlots() {
 // =============================================
 export function makeDefaultEraserSlots() {
     return [
-        { id: 0, name: '1', subTool: 'pen', binary: false },
-        { id: 1, name: '2', subTool: 'lasso', bucketEnabled: true, bucketTolerance: 'normal', binary: true },
+        { id: 0, name: '1', subTool: 'pen' },
+        { id: 1, name: '2', subTool: 'lasso', bucketEnabled: true, bucketTolerance: 'normal' },
         { id: 2, name: '3', subTool: 'clear' },
     ];
 }

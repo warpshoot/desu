@@ -248,12 +248,6 @@ export function fillTone(points) {
     const ctx = getActiveLayerCtx();
     if (!ctx) return;
 
-    // Get current binary setting from active slot
-    const slot = (state.mode === 'eraser')
-        ? state.eraserSlots[state.activeEraserSlotIndex]
-        : state.fillSlots[state.activeFillSlotIndex];
-    const isBinary = slot ? slot.binary !== false : true;
-
     const preset = getCurrentTonePreset();
     if (!preset) return;
 
@@ -291,10 +285,7 @@ export function fillTone(points) {
 
     drawToneInRegion(offCtx, minX * dpr, minY * dpr, maxX * dpr, maxY * dpr, preset);
 
-    // Binarize to remove antialiasing (Only if binary mode is ON)
-    if (isBinary) {
-        binarizeCanvas(offCtx, pWidth, pHeight);
-    }
+    binarizeCanvas(offCtx, pWidth, pHeight);
 
     // CSS座標でメインキャンバスに合成 (ctx は既に dpr スケール済み)
     ctx.drawImage(offscreen, minX, minY, width, height);
@@ -437,16 +428,8 @@ export function floodFillTone(startX, startY, tolerance = 'normal') {
     resultCtx.globalCompositeOperation = 'destination-in';
     resultCtx.drawImage(tempMaskCanvas, 0, 0);
 
-    // Get current binary setting from active slot
-    const slot = (state.mode === 'eraser')
-        ? state.eraserSlots[state.activeEraserSlotIndex]
-        : state.fillSlots[state.activeFillSlotIndex];
-    const isBinary = slot ? slot.binary !== false : true;
-
-    // 4. Binarize to remove antialiasing (Only if binary mode is ON)
-    if (isBinary) {
-        binarizeCanvas(resultCtx, regionW, regionH);
-    }
+    // 4. Binarize to remove antialiasing
+    binarizeCanvas(resultCtx, regionW, regionH);
 
     // 5. Finally draw to active layer
     ctx.drawImage(resultCanvas, minX / dpr, minY / dpr, regionW / dpr, regionH / dpr);
