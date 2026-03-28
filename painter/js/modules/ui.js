@@ -1663,9 +1663,8 @@ function openBrushSettings(idx) {
     document.getElementById('bs-pen-pressure-row').style.display     = isStipple ? 'none' : '';
     document.getElementById('bs-binary-row').style.display           = isStipple ? 'none' : '';
 
-    // 2値時: 不透明度スライダーと筆圧→透明度をグレーアウト
+    // 2値時: 不透明度スライダーをグレーアウト
     document.getElementById('bs-opacity-row').classList.toggle('disabled', brush.binary);
-    document.getElementById('bs-pressure-opacity').closest('.bs-toggle-label').classList.toggle('disabled', brush.binary);
 
     // 筆圧カーブ: ペン系のみ表示 (点描では非表示)
     document.getElementById('bs-pressure-curve-row').style.display = isStipple ? 'none' : '';
