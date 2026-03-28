@@ -179,8 +179,10 @@ export async function endPenDrawing() {
         if (_usingStrokeCanvas) {
             const mainCtx = getActiveLayerCtx();
             if (mainCtx) {
+                const brush = _getDrawBrush();
                 mainCtx.save();
                 mainCtx.globalAlpha = _strokeOpacity;
+                if (brush.binary) mainCtx.imageSmoothingEnabled = false;
                 const dpr = window.devicePixelRatio || 1;
                 mainCtx.drawImage(strokeCanvas, 0, 0, strokeCanvas.width / dpr, strokeCanvas.height / dpr);
                 mainCtx.restore();

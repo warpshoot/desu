@@ -32,9 +32,10 @@ export function markLayerDirty(layerId) {
  * 差分保存: 前回のスナップショットと比較し、変更レイヤーのみ新規Bitmap作成
  */
 export async function saveState() {
-    const prevSnapshot = state.undoStack.length > 0
-        ? state.undoStack[state.undoStack.length - 1]
-        : null;
+    // Redo スタックを同期的にクリア (await 前)
+    // これにより、非同期 bitmap 作成中に undo が実行されても
+    // redo エントリが誤って消されることを防ぐ
+    _clearRedoStack();
 
     const snapshot = {
         bitmaps: new Map(),
@@ -57,9 +58,6 @@ export async function saveState() {
         const old = state.undoStack.shift();
         _closeSnapshotBitmaps(old, state.undoStack[0]);
     }
-
-    // Clear redo stack on new action
-    _clearRedoStack();
 }
 
 /**
