@@ -319,12 +319,11 @@ export function floodFillTone(startX, startY) {
     const idx = (startY * w + startX) * 4;
     const targetA = data[idx + 3];
 
-    // モノクロ2値: アルファ閾値で透明/不透明を判定
-    const ALPHA_THRESHOLD = 128;
-    const targetIsTransparent = targetA < ALPHA_THRESHOLD;
-    const matchTarget = targetIsTransparent
-        ? (i) => data[i + 3] < ALPHA_THRESHOLD
-        : (i) => data[i + 3] >= ALPHA_THRESHOLD;
+    // 透明タップ: alpha < 255 を全てマッチ (完全不透明のみが壁)
+    // 不透明タップ: alpha === 255 をマッチ
+    const matchTarget = targetA < 255
+        ? (i) => data[i + 3] < 255
+        : (i) => data[i + 3] === 255;
 
     const mask = new Uint8Array(w * h);
     let minX = startX, minY = startY, maxX = startX, maxY = startY;
