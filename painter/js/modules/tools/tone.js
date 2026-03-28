@@ -323,7 +323,12 @@ export function floodFillTone(startX, startY) {
     const targetA = data[idx + 3];
 
 
-    const matchTarget = (i) => data[i] === targetR && data[i + 1] === targetG && data[i + 2] === targetB && data[i + 3] === targetA;
+    const tol = 30; // アンチエイリアス中間色の許容範囲
+    const matchTarget = (i) =>
+        Math.abs(data[i] - targetR) <= tol &&
+        Math.abs(data[i + 1] - targetG) <= tol &&
+        Math.abs(data[i + 2] - targetB) <= tol &&
+        Math.abs(data[i + 3] - targetA) <= tol;
 
     const mask = new Uint8Array(w * h);
     let minX = startX, minY = startY, maxX = startX, maxY = startY;

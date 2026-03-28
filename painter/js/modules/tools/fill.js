@@ -19,7 +19,10 @@ function getActiveContextAndCanvas() {
 
 // ============================================
 // 塗りつぶし（スキャンライン法）
+// アンチエイリアスの中間色を許容するためトレランスを使用
 // ============================================
+
+const FILL_TOLERANCE = 30; // 0-255: アンチエイリアスの中間色を吸収する閾値
 
 export function floodFill(startX, startY, fillColor) {
     const { canvas, ctx } = getActiveContextAndCanvas();
@@ -42,7 +45,12 @@ export function floodFill(startX, startY, fillColor) {
 
     if (targetR === fillColor[0] && targetG === fillColor[1] && targetB === fillColor[2] && targetA === fillColor[3]) return;
 
-    const matchTarget = (i) => data[i] === targetR && data[i + 1] === targetG && data[i + 2] === targetB && data[i + 3] === targetA;
+    const tol = FILL_TOLERANCE;
+    const matchTarget = (i) =>
+        Math.abs(data[i] - targetR) <= tol &&
+        Math.abs(data[i + 1] - targetG) <= tol &&
+        Math.abs(data[i + 2] - targetB) <= tol &&
+        Math.abs(data[i + 3] - targetA) <= tol;
     const setPixel = (i) => {
         data[i] = fillColor[0];
         data[i + 1] = fillColor[1];
@@ -50,13 +58,15 @@ export function floodFill(startX, startY, fillColor) {
         data[i + 3] = fillColor[3];
     };
 
+    // visited マスクで再訪問防止
+    const visited = new Uint8Array(w * h);
     const stack = [[startX, startY]];
 
     while (stack.length > 0) {
         let [x, y] = stack.pop();
         let i = (y * w + x) * 4;
 
-        while (x >= 0 && matchTarget(i)) {
+        while (x >= 0 && matchTarget(i) && !visited[y * w + x]) {
             x--;
             i -= 4;
         }
@@ -65,12 +75,13 @@ export function floodFill(startX, startY, fillColor) {
 
         let spanAbove = false, spanBelow = false;
 
-        while (x < w && matchTarget(i)) {
+        while (x < w && matchTarget(i) && !visited[y * w + x]) {
+            visited[y * w + x] = 1;
             setPixel(i);
 
             if (y > 0) {
                 const above = i - w * 4;
-                if (matchTarget(above)) {
+                if (matchTarget(above) && !visited[(y - 1) * w + x]) {
                     if (!spanAbove) {
                         stack.push([x, y - 1]);
                         spanAbove = true;
@@ -82,7 +93,7 @@ export function floodFill(startX, startY, fillColor) {
 
             if (y < h - 1) {
                 const below = i + w * 4;
-                if (matchTarget(below)) {
+                if (matchTarget(below) && !visited[(y + 1) * w + x]) {
                     if (!spanBelow) {
                         stack.push([x, y + 1]);
                         spanBelow = true;
@@ -100,12 +111,11 @@ export function floodFill(startX, startY, fillColor) {
     ctx.putImageData(imgData, 0, 0);
 }
 
-// 透明で塗りつぶし
+// 透明で塗りつぶし (トレランス付き)
 export function floodFillTransparent(startX, startY) {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
-    // CSS座標を物理ピクセル座標に変換
     const dpr = window.devicePixelRatio || 1;
     startX = Math.round(startX * dpr);
     startY = Math.round(startY * dpr);
@@ -122,18 +132,24 @@ export function floodFillTransparent(startX, startY) {
 
     if (targetA === 0) return;
 
-    const matchTarget = (i) => data[i] === targetR && data[i + 1] === targetG && data[i + 2] === targetB && data[i + 3] === targetA;
+    const tol = FILL_TOLERANCE;
+    const matchTarget = (i) =>
+        Math.abs(data[i] - targetR) <= tol &&
+        Math.abs(data[i + 1] - targetG) <= tol &&
+        Math.abs(data[i + 2] - targetB) <= tol &&
+        Math.abs(data[i + 3] - targetA) <= tol;
     const setPixel = (i) => {
-        data[i + 3] = 0;
+        data[i] = 0; data[i + 1] = 0; data[i + 2] = 0; data[i + 3] = 0;
     };
 
+    const visited = new Uint8Array(w * h);
     const stack = [[startX, startY]];
 
     while (stack.length > 0) {
         let [x, y] = stack.pop();
         let i = (y * w + x) * 4;
 
-        while (x >= 0 && matchTarget(i)) {
+        while (x >= 0 && matchTarget(i) && !visited[y * w + x]) {
             x--;
             i -= 4;
         }
@@ -142,31 +158,22 @@ export function floodFillTransparent(startX, startY) {
 
         let spanAbove = false, spanBelow = false;
 
-        while (x < w && matchTarget(i)) {
+        while (x < w && matchTarget(i) && !visited[y * w + x]) {
+            visited[y * w + x] = 1;
             setPixel(i);
 
             if (y > 0) {
                 const above = i - w * 4;
-                if (matchTarget(above)) {
-                    if (!spanAbove) {
-                        stack.push([x, y - 1]);
-                        spanAbove = true;
-                    }
-                } else {
-                    spanAbove = false;
-                }
+                if (matchTarget(above) && !visited[(y - 1) * w + x]) {
+                    if (!spanAbove) { stack.push([x, y - 1]); spanAbove = true; }
+                } else { spanAbove = false; }
             }
 
             if (y < h - 1) {
                 const below = i + w * 4;
-                if (matchTarget(below)) {
-                    if (!spanBelow) {
-                        stack.push([x, y + 1]);
-                        spanBelow = true;
-                    }
-                } else {
-                    spanBelow = false;
-                }
+                if (matchTarget(below) && !visited[(y + 1) * w + x]) {
+                    if (!spanBelow) { stack.push([x, y + 1]); spanBelow = true; }
+                } else { spanBelow = false; }
             }
 
             x++;
