@@ -72,9 +72,9 @@ export function applyPressureCurve(pressure, gamma) {
 // =============================================
 export function makeDefaultFillSlots() {
     return [
-        { id: 0, name: '1', subTool: 'fill', opacity: 1.0, bucketEnabled: true, tonePresetId: 'coarse1' },
-        { id: 1, name: '2', subTool: 'tone', opacity: 1.0, bucketEnabled: true, tonePresetId: 'coarse1' },
-        { id: 2, name: '3', subTool: 'fill', opacity: 0.5, bucketEnabled: true, tonePresetId: 'coarse1' },
+        { id: 0, name: '1', subTool: 'fill', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1' },
+        { id: 1, name: '2', subTool: 'tone', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1' },
+        { id: 2, name: '3', subTool: 'fill', opacity: 0.5, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1' },
     ];
 }
 
@@ -84,7 +84,8 @@ export function makeDefaultFillSlots() {
 export function makeDefaultEraserSlots() {
     return [
         { id: 0, name: '1', subTool: 'pen' },
-        { id: 1, name: '2', subTool: 'lasso' },
+        { id: 1, name: '2', subTool: 'lasso', bucketEnabled: true, bucketTolerance: 'normal' },
+        { id: 2, name: '3', subTool: 'clear' },
     ];
 }
 

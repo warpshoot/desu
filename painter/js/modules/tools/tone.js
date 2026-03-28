@@ -1,5 +1,6 @@
 ﻿import { state, getActiveLayerCtx } from '../state.js';
 import { getBounds, isPointInPolygon } from '../utils.js';
+import { _makeMatchFn } from './fill.js';
 
 // ============================================
 // Tone Presets Configuration
@@ -295,7 +296,7 @@ export function fillTone(points) {
 // Flood Fill for Tone
 // ============================================
 
-export function floodFillTone(startX, startY) {
+export function floodFillTone(startX, startY, tolerance = 'normal') {
     const ctx = getActiveLayerCtx();
     if (!ctx) {
         return;
@@ -319,11 +320,7 @@ export function floodFillTone(startX, startY) {
     const idx = (startY * w + startX) * 4;
     const targetA = data[idx + 3];
 
-    // 透明タップ: alpha < 255 を全てマッチ (完全不透明のみが壁)
-    // 不透明タップ: alpha === 255 をマッチ
-    const matchTarget = targetA < 255
-        ? (i) => data[i + 3] < 255
-        : (i) => data[i + 3] === 255;
+    const matchTarget = _makeMatchFn(data, targetA, tolerance);
 
     const mask = new Uint8Array(w * h);
     let minX = startX, minY = startY, maxX = startX, maxY = startY;

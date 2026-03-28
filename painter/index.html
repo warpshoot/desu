@@ -54,6 +54,7 @@
             <div class="mode-btn" id="mode-eraser" data-mode="eraser" title="消しゴム">
                 <img src="icons/er2.svg" class="tool-icon mode-icon" data-sub="pen" style="filter: brightness(0);" alt="Eraser Pen">
                 <img src="icons/er1.png" class="tool-icon mode-icon" data-sub="lasso" style="filter: brightness(0); display:none;" alt="Eraser Lasso">
+                <svg class="tool-icon mode-icon" data-sub="clear" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/><path d="M9 7V4h6v3"/></svg>
                 <div class="hold-progress"></div>
             </div>
         </div>
@@ -290,6 +291,45 @@
                 <label class="bs-toggle-label">
                     <input type="checkbox" id="fs-bucket" checked> バケツ (タップで塗りつぶし)
                 </label>
+            </div>
+            <div class="bs-row" id="fs-tolerance-row">
+                <label>バケツ許容値</label>
+                <select id="fs-tolerance">
+                    <option value="strict">厳密</option>
+                    <option value="normal" selected>標準</option>
+                    <option value="loose">ゆるい</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- 消しゴム設定パネル -->
+    <div id="eraser-settings-panel" class="hidden">
+        <div id="eraser-settings-header">
+            <span id="eraser-settings-name">消しゴム設定</span>
+            <button id="eraser-settings-close">×</button>
+        </div>
+        <div id="eraser-settings-body">
+            <div class="bs-row" id="es-subtool-row">
+                <label>サブツール</label>
+                <select id="es-subtool">
+                    <option value="pen">ペン</option>
+                    <option value="lasso">投げ縄</option>
+                    <option value="clear">全消し</option>
+                </select>
+            </div>
+            <div class="bs-row bs-toggles" id="es-bucket-row">
+                <label class="bs-toggle-label">
+                    <input type="checkbox" id="es-bucket" checked> バケツ (タップで消去)
+                </label>
+            </div>
+            <div class="bs-row" id="es-tolerance-row">
+                <label>バケツ許容値</label>
+                <select id="es-tolerance">
+                    <option value="strict">厳密</option>
+                    <option value="normal" selected>標準</option>
+                    <option value="loose">ゆるい</option>
+                </select>
             </div>
         </div>
     </div>
