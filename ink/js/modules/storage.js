@@ -1,4 +1,4 @@
-import { layers, createLayer, deleteLayer } from './state.js';
+import { state, layers, createLayer, deleteLayer } from './state.js';
 
 const STORAGE_KEY = 'desu-draw-state';
 let saveTimeout = null;
@@ -10,7 +10,23 @@ export function saveLocalState() {
         try {
             const data = {
                 timestamp: Date.now(),
-                layers: []
+                layers: [],
+                // Also save current tools for persistence
+                settings: {
+                    brushes: state.brushes,
+                    fillSlots: state.fillSlots,
+                    eraserSlots: state.eraserSlots,
+                    activeBrushIndex: state.activeBrushIndex,
+                    activeFillSlotIndex: state.activeFillSlotIndex,
+                    activeEraserSlotIndex: state.activeEraserSlotIndex,
+                    mode: state.mode,
+                    subTool: state.subTool,
+                    penSize: state.penSize,
+                    eraserSize: state.eraserSize,
+                    stippleSize: state.stippleSize,
+                    inkColor: state.inkColor,
+                    canvasColor: state.canvasColor
+                }
             };
 
             for (const layer of layers) {
@@ -24,11 +40,9 @@ export function saveLocalState() {
 
             const json = JSON.stringify(data);
             localStorage.setItem(STORAGE_KEY, json);
-            // console.log('[Storage] Saved', json.length);
         } catch (e) {
             if (e.name === 'QuotaExceededError') {
                 console.warn('[Storage] Quota exceeded, cannot save state.');
-                // Optional: Notify user once?
             } else {
                 console.error('[Storage] Save failed:', e);
             }
@@ -54,15 +68,16 @@ export function loadLocalState() {
 
             console.log('[Storage] Loading state from', new Date(data.timestamp));
 
+            // Restore settings if present
+            if (data.settings) {
+                _restoreSettings(data.settings);
+            }
+
             // Adjust layer count
-            // 1. Ensure enough layers
             while (layers.length < data.layers.length) {
                 createLayer();
             }
-            // 2. Remove excess layers (if safe)
-            // Note: deleteLayer logic prevents deleting the last one, loop carefully
             while (layers.length > data.layers.length) {
-                // Delete the last layer
                 deleteLayer(layers[layers.length - 1].id);
             }
 
@@ -73,19 +88,11 @@ export function loadLocalState() {
                 if (index >= layers.length) return;
                 const layer = layers[index];
 
-                // Restore properties
                 layer.opacity = saved.opacity ?? 1.0;
                 layer.visible = saved.visible ?? true;
-
-                // Update DOM style
-                // (state.js doesn't auto-update style on property change, usually handled by UI)
                 layer.canvas.style.opacity = layer.opacity;
                 layer.canvas.style.display = layer.visible ? 'block' : 'none';
 
-                // Note: Sliders in UI won't update automatically unless we trigger UI update
-                // But that's acceptable for now.
-
-                // Load image
                 const img = new Image();
                 img.onload = () => {
                     layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
@@ -94,6 +101,7 @@ export function loadLocalState() {
                     layer.ctx.imageSmoothingEnabled = true;
                     loadedCount++;
                     if (loadedCount === data.layers.length) {
+                        document.dispatchEvent(new CustomEvent('desu:state-loaded'));
                         resolve(true);
                     }
                 };
@@ -114,6 +122,7 @@ export async function exportProject() {
             version: 1,
             timestamp: Date.now(),
             layers: []
+            // Project export currently intentionally omits settings as requested
         };
 
         for (const layer of layers) {
@@ -126,29 +135,8 @@ export async function exportProject() {
         }
 
         const json = JSON.stringify(data);
-        const filename = 'desu_drawing_' + Date.now() + '.json';
-
-        // Use Web Share API on iOS Safari (Blob download doesn't save to Files app)
-        if (navigator.canShare) {
-            const file = new File([json], filename, { type: 'application/json' });
-            try {
-                if (navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file] });
-                    return true;
-                }
-            } catch (e) {
-                if (e.name === 'AbortError') return true;
-            }
-        }
-
-        // Fallback: traditional download
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
+        const filename = 'desu_ink_project_' + Date.now() + '.json';
+        await _shareOrDownload(json, filename, 'application/json');
         return true;
     } catch (e) {
         console.error('Failed to export project:', e);
@@ -169,18 +157,18 @@ export function importProject(file) {
                     throw new Error('Invalid project file');
                 }
 
-                // Restore layers
-                // 1. Clear existing layers (leaving one)
+                // Project import might contain settings if exported from another version
+                if (data.settings) {
+                    _restoreSettings(data.settings);
+                }
+
                 while (layers.length > 1) {
                     deleteLayer(layers[layers.length - 1].id);
                 }
-
-                // 2. Add needed layers
                 while (layers.length < data.layers.length) {
                     createLayer();
                 }
 
-                // 3. Restore content
                 const dpr = window.devicePixelRatio || 1;
                 let loadedCount = 0;
                 data.layers.forEach((saved, index) => {
@@ -200,6 +188,7 @@ export function importProject(file) {
                         layer.ctx.imageSmoothingEnabled = true;
                         loadedCount++;
                         if (loadedCount === data.layers.length) {
+                            document.dispatchEvent(new CustomEvent('desu:state-loaded'));
                             resolve(true);
                         }
                     };
@@ -213,4 +202,90 @@ export function importProject(file) {
         };
         reader.readAsText(file);
     });
+}
+
+// --- Tool Config Export/Import ---
+
+export async function exportConfig() {
+    try {
+        const config = {
+            brushes: state.brushes,
+            fillSlots: state.fillSlots,
+            eraserSlots: state.eraserSlots,
+            activeBrushIndex: state.activeBrushIndex,
+            activeFillSlotIndex: state.activeFillSlotIndex,
+            activeEraserSlotIndex: state.activeEraserSlotIndex,
+            mode: state.mode,
+            subTool: state.subTool,
+            penSize: state.penSize,
+            eraserSize: state.eraserSize,
+            stippleSize: state.stippleSize,
+            inkColor: state.inkColor,
+            canvasColor: state.canvasColor
+        };
+        const json = JSON.stringify(config);
+        const filename = 'desu_ink_config_' + Date.now() + '.json';
+        await _shareOrDownload(json, filename, 'application/json');
+        return true;
+    } catch (e) {
+        console.error('Failed to export config:', e);
+        return false;
+    }
+}
+
+export function importConfig(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const config = JSON.parse(e.target.result);
+                _restoreSettings(config);
+                document.dispatchEvent(new CustomEvent('desu:state-loaded'));
+                resolve(true);
+            } catch (err) {
+                console.error('Config import failed:', err);
+                resolve(false);
+            }
+        };
+        reader.readAsText(file);
+    });
+}
+
+// --- Internal Helpers ---
+
+function _restoreSettings(s) {
+    if (s.brushes) state.brushes = s.brushes;
+    if (s.fillSlots) state.fillSlots = s.fillSlots;
+    if (s.eraserSlots) state.eraserSlots = s.eraserSlots;
+    if (s.activeBrushIndex != null) state.activeBrushIndex = s.activeBrushIndex;
+    if (s.activeFillSlotIndex != null) state.activeFillSlotIndex = s.activeFillSlotIndex;
+    if (s.activeEraserSlotIndex != null) state.activeEraserSlotIndex = s.activeEraserSlotIndex;
+    if (s.mode) state.mode = s.mode;
+    if (s.subTool) state.subTool = s.subTool;
+    if (s.penSize) state.penSize = s.penSize;
+    if (s.eraserSize) state.eraserSize = s.eraserSize;
+    if (s.stippleSize) state.stippleSize = s.stippleSize;
+    if (s.inkColor) state.inkColor = s.inkColor;
+    if (s.canvasColor) state.canvasColor = s.canvasColor;
+}
+
+async function _shareOrDownload(content, filename, type) {
+    if (navigator.canShare) {
+        const file = new File([content], filename, { type });
+        try {
+            if (navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file] });
+                return;
+            }
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+        }
+    }
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
 }

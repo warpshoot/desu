@@ -45,7 +45,7 @@ import {
     createTonePreview,
     floodFillTone
 } from './tools/tone.js';
-import { exportProject, importProject } from './storage.js';
+import { exportProject, importProject, exportConfig, importConfig } from './storage.js';
 
 // ============================================
 // Debug Display
@@ -174,6 +174,9 @@ function setupFileUI() {
     const exportBtn = document.getElementById('exportProjectBtn');
     const importBtn = document.getElementById('importProjectBtn');
     const fileInput = document.getElementById('fileInput');
+    const exportConfigBtn = document.getElementById('exportConfigBtn');
+    const importConfigBtn = document.getElementById('importConfigBtn');
+    const configInput = document.getElementById('configInput');
 
 
     if (!fileBtn || !menu) return;
@@ -284,7 +287,45 @@ function setupFileUI() {
             }
         });
     }
+
+    // Config Export click
+    if (exportConfigBtn) {
+        exportConfigBtn.addEventListener('click', async () => {
+            hideAllMenus();
+            await exportConfig();
+        });
+    }
+
+    // Config Import click
+    if (importConfigBtn) {
+        importConfigBtn.addEventListener('click', () => {
+            hideAllMenus();
+            configInput.click();
+        });
+    }
+
+    // Config input change (Import)
+    if (configInput) {
+        configInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                importConfig(file).then((success) => {
+                    if (!success) alert('設定の読み込みに失敗しました');
+                    configInput.value = '';
+                });
+            }
+        });
+    }
 }
+
+document.addEventListener('desu:state-loaded', () => {
+    updateModeButtonIcon(state.mode, state.subTool);
+    updateToolButtonStates();
+    updateBrushSizeVisibility();
+    updateBrushSizeSlider();
+    renderBrushPalette();
+    syncBrushSliders();
+});
 
 // ============================================
 // Layer Panel (Dynamic Layer Buttons)
@@ -1856,6 +1897,7 @@ function openFillSettings(idx) {
     document.getElementById('fs-opacity-val').textContent = Math.round((slot.opacity ?? 1.0) * 100);
     document.getElementById('fs-bucket').checked = slot.bucketEnabled !== false;
     document.getElementById('fs-tolerance').value = slot.bucketTolerance || 'normal';
+    document.getElementById('fs-is-binary').checked = slot.binary !== false;
 
     // バケツ有効時のみ許容値表示
     const bucketOn = slot.bucketEnabled !== false;
@@ -1899,6 +1941,7 @@ function setupFillSettingsPanel() {
     const opVal        = document.getElementById('fs-opacity-val');
     const bucketCheck  = document.getElementById('fs-bucket');
     const toleranceSel = document.getElementById('fs-tolerance');
+    const binaryCheck   = document.getElementById('fs-is-binary');
 
     const sync = () => {
         const slot = state.fillSlots[_editingFillSlotIdx];
@@ -1906,6 +1949,7 @@ function setupFillSettingsPanel() {
         slot.opacity        = parseInt(opSlider.value) / 100;
         slot.bucketEnabled  = bucketCheck.checked;
         slot.bucketTolerance = toleranceSel.value;
+        slot.binary        = binaryCheck.checked;
         opVal.textContent   = Math.round(slot.opacity * 100);
 
         const isTone = slot.subTool === 'tone';
@@ -1927,6 +1971,7 @@ function setupFillSettingsPanel() {
     opSlider.addEventListener('input', sync);
     bucketCheck.addEventListener('input', sync);
     toleranceSel.addEventListener('input', sync);
+    binaryCheck.addEventListener('input', sync);
 
     panel.addEventListener('pointerdown', (e) => e.stopPropagation());
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
@@ -1950,12 +1995,14 @@ function openEraserSettings(idx) {
     document.getElementById('es-subtool').value = slot.subTool || 'pen';
     document.getElementById('es-bucket').checked = slot.bucketEnabled !== false;
     document.getElementById('es-tolerance').value = slot.bucketTolerance || 'normal';
+    document.getElementById('es-is-binary').checked = slot.binary !== false;
 
     // lasso のみバケツ設定を表示
     const isLasso = slot.subTool === 'lasso';
     document.getElementById('es-bucket-row').style.display = isLasso ? '' : 'none';
     const bucketOn = isLasso && slot.bucketEnabled !== false;
     document.getElementById('es-tolerance-row').style.display = bucketOn ? '' : 'none';
+    document.getElementById('es-is-binary-row').style.display = isLasso ? '' : 'none';
 
     panel.classList.remove('hidden');
     panel.style.display = '';
@@ -1986,16 +2033,19 @@ function setupEraserSettingsPanel() {
     const subToolSel   = document.getElementById('es-subtool');
     const bucketCheck  = document.getElementById('es-bucket');
     const toleranceSel = document.getElementById('es-tolerance');
+    const binaryCheck  = document.getElementById('es-is-binary');
 
     const sync = () => {
         const slot = state.eraserSlots[_editingEraserSlotIdx];
         slot.subTool         = subToolSel.value;
         slot.bucketEnabled   = bucketCheck.checked;
         slot.bucketTolerance = toleranceSel.value;
+        slot.binary          = binaryCheck.checked;
 
         const isLasso = slot.subTool === 'lasso';
         document.getElementById('es-bucket-row').style.display = isLasso ? '' : 'none';
         document.getElementById('es-tolerance-row').style.display = (isLasso && bucketCheck.checked) ? '' : 'none';
+        document.getElementById('es-is-binary-row').style.display = isLasso ? '' : 'none';
 
         // アクティブスロットならモード反映
         if (_editingEraserSlotIdx === state.activeEraserSlotIndex && state.mode === 'eraser') {
@@ -2011,6 +2061,7 @@ function setupEraserSettingsPanel() {
     subToolSel.addEventListener('input', sync);
     bucketCheck.addEventListener('input', sync);
     toleranceSel.addEventListener('input', sync);
+    binaryCheck.addEventListener('input', sync);
 
     panel.addEventListener('pointerdown', (e) => e.stopPropagation());
     panel.addEventListener('pointermove', (e) => e.stopPropagation());

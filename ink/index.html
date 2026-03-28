@@ -121,16 +121,27 @@
     <!-- ファイル管理メニュー -->
     <div id="file-menu" class="tool-menu hidden">
         <div class="menu-item" id="newProjectBtn">
-            <span>NEW</span>
+            <span>新規作成</span>
         </div>
+        <div class="menu-divider"></div>
         <div class="menu-item" id="exportProjectBtn">
-            <span>SAVE (.json)</span>
+            <span>プロジェクト保存 (.json)</span>
         </div>
         <div class="menu-item" id="importProjectBtn">
-            <span>LOAD</span>
-            <!-- Hidden file input -->
-            <input type="file" id="fileInput" accept=".json,.desu" style="display:none;">
+            <span>プロジェクト読込</span>
         </div>
+        <div class="menu-divider"></div>
+        <div class="menu-item" id="exportConfigBtn">
+            <span>設定の書き出し</span>
+        </div>
+        <div class="menu-item" id="importConfigBtn">
+            <span>設定の読み込み</span>
+        </div>
+        
+        <!-- Project Save Input -->
+        <input type="file" id="fileInput" accept=".json,.desu" style="display:none;">
+        <!-- Config Save Input -->
+        <input type="file" id="configInput" accept=".json,.desuconfig" style="display:none;">
     </div>
 
     <!-- 保存UI -->
@@ -297,6 +308,11 @@
                     <option value="loose">ゆるい</option>
                 </select>
             </div>
+            <div class="bs-row bs-toggles" id="fs-is-binary-row">
+                <label class="bs-toggle-label">
+                    <input type="checkbox" id="fs-is-binary" checked> 2値ピクセル
+                </label>
+            </div>
         </div>
     </div>
 
@@ -327,6 +343,11 @@
                     <option value="normal" selected>標準</option>
                     <option value="loose">ゆるい</option>
                 </select>
+            </div>
+            <div class="bs-row bs-toggles" id="es-is-binary-row">
+                <label class="bs-toggle-label">
+                    <input type="checkbox" id="es-is-binary" checked> 2値ピクセル
+                </label>
             </div>
         </div>
     </div>
