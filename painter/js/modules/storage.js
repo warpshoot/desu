@@ -89,7 +89,9 @@ export function loadLocalState() {
                 const img = new Image();
                 img.onload = () => {
                     layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+                    layer.ctx.imageSmoothingEnabled = false;
                     layer.ctx.drawImage(img, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
+                    layer.ctx.imageSmoothingEnabled = true;
                     loadedCount++;
                     if (loadedCount === data.layers.length) {
                         resolve(true);
@@ -97,8 +99,6 @@ export function loadLocalState() {
                 };
                 img.src = saved.image;
             });
-
-
 
         } catch (e) {
             console.error('[Storage] Load failed:', e);
@@ -195,7 +195,9 @@ export function importProject(file) {
                     const img = new Image();
                     img.onload = () => {
                         layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+                        layer.ctx.imageSmoothingEnabled = false;
                         layer.ctx.drawImage(img, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
+                        layer.ctx.imageSmoothingEnabled = true;
                         loadedCount++;
                         if (loadedCount === data.layers.length) {
                             resolve(true);

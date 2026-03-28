@@ -135,7 +135,9 @@ function restoreSnapshot(snapshot) {
         const bitmap = bitmaps instanceof Map ? bitmaps.get(layer.id) : bitmaps.get(layer.id);
         if (bitmap) {
             layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+            layer.ctx.imageSmoothingEnabled = false;
             layer.ctx.drawImage(bitmap, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
+            layer.ctx.imageSmoothingEnabled = true;
         }
     }
 
@@ -167,7 +169,9 @@ export function restoreLayer(layerId) {
     if (bitmap && layer) {
         const dpr = window.devicePixelRatio || 1;
         layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+        layer.ctx.imageSmoothingEnabled = false;
         layer.ctx.drawImage(bitmap, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
+        layer.ctx.imageSmoothingEnabled = true;
     }
 }
 

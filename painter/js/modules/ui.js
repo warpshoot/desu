@@ -1651,7 +1651,7 @@ function openBrushSettings(idx) {
     document.getElementById('bs-opacity').value    = Math.round(brush.opacity * 100);
     document.getElementById('bs-opacity-val').textContent = Math.round(brush.opacity * 100);
     document.getElementById('bs-pressure-size').checked    = brush.pressureSize;
-    document.getElementById('bs-pressure-opacity').checked = brush.pressureOpacity;
+    // pressureOpacity removed: スタンプ重畳で正しく動作しないため廃止
     document.getElementById('bs-binary').checked           = brush.binary;
     document.getElementById('bs-pressure-curve').value     = brush.pressureCurve ?? 1.0;
     document.getElementById('bs-pressure-curve-val').textContent = (brush.pressureCurve ?? 1.0).toFixed(1);
@@ -1706,7 +1706,6 @@ function setupBrushSettingsPanel() {
     const opSlider         = document.getElementById('bs-opacity');
     const opVal            = document.getElementById('bs-opacity-val');
     const psizeCheck       = document.getElementById('bs-pressure-size');
-    const popCheck         = document.getElementById('bs-pressure-opacity');
     const binaryCheck      = document.getElementById('bs-binary');
     const curveSlider      = document.getElementById('bs-pressure-curve');
     const curveVal         = document.getElementById('bs-pressure-curve-val');
@@ -1719,7 +1718,7 @@ function setupBrushSettingsPanel() {
         b.pressureDensity = pdensityCheck.checked;
         b.opacity         = parseInt(opSlider.value) / 100;
         b.pressureSize    = psizeCheck.checked;
-        b.pressureOpacity = popCheck.checked;
+        b.pressureOpacity = false; // 機能廃止
         b.binary          = binaryCheck.checked;
         b.pressureCurve   = parseFloat(curveSlider.value);
         // color removed: monochrome only (INK_COLOR = #000000)
@@ -1735,9 +1734,8 @@ function setupBrushSettingsPanel() {
         document.getElementById('bs-binary-row').style.display           = isStipple ? 'none' : '';
         document.getElementById('bs-pressure-curve-row').style.display   = isStipple ? 'none' : '';
 
-        // 2値時: 不透明度スライダーと筆圧→透明度をグレーアウト
+        // 2値時: 不透明度スライダーをグレーアウト
         document.getElementById('bs-opacity-row').classList.toggle('disabled', b.binary);
-        document.getElementById('bs-pressure-opacity').closest('.bs-toggle-label').classList.toggle('disabled', b.binary);
 
         // このスロットがアクティブなら、モードボタンのサブツールも更新
         if (_editingBrushIdx === state.activeBrushIndex && state.mode === 'pen') {
@@ -1760,7 +1758,7 @@ function setupBrushSettingsPanel() {
         if (_editingBrushIdx === state.activeBrushIndex) syncBrushSliders();
     };
 
-    [subToolSelect, psizeCheck, popCheck, binaryCheck, pdensityCheck]
+    [subToolSelect, psizeCheck, binaryCheck, pdensityCheck]
         .forEach(el => el.addEventListener('input', sync));
     opSlider.addEventListener('input', sync);
     densitySlider.addEventListener('input', sync);
@@ -2321,7 +2319,9 @@ function setupOrientationHandler() {
             layer.canvas.style.height = h + 'px';
             layer.ctx.setTransform(1, 0, 0, 1, 0, 0);
             layer.ctx.scale(dpr, dpr);
+            layer.ctx.imageSmoothingEnabled = false;
             layer.ctx.drawImage(layerBitmaps[i], 0, 0, w, h);
+            layer.ctx.imageSmoothingEnabled = true;
             layerBitmaps[i].close();
         }
 

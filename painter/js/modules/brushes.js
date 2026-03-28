@@ -24,7 +24,7 @@ export function makeDefaultBrushes() {
             size: 3,
             opacity: 1.0,
             pressureSize: true,
-            pressureOpacity: false,
+            pressureOpacity: false, // 未使用: スタンプ重畳で正しく動作しないため無効
             pressureDensity: false,
             binary: false,
             stippleDensity: 5,
@@ -50,7 +50,7 @@ export function makeDefaultBrushes() {
             size: 4,
             opacity: 0.3,
             pressureSize: false,
-            pressureOpacity: false,
+            pressureOpacity: false, // 未使用: スタンプ重畳で正しく動作しないため無効
             pressureDensity: true,
             binary: false,
             stippleDensity: 5,
@@ -141,18 +141,13 @@ function _drawStroke(ctx, pts, fromIdx, isStart, b) {
     const getW = (p) => b.pressureSize
         ? Math.max(0.5, b.size * (0.3 + 1.2 * applyPressureCurve(p, gamma)))
         : b.size;
-    const getA = (p) => b.pressureOpacity
-        ? (0.1 + 0.9 * applyPressureCurve(p, gamma))
-        : 1.0;
 
     ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = INK_COLOR;
 
     if (isStart) {
         const p = pts[0];
         const w = getW(p.pressure);
-        ctx.fillStyle = b.pressureOpacity
-            ? _applyAlpha(INK_COLOR, getA(p.pressure))
-            : INK_COLOR;
         ctx.beginPath(); ctx.arc(p.x, p.y, w / 2, 0, Math.PI * 2); ctx.fill();
         return 0;
     }
@@ -161,13 +156,7 @@ function _drawStroke(ctx, pts, fromIdx, isStart, b) {
     for (let i = startI; i < pts.length; i++) {
         const p1 = pts[i-1], p2 = pts[i];
         const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
-
-        if (b.pressureOpacity) {
-            _stampSegmentWithAlpha(ctx, p1, p2, w1, w2, getA(p1.pressure), getA(p2.pressure));
-        } else {
-            ctx.fillStyle = INK_COLOR;
-            _stampSegment(ctx, p1, p2, w1, w2);
-        }
+        _stampSegment(ctx, p1, p2, w1, w2);
     }
     return pts.length - 1;
 }
@@ -182,23 +171,41 @@ function _drawBinary(ctx, pts, fromIdx, isStart, b) {
         : b.size;
 
     ctx.globalCompositeOperation = 'source-over';
-    // 2値モード: アンチエイリアスを無効化して完全不透明ピクセルのみ出力
     ctx.imageSmoothingEnabled = false;
 
     const startI = isStart ? 0 : Math.max(1, fromIdx);
     for (let i = startI; i < pts.length; i++) {
         const p1 = pts[Math.max(0, i - 1)];
         const p2 = pts[i];
-        const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-        const steps = i === 0 ? 0 : Math.ceil(dist);
-        for (let j = 0; j <= steps; j++) {
-            const t = steps === 0 ? 0 : j / steps;
-            const cx = p1.x + (p2.x - p1.x) * t;
-            const cy = p1.y + (p2.y - p1.y) * t;
+
+        if (i === 0) {
+            // 始点のみ: 1ドット描画
+            const stampW = Math.max(1, Math.round(getW(p1.pressure)));
+            const stamp = getPixelBrush(stampW);
+            ctx.drawImage(stamp, Math.floor(p1.x - stampW / 2), Math.floor(p1.y - stampW / 2));
+            continue;
+        }
+
+        // Bresenham ライン: 最小限のドット数で直線を描画
+        let x0 = Math.floor(p1.x), y0 = Math.floor(p1.y);
+        const x1 = Math.floor(p2.x), y1 = Math.floor(p2.y);
+        const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+        let err = dx - dy;
+        const totalDist = dx + dy || 1;
+        let traveled = 0;
+
+        while (true) {
+            const t = traveled / totalDist;
             const cp = p1.pressure + (p2.pressure - p1.pressure) * t;
             const stampW = Math.max(1, Math.round(getW(cp)));
             const stamp = getPixelBrush(stampW);
-            ctx.drawImage(stamp, Math.floor(cx - stampW / 2), Math.floor(cy - stampW / 2));
+            ctx.drawImage(stamp, x0 - Math.floor(stampW / 2), y0 - Math.floor(stampW / 2));
+
+            if (x0 === x1 && y0 === y1) break;
+            const e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; x0 += sx; traveled++; }
+            if (e2 < dx) { err += dx; y0 += sy; traveled++; }
         }
     }
     ctx.imageSmoothingEnabled = true;
@@ -263,25 +270,3 @@ function _stampSegment(ctx, p1, p2, w1, w2) {
     }
 }
 
-function _stampSegmentWithAlpha(ctx, p1, p2, w1, w2, a1, a2) {
-    const dx = p2.x - p1.x, dy = p2.y - p1.y;
-    const dist = Math.hypot(dx, dy);
-
-    const spacing = Math.max(1.0, Math.min(w1, w2) * 0.15);
-    const steps = Math.max(1, Math.ceil(dist / spacing));
-
-    for (let j = 0; j <= steps; j++) {
-        const t = j / steps;
-        const cx = p1.x + dx * t, cy = p1.y + dy * t;
-        const cw = w1 + (w2 - w1) * t;
-        const ca = a1 + (a2 - a1) * t;
-        ctx.fillStyle = _applyAlpha(INK_COLOR, ca);
-        if (cw > 0) {
-            ctx.beginPath(); ctx.arc(cx, cy, cw / 2, 0, Math.PI * 2); ctx.fill();
-        }
-    }
-}
-
-function _applyAlpha(hex, alpha) {
-    return `rgba(0,0,0,${alpha.toFixed(4)})`;
-}
