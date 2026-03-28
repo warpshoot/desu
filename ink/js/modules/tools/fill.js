@@ -199,25 +199,6 @@ export function fillPolygonTransparent(points) {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
-    // Get current binary setting from active eraser slot
-    const slot = state.eraserSlots[state.activeEraserSlotIndex];
-    const isBinary = slot ? slot.binary !== false : true;
-
-    if (!isBinary) {
-        // Smooth erasure using standard context methods
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        for (let i = 1; i < points.length; i++) {
-            ctx.lineTo(points[i].x, points[i].y);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-        return;
-    }
-
     // getImageData/putImageData は物理ピクセル座標で動作するため dpr でスケーリング
     const dpr = window.devicePixelRatio || 1;
     const physicalPoints = points.map(p => ({ x: p.x * dpr, y: p.y * dpr }));
@@ -442,26 +423,7 @@ export function fillPolygon(points) {
         ctx.fill();
         ctx.restore();
     } else {
-        // Get current binary setting from active fill slot
-        const slot = state.fillSlots[state.activeFillSlotIndex];
-        const isBinary = slot ? slot.binary !== false : true;
-
-        if (isBinary) {
-            // Black fill for fill tool (2-pixel/No AA)
-            fillPolygonNoAA(points, 0, 0, 0, 1.0);
-        } else {
-            // Smooth AA fill using standard methods
-            const ctx = getActiveLayerCtx();
-            if (!ctx) return;
-            ctx.fillStyle = '#000000';
-            ctx.beginPath();
-            ctx.moveTo(points[0].x, points[0].y);
-            for (let i = 1; i < points.length; i++) {
-                ctx.lineTo(points[i].x, points[i].y);
-            }
-            ctx.closePath();
-            ctx.fill();
-        }
+        fillPolygonNoAA(points, 0, 0, 0, 1.0);
     }
 }
 
