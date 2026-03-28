@@ -20,7 +20,7 @@ let pressureBufferIdx = 0;
 /**
  * 手ぶれ補正の「糸」を描画 (lassoCanvasを使用)
  */
-function _drawStabString(cursorX, cursorY, brushX, brushY) {
+function _drawStabString(cursorX, cursorY, brushX, brushY, brush) {
     if (!lassoCtx || !lassoCanvas) return;
 
     // lassoCanvasはスクリーン座標(=無変形)で使用されることが想定されているため、
@@ -35,7 +35,6 @@ function _drawStabString(cursorX, cursorY, brushX, brushY) {
     const sy2 = brushY * s + ty;
 
     lassoCtx.save();
-    const brush = state.activeBrush;
     const stabDist = (brush.stabilizerDistance ?? 20) * s;
     const showGuide  = brush.stabShowGuide ?? true;
 
@@ -82,10 +81,19 @@ function _drawStabString(cursorX, cursorY, brushX, brushY) {
     lassoCtx.restore();
 }
 
-// 消しゴム時は eraserSize を使う専用ブラシを返す
+// 消しゴム時は eraserSize を使う専用ブラシを返す (手ぶれ補正設定は消しゴムスロットから取得)
 function _getDrawBrush() {
     if (state.isErasing) {
-        return { ...state.activeBrush, size: state.eraserSize, pressureSize: true };
+        const eraserSlot = state.activeEraserSlot;
+        return {
+            ...state.activeBrush,
+            size: state.eraserSize,
+            pressureSize: true,
+            stabilizerEnabled:  eraserSlot.stabilizerEnabled  ?? false,
+            stabilizerDistance: eraserSlot.stabilizerDistance ?? 20,
+            stabStringVisible:  eraserSlot.stabStringVisible  ?? true,
+            stabShowGuide:      eraserSlot.stabShowGuide      ?? true,
+        };
     }
     return state.activeBrush;
 }
@@ -211,7 +219,7 @@ export function startPenDrawing(x, y, pressure = 0.5) {
     _stabAnchorY = y;
 
     const brush = _getDrawBrush();
-    if (brush.stabilizerEnabled && !state.isErasing) {
+    if (brush.stabilizerEnabled) {
         lassoCanvas.style.display = 'block';
         lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
     }
@@ -237,11 +245,11 @@ export function drawPenLine(x, y, pressure = 0.5) {
 
     // 手ぶれ補正 (糸引きスタビライザー)
     // カーソルがアンカーから stabilizerDistance 以上離れたときのみアンカーを移動
-    if (brush.stabilizerEnabled && !state.isErasing) {
+    if (brush.stabilizerEnabled) {
         // 糸の描画
         lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
         if (brush.stabStringVisible ?? true) {
-            _drawStabString(x, y, _stabAnchorX, _stabAnchorY);
+            _drawStabString(x, y, _stabAnchorX, _stabAnchorY, brush);
         }
 
         const stabDist = brush.stabilizerDistance ?? 20;

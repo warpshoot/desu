@@ -1899,6 +1899,9 @@ function openFillSettings(idx) {
     document.getElementById('fs-opacity-val').textContent = Math.round((slot.opacity ?? 1.0) * 100);
     document.getElementById('fs-bucket').checked = slot.bucketEnabled !== false;
     document.getElementById('fs-tolerance').value = slot.bucketTolerance || 'normal';
+    document.getElementById('fs-stabilizer').checked = slot.stabilizerEnabled ?? false;
+    document.getElementById('fs-stabilizer-dist').value = slot.stabilizerDistance ?? 20;
+    document.getElementById('fs-stabilizer-dist-val').textContent = slot.stabilizerDistance ?? 20;
     // バケツ有効時のみ許容値表示
     const bucketOn = slot.bucketEnabled !== false;
     document.getElementById('fs-tolerance-row').style.display = bucketOn ? '' : 'none';
@@ -1906,6 +1909,11 @@ function openFillSettings(idx) {
     // トーン時: 不透明度は非表示 (トーンは2値パターン)
     const isTone = slot.subTool === 'tone';
     document.getElementById('fs-opacity-row').style.display = isTone ? 'none' : '';
+
+    // 手ぶれ補正の表示 (投げ縄は常に選択可能なのでスロット問わず表示)
+    const stabOn = slot.stabilizerEnabled ?? false;
+    document.getElementById('fs-stabilizer-row').style.display = '';
+    document.getElementById('fs-stabilizer-dist-row').style.display = stabOn ? '' : 'none';
 
     panel.classList.remove('hidden');
     panel.style.display = '';
@@ -1917,7 +1925,7 @@ function openFillSettings(idx) {
         const toolbarWidth = 64;
         panel.style.left = `${toolbarWidth}px`;
 
-        const panelHeight = 250;
+        const panelHeight = 300;
         let topPos = rect.top - 60;
         const winHeight = window.innerHeight;
 
@@ -1935,24 +1943,31 @@ function setupFillSettingsPanel() {
     const panel = document.getElementById('fill-settings-panel');
     if (!panel) return;
 
-    const closeBtn     = document.getElementById('fill-settings-close');
-    const subToolSel   = document.getElementById('fs-subtool');
-    const opSlider     = document.getElementById('fs-opacity');
-    const opVal        = document.getElementById('fs-opacity-val');
-    const bucketCheck  = document.getElementById('fs-bucket');
-    const toleranceSel = document.getElementById('fs-tolerance');
+    const closeBtn       = document.getElementById('fill-settings-close');
+    const subToolSel     = document.getElementById('fs-subtool');
+    const opSlider       = document.getElementById('fs-opacity');
+    const opVal          = document.getElementById('fs-opacity-val');
+    const bucketCheck    = document.getElementById('fs-bucket');
+    const toleranceSel   = document.getElementById('fs-tolerance');
+    const stabCheck      = document.getElementById('fs-stabilizer');
+    const stabDistSlider = document.getElementById('fs-stabilizer-dist');
+    const stabDistVal    = document.getElementById('fs-stabilizer-dist-val');
 
     const sync = () => {
         const slot = state.fillSlots[_editingFillSlotIdx];
-        slot.subTool        = subToolSel.value;
-        slot.opacity        = parseInt(opSlider.value) / 100;
-        slot.bucketEnabled  = bucketCheck.checked;
-        slot.bucketTolerance = toleranceSel.value;
-        opVal.textContent   = Math.round(slot.opacity * 100);
+        slot.subTool            = subToolSel.value;
+        slot.opacity            = parseInt(opSlider.value) / 100;
+        slot.bucketEnabled      = bucketCheck.checked;
+        slot.bucketTolerance    = toleranceSel.value;
+        slot.stabilizerEnabled  = stabCheck.checked;
+        slot.stabilizerDistance = parseInt(stabDistSlider.value);
+        opVal.textContent       = Math.round(slot.opacity * 100);
+        stabDistVal.textContent = slot.stabilizerDistance;
 
         const isTone = slot.subTool === 'tone';
         document.getElementById('fs-opacity-row').style.display = isTone ? 'none' : '';
         document.getElementById('fs-tolerance-row').style.display = bucketCheck.checked ? '' : 'none';
+        document.getElementById('fs-stabilizer-dist-row').style.display = slot.stabilizerEnabled ? '' : 'none';
 
         // アクティブスロットならモード反映
         if (_editingFillSlotIdx === state.activeFillSlotIndex && state.mode === 'fill') {
@@ -1969,6 +1984,8 @@ function setupFillSettingsPanel() {
     opSlider.addEventListener('input', sync);
     bucketCheck.addEventListener('input', sync);
     toleranceSel.addEventListener('input', sync);
+    stabCheck.addEventListener('input', sync);
+    stabDistSlider.addEventListener('input', sync);
 
     panel.addEventListener('pointerdown', (e) => e.stopPropagation());
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
@@ -1992,11 +2009,25 @@ function openEraserSettings(idx) {
     document.getElementById('es-subtool').value = slot.subTool || 'pen';
     document.getElementById('es-bucket').checked = slot.bucketEnabled !== false;
     document.getElementById('es-tolerance').value = slot.bucketTolerance || 'normal';
+    document.getElementById('es-stabilizer').checked = slot.stabilizerEnabled ?? false;
+    document.getElementById('es-stabilizer-dist').value = slot.stabilizerDistance ?? 20;
+    document.getElementById('es-stabilizer-dist-val').textContent = slot.stabilizerDistance ?? 20;
+    document.getElementById('es-stab-string').checked = slot.stabStringVisible ?? true;
+    document.getElementById('es-stab-guide').checked = slot.stabShowGuide ?? true;
+
     // lasso のみバケツ設定を表示
     const isLasso = slot.subTool === 'lasso';
+    const isPen   = slot.subTool === 'pen';
     document.getElementById('es-bucket-row').style.display = isLasso ? '' : 'none';
     const bucketOn = isLasso && slot.bucketEnabled !== false;
     document.getElementById('es-tolerance-row').style.display = bucketOn ? '' : 'none';
+    // pen/lasso のみ手ぶれ補正を表示 (clear は非表示)
+    const showStab = isPen || isLasso;
+    const stabOn   = showStab && (slot.stabilizerEnabled ?? false);
+    document.getElementById('es-stabilizer-row').style.display = showStab ? '' : 'none';
+    document.getElementById('es-stabilizer-dist-row').style.display = stabOn ? '' : 'none';
+    // viz オプション (ライン/ガイド) はペンのみ
+    document.getElementById('es-stab-viz-row').style.display = (isPen && stabOn) ? '' : 'none';
 
     panel.classList.remove('hidden');
     panel.style.display = '';
@@ -2007,7 +2038,7 @@ function openEraserSettings(idx) {
         const toolbarWidth = 64;
         panel.style.left = `${toolbarWidth}px`;
 
-        const panelHeight = 200;
+        const panelHeight = 280;
         let topPos = rect.top - 60;
         const winHeight = window.innerHeight;
         if (topPos + panelHeight > winHeight - 12) {
@@ -2023,20 +2054,37 @@ function setupEraserSettingsPanel() {
     const panel = document.getElementById('eraser-settings-panel');
     if (!panel) return;
 
-    const closeBtn     = document.getElementById('eraser-settings-close');
-    const subToolSel   = document.getElementById('es-subtool');
-    const bucketCheck  = document.getElementById('es-bucket');
-    const toleranceSel = document.getElementById('es-tolerance');
+    const closeBtn       = document.getElementById('eraser-settings-close');
+    const subToolSel     = document.getElementById('es-subtool');
+    const bucketCheck    = document.getElementById('es-bucket');
+    const toleranceSel   = document.getElementById('es-tolerance');
+    const stabCheck      = document.getElementById('es-stabilizer');
+    const stabDistSlider = document.getElementById('es-stabilizer-dist');
+    const stabDistVal    = document.getElementById('es-stabilizer-dist-val');
+    const stabStringCheck = document.getElementById('es-stab-string');
+    const stabGuideCheck  = document.getElementById('es-stab-guide');
 
     const sync = () => {
         const slot = state.eraserSlots[_editingEraserSlotIdx];
-        slot.subTool         = subToolSel.value;
-        slot.bucketEnabled   = bucketCheck.checked;
-        slot.bucketTolerance = toleranceSel.value;
+        slot.subTool            = subToolSel.value;
+        slot.bucketEnabled      = bucketCheck.checked;
+        slot.bucketTolerance    = toleranceSel.value;
+        slot.stabilizerEnabled  = stabCheck.checked;
+        slot.stabilizerDistance = parseInt(stabDistSlider.value);
+        slot.stabStringVisible  = stabStringCheck.checked;
+        slot.stabShowGuide      = stabGuideCheck.checked;
+        stabDistVal.textContent = slot.stabilizerDistance;
 
         const isLasso = slot.subTool === 'lasso';
+        const isPen   = slot.subTool === 'pen';
         document.getElementById('es-bucket-row').style.display = isLasso ? '' : 'none';
         document.getElementById('es-tolerance-row').style.display = (isLasso && bucketCheck.checked) ? '' : 'none';
+
+        const showStab = isPen || isLasso;
+        const stabOn   = showStab && slot.stabilizerEnabled;
+        document.getElementById('es-stabilizer-row').style.display = showStab ? '' : 'none';
+        document.getElementById('es-stabilizer-dist-row').style.display = stabOn ? '' : 'none';
+        document.getElementById('es-stab-viz-row').style.display = (isPen && stabOn) ? '' : 'none';
 
         // アクティブスロットならモード反映
         if (_editingEraserSlotIdx === state.activeEraserSlotIndex && state.mode === 'eraser') {
@@ -2052,6 +2100,10 @@ function setupEraserSettingsPanel() {
     subToolSel.addEventListener('input', sync);
     bucketCheck.addEventListener('input', sync);
     toleranceSel.addEventListener('input', sync);
+    stabCheck.addEventListener('input', sync);
+    stabDistSlider.addEventListener('input', sync);
+    stabStringCheck.addEventListener('input', sync);
+    stabGuideCheck.addEventListener('input', sync);
 
     panel.addEventListener('pointerdown', (e) => e.stopPropagation());
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
