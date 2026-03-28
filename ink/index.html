@@ -308,6 +308,15 @@
                     <option value="loose">ゆるい</option>
                 </select>
             </div>
+            <div class="bs-row bs-toggles" id="fs-stabilizer-row">
+                <label class="bs-toggle-label">
+                    <input type="checkbox" id="fs-stabilizer"> 手ぶれ補正
+                </label>
+            </div>
+            <div class="bs-row" id="fs-stabilizer-dist-row">
+                <label>補正距離 <span id="fs-stabilizer-dist-val">20</span></label>
+                <input type="range" id="fs-stabilizer-dist" min="5" max="150" value="20">
+            </div>
         </div>
     </div>
 
@@ -338,6 +347,23 @@
                     <option value="normal" selected>標準</option>
                     <option value="loose">ゆるい</option>
                 </select>
+            </div>
+            <div class="bs-row bs-toggles" id="es-stabilizer-row">
+                <label class="bs-toggle-label">
+                    <input type="checkbox" id="es-stabilizer"> 手ぶれ補正
+                </label>
+            </div>
+            <div class="bs-row" id="es-stabilizer-dist-row">
+                <label>補正距離 <span id="es-stabilizer-dist-val">20</span></label>
+                <input type="range" id="es-stabilizer-dist" min="5" max="150" value="20">
+            </div>
+            <div class="bs-row bs-toggles" id="es-stab-viz-row">
+                <label class="bs-toggle-label">
+                    <input type="checkbox" id="es-stab-string" checked> ライン
+                </label>
+                <label class="bs-toggle-label">
+                    <input type="checkbox" id="es-stab-guide" checked> ガイド
+                </label>
             </div>
         </div>
     </div>

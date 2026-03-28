@@ -284,15 +284,108 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
 // 投げ縄ツール制御
 // ============================================
 
+// 手ぶれ補正: 投げ縄描画中のアンカー位置
+let _lassoAnchorX = 0;
+let _lassoAnchorY = 0;
+
+/**
+ * 現在の投げ縄スロットから手ぶれ補正設定を取得
+ */
+function _getLassoStab() {
+    const slot = state.mode === 'eraser' ? state.activeEraserSlot : state.activeFillSlot;
+    return {
+        enabled:  slot.stabilizerEnabled  ?? false,
+        distance: slot.stabilizerDistance ?? 20,
+    };
+}
+
+/**
+ * 手ぶれ補正の「糸」をlassoCanvas上に描画 (投げ縄パス描画後に重ね描き)
+ */
+function _drawLassoStabString(cursorX, cursorY, anchorX, anchorY) {
+    const s = state.scale;
+    const tx = state.translateX;
+    const ty = state.translateY;
+    const sx1 = cursorX * s + tx;
+    const sy1 = cursorY * s + ty;
+    const sx2 = anchorX * s + tx;
+    const sy2 = anchorY * s + ty;
+
+    lassoCtx.save();
+    lassoCtx.lineWidth = 3;
+    lassoCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    lassoCtx.beginPath();
+    lassoCtx.moveTo(sx1, sy1);
+    lassoCtx.lineTo(sx2, sy2);
+    lassoCtx.stroke();
+
+    lassoCtx.lineWidth = 1.5;
+    lassoCtx.strokeStyle = 'rgba(60, 130, 255, 0.85)';
+    lassoCtx.beginPath();
+    lassoCtx.moveTo(sx1, sy1);
+    lassoCtx.lineTo(sx2, sy2);
+    lassoCtx.stroke();
+
+    // アンカー円
+    lassoCtx.beginPath();
+    lassoCtx.arc(sx2, sy2, 4, 0, Math.PI * 2);
+    lassoCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    lassoCtx.fill();
+    lassoCtx.lineWidth = 1.5;
+    lassoCtx.strokeStyle = 'rgba(60, 130, 255, 0.9)';
+    lassoCtx.stroke();
+
+    // カーソル小円
+    lassoCtx.beginPath();
+    lassoCtx.arc(sx1, sy1, 2.5, 0, Math.PI * 2);
+    lassoCtx.fillStyle = 'rgba(60, 130, 255, 0.7)';
+    lassoCtx.fill();
+
+    lassoCtx.restore();
+}
+
 export function startLasso(x, y) {
     state.isLassoing = true;
     state.lassoPoints = [{ x, y }];
+    _lassoAnchorX = x;
+    _lassoAnchorY = y;
     lassoCanvas.style.display = 'block';
     lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
 }
 
-export function updateLasso(x, y) {
+export function updateLasso(rawX, rawY) {
     if (!state.isLassoing) return;
+
+    const stab = _getLassoStab();
+    let x = rawX, y = rawY;
+
+    if (stab.enabled) {
+        // 糸引きスタビライザー: アンカーが stabilizerDistance を超えたときのみ移動
+        const dx = rawX - _lassoAnchorX;
+        const dy = rawY - _lassoAnchorY;
+        const d = Math.hypot(dx, dy);
+        if (d <= stab.distance) {
+            // ブラシは動かない — 糸だけ再描画
+            lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+            // 既存パスを再描画
+            lassoCtx.strokeStyle = '#0066ff';
+            lassoCtx.lineWidth = 2;
+            lassoCtx.beginPath();
+            lassoCtx.moveTo(state.lassoPoints[0].x, state.lassoPoints[0].y);
+            for (let i = 1; i < state.lassoPoints.length; i++) {
+                lassoCtx.lineTo(state.lassoPoints[i].x, state.lassoPoints[i].y);
+            }
+            lassoCtx.lineTo(state.lassoPoints[0].x, state.lassoPoints[0].y);
+            lassoCtx.stroke();
+            _drawLassoStabString(rawX, rawY, _lassoAnchorX, _lassoAnchorY);
+            return;
+        }
+        const ratio = (d - stab.distance) / d;
+        _lassoAnchorX += dx * ratio;
+        _lassoAnchorY += dy * ratio;
+        x = _lassoAnchorX;
+        y = _lassoAnchorY;
+    }
 
     state.lassoPoints.push({ x, y });
 
@@ -308,6 +401,10 @@ export function updateLasso(x, y) {
     // 始点に戻る線（プレビュー）
     lassoCtx.lineTo(state.lassoPoints[0].x, state.lassoPoints[0].y);
     lassoCtx.stroke();
+
+    if (stab.enabled) {
+        _drawLassoStabString(rawX, rawY, _lassoAnchorX, _lassoAnchorY);
+    }
 }
 
 export function finishLasso() {
