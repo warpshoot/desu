@@ -1754,13 +1754,15 @@ function openBrushSettings(idx) {
     // 筆圧カーブ: ペン系のみ表示 (点描では非表示)
     document.getElementById('bs-pressure-curve-row').style.display = isStipple ? 'none' : '';
 
-    // 手ぶれ補正: 常に表示、距離・可視化は有効時のみ操作可能
+    // 手ぶれ補正: 常に表示、距離・可視化は有効時のみ操作可能。点描時は全て無効
     document.getElementById('bs-stabilizer-row').style.display = '';
     document.getElementById('bs-stabilizer-dist-row').style.display = '';
-    const _stabOn = brush.stabilizerEnabled ?? false;
-    document.getElementById('bs-stabilizer-dist-row').classList.toggle('disabled', !_stabOn);
-    document.getElementById('bs-stab-viz-row').classList.toggle('disabled', !_stabOn);
-    document.getElementById('bs-stab-guide').closest('label').classList.toggle('disabled', !(brush.stabStringVisible ?? true));
+    
+    const isStippleOrStabOff = isStipple || !(brush.stabilizerEnabled ?? false);
+    document.getElementById('bs-stabilizer-row').classList.toggle('disabled', isStipple);
+    document.getElementById('bs-stabilizer-dist-row').classList.toggle('disabled', isStippleOrStabOff);
+    document.getElementById('bs-stab-viz-row').classList.toggle('disabled', isStippleOrStabOff);
+    document.getElementById('bs-stab-guide').closest('label').classList.toggle('disabled', isStippleOrStabOff || !(brush.stabStringVisible ?? true));
 
     panel.classList.remove('hidden');
     panel.style.display = ''; // インラインの残りカスを掃除
@@ -1839,10 +1841,12 @@ function setupBrushSettingsPanel() {
         // 2値時: 不透明度スライダーをグレーアウト
         document.getElementById('bs-opacity-row').classList.toggle('disabled', b.binary);
 
-        // 手ぶれ補正距離・可視化: 補正OFFのときグレーアウト
-        document.getElementById('bs-stabilizer-dist-row').classList.toggle('disabled', !b.stabilizerEnabled);
-        document.getElementById('bs-stab-viz-row').classList.toggle('disabled', !b.stabilizerEnabled);
-        stabGuideCheck.closest('label').classList.toggle('disabled', !b.stabStringVisible);
+        // 手ぶれ補正: 補正OFFまたは点描のときグレーアウト
+        const isStippleOrStabOff = isStipple || !b.stabilizerEnabled;
+        document.getElementById('bs-stabilizer-row').classList.toggle('disabled', isStipple);
+        document.getElementById('bs-stabilizer-dist-row').classList.toggle('disabled', isStippleOrStabOff);
+        document.getElementById('bs-stab-viz-row').classList.toggle('disabled', isStippleOrStabOff);
+        stabGuideCheck.closest('label').classList.toggle('disabled', isStippleOrStabOff || !b.stabStringVisible);
 
         // このスロットがアクティブなら、モードボタンのサブツールも更新
         if (_editingBrushIdx === state.activeBrushIndex && state.mode === 'pen') {
