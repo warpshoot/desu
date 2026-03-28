@@ -370,7 +370,7 @@ export function floodFillSketch(startX, startY) {
     // 3. Composite to active layer using multiply
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
-    ctx.drawImage(resultCanvas, 0, 0);
+    ctx.drawImage(resultCanvas, 0, 0, resultCanvas.width / dpr, resultCanvas.height / dpr);
     ctx.restore();
 
 }

@@ -7,6 +7,8 @@ import {
     eventCanvas,
     canvasBg,
     layerContainer,
+    strokeCanvas,
+    strokeCtx,
     createLayer,
     deleteLayer,
     getLayer,
@@ -847,6 +849,9 @@ function flashLayer(layerId) {
     flashCanvas.style.transform = layer.canvas.style.transform;
     flashCanvas.width = layer.canvas.width;
     flashCanvas.height = layer.canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    flashCanvas.style.width = (layer.canvas.width / dpr) + 'px';
+    flashCanvas.style.height = (layer.canvas.height / dpr) + 'px';
 
     const ctx = flashCanvas.getContext('2d');
     ctx.clearRect(0, 0, flashCanvas.width, flashCanvas.height);
@@ -2132,45 +2137,80 @@ function setupCreditModal() {
 // ============================================
 
 function setupOrientationHandler() {
+    async function resizeAllCanvases() {
+        // Save all layer contents as ImageBitmaps
+        const layerBitmaps = await Promise.all(
+            layers.map(layer => createImageBitmap(layer.canvas))
+        );
+
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const dpr = window.devicePixelRatio || 1;
+
+        // Background div
+        canvasBg.style.width = w + 'px';
+        canvasBg.style.height = h + 'px';
+
+        // Lasso canvas
+        lassoCanvas.width = w * dpr;
+        lassoCanvas.height = h * dpr;
+        lassoCanvas.style.width = w + 'px';
+        lassoCanvas.style.height = h + 'px';
+        const lCtx = lassoCanvas.getContext('2d');
+        lCtx.setTransform(1, 0, 0, 1, 0, 0);
+        lCtx.scale(dpr, dpr);
+
+        // Selection canvas
+        selectionCanvas.width = w * dpr;
+        selectionCanvas.height = h * dpr;
+        selectionCanvas.style.width = w + 'px';
+        selectionCanvas.style.height = h + 'px';
+
+        // Stroke canvas
+        strokeCanvas.width = w * dpr;
+        strokeCanvas.height = h * dpr;
+        strokeCanvas.style.width = w + 'px';
+        strokeCanvas.style.height = h + 'px';
+        strokeCtx.setTransform(1, 0, 0, 1, 0, 0);
+        strokeCtx.scale(dpr, dpr);
+
+        // Event canvas (no DPR, CSS pixel sized)
+        eventCanvas.width = w;
+        eventCanvas.height = h;
+
+        // Restore each layer
+        for (let i = 0; i < layers.length; i++) {
+            const layer = layers[i];
+            layer.canvas.width = w * dpr;
+            layer.canvas.height = h * dpr;
+            layer.canvas.style.width = w + 'px';
+            layer.canvas.style.height = h + 'px';
+            layer.ctx.setTransform(1, 0, 0, 1, 0, 0);
+            layer.ctx.scale(dpr, dpr);
+            layer.ctx.drawImage(layerBitmaps[i], 0, 0, w, h);
+            layerBitmaps[i].close();
+        }
+
+        applyTransform();
+    }
+
     // Handle orientation change
     window.addEventListener('orientationchange', () => {
-        setTimeout(async () => {
-            // Save all layer contents as ImageBitmaps
-            const layerBitmaps = await Promise.all(
-                layers.map(layer => createImageBitmap(layer.canvas))
-            );
-
-            // Resize all canvases
-            const w = window.innerWidth;
-            const h = window.innerHeight;
-
-            lassoCanvas.width = w;
-            lassoCanvas.height = h;
-
-            selectionCanvas.width = w;
-            selectionCanvas.height = h;
-
-            // Restore each layer
-            for (let i = 0; i < layers.length; i++) {
-                const layer = layers[i];
-                layer.canvas.width = w;
-                layer.canvas.height = h;
-                layer.ctx.drawImage(layerBitmaps[i], 0, 0);
-                layerBitmaps[i].close();
-            }
-
-            // Reapply transform (zoom/pan)
-            applyTransform();
-        }, 100);
+        setTimeout(resizeAllCanvases, 100);
     });
 
-    // Handle resize
+    // Handle resize (e.g., browser chrome appearing/disappearing on iOS)
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-            // Re-initialize canvas sizes if needed
-        }, 250);
+        resizeTimeout = setTimeout(resizeAllCanvases, 250);
+    });
+
+    // Handle returning from another app (visibility restored)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            applyTransform();
+        }
     });
 }
 
