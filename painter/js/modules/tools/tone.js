@@ -250,6 +250,8 @@ export function fillTone(points) {
     const preset = getCurrentTonePreset();
     if (!preset) return;
 
+    const dpr = window.devicePixelRatio || 1;
+
     const minX = Math.floor(Math.min(...points.map(p => p.x)));
     const minY = Math.floor(Math.min(...points.map(p => p.y)));
     const maxX = Math.ceil(Math.max(...points.map(p => p.x)));
@@ -259,33 +261,34 @@ export function fillTone(points) {
 
     if (width <= 0 || height <= 0) return;
 
-    // Offscreen canvas with clipping
+    // 物理ピクセルサイズでオフスクリーンキャンバスを作成 (DPR対応)
+    const pWidth = Math.ceil(width * dpr);
+    const pHeight = Math.ceil(height * dpr);
     const offscreen = document.createElement('canvas');
-    offscreen.width = width;
-    offscreen.height = height;
+    offscreen.width = pWidth;
+    offscreen.height = pHeight;
     const offCtx = offscreen.getContext('2d');
 
-    // Set up clipping path
+    // 物理ピクセル座標でクリッピングパス設定
     offCtx.beginPath();
-    offCtx.moveTo(points[0].x - minX, points[0].y - minY);
+    offCtx.moveTo((points[0].x - minX) * dpr, (points[0].y - minY) * dpr);
     for (let i = 1; i < points.length; i++) {
-        offCtx.lineTo(points[i].x - minX, points[i].y - minY);
+        offCtx.lineTo((points[i].x - minX) * dpr, (points[i].y - minY) * dpr);
     }
     offCtx.closePath();
     offCtx.clip();
 
-    // Translate for global alignment
-    offCtx.translate(-minX, -minY);
+    // 物理ピクセル座標にトランスレートしてパターン描画
+    offCtx.translate(-minX * dpr, -minY * dpr);
     offCtx.fillStyle = '#000000';
 
-    // Draw tone pattern
-    drawToneInRegion(offCtx, minX, minY, maxX, maxY, preset);
+    drawToneInRegion(offCtx, minX * dpr, minY * dpr, maxX * dpr, maxY * dpr, preset);
 
     // Binarize to remove antialiasing
-    binarizeCanvas(offCtx, width, height);
+    binarizeCanvas(offCtx, pWidth, pHeight);
 
-    // Composite to main canvas
-    ctx.drawImage(offscreen, minX, minY);
+    // CSS座標でメインキャンバスに合成 (ctx は既に dpr スケール済み)
+    ctx.drawImage(offscreen, minX, minY, width, height);
 }
 
 // ============================================

@@ -1054,6 +1054,11 @@ function cancelCurrentOperation() {
     if (state.isPenDrawing) {
         const layer = getActiveLayer();
         if (layer) restoreLayer(layer.id);
+        // ストロークキャンバスのプレビューをクリア
+        if (strokeCanvas && strokeCtx) {
+            strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
+            strokeCanvas.style.opacity = 1;
+        }
         // Remove the saveState() entry that was added when drawing started
         // Otherwise undo() would restore to the same state (no visible change)
         state.undoStack.pop();
