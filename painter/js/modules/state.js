@@ -251,13 +251,14 @@ export const state = {
     translateY: 0,
 
     // Global History (unified, no per-layer stacks)
-    MAX_HISTORY: 10,
+    MAX_HISTORY: 50,
     undoStack: [],   // Each entry: Map<layerId, ImageBitmap>
     redoStack: [],
 
     // Pointer Management
     activePointers: new Map(),
     pencilDetected: false,
+    _pencilResetTimer: null,
     maxFingers: 0,
     strokeMade: false,
 

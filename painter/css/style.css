@@ -2068,4 +2068,22 @@ body.help-mode #tool-panel {
     width: 14px;
     height: 14px;
     cursor: pointer;
+}
+
+/* 筆圧カーブコンテナ */
+.bs-pressure-curve-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.bs-pressure-curve-container input[type="range"] {
+    flex: 1;
+}
+
+.bs-curve-label {
+    font-size: 10px;
+    color: #888;
+    white-space: nowrap;
 }

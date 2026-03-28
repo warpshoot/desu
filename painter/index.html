@@ -72,7 +72,7 @@
         <!-- ブラシサイズスライダー -->
         <div id="size-slider-container">
             <div id="sizeDisplay">3</div>
-            <input type="range" id="brushSize" min="1" max="100" value="3">
+            <input type="range" id="brushSize" min="1" max="500" value="3">
             <div class="tool-tooltip">ペンサイズ</div>
         </div>
         <!-- ブラシパレット (5スロット) -->
@@ -312,6 +312,16 @@
                 <label class="bs-toggle-label">
                     <input type="checkbox" id="bs-binary"> 2値ピクセル
                 </label>
+            </div>
+
+            <!-- 筆圧カーブ設定 -->
+            <div class="bs-row" id="bs-pressure-curve-row">
+                <label>筆圧カーブ <span id="bs-pressure-curve-val">1.0</span></label>
+                <div class="bs-pressure-curve-container">
+                    <span class="bs-curve-label">柔</span>
+                    <input type="range" id="bs-pressure-curve" min="0.3" max="3.0" step="0.1" value="1.0">
+                    <span class="bs-curve-label">硬</span>
+                </div>
             </div>
 
         </div>
