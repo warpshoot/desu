@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>DESU™ draw</title>
+    <title>DESU™ ink</title>
     <meta name="theme-color" content="#ffffff">
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="css/style.css">
@@ -73,7 +73,6 @@
         <div id="size-slider-container">
             <div id="sizeDisplay">3</div>
             <input type="range" id="brushSize" min="0" max="1000" value="0">
-            <div class="tool-tooltip">ペンサイズ</div>
         </div>
         <!-- ブラシパレット (5スロット) -->
         <div id="brush-palette">
@@ -101,7 +100,6 @@
 
         <div class="tool-btn" id="fileBtn">
             <img src="icons/file.svg" alt="File" style="width: 24px; height: 24px;">
-            <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-2">ファイル管理</div>
         </div>
 
         <div class="tool-btn" id="saveBtn">
@@ -109,7 +107,6 @@
                 <path d="M12 4 L12 16 M6 12 L12 18 L18 12" />
                 <path d="M4 20 L20 20" />
             </svg>
-            <div class="tool-tooltip tool-tooltip-bottom tooltip-offset-3">保存 (⌘S)</div>
         </div>
     </div>
 
@@ -188,7 +185,7 @@
         <div id="credit-content">
             <div class="credit-row">
                 <span class="credit-key">名称</span>
-                <span class="credit-val">DESU™ draw</span>
+                <span class="credit-val">DESU™ ink</span>
             </div>
             <div class="credit-row">
                 <span class="credit-key">支給元</span>
@@ -201,7 +198,7 @@
             <hr class="credit-divider">
             <div class="credit-row">
                 <span class="credit-key">説明書</span>
-                <a href="draw_MANUAL.md" target="_blank" class="credit-manual-link">人間向け</a>
+                <a href="ink_MANUAL.md" target="_blank" class="credit-manual-link">人間向け</a>
             </div>
         </div>
     </div>

@@ -2411,16 +2411,17 @@ function drawSelectionRect(ctx, start, end, canvas) {
 function setupCreditModal() {
     const creditBtn = document.getElementById('credit-btn');
     const creditModal = document.getElementById('credit-modal');
-    const modalContent = creditModal.querySelector('.credit-modal-content');
+    const modalContent = document.getElementById('credit-content');
+
+    if (!creditBtn || !creditModal) return;
 
     creditBtn.addEventListener('click', () => {
         creditModal.classList.toggle('visible');
-        document.body.classList.toggle('help-mode', creditModal.classList.contains('visible'));
     });
 
-    // Close help mode on any click outside modal content (except links inside modal)
+    // Close on any click outside modal content (except links inside modal)
     document.addEventListener('click', (e) => {
-        if (!document.body.classList.contains('help-mode')) return;
+        if (!creditModal.classList.contains('visible')) return;
 
         // If clicked inside modal content, only allow link navigation
         if (modalContent && modalContent.contains(e.target)) {
@@ -2433,7 +2434,6 @@ function setupCreditModal() {
         // Close modal on any other click (including toolbar buttons, canvas, etc.)
         if (e.target !== creditBtn && !creditBtn.contains(e.target)) {
             creditModal.classList.remove('visible');
-            document.body.classList.remove('help-mode');
         }
     });
 }

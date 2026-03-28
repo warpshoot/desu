@@ -253,10 +253,7 @@
       </div>
       <div id="loading">PROCESSING...</div>
       
-      <div class="canvas-container">
-        <div class="canvas-label">Original</div>
-        <canvas id="origCanvas"></canvas>
-      </div>
+
       <div class="canvas-container">
         <div class="canvas-label">Processed</div>
         <canvas id="outCanvas"></canvas>
@@ -281,22 +278,36 @@
         </div>
       </div>
 
-      <!-- 2. Edge -->
+      <!-- 2. Outline & Edge -->
       <div class="panel-section">
-        <h2>2. Edge Detect</h2>
+        <h2>2. Outline & Edge</h2>
         <div class="control-row">
-          <label>Enable (Internal Mask)</label>
+          <label>Show Outline</label>
           <label class="toggle">
-            <input type="checkbox" id="edgeEnable" checked>
+            <input type="checkbox" id="outlineEnable" checked>
             <span class="slider"></span>
           </label>
         </div>
-        <div class="control-group" style="margin-top: 5px;">
+        <div class="control-row" style="margin-top:10px;">
+          <label>Line Color</label>
+          <input type="color" id="outlineColor" value="#111111">
+        </div>
+
+        <div style="margin-top:15px; border-top: 1px dotted var(--border); padding-top: 15px;">
           <div class="control-row">
-            <label>Threshold</label>
-            <span id="edgeThreshVal">80</span>
+            <label>Internal Edge Mask</label>
+            <label class="toggle">
+              <input type="checkbox" id="edgeEnable" checked>
+              <span class="slider"></span>
+            </label>
           </div>
-          <input type="range" id="edgeThresh" min="0" max="255" value="80">
+          <div class="control-group" style="margin-top: 5px;">
+            <div class="control-row">
+              <label>Detection Threshold</label>
+              <span id="edgeThreshVal">80</span>
+            </div>
+            <input type="range" id="edgeThresh" min="0" max="255" value="80">
+          </div>
         </div>
       </div>
 
@@ -360,25 +371,16 @@
         </div>
       </div>
 
-      <!-- 6. Outline -->
-      <div class="panel-section">
-        <h2>6. Outline Overlay</h2>
-        <div class="control-row">
-          <label>Show Outline</label>
-          <label class="toggle">
-            <input type="checkbox" id="outlineEnable" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
-        <div class="control-row" style="margin-top:10px;">
-          <label>Color</label>
-          <input type="color" id="outlineColor" value="#111111">
-        </div>
-      </div>
-
       <!-- 7. Anti-Jaggy -->
       <div class="panel-section">
         <h2>7. Anti-Jaggy</h2>
+        <div class="control-group">
+          <div class="control-row">
+            <label>Intensity</label>
+            <span id="jaggyIntVal">50%</span>
+          </div>
+          <input type="range" id="jaggyInt" min="0" max="100" value="50">
+        </div>
         <div class="control-group">
           <div class="control-row">
             <label>Passes (Heavy)</label>
@@ -509,10 +511,8 @@ let currentLabPalette = [];
 // DOM Elements
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
-const origCanvas = document.getElementById('origCanvas');
 const outCanvas = document.getElementById('outCanvas');
 const loading = document.getElementById('loading');
-const ctxO = origCanvas.getContext('2d', { willReadFrequently: true });
 const ctxR = outCanvas.getContext('2d', { willReadFrequently: true });
 
 // Controls
@@ -534,7 +534,11 @@ const UI = {
   outlineEnable: document.getElementById('outlineEnable'),
   outlineColor: document.getElementById('outlineColor'),
   btnRenderAll: document.getElementById('btnRenderAll'),
-  btnApplyJaggy: document.getElementById('btnApplyJaggy')
+  btnApplyJaggy: document.getElementById('btnApplyJaggy'),
+  jaggyInt: document.getElementById('jaggyInt'),
+  jaggyIntVal: document.getElementById('jaggyIntVal'),
+  jaggyPass: document.getElementById('jaggyPass'),
+  jaggyPassVal: document.getElementById('jaggyPassVal')
 };
 
 function readImage(file) {
@@ -542,9 +546,6 @@ function readImage(file) {
   const url = URL.createObjectURL(file);
   imgElement = new Image();
   imgElement.onload = () => {
-    origCanvas.width = imgElement.width;
-    origCanvas.height = imgElement.height;
-    ctxO.drawImage(imgElement, 0, 0);
     URL.revokeObjectURL(url);
     dropZone.classList.add('hidden');
     origEdgeMask = null; // reset
@@ -569,6 +570,8 @@ fileInput.addEventListener('change', e => {
 UI.edgeThresh.addEventListener('input', e => { UI.edgeThreshVal.textContent = e.target.value; triggerUpdate(); });
 UI.palColors.addEventListener('input', e => { UI.palColorsVal.textContent = e.target.value; triggerUpdate(); });
 UI.ditherLevel.addEventListener('input', e => { UI.ditherLevelVal.textContent = e.target.value + '%'; triggerUpdate(); });
+UI.jaggyInt.addEventListener('input', e => { UI.jaggyIntVal.textContent = e.target.value + '%'; });
+UI.jaggyPass.addEventListener('input', e => { UI.jaggyPassVal.textContent = e.target.value; });
 
 UI.palMode.addEventListener('change', e => {
   if(e.target.value === 'auto') {
@@ -787,6 +790,64 @@ document.getElementById('btnExp1x').onclick = () => exportScale(1);
 document.getElementById('btnExp2x').onclick = () => exportScale(2);
 document.getElementById('btnExp4x').onclick = () => exportScale(4);
 document.getElementById('btnExp8x').onclick = () => exportScale(8);
+
+// Anti-Jaggy Implementation
+UI.btnApplyJaggy.addEventListener('click', async () => {
+    if(!imgElement) return;
+    loading.style.display = 'flex';
+    loading.textContent = 'REMOVING JAGGIES...';
+    await new Promise(r => setTimeout(r, 20)); // flush UI
+    
+    let passes = parseInt(UI.jaggyPass.value);
+    let st = parseInt(UI.jaggyInt.value) / 100;
+    let isoThresh = Math.floor(st * 2); // 0, 1, or 2 neighbors max
+    
+    let w = outCanvas.width;
+    let h = outCanvas.height;
+    let imgData = ctxR.getImageData(0,0,w,h);
+    
+    // Uint32 view for fast color comparison 
+    // note: assumes little-endian but safe for exact match checking
+    let data32 = new Uint32Array(imgData.data.buffer);
+    
+    for(let p=0; p<passes; p++) {
+        let src = data32.slice();
+        
+        for(let y=1; y<h-1; y++) {
+            for(let x=1; x<w-1; x++) {
+                let idx = y*w + x;
+                let c = src[idx];
+                
+                let neighbors = [
+                    src[idx-w-1], src[idx-w], src[idx-w+1],
+                    src[idx-1],               src[idx+1],
+                    src[idx+w-1], src[idx+w], src[idx+w+1]
+                ];
+                
+                let sameCount = 0;
+                let counts = new Map();
+                let maxC = c;
+                let maxN = 0;
+                
+                for(let i=0; i<8; i++) {
+                    let n = neighbors[i];
+                    if(n === c) sameCount++;
+                    let cnt = (counts.get(n)||0)+1;
+                    counts.set(n, cnt);
+                    if(cnt > maxN) { maxN = cnt; maxC = n; }
+                }
+                
+                if(sameCount <= isoThresh) {
+                    data32[idx] = maxC; // mode filter
+                }
+            }
+        }
+    }
+    
+    ctxR.putImageData(imgData, 0, 0);
+    loading.textContent = 'PROCESSING...';
+    loading.style.display = 'none';
+});
 
 </script>
 </body>

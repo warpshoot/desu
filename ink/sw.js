@@ -1,4 +1,4 @@
-const CACHE_NAME = 'desu-draw-v1';
+const CACHE_NAME = 'desu-ink-v1';
 const ASSETS = [
   './',
   './css/style.css',
