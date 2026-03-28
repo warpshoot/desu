@@ -28,7 +28,7 @@ import {
 } from './tools/stipple.js';
 import {
     startLasso, updateLasso, finishLasso,
-    fillPolygon, fillPolygonTransparent, floodFill, floodFillTransparent, floodFillSketch
+    fillPolygonNoAA, fillPolygonTransparent, floodFill, floodFillTransparent,
 } from './tools/fill.js';
 import { saveState, undo, redo, restoreLayer, resetHistory, saveLayerChangeState } from './history.js';
 import {
@@ -151,6 +151,7 @@ export function initUI() {
     setupColorPickers();
     setupBrushPalette();
     setupBrushSettingsPanel();
+    setupFillSettingsPanel();
     setupZoomControls();
     setupSaveUI();
     setupFileUI();
@@ -381,7 +382,7 @@ function setupLayerPanel() {
 // スロットアイコン (flyout から流用)
 const SUB_TOOL_ICONS = {
     pen:     { pen: 'icons/pen.png', stipple: 'icons/stipple.svg' },
-    fill:    { fill: 'icons/bet.png', tone: 'icons/tone.png', sketch: 'icons/ata.png' },
+    fill:    { fill: 'icons/bet.png', tone: 'icons/tone.png' },
     eraser:  { pen: 'icons/er2.svg', lasso: 'icons/er1.png' }
 };
 
@@ -646,10 +647,14 @@ function hideAllMenus() {
         menu.classList.add('hidden');
     });
 
-    // ブラシ設定パネルも閉じる
+    // 設定パネルも閉じる
     const brushSettingsPanel = document.getElementById('brush-settings-panel');
     if (brushSettingsPanel) {
         brushSettingsPanel.classList.add('hidden');
+    }
+    const fillSettingsPanel = document.getElementById('fill-settings-panel');
+    if (fillSettingsPanel) {
+        fillSettingsPanel.classList.add('hidden');
     }
 
     // トーンメニュー（固定されていない場合）も閉じる
@@ -1231,33 +1236,49 @@ async function handlePointerUp(e) {
                 const wasClick = pointer && pointer.totalMove < 5;
 
                 if (wasClick && duration < 300 && !state.wasPanning && !state.wasPinching) {
-                    // Tap detected → flood fill
-                    const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
-                    const fx = Math.floor(canvasPoint.x);
-                    const fy = Math.floor(canvasPoint.y);
+                    // Tap detected → bucket fill (バケツ)
+                    const fillSlot = state.mode === 'fill' ? state.fillSlots[state.activeFillSlotIndex] : null;
+                    const bucketEnabled = fillSlot ? (fillSlot.bucketEnabled !== false) : true;
 
-                    await saveState();
-                    if (state.mode === 'fill') {
-                        if (state.subTool === 'fill') {
-                            floodFill(fx, fy, [0, 0, 0, 255]);
-                        } else if (state.subTool === 'tone') {
-                            floodFillTone(fx, fy);
-                        } else if (state.subTool === 'sketch') {
-                            floodFillSketch(fx, fy);
+                    if (bucketEnabled) {
+                        const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
+                        const fx = Math.floor(canvasPoint.x);
+                        const fy = Math.floor(canvasPoint.y);
+
+                        await saveState();
+                        if (state.mode === 'fill') {
+                            if (state.subTool === 'tone') {
+                                floodFillTone(fx, fy);
+                            } else {
+                                // 統一バケツ: スロットの色と不透明度を使用
+                                const slotOpacity = fillSlot.opacity ?? 1.0;
+                                const hex = fillSlot.color || '#000000';
+                                const r = parseInt(hex.slice(1, 3), 16);
+                                const g = parseInt(hex.slice(3, 5), 16);
+                                const b = parseInt(hex.slice(5, 7), 16);
+                                floodFill(fx, fy, [r, g, b, Math.round(slotOpacity * 255)]);
+                            }
+                        } else if (state.mode === 'eraser' && state.subTool === 'lasso') {
+                            floodFillTransparent(fx, fy);
                         }
-                    } else if (state.mode === 'eraser' && state.subTool === 'lasso') {
-                        floodFillTransparent(fx, fy);
+                        updateLayerThumbnail(getActiveLayer());
                     }
-                    updateLayerThumbnail(getActiveLayer());
                 } else if (points && points.length >= 3 && !state.wasPanning && !state.wasPinching) {
-                    // Drag detected → polygon fill
+                    // Drag detected → polygon fill (投げ縄)
                     await saveState();
                     if (state.mode === 'eraser') {
                         fillPolygonTransparent(points);
                     } else if (state.subTool === 'tone') {
                         fillTone(points);
                     } else {
-                        fillPolygon(points);
+                        // 統一ポリゴン塗り: スロットの色と不透明度を使用
+                        const fillSlot = state.fillSlots[state.activeFillSlotIndex];
+                        const slotOpacity = fillSlot.opacity ?? 1.0;
+                        const hex = fillSlot.color || '#000000';
+                        const r = parseInt(hex.slice(1, 3), 16);
+                        const g = parseInt(hex.slice(3, 5), 16);
+                        const b = parseInt(hex.slice(5, 7), 16);
+                        fillPolygonNoAA(points, r, g, b, slotOpacity);
                     }
                     updateLayerThumbnail(getActiveLayer());
                 }
@@ -1470,7 +1491,8 @@ function renderBrushPalette() {
 
             const swatch = document.createElement('div');
             swatch.className = 'brush-swatch';
-            swatch.appendChild(_makeSlotIcon(SUB_TOOL_ICONS.fill[slot.subTool]));
+            swatch.style.opacity = slot.opacity ?? 1.0;
+            swatch.appendChild(_makeSlotIcon(SUB_TOOL_ICONS.fill[slot.subTool] || SUB_TOOL_ICONS.fill.fill));
 
             el.appendChild(swatch);
             palette.appendChild(el);
@@ -1539,7 +1561,17 @@ function setupBrushPalette() {
         const category = slot.dataset.category || 'pen';
 
         if (category === 'fill') {
-            if (state.activeFillSlotIndex === idx) return;
+            if (state.activeFillSlotIndex === idx) {
+                // 同じスロットを再タップ → 設定パネル開閉
+                const panel = document.getElementById('fill-settings-panel');
+                const isVisible = panel && !panel.classList.contains('hidden');
+                if (isVisible && _editingFillSlotIdx === idx) {
+                    hideAllMenus();
+                } else {
+                    openFillSettings(idx);
+                }
+                return;
+            }
             hideAllMenus();
             state.activeFillSlotIndex = idx;
             const fillSlot = state.fillSlots[idx];
@@ -1739,6 +1771,93 @@ function setupBrushSettingsPanel() {
     curveSlider.addEventListener('input', sync);
 
     // Stop panel events from reaching canvas
+    panel.addEventListener('pointerdown', (e) => e.stopPropagation());
+    panel.addEventListener('pointermove', (e) => e.stopPropagation());
+
+    closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+}
+
+// =============================================
+// Fill Settings Panel (投げ縄設定パネル)
+// =============================================
+
+let _editingFillSlotIdx = 0;
+
+function openFillSettings(idx) {
+    _editingFillSlotIdx = idx;
+    const slot = state.fillSlots[idx];
+    const panel = document.getElementById('fill-settings-panel');
+    if (!panel) return;
+
+    document.getElementById('fill-settings-name').textContent = `投げ縄 ${idx + 1} 設定`;
+    document.getElementById('fs-subtool').value = slot.subTool || 'fill';
+    document.getElementById('fs-opacity').value = Math.round((slot.opacity ?? 1.0) * 100);
+    document.getElementById('fs-opacity-val').textContent = Math.round((slot.opacity ?? 1.0) * 100);
+    document.getElementById('fs-bucket').checked = slot.bucketEnabled !== false;
+
+    // トーン時: 不透明度は非表示 (トーンは2値パターン)
+    const isTone = slot.subTool === 'tone';
+    document.getElementById('fs-opacity-row').style.display = isTone ? 'none' : '';
+
+    panel.classList.remove('hidden');
+    panel.style.display = '';
+
+    // スロットボタンの位置を取得してパネルの位置を調整
+    const activeSlot = document.querySelector(`.brush-slot[data-idx="${idx}"][data-category="fill"]`);
+    if (activeSlot) {
+        const rect = activeSlot.getBoundingClientRect();
+        const toolbarWidth = 64;
+        panel.style.left = `${toolbarWidth}px`;
+
+        const panelHeight = 250;
+        let topPos = rect.top - 60;
+        const winHeight = window.innerHeight;
+
+        if (topPos + panelHeight > winHeight - 12) {
+            topPos = winHeight - panelHeight - 12;
+        }
+        if (topPos < 12) topPos = 12;
+
+        panel.style.top = `${topPos}px`;
+        panel.style.bottom = 'auto';
+    }
+}
+
+function setupFillSettingsPanel() {
+    const panel = document.getElementById('fill-settings-panel');
+    if (!panel) return;
+
+    const closeBtn     = document.getElementById('fill-settings-close');
+    const subToolSel   = document.getElementById('fs-subtool');
+    const opSlider     = document.getElementById('fs-opacity');
+    const opVal        = document.getElementById('fs-opacity-val');
+    const bucketCheck  = document.getElementById('fs-bucket');
+
+    const sync = () => {
+        const slot = state.fillSlots[_editingFillSlotIdx];
+        slot.subTool       = subToolSel.value;
+        slot.opacity       = parseInt(opSlider.value) / 100;
+        slot.bucketEnabled = bucketCheck.checked;
+        opVal.textContent  = Math.round(slot.opacity * 100);
+
+        const isTone = slot.subTool === 'tone';
+        document.getElementById('fs-opacity-row').style.display = isTone ? 'none' : '';
+
+        // アクティブスロットならモード反映
+        if (_editingFillSlotIdx === state.activeFillSlotIndex && state.mode === 'fill') {
+            state.subTool = slot.subTool;
+            updateModeButtonIcon('fill', slot.subTool);
+            updateToolButtonStates();
+            updateToneMenuVisibility();
+        }
+
+        renderBrushPalette();
+    };
+
+    subToolSel.addEventListener('input', sync);
+    opSlider.addEventListener('input', sync);
+    bucketCheck.addEventListener('input', sync);
+
     panel.addEventListener('pointerdown', (e) => e.stopPropagation());
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
 
