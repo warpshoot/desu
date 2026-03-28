@@ -49,7 +49,6 @@
             <div class="mode-btn" id="mode-fill" data-mode="fill" title="塗り">
                 <img src="icons/bet.png" class="tool-icon mode-icon" data-sub="fill" alt="Fill">
                 <img src="icons/tone.png" class="tool-icon mode-icon" data-sub="tone" style="display:none;" alt="Tone">
-                <img src="icons/ata.png" class="tool-icon mode-icon" data-sub="sketch" style="display:none;" alt="Sketch">
                 <div class="hold-progress"></div>
             </div>
             <div class="mode-btn" id="mode-eraser" data-mode="eraser" title="消しゴム">
@@ -268,6 +267,32 @@
     </div>
 
 
+
+    <!-- 投げ縄設定パネル -->
+    <div id="fill-settings-panel" class="hidden">
+        <div id="fill-settings-header">
+            <span id="fill-settings-name">投げ縄設定</span>
+            <button id="fill-settings-close">×</button>
+        </div>
+        <div id="fill-settings-body">
+            <div class="bs-row" id="fs-subtool-row">
+                <label>サブツール</label>
+                <select id="fs-subtool">
+                    <option value="fill">塗りつぶし</option>
+                    <option value="tone">トーン</option>
+                </select>
+            </div>
+            <div class="bs-row" id="fs-opacity-row">
+                <label>不透明度 <span id="fs-opacity-val">100</span>%</label>
+                <input type="range" id="fs-opacity" min="1" max="100" value="100">
+            </div>
+            <div class="bs-row bs-toggles" id="fs-bucket-row">
+                <label class="bs-toggle-label">
+                    <input type="checkbox" id="fs-bucket" checked> バケツ (タップで塗りつぶし)
+                </label>
+            </div>
+        </div>
+    </div>
 
     <!-- ブラシ設定パネル -->
     <div id="brush-settings-panel" class="hidden">

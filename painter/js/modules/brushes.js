@@ -74,9 +74,9 @@ export function applyPressureCurve(pressure, gamma) {
 // =============================================
 export function makeDefaultFillSlots() {
     return [
-        { id: 0, name: '1', subTool: 'fill' },
-        { id: 1, name: '2', subTool: 'tone' },
-        { id: 2, name: '3', subTool: 'sketch' },
+        { id: 0, name: '1', subTool: 'fill',   opacity: 1.0, color: '#000000', bucketEnabled: true },
+        { id: 1, name: '2', subTool: 'tone',   opacity: 1.0, color: '#000000', bucketEnabled: true },
+        { id: 2, name: '3', subTool: 'fill',   opacity: 0.5, color: '#808080', bucketEnabled: true },
     ];
 }
 
