@@ -1489,7 +1489,7 @@ function _makeClearIcon() {
     svg.setAttribute('stroke', 'currentColor');
     svg.setAttribute('stroke-width', '2');
     svg.setAttribute('stroke-linecap', 'round');
-    svg.className = 'slot-subtool-icon';
+    svg.setAttribute('class', 'slot-subtool-icon');
     svg.innerHTML = '<path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/><path d="M9 7V4h6v3"/>';
     return svg;
 }
