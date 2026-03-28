@@ -30,7 +30,7 @@ import {
     startLasso, updateLasso, finishLasso,
     fillPolygon, fillPolygonTransparent, floodFill, floodFillTransparent, floodFillSketch
 } from './tools/fill.js';
-import { saveState, undo, redo, restoreLayer, resetHistory } from './history.js';
+import { saveState, undo, redo, restoreLayer, resetHistory, saveLayerChangeState } from './history.js';
 import {
     showSelectionUI, hideSelectionUI, confirmSelection, redoSelection,
     saveSelectedRegion, saveAllCanvas, copyToClipboard, saveRegion
@@ -338,22 +338,14 @@ function setupLayerPanel() {
 
     // Add layer button
     addBtn.addEventListener('click', async () => {
-        showConfirmModal(
-            "この操作によりアンドゥ履歴が失われます。\n続けますか？",
-            'layerAdd',
-            async () => {
-                const layer = createLayer();
-                if (layer) {
-                    // Apply current zoom/pan to the new layer immediately
-                    applyTransform();
-
-                    await resetHistory();
-                    updateAllThumbnails();
-                    renderLayerButtons();
-                    updateActiveLayerIndicator();
-                }
-            }
-        );
+        const layer = createLayer();
+        if (layer) {
+            applyTransform();
+            await saveLayerChangeState();
+            updateAllThumbnails();
+            renderLayerButtons();
+            updateActiveLayerIndicator();
+        }
     });
 
 
@@ -618,11 +610,11 @@ function setupLayerMenuActions(menu, layerId) {
         if (index <= 0) return;
 
         showConfirmModal(
-            "この操作によりアンドゥ履歴が失われます。\n下のレイヤーに統合しますか？",
+            "下のレイヤーに統合しますか？",
             'layerMerge',
             async () => {
                 if (mergeLayerDown(layerId)) {
-                    await resetHistory();
+                    await saveLayerChangeState();
                     window.renderLayerButtons();
                     updateActiveLayerIndicator();
                     hideAllMenus();
@@ -637,20 +629,13 @@ function setupLayerMenuActions(menu, layerId) {
 
     // Delete button
     newDeleteBtn.addEventListener('click', async () => {
-        if (layers.length <= 1) return; // Can't delete last layer
-
-        showConfirmModal(
-            "この操作によりアンドゥ履歴が失われます。\n続けますか？",
-            'layerDelete',
-            async () => {
-                if (deleteLayer(layerId)) {
-                    await resetHistory();
-                    window.renderLayerButtons();
-                    updateActiveLayerIndicator();
-                    hideAllMenus();
-                }
-            }
-        );
+        if (layers.length <= 1) return;
+        if (deleteLayer(layerId)) {
+            await saveLayerChangeState();
+            window.renderLayerButtons();
+            updateActiveLayerIndicator();
+            hideAllMenus();
+        }
     });
 
     // Disable delete if only one layer
@@ -918,11 +903,6 @@ async function handlePointerDown(e) {
         totalMove: 0
     });
 
-    // Detect pencil
-    if (e.pointerType === 'pen') {
-        state.pencilDetected = true;
-    }
-
     // Reset interaction flags if this is the first pointer
     if (state.activePointers.size === 1) {
         state.touchStartTime = Date.now();
@@ -982,6 +962,17 @@ async function handlePointerDown(e) {
         return;
     }
 
+    // パームリジェクション改善:
+    // ペンが検出されている間は指での描画をブロックするが、
+    // ペンが離れて500ms経過後はリセットする (指でのジェスチャー操作を阻害しない)
+    if (e.pointerType === 'pen') {
+        state.pencilDetected = true;
+        if (state._pencilResetTimer) {
+            clearTimeout(state._pencilResetTimer);
+            state._pencilResetTimer = null;
+        }
+    }
+
     // 1 Finger = Drawing (if not space pressed)
     const canDraw = e.pointerType === 'pen' || e.pointerType === 'mouse' || (e.pointerType === 'touch' && !state.pencilDetected);
 
@@ -992,20 +983,22 @@ async function handlePointerDown(e) {
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
         // --- Mode-based dispatch ---
+        // 描画を先行開始し、saveState はバックグラウンドで実行
+        // これにより最初のストローク点の遅延を解消
         if (state.mode === 'pen') {
             // Pen mode: freehand stroke (pen or stipple)
-            state.drawingPending = true;
-            await saveState();
-            if (!state.drawingPending) {
-                state.undoStack.pop();
-                return;
-            }
-            state.drawingPending = false;
             if (state.subTool === 'stipple') {
                 startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             } else {
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
+            state.drawingPending = true;
+            saveState().then(() => {
+                if (!state.drawingPending) {
+                    state.undoStack.pop();
+                }
+                state.drawingPending = false;
+            });
         } else if (state.mode === 'fill') {
             // Fill mode: lasso/bucket (fill, tone, sketch)
             startLasso(e.clientX, e.clientY);
@@ -1014,14 +1007,14 @@ async function handlePointerDown(e) {
                 startLasso(e.clientX, e.clientY);
             } else {
                 // Eraser pen: freehand erase
-                state.drawingPending = true;
-                await saveState();
-                if (!state.drawingPending) {
-                    state.undoStack.pop();
-                    return;
-                }
-                state.drawingPending = false;
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
+                state.drawingPending = true;
+                saveState().then(() => {
+                    if (!state.drawingPending) {
+                        state.undoStack.pop();
+                    }
+                    state.drawingPending = false;
+                });
             }
         }
         state.strokeMade = true;
@@ -1185,6 +1178,15 @@ async function handlePointerUp(e) {
     try {
         eventCanvas.releasePointerCapture(e.pointerId);
     } catch (err) { }
+
+    // パームリジェクション: ペンが離れた後500msでリセット
+    // これにより指でのジェスチャー操作が再び可能になる
+    if (e.pointerType === 'pen' && state.pencilDetected) {
+        state._pencilResetTimer = setTimeout(() => {
+            state.pencilDetected = false;
+            state._pencilResetTimer = null;
+        }, 500);
+    }
 
     // Reset pinch checks
     if (state.activePointers.size < 2) {
@@ -1628,6 +1630,8 @@ function openBrushSettings(idx) {
     document.getElementById('bs-pressure-size').checked    = brush.pressureSize;
     document.getElementById('bs-pressure-opacity').checked = brush.pressureOpacity;
     document.getElementById('bs-binary').checked           = brush.binary;
+    document.getElementById('bs-pressure-curve').value     = brush.pressureCurve ?? 1.0;
+    document.getElementById('bs-pressure-curve-val').textContent = (brush.pressureCurve ?? 1.0).toFixed(1);
 
     // 点描時: 密度・筆圧→密度を表示、不透明度・筆圧系・2値を非表示
     document.getElementById('bs-density-row').style.display          = isStipple ? '' : 'none';
@@ -1639,6 +1643,9 @@ function openBrushSettings(idx) {
     // 2値時: 不透明度スライダーと筆圧→透明度をグレーアウト
     document.getElementById('bs-opacity-row').classList.toggle('disabled', brush.binary);
     document.getElementById('bs-pressure-opacity').closest('.bs-toggle-label').classList.toggle('disabled', brush.binary);
+
+    // 筆圧カーブ: ペン系のみ表示 (点描では非表示)
+    document.getElementById('bs-pressure-curve-row').style.display = isStipple ? 'none' : '';
 
     panel.classList.remove('hidden');
     panel.style.display = ''; // インラインの残りカスを掃除
@@ -1678,6 +1685,8 @@ function setupBrushSettingsPanel() {
     const psizeCheck       = document.getElementById('bs-pressure-size');
     const popCheck         = document.getElementById('bs-pressure-opacity');
     const binaryCheck      = document.getElementById('bs-binary');
+    const curveSlider      = document.getElementById('bs-pressure-curve');
+    const curveVal         = document.getElementById('bs-pressure-curve-val');
 
     const sync = () => {
         const b = state.brushes[_editingBrushIdx];
@@ -1689,9 +1698,11 @@ function setupBrushSettingsPanel() {
         b.pressureSize    = psizeCheck.checked;
         b.pressureOpacity = popCheck.checked;
         b.binary          = binaryCheck.checked;
+        b.pressureCurve   = parseFloat(curveSlider.value);
         b.color           = '#000000';
         densityVal.textContent = b.stippleDensity;
         opVal.textContent = Math.round(b.opacity * 100);
+        curveVal.textContent = b.pressureCurve.toFixed(1);
 
         // 行の表示をサブツールに合わせて切り替え
         document.getElementById('bs-density-row').style.display          = isStipple ? '' : 'none';
@@ -1699,6 +1710,7 @@ function setupBrushSettingsPanel() {
         document.getElementById('bs-opacity-row').style.display          = isStipple ? 'none' : '';
         document.getElementById('bs-pen-pressure-row').style.display     = isStipple ? 'none' : '';
         document.getElementById('bs-binary-row').style.display           = isStipple ? 'none' : '';
+        document.getElementById('bs-pressure-curve-row').style.display   = isStipple ? 'none' : '';
 
         // 2値時: 不透明度スライダーと筆圧→透明度をグレーアウト
         document.getElementById('bs-opacity-row').classList.toggle('disabled', b.binary);
@@ -1729,6 +1741,7 @@ function setupBrushSettingsPanel() {
         .forEach(el => el.addEventListener('input', sync));
     opSlider.addEventListener('input', sync);
     densitySlider.addEventListener('input', sync);
+    curveSlider.addEventListener('input', sync);
 
     // Stop panel events from reaching canvas
     panel.addEventListener('pointerdown', (e) => e.stopPropagation());

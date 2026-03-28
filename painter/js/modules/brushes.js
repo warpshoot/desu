@@ -29,6 +29,7 @@ export function makeDefaultBrushes() {
             pressureDensity: false,
             binary: false,
             stippleDensity: 5,
+            pressureCurve: 1.0,   // 筆圧カーブ (gamma: <1=柔, 1=線形, >1=硬)
             color: '#000000',
         },
         {
@@ -43,6 +44,7 @@ export function makeDefaultBrushes() {
             pressureDensity: false,
             binary: false,
             stippleDensity: 5,
+            pressureCurve: 1.0,
             color: '#000000',
         },
         {
@@ -57,9 +59,21 @@ export function makeDefaultBrushes() {
             pressureDensity: true,
             binary: false,
             stippleDensity: 5,
+            pressureCurve: 1.0,
             color: '#444444',
         }
     ];
+}
+
+/**
+ * 筆圧カーブを適用
+ * gamma < 1: 柔らかい (弱い力でも反応)
+ * gamma = 1: 線形 (そのまま)
+ * gamma > 1: 硬い (強く押さないと反応しない)
+ */
+export function applyPressureCurve(pressure, gamma) {
+    if (gamma === 1.0 || gamma == null) return pressure;
+    return Math.pow(Math.max(0, Math.min(1, pressure)), gamma);
 }
 
 // =============================================
@@ -153,8 +167,9 @@ export function drawBrushSegment(ctx, points, fromIdx, isStart, brush, isErasing
 // ======= PEN =======
 function _drawPen(ctx, pts, fromIdx, isStart, b) {
     const baseSize = b.size;
+    const gamma = b.pressureCurve ?? 1.0;
     const getW = (p) => b.pressureSize
-        ? Math.max(0.5, baseSize * (0.3 + 1.2 * p))
+        ? Math.max(0.5, baseSize * (0.3 + 1.2 * applyPressureCurve(p, gamma)))
         : baseSize;
 
     ctx.globalCompositeOperation = 'source-over';
@@ -201,15 +216,16 @@ function _drawPen(ctx, pts, fromIdx, isStart, b) {
 function _drawInk(ctx, pts, fromIdx, isStart, b) {
     ctx.globalCompositeOperation = 'source-over';
 
+    const gamma = b.pressureCurve ?? 1.0;
     const getW = (p) => b.pressureSize
-        ? Math.max(0.5, b.size * (0.25 + 1.3 * p))
+        ? Math.max(0.5, b.size * (0.25 + 1.3 * applyPressureCurve(p, gamma)))
         : b.size;
 
     if (isStart) {
         const p = pts[0];
         const w = getW(p.pressure);
-        // b.opacity は stroke canvas 合成時に globalAlpha で適用するためここでは除外
-        const alpha = b.pressureOpacity ? (0.1 + 0.9 * p.pressure) : 1.0;
+        const cp = applyPressureCurve(p.pressure, gamma);
+        const alpha = b.pressureOpacity ? (0.1 + 0.9 * cp) : 1.0;
         ctx.fillStyle = _applyAlpha(b.color, alpha);
         ctx.beginPath(); ctx.arc(p.x, p.y, w / 2, 0, Math.PI * 2); ctx.fill();
         return 0;
@@ -218,8 +234,10 @@ function _drawInk(ctx, pts, fromIdx, isStart, b) {
     for (let i = startI; i < pts.length; i++) {
         const p1 = pts[i-1], p2 = pts[i];
         const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
-        const a1 = b.pressureOpacity ? (0.1 + 0.9 * p1.pressure) : 1.0;
-        const a2 = b.pressureOpacity ? (0.1 + 0.9 * p2.pressure) : 1.0;
+        const cp1 = applyPressureCurve(p1.pressure, gamma);
+        const cp2 = applyPressureCurve(p2.pressure, gamma);
+        const a1 = b.pressureOpacity ? (0.1 + 0.9 * cp1) : 1.0;
+        const a2 = b.pressureOpacity ? (0.1 + 0.9 * cp2) : 1.0;
         const dx = p2.x - p1.x, dy = p2.y - p1.y;
         const dist = Math.hypot(dx, dy);
         
@@ -247,8 +265,8 @@ function _drawSketch(ctx, pts, fromIdx, isStart, b) {
     ctx.globalCompositeOperation = 'source-over';
 
     const w = b.size;
-    // b.opacity は stroke canvas 合成時に globalAlpha で適用するためここでは除外
-    const baseAlpha = b.pressureOpacity ? 1.0 : 1.0;
+    const gamma = b.pressureCurve ?? 1.0;
+    const baseAlpha = 1.0;
 
     const startI = isStart ? 0 : Math.max(1, fromIdx);
     for (let i = startI; i < pts.length; i++) {
@@ -264,7 +282,8 @@ function _drawSketch(ctx, pts, fromIdx, isStart, b) {
             const cx = p1.x + (p2.x - p1.x) * t;
             const cy = p1.y + (p2.y - p1.y) * t;
             const pr = p1.pressure + (p2.pressure - p1.pressure) * t;
-            const alpha = b.pressureOpacity ? (0.2 + 0.8 * pr) : baseAlpha;
+            const cp = applyPressureCurve(pr, gamma);
+            const alpha = b.pressureOpacity ? (0.2 + 0.8 * cp) : baseAlpha;
             ctx.fillStyle = _applyAlpha(b.color, alpha);
             ctx.beginPath(); ctx.arc(cx, cy, w / 2, 0, Math.PI * 2); ctx.fill();
         }
@@ -278,8 +297,9 @@ function _drawErase(ctx, pts, fromIdx, isStart, b) {
     ctx.globalCompositeOperation = 'destination-out';
     ctx.fillStyle = '#000000';
 
+    const gamma = b.pressureCurve ?? 1.0;
     const getW = (p) => b.pressureSize
-        ? Math.max(1, b.size * (0.3 + 1.2 * p))
+        ? Math.max(1, b.size * (0.3 + 1.2 * applyPressureCurve(p, gamma)))
         : b.size;
 
     if (isStart) {
