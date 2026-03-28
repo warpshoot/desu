@@ -299,6 +299,12 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
     ctx.putImageData(imgData, bounds.minX, bounds.minY);
 }
 
+// スケッチ塗りつぶし用の再利用キャンバス (毎回生成を避ける)
+let _sketchResultCanvas = null;
+let _sketchResultCtx = null;
+let _sketchMaskCanvas = null;
+let _sketchMaskCtx = null;
+
 // Sketch flood fill (semi-transparent grey with multiply blend)
 export function floodFillSketch(startX, startY) {
     const { canvas, ctx } = getActiveContextAndCanvas();
@@ -364,22 +370,32 @@ export function floodFillSketch(startX, startY) {
     }
 
 
-    // Create a temporary canvas for the final result
-    const resultCanvas = document.createElement('canvas');
-    resultCanvas.width = w;
-    resultCanvas.height = h;
-    const resultCtx = resultCanvas.getContext('2d');
+    // 再利用キャンバスのサイズを合わせる (初回 or リサイズ時のみ再生成)
+    if (!_sketchResultCanvas || _sketchResultCanvas.width !== w || _sketchResultCanvas.height !== h) {
+        _sketchResultCanvas = document.createElement('canvas');
+        _sketchResultCanvas.width = w;
+        _sketchResultCanvas.height = h;
+        _sketchResultCtx = _sketchResultCanvas.getContext('2d');
+    }
+    if (!_sketchMaskCanvas || _sketchMaskCanvas.width !== w || _sketchMaskCanvas.height !== h) {
+        _sketchMaskCanvas = document.createElement('canvas');
+        _sketchMaskCanvas.width = w;
+        _sketchMaskCanvas.height = h;
+        _sketchMaskCtx = _sketchMaskCanvas.getContext('2d');
+    }
+
+    const resultCtx = _sketchResultCtx;
+    resultCtx.clearRect(0, 0, w, h);
 
     // 1. Fill result with solid semi-transparent grey
+    resultCtx.globalCompositeOperation = 'source-over';
     resultCtx.fillStyle = '#808080';
     resultCtx.globalAlpha = 0.5;
     resultCtx.fillRect(0, 0, w, h);
 
     // 2. Apply the mask using destination-in
-    const tempMaskCanvas = document.createElement('canvas');
-    tempMaskCanvas.width = w;
-    tempMaskCanvas.height = h;
-    const tempMaskCtx = tempMaskCanvas.getContext('2d');
+    const tempMaskCtx = _sketchMaskCtx;
+    tempMaskCtx.clearRect(0, 0, w, h);
     const maskImgData = tempMaskCtx.createImageData(w, h);
     const mData = maskImgData.data;
 
@@ -396,12 +412,12 @@ export function floodFillSketch(startX, startY) {
 
     resultCtx.globalAlpha = 1.0;
     resultCtx.globalCompositeOperation = 'destination-in';
-    resultCtx.drawImage(tempMaskCanvas, 0, 0);
+    resultCtx.drawImage(_sketchMaskCanvas, 0, 0);
 
     // 3. Composite to active layer using multiply
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
-    ctx.drawImage(resultCanvas, 0, 0, resultCanvas.width / dpr, resultCanvas.height / dpr);
+    ctx.drawImage(_sketchResultCanvas, 0, 0, _sketchResultCanvas.width / dpr, _sketchResultCanvas.height / dpr);
     ctx.restore();
 
 }

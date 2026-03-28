@@ -9,8 +9,9 @@
 // インク色: 黒固定 (モノクロツール)
 const INK_COLOR = '#000000';
 
-// ブラシキャッシュ（binary用）
+// ブラシキャッシュ（binary用）— LRU的に上限管理
 const brushCache = new Map();
+const BRUSH_CACHE_MAX = 50;
 
 // =============================================
 // デフォルトブラシ定義
@@ -105,8 +106,13 @@ export function makeDefaultEraserSlots() {
 // 2値ブラシスタンプキャッシュ
 // =============================================
 function getPixelBrush(size) {
-    const key = `${size}`;
-    if (brushCache.has(key)) return brushCache.get(key);
+    if (brushCache.has(size)) {
+        // LRU: 再挿入でMapの末尾に移動
+        const c = brushCache.get(size);
+        brushCache.delete(size);
+        brushCache.set(size, c);
+        return c;
+    }
 
     const c = document.createElement('canvas');
     c.width = size; c.height = size;
@@ -124,7 +130,13 @@ function getPixelBrush(size) {
         }
     }
     ctx.putImageData(img, 0, 0);
-    brushCache.set(key, c);
+
+    // キャッシュ上限を超えたら最古のエントリを削除
+    if (brushCache.size >= BRUSH_CACHE_MAX) {
+        const oldest = brushCache.keys().next().value;
+        brushCache.delete(oldest);
+    }
+    brushCache.set(size, c);
     return c;
 }
 
