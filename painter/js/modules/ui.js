@@ -1694,6 +1694,9 @@ function openBrushSettings(idx) {
     document.getElementById('bs-binary').checked           = brush.binary;
     document.getElementById('bs-pressure-curve').value     = brush.pressureCurve ?? 1.0;
     document.getElementById('bs-pressure-curve-val').textContent = (brush.pressureCurve ?? 1.0).toFixed(1);
+    document.getElementById('bs-stabilizer').checked = brush.stabilizerEnabled ?? false;
+    document.getElementById('bs-stabilizer-dist').value = brush.stabilizerDistance ?? 20;
+    document.getElementById('bs-stabilizer-dist-val').textContent = brush.stabilizerDistance ?? 20;
 
     // 点描時: 密度・筆圧→密度を表示、不透明度・筆圧系・2値を非表示
     document.getElementById('bs-density-row').style.display          = isStipple ? '' : 'none';
@@ -1707,6 +1710,11 @@ function openBrushSettings(idx) {
 
     // 筆圧カーブ: ペン系のみ表示 (点描では非表示)
     document.getElementById('bs-pressure-curve-row').style.display = isStipple ? 'none' : '';
+
+    // 手ぶれ補正: 常に表示、距離は有効時のみ操作可能
+    document.getElementById('bs-stabilizer-row').style.display = '';
+    document.getElementById('bs-stabilizer-dist-row').style.display = '';
+    document.getElementById('bs-stabilizer-dist-row').classList.toggle('disabled', !(brush.stabilizerEnabled ?? false));
 
     panel.classList.remove('hidden');
     panel.style.display = ''; // インラインの残りカスを掃除
@@ -1747,6 +1755,9 @@ function setupBrushSettingsPanel() {
     const binaryCheck      = document.getElementById('bs-binary');
     const curveSlider      = document.getElementById('bs-pressure-curve');
     const curveVal         = document.getElementById('bs-pressure-curve-val');
+    const stabCheck        = document.getElementById('bs-stabilizer');
+    const stabDistSlider   = document.getElementById('bs-stabilizer-dist');
+    const stabDistVal      = document.getElementById('bs-stabilizer-dist-val');
 
     const sync = () => {
         const b = state.brushes[_editingBrushIdx];
@@ -1758,11 +1769,14 @@ function setupBrushSettingsPanel() {
         b.pressureSize    = psizeCheck.checked;
         b.pressureOpacity = false; // 機能廃止
         b.binary          = binaryCheck.checked;
-        b.pressureCurve   = parseFloat(curveSlider.value);
+        b.pressureCurve        = parseFloat(curveSlider.value);
+        b.stabilizerEnabled    = stabCheck.checked;
+        b.stabilizerDistance   = parseInt(stabDistSlider.value);
         // color removed: monochrome only (INK_COLOR = #000000)
-        densityVal.textContent = b.stippleDensity;
-        opVal.textContent = Math.round(b.opacity * 100);
-        curveVal.textContent = b.pressureCurve.toFixed(1);
+        densityVal.textContent   = b.stippleDensity;
+        opVal.textContent        = Math.round(b.opacity * 100);
+        curveVal.textContent     = b.pressureCurve.toFixed(1);
+        stabDistVal.textContent  = b.stabilizerDistance;
 
         // 行の表示をサブツールに合わせて切り替え
         document.getElementById('bs-density-row').style.display          = isStipple ? '' : 'none';
@@ -1774,6 +1788,9 @@ function setupBrushSettingsPanel() {
 
         // 2値時: 不透明度スライダーをグレーアウト
         document.getElementById('bs-opacity-row').classList.toggle('disabled', b.binary);
+
+        // 手ぶれ補正距離: 補正OFFのときグレーアウト
+        document.getElementById('bs-stabilizer-dist-row').classList.toggle('disabled', !b.stabilizerEnabled);
 
         // このスロットがアクティブなら、モードボタンのサブツールも更新
         if (_editingBrushIdx === state.activeBrushIndex && state.mode === 'pen') {
@@ -1796,11 +1813,12 @@ function setupBrushSettingsPanel() {
         if (_editingBrushIdx === state.activeBrushIndex) syncBrushSliders();
     };
 
-    [subToolSelect, psizeCheck, binaryCheck, pdensityCheck]
+    [subToolSelect, psizeCheck, binaryCheck, pdensityCheck, stabCheck]
         .forEach(el => el.addEventListener('input', sync));
     opSlider.addEventListener('input', sync);
     densitySlider.addEventListener('input', sync);
     curveSlider.addEventListener('input', sync);
+    stabDistSlider.addEventListener('input', sync);
 
     // Stop panel events from reaching canvas
     panel.addEventListener('pointerdown', (e) => e.stopPropagation());

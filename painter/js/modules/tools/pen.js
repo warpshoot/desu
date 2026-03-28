@@ -7,6 +7,10 @@ let lastDrawnIndex = 0;
 let _strokeOpacity = 1.0;
 let _usingStrokeCanvas = false;
 
+// 手ぶれ補正 (糸引きスタビライザー) の状態
+let _stabAnchorX = 0;  // ブラシの実際の位置 (カーソルより遅れる)
+let _stabAnchorY = 0;
+
 // 筆圧スムージング用リングバッファ (5点ウィンドウ平均)
 const PRESSURE_WINDOW = 5;
 let pressureBuffer = [];
@@ -124,6 +128,10 @@ export function startPenDrawing(x, y, pressure = 0.5) {
     smoothedPoints = [{ x, y, pressure: smoothedP }];
     lastDrawnIndex = 0;
 
+    // 手ぶれ補正: アンカーをカーソル位置で初期化
+    _stabAnchorX = x;
+    _stabAnchorY = y;
+
     const brush = _getDrawBrush();
     _strokeOpacity = brush.opacity ?? 1.0;
     _usingStrokeCanvas = !state.isErasing && !!strokeCanvas && !!strokeCtx;
@@ -142,6 +150,23 @@ export function startPenDrawing(x, y, pressure = 0.5) {
 export function drawPenLine(x, y, pressure = 0.5) {
     if (!state.isPenDrawing) return;
 
+    const brush = _getDrawBrush();
+
+    // 手ぶれ補正 (糸引きスタビライザー)
+    // カーソルがアンカーから stabilizerDistance 以上離れたときのみアンカーを移動
+    if (brush.stabilizerEnabled && !state.isErasing) {
+        const stabDist = brush.stabilizerDistance ?? 20;
+        const dx = x - _stabAnchorX;
+        const dy = y - _stabAnchorY;
+        const d = Math.hypot(dx, dy);
+        if (d <= stabDist) return; // ブラシは動かない
+        const ratio = (d - stabDist) / d;
+        _stabAnchorX += dx * ratio;
+        _stabAnchorY += dy * ratio;
+        x = _stabAnchorX;
+        y = _stabAnchorY;
+    }
+
     const lastPoint = strokePoints[strokePoints.length - 1];
     const dist = Math.hypot(x - lastPoint.x, y - lastPoint.y);
     if (dist < 0.5) return;
@@ -155,8 +180,6 @@ export function drawPenLine(x, y, pressure = 0.5) {
     // Catmull-Rom 補間で滑らかな点列を再構築
     const prevSmoothedLen = smoothedPoints.length;
     _rebuildSmoothedPoints(prevRawLen);
-
-    const brush = _getDrawBrush();
 
     // lastDrawnIndex は smoothedPoints 上のインデックス
     // 前回の末尾から描画再開

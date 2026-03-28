@@ -29,6 +29,8 @@ export function makeDefaultBrushes() {
             binary: false,
             stippleDensity: 5,
             pressureCurve: 1.0,
+            stabilizerEnabled: false,
+            stabilizerDistance: 20,
         },
         {
             id: 1,
@@ -42,6 +44,8 @@ export function makeDefaultBrushes() {
             binary: false,
             stippleDensity: 5,
             pressureCurve: 1.0,
+            stabilizerEnabled: false,
+            stabilizerDistance: 20,
         },
         {
             id: 3,
@@ -55,6 +59,8 @@ export function makeDefaultBrushes() {
             binary: false,
             stippleDensity: 5,
             pressureCurve: 1.0,
+            stabilizerEnabled: false,
+            stabilizerDistance: 20,
         }
     ];
 }
