@@ -317,18 +317,14 @@ export function floodFillTone(startX, startY) {
     const imgData = ctx.getImageData(0, 0, w, h);
     const data = imgData.data;
     const idx = (startY * w + startX) * 4;
-    const targetR = data[idx];
-    const targetG = data[idx + 1];
-    const targetB = data[idx + 2];
     const targetA = data[idx + 3];
 
-
-    const tol = 30; // アンチエイリアス中間色の許容範囲
-    const matchTarget = (i) =>
-        Math.abs(data[i] - targetR) <= tol &&
-        Math.abs(data[i + 1] - targetG) <= tol &&
-        Math.abs(data[i + 2] - targetB) <= tol &&
-        Math.abs(data[i + 3] - targetA) <= tol;
+    // モノクロ2値: アルファ閾値で透明/不透明を判定
+    const ALPHA_THRESHOLD = 128;
+    const targetIsTransparent = targetA < ALPHA_THRESHOLD;
+    const matchTarget = targetIsTransparent
+        ? (i) => data[i + 3] < ALPHA_THRESHOLD
+        : (i) => data[i + 3] >= ALPHA_THRESHOLD;
 
     const mask = new Uint8Array(w * h);
     let minX = startX, minY = startY, maxX = startX, maxY = startY;
