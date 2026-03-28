@@ -19,11 +19,10 @@ function getActiveContextAndCanvas() {
 
 // ============================================
 // 塗りつぶし（スキャンライン法）
-// モノクロ2値前提: アルファ閾値で透明/不透明を判定
-// アンチエイリアスの中間アルファは同じグループとして扱う
+// モノクロ2値前提:
+//   透明タップ → 完全不透明(255)以外は全て塗りつぶし対象
+//   不透明タップ → 同じアルファ値(±許容)の領域を塗りつぶし
 // ============================================
-
-const ALPHA_THRESHOLD = 128; // 透明/不透明の境界
 
 export function floodFill(startX, startY, fillColor) {
     const { canvas, ctx } = getActiveContextAndCanvas();
@@ -43,16 +42,15 @@ export function floodFill(startX, startY, fillColor) {
     const idx = (startY * w + startX) * 4;
     const targetA = data[idx + 3];
 
-    // タップ位置が透明なら「透明グループ」、不透明なら「不透明グループ」
-    const targetIsTransparent = targetA < ALPHA_THRESHOLD;
-
     // 既に塗り色と同じなら何もしない
     if (data[idx] === fillColor[0] && data[idx + 1] === fillColor[1] &&
         data[idx + 2] === fillColor[2] && data[idx + 3] === fillColor[3]) return;
 
-    const matchTarget = targetIsTransparent
-        ? (i) => data[i + 3] < ALPHA_THRESHOLD
-        : (i) => data[i + 3] >= ALPHA_THRESHOLD;
+    // 透明タップ: alpha < 255 を全てマッチ (完全不透明のみが壁)
+    // 不透明タップ: 同アルファ値(±30)をマッチ
+    const matchTarget = targetA < 255
+        ? (i) => data[i + 3] < 255
+        : (i) => data[i + 3] === 255;
     const setPixel = (i) => {
         data[i] = fillColor[0];
         data[i + 1] = fillColor[1];
@@ -133,11 +131,11 @@ export function floodFillTransparent(startX, startY) {
 
     if (targetA === 0) return;
 
-    // 不透明ピクセルを透明に (アンチエイリアス中間色も対象)
-    const targetIsTransparent = targetA < ALPHA_THRESHOLD;
-    const matchTarget = targetIsTransparent
-        ? (i) => data[i + 3] < ALPHA_THRESHOLD
-        : (i) => data[i + 3] >= ALPHA_THRESHOLD;
+    // 透明タップ: alpha < 255 を全てマッチ
+    // 不透明タップ: alpha === 255 をマッチ
+    const matchTarget = targetA < 255
+        ? (i) => data[i + 3] < 255
+        : (i) => data[i + 3] === 255;
     const setPixel = (i) => {
         data[i] = 0; data[i + 1] = 0; data[i + 2] = 0; data[i + 3] = 0;
     };
@@ -293,10 +291,9 @@ export function floodFillSketch(startX, startY) {
     const idx = (startY * w + startX) * 4;
     const targetA = data[idx + 3];
 
-    const targetIsTransparent = targetA < ALPHA_THRESHOLD;
-    const matchTarget = targetIsTransparent
-        ? (i) => data[i + 3] < ALPHA_THRESHOLD
-        : (i) => data[i + 3] >= ALPHA_THRESHOLD;
+    const matchTarget = targetA < 255
+        ? (i) => data[i + 3] < 255
+        : (i) => data[i + 3] === 255;
 
     const mask = new Uint8Array(w * h);
     const stack = [[startX, startY]];
