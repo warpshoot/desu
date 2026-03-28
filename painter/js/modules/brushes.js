@@ -1,10 +1,8 @@
 /**
- * brushes.js — ブラシプリセット管理 & 描画エンジン
+ * brushes.js — ブラシプリセット管理 & 統一描画エンジン
  *
- * ブラシタイプ:
- *   pen      : 2値 or 筆圧→線幅。不透明。
- *   ink      : 筆圧 → 線幅 + 不透明度。インクっぽさ。
- *   sketch   : 筆圧 → 不透明度。重ね塗りで色がつく。薄灰。
+ * 全スロットが同一の描画ロジックを使用。
+ * 挙動はブラシ設定 (pressureSize, pressureOpacity, binary, etc.) で制御。
  */
 
 // ブラシキャッシュ（binary用）
@@ -18,7 +16,6 @@ export function makeDefaultBrushes() {
         {
             id: 0,
             name: '1',
-            type: 'pen',
             subTool: 'pen',
             size: 3,
             opacity: 1.0,
@@ -27,13 +24,12 @@ export function makeDefaultBrushes() {
             pressureDensity: false,
             binary: false,
             stippleDensity: 5,
-            pressureCurve: 1.0,   // 筆圧カーブ (gamma: <1=柔, 1=線形, >1=硬)
+            pressureCurve: 1.0,
             color: '#000000',
         },
         {
             id: 1,
             name: '2',
-            type: 'ink',
             subTool: 'pen',
             size: 6,
             opacity: 0.9,
@@ -48,7 +44,6 @@ export function makeDefaultBrushes() {
         {
             id: 3,
             name: '3',
-            type: 'sketch',
             subTool: 'stipple',
             size: 4,
             opacity: 0.3,
@@ -128,169 +123,106 @@ function getPixelBrush(size, hexColor) {
 }
 
 // =============================================
-// ブラシ別 描画エンジン
+// 統一描画エンジン
 // =============================================
 
 /**
  * 1ストローク分のポイント列からキャンバスに描く
- * @param {CanvasRenderingContext2D} ctx
- * @param {{x,y,pressure}[]} points  全ポイント列
- * @param {number} fromIdx           前回描いたindex
- * @param {boolean} isStart          最初の点かどうか
- * @param {object} brush             ブラシ設定オブジェクト
- * @param {boolean} isErasing
- * @returns {number}                 次回のfromIdx
+ * 全ブラシスロットが同じロジックを使用。
+ * 挙動は brush の設定フラグで制御:
+ *   - pressureSize:    筆圧→線幅
+ *   - pressureOpacity: 筆圧→不透明度
+ *   - binary:          2値ピクセルモード
+ *   - pressureCurve:   筆圧カーブ (gamma)
  */
 export function drawBrushSegment(ctx, points, fromIdx, isStart, brush, isErasing) {
     if (points.length === 0) return 0;
 
-    // --- 消しゴムモード ---
     if (isErasing) {
         return _drawErase(ctx, points, fromIdx, isStart, brush);
     }
 
-    // 2値ピクセルモードはブラシタイプに関わらず適用
     if (brush.binary) {
-        return _drawPen(ctx, points, fromIdx, isStart, brush);
+        return _drawBinary(ctx, points, fromIdx, isStart, brush);
     }
 
-    switch (brush.type) {
-        case 'ink':        return _drawInk(ctx, points, fromIdx, isStart, brush);
-        case 'sketch':     return _drawSketch(ctx, points, fromIdx, isStart, brush);
-        case 'pen':
-        default:           return _drawPen(ctx, points, fromIdx, isStart, brush);
-    }
+    return _drawStroke(ctx, points, fromIdx, isStart, brush);
 }
 
-// ======= PEN =======
-function _drawPen(ctx, pts, fromIdx, isStart, b) {
-    const baseSize = b.size;
+// =============================================
+// 統一ストローク描画
+// =============================================
+function _drawStroke(ctx, pts, fromIdx, isStart, b) {
     const gamma = b.pressureCurve ?? 1.0;
     const getW = (p) => b.pressureSize
-        ? Math.max(0.5, baseSize * (0.3 + 1.2 * applyPressureCurve(p, gamma)))
-        : baseSize;
+        ? Math.max(0.5, b.size * (0.3 + 1.2 * applyPressureCurve(p, gamma)))
+        : b.size;
+    const getA = (p) => b.pressureOpacity
+        ? (0.1 + 0.9 * applyPressureCurve(p, gamma))
+        : 1.0;
 
     ctx.globalCompositeOperation = 'source-over';
 
-    if (b.binary) {
-        // pixel-stamp mode (pressure varies stamp size if pressureSize is on)
-        const startI = isStart ? 0 : Math.max(1, fromIdx);
-        for (let i = startI; i < pts.length; i++) {
-            const p1 = pts[Math.max(0, i - 1)];
-            const p2 = pts[i];
-            const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-            const steps = i === 0 ? 0 : Math.ceil(dist);
-            for (let j = 0; j <= steps; j++) {
-                const t = steps === 0 ? 0 : j / steps;
-                const cx = p1.x + (p2.x - p1.x) * t;
-                const cy = p1.y + (p2.y - p1.y) * t;
-                const cp = p1.pressure + (p2.pressure - p1.pressure) * t;
-                const stampW = Math.max(1, Math.round(getW(cp)));
-                const stamp = getPixelBrush(stampW, b.color);
-                ctx.drawImage(stamp, Math.floor(cx - stampW / 2), Math.floor(cy - stampW / 2));
-            }
-        }
-        return pts.length - 1;
-    }
-
-    // smooth anti-aliased (opacity applied by stroke canvas compositing)
-    ctx.fillStyle = b.color;
     if (isStart) {
         const p = pts[0];
         const w = getW(p.pressure);
+        ctx.fillStyle = b.pressureOpacity
+            ? _applyAlpha(b.color, getA(p.pressure))
+            : b.color;
         ctx.beginPath(); ctx.arc(p.x, p.y, w / 2, 0, Math.PI * 2); ctx.fill();
         return 0;
     }
+
     const startI = Math.max(1, fromIdx);
     for (let i = startI; i < pts.length; i++) {
         const p1 = pts[i-1], p2 = pts[i];
         const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
-        _stampSegment(ctx, p1, p2, w1, w2);
+
+        if (b.pressureOpacity) {
+            // 筆圧→不透明度: 各点ごとに色を変えながらスタンプ
+            _stampSegmentWithAlpha(ctx, p1, p2, w1, w2, getA(p1.pressure), getA(p2.pressure), b.color);
+        } else {
+            // 不透明度固定: lineTo ベースの高速描画
+            ctx.fillStyle = b.color;
+            _stampSegment(ctx, p1, p2, w1, w2);
+        }
     }
     return pts.length - 1;
 }
 
-// ======= INK (pressure → width + opacity) =======
-function _drawInk(ctx, pts, fromIdx, isStart, b) {
-    ctx.globalCompositeOperation = 'source-over';
-
+// =============================================
+// 2値ピクセルモード
+// =============================================
+function _drawBinary(ctx, pts, fromIdx, isStart, b) {
     const gamma = b.pressureCurve ?? 1.0;
     const getW = (p) => b.pressureSize
-        ? Math.max(0.5, b.size * (0.25 + 1.3 * applyPressureCurve(p, gamma)))
+        ? Math.max(0.5, b.size * (0.3 + 1.2 * applyPressureCurve(p, gamma)))
         : b.size;
 
-    if (isStart) {
-        const p = pts[0];
-        const w = getW(p.pressure);
-        const cp = applyPressureCurve(p.pressure, gamma);
-        const alpha = b.pressureOpacity ? (0.1 + 0.9 * cp) : 1.0;
-        ctx.fillStyle = _applyAlpha(b.color, alpha);
-        ctx.beginPath(); ctx.arc(p.x, p.y, w / 2, 0, Math.PI * 2); ctx.fill();
-        return 0;
-    }
-    const startI = Math.max(1, fromIdx);
-    for (let i = startI; i < pts.length; i++) {
-        const p1 = pts[i-1], p2 = pts[i];
-        const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
-        const cp1 = applyPressureCurve(p1.pressure, gamma);
-        const cp2 = applyPressureCurve(p2.pressure, gamma);
-        const a1 = b.pressureOpacity ? (0.1 + 0.9 * cp1) : 1.0;
-        const a2 = b.pressureOpacity ? (0.1 + 0.9 * cp2) : 1.0;
-        const dx = p2.x - p1.x, dy = p2.y - p1.y;
-        const dist = Math.hypot(dx, dy);
-        
-        // 密度調整: 太さに応じて間隔を広げる
-        const spacing = Math.max(1.0, Math.min(w1, w2) * 0.08);
-        const steps = Math.max(1, Math.ceil(dist / spacing));
-        
-        for (let j = 0; j <= steps; j++) {
-            const t = j / steps;
-            const cx = p1.x + dx * t, cy = p1.y + dy * t;
-            const cw = w1 + (w2 - w1) * t;
-            const ca = a1 + (a2 - a1) * t;
-            // 密度を考慮して不透明度を補正 (重なりが少ない分、少し強めに)
-            const correctedAlpha = Math.min(1.0, ca * 1.5);
-            ctx.fillStyle = _applyAlpha(b.color, correctedAlpha);
-            ctx.beginPath(); ctx.arc(cx, cy, cw / 2, 0, Math.PI * 2); ctx.fill();
-        }
-    }
-    return pts.length - 1;
-}
-
-
-// ======= SKETCH (pressure → opacity, builds up) =======
-function _drawSketch(ctx, pts, fromIdx, isStart, b) {
     ctx.globalCompositeOperation = 'source-over';
-
-    const w = b.size;
-    const gamma = b.pressureCurve ?? 1.0;
-    const baseAlpha = 1.0;
 
     const startI = isStart ? 0 : Math.max(1, fromIdx);
     for (let i = startI; i < pts.length; i++) {
-        const p1 = pts[Math.max(0, i - 1)], p2 = pts[i];
+        const p1 = pts[Math.max(0, i - 1)];
+        const p2 = pts[i];
         const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-
-        // Sketch用密度調整: もともと薄いので少し細かめに
-        const spacing = Math.max(1.5, w * 0.15);
-        const steps = i === startI && isStart ? 0 : Math.max(1, Math.round(dist / spacing));
-
+        const steps = i === 0 ? 0 : Math.ceil(dist);
         for (let j = 0; j <= steps; j++) {
             const t = steps === 0 ? 0 : j / steps;
             const cx = p1.x + (p2.x - p1.x) * t;
             const cy = p1.y + (p2.y - p1.y) * t;
-            const pr = p1.pressure + (p2.pressure - p1.pressure) * t;
-            const cp = applyPressureCurve(pr, gamma);
-            const alpha = b.pressureOpacity ? (0.2 + 0.8 * cp) : baseAlpha;
-            ctx.fillStyle = _applyAlpha(b.color, alpha);
-            ctx.beginPath(); ctx.arc(cx, cy, w / 2, 0, Math.PI * 2); ctx.fill();
+            const cp = p1.pressure + (p2.pressure - p1.pressure) * t;
+            const stampW = Math.max(1, Math.round(getW(cp)));
+            const stamp = getPixelBrush(stampW, b.color);
+            ctx.drawImage(stamp, Math.floor(cx - stampW / 2), Math.floor(cy - stampW / 2));
         }
     }
     return pts.length - 1;
 }
 
-
-// ======= ERASER =======
+// =============================================
+// 消しゴム
+// =============================================
 function _drawErase(ctx, pts, fromIdx, isStart, b) {
     ctx.globalCompositeOperation = 'destination-out';
     ctx.fillStyle = '#000000';
@@ -318,11 +250,14 @@ function _drawErase(ctx, pts, fromIdx, isStart, b) {
 // =============================================
 // 共通ヘルパー
 // =============================================
+
+/**
+ * 不透明度固定のセグメント描画 (lineTo + 補間スタンプ)
+ */
 function _stampSegment(ctx, p1, p2, w1, w2) {
     const dx = p2.x - p1.x, dy = p2.y - p1.y;
     const dist = Math.hypot(dx, dy);
-    
-    // Stroke描画をベースにする
+
     ctx.strokeStyle = ctx.fillStyle;
     ctx.lineWidth = (w1 + w2) / 2;
     ctx.lineCap = 'round';
@@ -347,8 +282,30 @@ function _stampSegment(ctx, p1, p2, w1, w2) {
     }
 }
 
+/**
+ * 筆圧→不透明度対応のセグメント描画
+ * lineToは色が固定なので使えない。全て円スタンプで描画。
+ */
+function _stampSegmentWithAlpha(ctx, p1, p2, w1, w2, a1, a2, color) {
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const dist = Math.hypot(dx, dy);
+
+    const spacing = Math.max(1.0, Math.min(w1, w2) * 0.15);
+    const steps = Math.max(1, Math.ceil(dist / spacing));
+
+    for (let j = 0; j <= steps; j++) {
+        const t = j / steps;
+        const cx = p1.x + dx * t, cy = p1.y + dy * t;
+        const cw = w1 + (w2 - w1) * t;
+        const ca = a1 + (a2 - a1) * t;
+        ctx.fillStyle = _applyAlpha(color, ca);
+        if (cw > 0) {
+            ctx.beginPath(); ctx.arc(cx, cy, cw / 2, 0, Math.PI * 2); ctx.fill();
+        }
+    }
+}
+
 function _applyAlpha(hex, alpha) {
-    // hex: #RRGGBB → rgba(r,g,b,alpha)
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);

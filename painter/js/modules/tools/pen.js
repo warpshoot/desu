@@ -126,11 +126,10 @@ export function startPenDrawing(x, y, pressure = 0.5) {
 
     const brush = _getDrawBrush();
     _strokeOpacity = brush.opacity ?? 1.0;
-    // inkブラシで筆圧→不透明度の場合: ストロークキャンバスを使うと
+    // 筆圧→不透明度がオンの場合: ストロークキャンバスを使うと
     // CSS opacityが一律適用され、筆圧による不透明度変化が描画中に見えない。
     // この場合は直接レイヤーに描画し、リアルタイムプレビューを優先する。
-    const hasPerPointOpacity = brush.pressureOpacity && (brush.type === 'ink' || brush.type === 'sketch');
-    _usingStrokeCanvas = !state.isErasing && !hasPerPointOpacity && !!strokeCanvas && !!strokeCtx;
+    _usingStrokeCanvas = !state.isErasing && !brush.pressureOpacity && !!strokeCanvas && !!strokeCtx;
 
     if (_usingStrokeCanvas) {
         strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
