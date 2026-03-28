@@ -167,8 +167,10 @@ export async function copyToClipboard(x, y, w, h) {
     const outputScale = state.selectedScale;
 
     const flash = document.getElementById('flash');
-    flash.style.opacity = '0.7';
-    setTimeout(() => { flash.style.opacity = '0'; }, 100);
+    if (flash) {
+        flash.style.opacity = '0.7';
+        setTimeout(() => { flash.style.opacity = '0'; }, 100);
+    }
 
     let tempCanvas = null;
 
