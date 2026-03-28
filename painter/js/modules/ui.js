@@ -1697,6 +1697,8 @@ function openBrushSettings(idx) {
     document.getElementById('bs-stabilizer').checked = brush.stabilizerEnabled ?? false;
     document.getElementById('bs-stabilizer-dist').value = brush.stabilizerDistance ?? 20;
     document.getElementById('bs-stabilizer-dist-val').textContent = brush.stabilizerDistance ?? 20;
+    document.getElementById('bs-stab-string').checked = brush.stabStringVisible ?? true;
+    document.getElementById('bs-stab-guide').checked  = brush.stabShowGuide ?? true;
 
     // 点描時: 密度・筆圧→密度を表示、不透明度・筆圧系・2値を非表示
     document.getElementById('bs-density-row').style.display          = isStipple ? '' : 'none';
@@ -1711,10 +1713,13 @@ function openBrushSettings(idx) {
     // 筆圧カーブ: ペン系のみ表示 (点描では非表示)
     document.getElementById('bs-pressure-curve-row').style.display = isStipple ? 'none' : '';
 
-    // 手ぶれ補正: 常に表示、距離は有効時のみ操作可能
+    // 手ぶれ補正: 常に表示、距離・可視化は有効時のみ操作可能
     document.getElementById('bs-stabilizer-row').style.display = '';
     document.getElementById('bs-stabilizer-dist-row').style.display = '';
-    document.getElementById('bs-stabilizer-dist-row').classList.toggle('disabled', !(brush.stabilizerEnabled ?? false));
+    const _stabOn = brush.stabilizerEnabled ?? false;
+    document.getElementById('bs-stabilizer-dist-row').classList.toggle('disabled', !_stabOn);
+    document.getElementById('bs-stab-viz-row').classList.toggle('disabled', !_stabOn);
+    document.getElementById('bs-stab-guide').closest('label').classList.toggle('disabled', !(brush.stabStringVisible ?? true));
 
     panel.classList.remove('hidden');
     panel.style.display = ''; // インラインの残りカスを掃除
@@ -1758,6 +1763,8 @@ function setupBrushSettingsPanel() {
     const stabCheck        = document.getElementById('bs-stabilizer');
     const stabDistSlider   = document.getElementById('bs-stabilizer-dist');
     const stabDistVal      = document.getElementById('bs-stabilizer-dist-val');
+    const stabStringCheck  = document.getElementById('bs-stab-string');
+    const stabGuideCheck   = document.getElementById('bs-stab-guide');
 
     const sync = () => {
         const b = state.brushes[_editingBrushIdx];
@@ -1772,6 +1779,8 @@ function setupBrushSettingsPanel() {
         b.pressureCurve        = parseFloat(curveSlider.value);
         b.stabilizerEnabled    = stabCheck.checked;
         b.stabilizerDistance   = parseInt(stabDistSlider.value);
+        b.stabStringVisible    = stabStringCheck.checked;
+        b.stabShowGuide        = stabGuideCheck.checked;
         // color removed: monochrome only (INK_COLOR = #000000)
         densityVal.textContent   = b.stippleDensity;
         opVal.textContent        = Math.round(b.opacity * 100);
@@ -1789,8 +1798,10 @@ function setupBrushSettingsPanel() {
         // 2値時: 不透明度スライダーをグレーアウト
         document.getElementById('bs-opacity-row').classList.toggle('disabled', b.binary);
 
-        // 手ぶれ補正距離: 補正OFFのときグレーアウト
+        // 手ぶれ補正距離・可視化: 補正OFFのときグレーアウト
         document.getElementById('bs-stabilizer-dist-row').classList.toggle('disabled', !b.stabilizerEnabled);
+        document.getElementById('bs-stab-viz-row').classList.toggle('disabled', !b.stabilizerEnabled);
+        stabGuideCheck.closest('label').classList.toggle('disabled', !b.stabStringVisible);
 
         // このスロットがアクティブなら、モードボタンのサブツールも更新
         if (_editingBrushIdx === state.activeBrushIndex && state.mode === 'pen') {
@@ -1813,7 +1824,7 @@ function setupBrushSettingsPanel() {
         if (_editingBrushIdx === state.activeBrushIndex) syncBrushSliders();
     };
 
-    [subToolSelect, psizeCheck, binaryCheck, pdensityCheck, stabCheck]
+    [subToolSelect, psizeCheck, binaryCheck, pdensityCheck, stabCheck, stabStringCheck, stabGuideCheck]
         .forEach(el => el.addEventListener('input', sync));
     opSlider.addEventListener('input', sync);
     densitySlider.addEventListener('input', sync);

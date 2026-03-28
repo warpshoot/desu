@@ -73,7 +73,7 @@ body {
     top: 0;
     left: 0;
     transform-origin: 0 0;
-    z-index: 100;
+    z-index: 175;
 }
 
 /* ストロークプレビュー用キャンバス */
@@ -2085,7 +2085,8 @@ body.help-mode #tool-panel {
     display: flex;
     align-items: center;
     gap: 6px;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
 }
 
 .bs-pressure-curve-container input[type="range"] {

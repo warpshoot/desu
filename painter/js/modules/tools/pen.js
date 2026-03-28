@@ -1,4 +1,4 @@
-import { state, getActiveLayerCtx, strokeCanvas, strokeCtx } from '../state.js';
+import { state, getActiveLayerCtx, strokeCanvas, strokeCtx, lassoCanvas, lassoCtx } from '../state.js';
 import { drawBrushSegment } from '../brushes.js';
 
 let strokePoints = [];      // 生の入力点列
@@ -14,6 +14,71 @@ let _stabAnchorY = 0;
 // 筆圧スムージング用リングバッファ (5点ウィンドウ平均)
 const PRESSURE_WINDOW = 5;
 let pressureBuffer = [];
+
+/**
+ * 手ぶれ補正の「糸」を描画 (lassoCanvasを使用)
+ */
+function _drawStabString(cursorX, cursorY, brushX, brushY) {
+    if (!lassoCtx || !lassoCanvas) return;
+
+    // lassoCanvasはスクリーン座標(=無変形)で使用されることが想定されているため、
+    // キャンバス座標をスクリーン座標に変換して戻す
+    const s = state.scale;
+    const tx = state.translateX;
+    const ty = state.translateY;
+
+    const sx1 = cursorX * s + tx;
+    const sy1 = cursorY * s + ty;
+    const sx2 = brushX * s + tx;
+    const sy2 = brushY * s + ty;
+
+    lassoCtx.save();
+    const brush = state.activeBrush;
+    const stabDist = (brush.stabilizerDistance ?? 20) * s;
+    const showGuide  = brush.stabShowGuide ?? true;
+
+    // 糸の描画 (白縁 + 青線で視認性向上)
+    lassoCtx.lineWidth = 3;
+    lassoCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    lassoCtx.beginPath();
+    lassoCtx.moveTo(sx1, sy1);
+    lassoCtx.lineTo(sx2, sy2);
+    lassoCtx.stroke();
+
+    lassoCtx.lineWidth = 1.5;
+    lassoCtx.strokeStyle = 'rgba(60, 130, 255, 0.85)';
+    lassoCtx.beginPath();
+    lassoCtx.moveTo(sx1, sy1);
+    lassoCtx.lineTo(sx2, sy2);
+    lassoCtx.stroke();
+
+    if (showGuide) {
+        // ブラシ位置の円 (アンカー)
+        lassoCtx.beginPath();
+        lassoCtx.arc(sx2, sy2, 4, 0, Math.PI * 2);
+        lassoCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        lassoCtx.fill();
+        lassoCtx.lineWidth = 1.5;
+        lassoCtx.strokeStyle = 'rgba(60, 130, 255, 0.9)';
+        lassoCtx.stroke();
+
+        // カーソル位置の小円
+        lassoCtx.beginPath();
+        lassoCtx.arc(sx1, sy1, 2.5, 0, Math.PI * 2);
+        lassoCtx.fillStyle = 'rgba(60, 130, 255, 0.7)';
+        lassoCtx.fill();
+
+        // 補正限界の円 (糸の長さ)
+        lassoCtx.beginPath();
+        lassoCtx.setLineDash([3, 4]);
+        lassoCtx.lineWidth = 1;
+        lassoCtx.strokeStyle = 'rgba(60, 130, 255, 0.4)';
+        lassoCtx.arc(sx2, sy2, stabDist, 0, Math.PI * 2);
+        lassoCtx.stroke();
+    }
+
+    lassoCtx.restore();
+}
 
 // 消しゴム時は eraserSize を使う専用ブラシを返す
 function _getDrawBrush() {
@@ -133,6 +198,11 @@ export function startPenDrawing(x, y, pressure = 0.5) {
     _stabAnchorY = y;
 
     const brush = _getDrawBrush();
+    if (brush.stabilizerEnabled && !state.isErasing) {
+        lassoCanvas.style.display = 'block';
+        lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+    }
+
     _strokeOpacity = brush.opacity ?? 1.0;
     _usingStrokeCanvas = !state.isErasing && !!strokeCanvas && !!strokeCtx;
 
@@ -155,6 +225,12 @@ export function drawPenLine(x, y, pressure = 0.5) {
     // 手ぶれ補正 (糸引きスタビライザー)
     // カーソルがアンカーから stabilizerDistance 以上離れたときのみアンカーを移動
     if (brush.stabilizerEnabled && !state.isErasing) {
+        // 糸の描画
+        lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+        if (brush.stabStringVisible ?? true) {
+            _drawStabString(x, y, _stabAnchorX, _stabAnchorY);
+        }
+
         const stabDist = brush.stabilizerDistance ?? 20;
         const dx = x - _stabAnchorX;
         const dy = y - _stabAnchorY;
@@ -210,6 +286,12 @@ export async function endPenDrawing() {
             strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
             strokeCanvas.style.opacity = 1;
         }
+
+        if (lassoCtx) {
+            lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+            lassoCanvas.style.display = 'none';
+        }
+
         state.isPenDrawing = false;
         strokePoints = [];
         smoothedPoints = [];

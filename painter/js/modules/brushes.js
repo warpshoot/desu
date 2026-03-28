@@ -31,6 +31,8 @@ export function makeDefaultBrushes() {
             pressureCurve: 1.0,
             stabilizerEnabled: false,
             stabilizerDistance: 20,
+            stabStringVisible: true,
+            stabShowGuide: true,
         },
         {
             id: 1,
@@ -46,6 +48,8 @@ export function makeDefaultBrushes() {
             pressureCurve: 1.0,
             stabilizerEnabled: false,
             stabilizerDistance: 20,
+            stabStringVisible: true,
+            stabShowGuide: true,
         },
         {
             id: 3,
@@ -61,6 +65,8 @@ export function makeDefaultBrushes() {
             pressureCurve: 1.0,
             stabilizerEnabled: false,
             stabilizerDistance: 20,
+            stabStringVisible: true,
+            stabShowGuide: true,
         }
     ];
 }
