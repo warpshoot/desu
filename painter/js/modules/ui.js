@@ -688,6 +688,26 @@ function updateActiveLayerIndicator() {
     }
 }
 
+// =============================================
+// 非線形ブラシサイズスライダー変換
+// スライダー値 0-1000 → ブラシサイズ 1-500
+// 指数カーブで 1-20 がスライダーの大半を占める
+// =============================================
+const SLIDER_MAX = 1000;
+const BRUSH_SIZE_MIN = 1;
+const BRUSH_SIZE_MAX = 500;
+const SLIDER_EXPONENT = 3.0; // 大きいほど小サイズ側に偏る
+
+function sliderToBrushSize(sliderVal) {
+    const t = sliderVal / SLIDER_MAX; // 0..1
+    return Math.round(BRUSH_SIZE_MIN + Math.pow(t, SLIDER_EXPONENT) * (BRUSH_SIZE_MAX - BRUSH_SIZE_MIN));
+}
+
+function brushSizeToSlider(size) {
+    const t = (size - BRUSH_SIZE_MIN) / (BRUSH_SIZE_MAX - BRUSH_SIZE_MIN);
+    return Math.round(Math.pow(Math.max(0, t), 1 / SLIDER_EXPONENT) * SLIDER_MAX);
+}
+
 function updateBrushSizeVisibility() {
     const container = document.getElementById('size-slider-container');
 
@@ -708,7 +728,7 @@ function updateBrushSizeSlider() {
     } else {
         size = state.activeBrush.size;
     }
-    slider.value = size;
+    slider.value = brushSizeToSlider(size);
     display.textContent = size;
 }
 
@@ -938,7 +958,7 @@ async function handlePointerDown(e) {
         state.initialPinchCenter = { ...state.lastPinchCenter };
 
         // Interrupt drawing if 2nd finger touches
-        if (state.isPenDrawing || state.isLassoing || state.drawingPending) {
+        if (state.isPenDrawing || state.isLassoing) {
             // Check if 2nd finger came very quickly after 1st (likely a 2-finger tap intent)
             const timeSinceFirstFinger = Date.now() - state.touchStartTime;
             const isTwoFingerTapIntent = timeSinceFirstFinger < 150;
@@ -986,38 +1006,23 @@ async function handlePointerDown(e) {
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
         // --- Mode-based dispatch ---
-        // 描画を先行開始し、saveState はバックグラウンドで実行
-        // これにより最初のストローク点の遅延を解消
+        // saveState を await してから描画開始 (レースコンディション防止)
+        // createImageBitmap は高速 (<5ms) なので体感遅延は最小限
         if (state.mode === 'pen') {
-            // Pen mode: freehand stroke (pen or stipple)
+            await saveState();
             if (state.subTool === 'stipple') {
                 startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             } else {
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
-            state.drawingPending = true;
-            saveState().then(() => {
-                if (!state.drawingPending) {
-                    state.undoStack.pop();
-                }
-                state.drawingPending = false;
-            });
         } else if (state.mode === 'fill') {
-            // Fill mode: lasso/bucket (fill, tone, sketch)
             startLasso(e.clientX, e.clientY);
         } else if (state.mode === 'eraser') {
             if (state.subTool === 'lasso') {
                 startLasso(e.clientX, e.clientY);
             } else {
-                // Eraser pen: freehand erase
+                await saveState();
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
-                state.drawingPending = true;
-                saveState().then(() => {
-                    if (!state.drawingPending) {
-                        state.undoStack.pop();
-                    }
-                    state.drawingPending = false;
-                });
             }
         }
         state.strokeMade = true;
@@ -1059,7 +1064,6 @@ function cancelCurrentOperation() {
     state.isLassoing = false;
     state.strokeMade = false;
     state.didInteract = false;
-    state.drawingPending = false;
 }
 
 async function handlePointerMove(e) {
@@ -1250,13 +1254,9 @@ async function handlePointerUp(e) {
                             if (state.subTool === 'tone') {
                                 floodFillTone(fx, fy);
                             } else {
-                                // 統一バケツ: スロットの色と不透明度を使用
+                                // 統一バケツ: 黒 + スロットの不透明度
                                 const slotOpacity = fillSlot.opacity ?? 1.0;
-                                const hex = fillSlot.color || '#000000';
-                                const r = parseInt(hex.slice(1, 3), 16);
-                                const g = parseInt(hex.slice(3, 5), 16);
-                                const b = parseInt(hex.slice(5, 7), 16);
-                                floodFill(fx, fy, [r, g, b, Math.round(slotOpacity * 255)]);
+                                floodFill(fx, fy, [0, 0, 0, Math.round(slotOpacity * 255)]);
                             }
                         } else if (state.mode === 'eraser' && state.subTool === 'lasso') {
                             floodFillTransparent(fx, fy);
@@ -1271,14 +1271,10 @@ async function handlePointerUp(e) {
                     } else if (state.subTool === 'tone') {
                         fillTone(points);
                     } else {
-                        // 統一ポリゴン塗り: スロットの色と不透明度を使用
+                        // 統一ポリゴン塗り: 黒 + スロットの不透明度
                         const fillSlot = state.fillSlots[state.activeFillSlotIndex];
                         const slotOpacity = fillSlot.opacity ?? 1.0;
-                        const hex = fillSlot.color || '#000000';
-                        const r = parseInt(hex.slice(1, 3), 16);
-                        const g = parseInt(hex.slice(3, 5), 16);
-                        const b = parseInt(hex.slice(5, 7), 16);
-                        fillPolygonNoAA(points, r, g, b, slotOpacity);
+                        fillPolygonNoAA(points, 0, 0, 0, slotOpacity);
                     }
                     updateLayerThumbnail(getActiveLayer());
                 }
@@ -1428,7 +1424,7 @@ function setupColorPickers() {
     const sizeDisplay = document.getElementById('sizeDisplay');
 
     brushSizeSlider.addEventListener('input', (e) => {
-        const size = parseInt(e.target.value);
+        const size = sliderToBrushSize(parseInt(e.target.value));
         sizeDisplay.textContent = size;
 
         if (state.mode === 'eraser') {
@@ -1626,12 +1622,7 @@ function setupBrushPalette() {
 function syncBrushSliders() {
     if (state.mode === 'fill') return;   // 塗りスロットにブラシサイズはない
     if (state.mode === 'eraser') return; // 消しゴムサイズはスライダーとは別管理
-    const brush = state.activeBrush;
-    if (!brush) return;
-    const slider = document.getElementById('brushSize');
-    const display = document.getElementById('sizeDisplay');
-    if (slider) { slider.value = brush.size; }
-    if (display) { display.textContent = brush.size; }
+    updateBrushSizeSlider();
 }
 
 // =============================================
@@ -1726,7 +1717,7 @@ function setupBrushSettingsPanel() {
         b.pressureOpacity = popCheck.checked;
         b.binary          = binaryCheck.checked;
         b.pressureCurve   = parseFloat(curveSlider.value);
-        b.color           = '#000000';
+        // color removed: monochrome only (INK_COLOR = #000000)
         densityVal.textContent = b.stippleDensity;
         opVal.textContent = Math.round(b.opacity * 100);
         curveVal.textContent = b.pressureCurve.toFixed(1);
@@ -1909,28 +1900,28 @@ function setupToneMenu() {
     TONE_PRESETS.forEach(preset => {
         const item = document.createElement('div');
         item.className = 'tone-item';
-        if (preset.id === currentTonePresetId) {
-            item.classList.add('active');
-        }
-        // item.textContent = preset.name; // Removed text
         item.dataset.id = preset.id;
         item.title = `${preset.name} (${preset.type})`;
 
-        // Create preview
-        const preview = createTonePreview(preset, 40, 40); // Slightly smaller than container
+        const preview = createTonePreview(preset, 40, 40);
         item.appendChild(preview);
 
         item.addEventListener('click', (e) => {
-            // Prevent event propagation so we don't trigger outside click logic immediately if it exists
             e.stopPropagation();
 
+            // グローバルプリセット更新 (描画関数で参照)
             setTonePreset(preset.id);
+
+            // アクティブ塗りスロットにも保存 (スロット独立保持)
+            const fillSlot = state.fillSlots[state.activeFillSlotIndex];
+            if (fillSlot) {
+                fillSlot.tonePresetId = preset.id;
+            }
 
             // Update active state
             menu.querySelectorAll('.tone-item').forEach(el => el.classList.remove('active'));
             item.classList.add('active');
 
-            // Only close if NOT pinned
             if (!state.isToneMenuPinned) {
                 menu.classList.add('hidden');
             }
@@ -1958,6 +1949,17 @@ function updateToneMenuVisibility() {
     if (!menu) return;
 
     if (state.mode === 'fill' && state.subTool === 'tone') {
+        // スロットごとのトーンプリセットをグローバルに反映
+        const fillSlot = state.fillSlots[state.activeFillSlotIndex];
+        if (fillSlot && fillSlot.tonePresetId) {
+            setTonePreset(fillSlot.tonePresetId);
+        }
+        // メニューのアクティブ表示を更新
+        const activePresetId = fillSlot?.tonePresetId || currentTonePresetId;
+        menu.querySelectorAll('.tone-item').forEach(el => {
+            el.classList.toggle('active', el.dataset.id === activePresetId);
+        });
+
         menu.classList.remove('hidden');
 
         // 塗りモードボタンの真横に表示
