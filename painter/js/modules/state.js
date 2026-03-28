@@ -182,7 +182,8 @@ export function mergeLayerDown(id) {
     // Use globalAlpha to preserve top layer's opacity
     bottomLayer.ctx.save();
     bottomLayer.ctx.globalAlpha = topLayer.opacity;
-    bottomLayer.ctx.drawImage(topLayer.canvas, 0, 0);
+    const dpr = window.devicePixelRatio || 1;
+    bottomLayer.ctx.drawImage(topLayer.canvas, 0, 0, topLayer.canvas.width / dpr, topLayer.canvas.height / dpr);
     bottomLayer.ctx.restore();
 
     // Remove the top layer

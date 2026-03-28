@@ -65,7 +65,8 @@ export async function endPenDrawing() {
             if (mainCtx) {
                 mainCtx.save();
                 mainCtx.globalAlpha = _strokeOpacity;
-                mainCtx.drawImage(strokeCanvas, 0, 0);
+                const dpr = window.devicePixelRatio || 1;
+                mainCtx.drawImage(strokeCanvas, 0, 0, strokeCanvas.width / dpr, strokeCanvas.height / dpr);
                 mainCtx.restore();
             }
             strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);

@@ -302,6 +302,10 @@ export function floodFillTone(startX, startY) {
     const w = canvas.width;
     const h = canvas.height;
 
+    // CSS座標を物理ピクセル座標に変換
+    const dpr = window.devicePixelRatio || 1;
+    startX = Math.round(startX * dpr);
+    startY = Math.round(startY * dpr);
 
     if (startX < 0 || startX >= w || startY < 0 || startY >= h) {
         return;
@@ -429,7 +433,7 @@ export function floodFillTone(startX, startY) {
     binarizeCanvas(resultCtx, regionW, regionH);
 
     // 5. Finally draw to active layer
-    ctx.drawImage(resultCanvas, minX, minY);
+    ctx.drawImage(resultCanvas, minX / dpr, minY / dpr, regionW / dpr, regionH / dpr);
 }
 
 // Helper to binarize canvas (convert antialiased grays to pure black/white)
