@@ -1738,31 +1738,33 @@ function openBrushSettings(idx) {
     document.getElementById('bs-stabilizer').checked = brush.stabilizerEnabled ?? false;
     document.getElementById('bs-stabilizer-dist').value = brush.stabilizerDistance ?? 20;
     document.getElementById('bs-stabilizer-dist-val').textContent = brush.stabilizerDistance ?? 20;
-    document.getElementById('bs-stab-string').checked = brush.stabStringVisible ?? true;
-    document.getElementById('bs-stab-guide').checked  = brush.stabShowGuide ?? true;
+    // サブツールにあわせて行の表示/非表示を切り替え (邪魔なものは消す)
+    const densityRow      = document.getElementById('bs-density-row');
+    const pdensityRow     = document.getElementById('bs-pressure-density-row');
+    const opacityRow      = document.getElementById('bs-opacity-row');
+    const penPressureRow  = document.getElementById('bs-pen-pressure-row');
+    const binaryRow       = document.getElementById('bs-binary-row');
+    const pcurveRow       = document.getElementById('bs-pressure-curve-row');
+    const stabRow         = document.getElementById('bs-stabilizer-row');
+    const stabDistRow     = document.getElementById('bs-stabilizer-dist-row');
+    const stabVizRow      = document.getElementById('bs-stab-viz-row');
 
-    // 点描時: 密度・筆圧→密度を表示、不透明度・筆圧系・2値を非表示
-    document.getElementById('bs-density-row').style.display          = isStipple ? '' : 'none';
-    document.getElementById('bs-pressure-density-row').style.display = isStipple ? '' : 'none';
-    document.getElementById('bs-opacity-row').style.display          = isStipple ? 'none' : '';
-    document.getElementById('bs-pen-pressure-row').style.display     = isStipple ? 'none' : '';
-    document.getElementById('bs-binary-row').style.display           = isStipple ? 'none' : '';
+    // 点描系の表示制御
+    if (densityRow) densityRow.style.display = isStipple ? '' : 'none';
+    if (pdensityRow) pdensityRow.style.display = isStipple ? '' : 'none';
 
-    // 2値時: 不透明度スライダーをグレーアウト
-    document.getElementById('bs-opacity-row').classList.toggle('disabled', brush.binary);
+    // ペン系の表示制御
+    const showPenSettings = !isStipple;
+    opacityRow.style.display = (showPenSettings && !brush.binary) ? '' : 'none';
+    penPressureRow.style.display = showPenSettings ? '' : 'none';
+    binaryRow.style.display = showPenSettings ? '' : 'none';
+    pcurveRow.style.display = showPenSettings ? '' : 'none';
 
-    // 筆圧カーブ: ペン系のみ表示 (点描では非表示)
-    document.getElementById('bs-pressure-curve-row').style.display = isStipple ? 'none' : '';
-
-    // 手ぶれ補正: 常に表示、距離・可視化は有効時のみ操作可能。点描時は全て無効
-    document.getElementById('bs-stabilizer-row').style.display = '';
-    document.getElementById('bs-stabilizer-dist-row').style.display = '';
-    
-    const isStippleOrStabOff = isStipple || !(brush.stabilizerEnabled ?? false);
-    document.getElementById('bs-stabilizer-row').classList.toggle('disabled', isStipple);
-    document.getElementById('bs-stabilizer-dist-row').classList.toggle('disabled', isStippleOrStabOff);
-    document.getElementById('bs-stab-viz-row').classList.toggle('disabled', isStippleOrStabOff);
-    document.getElementById('bs-stab-guide').closest('label').classList.toggle('disabled', isStippleOrStabOff || !(brush.stabStringVisible ?? true));
+    // 手ぶれ補正の表示制御
+    const stabOn = brush.stabilizerEnabled ?? false;
+    stabRow.style.display = showPenSettings ? '' : 'none';
+    stabDistRow.style.display = (showPenSettings && stabOn) ? '' : 'none';
+    stabVizRow.style.display = (showPenSettings && stabOn) ? '' : 'none';
 
     panel.classList.remove('hidden');
     panel.style.display = ''; // インラインの残りカスを掃除
@@ -1828,27 +1830,30 @@ function setupBrushSettingsPanel() {
         densityVal.textContent   = b.stippleDensity;
         opVal.textContent        = Math.round(b.opacity * 100);
         curveVal.textContent     = b.pressureCurve.toFixed(1);
-        stabDistVal.textContent  = b.stabilizerDistance;
+        // 表示/非表示の同期
+        const densityRow      = document.getElementById('bs-density-row');
+        const pdensityRow     = document.getElementById('bs-pressure-density-row');
+        const opacityRow      = document.getElementById('bs-opacity-row');
+        const penPressureRow  = document.getElementById('bs-pen-pressure-row');
+        const binaryRow       = document.getElementById('bs-binary-row');
+        const pcurveRow       = document.getElementById('bs-pressure-curve-row');
+        const stabRow         = document.getElementById('bs-stabilizer-row');
+        const stabDistRow     = document.getElementById('bs-stabilizer-dist-row');
+        const stabVizRow      = document.getElementById('bs-stab-viz-row');
 
-        // 行の表示をサブツールに合わせて切り替え
-        document.getElementById('bs-density-row').style.display          = isStipple ? '' : 'none';
-        document.getElementById('bs-pressure-density-row').style.display = isStipple ? '' : 'none';
-        document.getElementById('bs-opacity-row').style.display          = isStipple ? 'none' : '';
-        document.getElementById('bs-pen-pressure-row').style.display     = isStipple ? 'none' : '';
-        document.getElementById('bs-binary-row').style.display           = isStipple ? 'none' : '';
-        document.getElementById('bs-pressure-curve-row').style.display   = isStipple ? 'none' : '';
+        if (densityRow) densityRow.style.display = isStipple ? '' : 'none';
+        if (pdensityRow) pdensityRow.style.display = isStipple ? '' : 'none';
 
-        // 2値時: 不透明度スライダーをグレーアウト
-        document.getElementById('bs-opacity-row').classList.toggle('disabled', b.binary);
+        const showPenSettings = !isStipple;
+        opacityRow.style.display = (showPenSettings && !b.binary) ? '' : 'none';
+        penPressureRow.style.display = showPenSettings ? '' : 'none';
+        binaryRow.style.display = showPenSettings ? '' : 'none';
+        pcurveRow.style.display = showPenSettings ? '' : 'none';
 
-        // 手ぶれ補正: 補正OFFまたは点描のときグレーアウト
-        const isStippleOrStabOff = isStipple || !b.stabilizerEnabled;
-        document.getElementById('bs-stabilizer-row').classList.toggle('disabled', isStipple);
-        document.getElementById('bs-stabilizer-dist-row').classList.toggle('disabled', isStippleOrStabOff);
-        document.getElementById('bs-stab-viz-row').classList.toggle('disabled', isStippleOrStabOff);
-        stabGuideCheck.closest('label').classList.toggle('disabled', isStippleOrStabOff || !b.stabStringVisible);
-
-        // このスロットがアクティブなら、モードボタンのサブツールも更新
+        const stabOn = b.stabilizerEnabled;
+        stabRow.style.display = showPenSettings ? '' : 'none';
+        stabDistRow.style.display = (showPenSettings && stabOn) ? '' : 'none';
+        stabVizRow.style.display = (showPenSettings && stabOn) ? '' : 'none';
         if (_editingBrushIdx === state.activeBrushIndex && state.mode === 'pen') {
             state.subTool = b.subTool;
             updateModeButtonIcon('pen', b.subTool);
@@ -2002,11 +2007,12 @@ function openEraserSettings(idx) {
     document.getElementById('es-is-binary').checked = slot.binary !== false;
 
     // lasso のみバケツ設定を表示
+    // 投げ縄のみバケツ設定を表示。2値化設定は常に表示
     const isLasso = slot.subTool === 'lasso';
     document.getElementById('es-bucket-row').style.display = isLasso ? '' : 'none';
     const bucketOn = isLasso && slot.bucketEnabled !== false;
     document.getElementById('es-tolerance-row').style.display = bucketOn ? '' : 'none';
-    document.getElementById('es-is-binary-row').style.display = isLasso ? '' : 'none';
+    document.getElementById('es-is-binary-row').style.display = ''; // 常に表示
 
     panel.classList.remove('hidden');
     panel.style.display = '';
@@ -2049,7 +2055,7 @@ function setupEraserSettingsPanel() {
         const isLasso = slot.subTool === 'lasso';
         document.getElementById('es-bucket-row').style.display = isLasso ? '' : 'none';
         document.getElementById('es-tolerance-row').style.display = (isLasso && bucketCheck.checked) ? '' : 'none';
-        document.getElementById('es-is-binary-row').style.display = isLasso ? '' : 'none';
+        document.getElementById('es-is-binary-row').style.display = ''; // 常に表示
 
         // アクティブスロットならモード反映
         if (_editingEraserSlotIdx === state.activeEraserSlotIndex && state.mode === 'eraser') {
