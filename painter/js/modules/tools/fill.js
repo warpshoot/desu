@@ -19,16 +19,16 @@ function getActiveContextAndCanvas() {
 
 // ============================================
 // 塗りつぶし（スキャンライン法）
-// アンチエイリアスの中間色を許容するためトレランスを使用
+// モノクロ2値前提: アルファ閾値で透明/不透明を判定
+// アンチエイリアスの中間アルファは同じグループとして扱う
 // ============================================
 
-const FILL_TOLERANCE = 30; // 0-255: アンチエイリアスの中間色を吸収する閾値
+const ALPHA_THRESHOLD = 128; // 透明/不透明の境界
 
 export function floodFill(startX, startY, fillColor) {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
-    // CSS座標を物理ピクセル座標に変換
     const dpr = window.devicePixelRatio || 1;
     startX = Math.round(startX * dpr);
     startY = Math.round(startY * dpr);
@@ -41,16 +41,18 @@ export function floodFill(startX, startY, fillColor) {
     const data = imgData.data;
 
     const idx = (startY * w + startX) * 4;
-    const targetR = data[idx], targetG = data[idx + 1], targetB = data[idx + 2], targetA = data[idx + 3];
+    const targetA = data[idx + 3];
 
-    if (targetR === fillColor[0] && targetG === fillColor[1] && targetB === fillColor[2] && targetA === fillColor[3]) return;
+    // タップ位置が透明なら「透明グループ」、不透明なら「不透明グループ」
+    const targetIsTransparent = targetA < ALPHA_THRESHOLD;
 
-    const tol = FILL_TOLERANCE;
-    const matchTarget = (i) =>
-        Math.abs(data[i] - targetR) <= tol &&
-        Math.abs(data[i + 1] - targetG) <= tol &&
-        Math.abs(data[i + 2] - targetB) <= tol &&
-        Math.abs(data[i + 3] - targetA) <= tol;
+    // 既に塗り色と同じなら何もしない
+    if (data[idx] === fillColor[0] && data[idx + 1] === fillColor[1] &&
+        data[idx + 2] === fillColor[2] && data[idx + 3] === fillColor[3]) return;
+
+    const matchTarget = targetIsTransparent
+        ? (i) => data[i + 3] < ALPHA_THRESHOLD
+        : (i) => data[i + 3] >= ALPHA_THRESHOLD;
     const setPixel = (i) => {
         data[i] = fillColor[0];
         data[i + 1] = fillColor[1];
@@ -58,7 +60,6 @@ export function floodFill(startX, startY, fillColor) {
         data[i + 3] = fillColor[3];
     };
 
-    // visited マスクで再訪問防止
     const visited = new Uint8Array(w * h);
     const stack = [[startX, startY]];
 
@@ -128,16 +129,15 @@ export function floodFillTransparent(startX, startY) {
     const data = imgData.data;
 
     const idx = (startY * w + startX) * 4;
-    const targetR = data[idx], targetG = data[idx + 1], targetB = data[idx + 2], targetA = data[idx + 3];
+    const targetA = data[idx + 3];
 
     if (targetA === 0) return;
 
-    const tol = FILL_TOLERANCE;
-    const matchTarget = (i) =>
-        Math.abs(data[i] - targetR) <= tol &&
-        Math.abs(data[i + 1] - targetG) <= tol &&
-        Math.abs(data[i + 2] - targetB) <= tol &&
-        Math.abs(data[i + 3] - targetA) <= tol;
+    // 不透明ピクセルを透明に (アンチエイリアス中間色も対象)
+    const targetIsTransparent = targetA < ALPHA_THRESHOLD;
+    const matchTarget = targetIsTransparent
+        ? (i) => data[i + 3] < ALPHA_THRESHOLD
+        : (i) => data[i + 3] >= ALPHA_THRESHOLD;
     const setPixel = (i) => {
         data[i] = 0; data[i + 1] = 0; data[i + 2] = 0; data[i + 3] = 0;
     };
@@ -291,12 +291,12 @@ export function floodFillSketch(startX, startY) {
     const data = imgData.data;
 
     const idx = (startY * w + startX) * 4;
-    const targetR = data[idx];
-    const targetG = data[idx + 1];
-    const targetB = data[idx + 2];
     const targetA = data[idx + 3];
 
-    const matchTarget = (i) => data[i] === targetR && data[i + 1] === targetG && data[i + 2] === targetB && data[i + 3] === targetA;
+    const targetIsTransparent = targetA < ALPHA_THRESHOLD;
+    const matchTarget = targetIsTransparent
+        ? (i) => data[i + 3] < ALPHA_THRESHOLD
+        : (i) => data[i + 3] >= ALPHA_THRESHOLD;
 
     const mask = new Uint8Array(w * h);
     const stack = [[startX, startY]];
