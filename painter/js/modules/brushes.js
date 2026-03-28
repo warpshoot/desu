@@ -158,7 +158,6 @@ function _drawPen(ctx, pts, fromIdx, isStart, b) {
         : baseSize;
 
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = b.color;
 
     if (b.binary) {
         // pixel-stamp mode
@@ -182,6 +181,7 @@ function _drawPen(ctx, pts, fromIdx, isStart, b) {
     }
 
     // smooth anti-aliased
+    ctx.fillStyle = _applyAlpha(b.color, b.opacity);
     if (isStart) {
         const p = pts[0];
         const w = getW(p.pressure);

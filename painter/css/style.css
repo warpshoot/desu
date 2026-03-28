@@ -1956,6 +1956,16 @@ body.help-mode #tool-panel {
     gap: 8px;
 }
 
+.bs-row.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+.bs-toggle-label.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
 .bs-row label {
     font-size: 12px;
     color: #555;
