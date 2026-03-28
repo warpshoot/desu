@@ -11,9 +11,11 @@ let _usingStrokeCanvas = false;
 let _stabAnchorX = 0;  // ブラシの実際の位置 (カーソルより遅れる)
 let _stabAnchorY = 0;
 
-// 筆圧スムージング用リングバッファ (5点ウィンドウ平均)
+// 筆圧スムージング用リングバッファ (5点ウィンドウ加重平均)
 const PRESSURE_WINDOW = 5;
-let pressureBuffer = [];
+let pressureBuffer = new Float32Array(PRESSURE_WINDOW);
+let pressureBufferLen = 0;
+let pressureBufferIdx = 0;
 
 /**
  * 手ぶれ補正の「糸」を描画 (lassoCanvasを使用)
@@ -91,17 +93,21 @@ function _getDrawBrush() {
 /**
  * 筆圧のウィンドウ平均スムージング
  * 直近N点の加重移動平均で筆圧ノイズを除去
+ * O(1) リングバッファで shift() のコストを回避
  */
 function _smoothPressure(rawPressure) {
-    pressureBuffer.push(rawPressure);
-    if (pressureBuffer.length > PRESSURE_WINDOW) {
-        pressureBuffer.shift();
-    }
+    pressureBuffer[pressureBufferIdx] = rawPressure;
+    pressureBufferIdx = (pressureBufferIdx + 1) % PRESSURE_WINDOW;
+    if (pressureBufferLen < PRESSURE_WINDOW) pressureBufferLen++;
+
     // 新しい値ほど重みが大きい加重平均
+    // リングバッファ内を古い順 (oldest → newest) に走査
     let sum = 0, weightSum = 0;
-    for (let i = 0; i < pressureBuffer.length; i++) {
-        const w = i + 1; // 1,2,3,4,5
-        sum += pressureBuffer[i] * w;
+    for (let i = 0; i < pressureBufferLen; i++) {
+        // oldest = pressureBufferIdx - pressureBufferLen + i (mod WINDOW)
+        const idx = (pressureBufferIdx - pressureBufferLen + i + PRESSURE_WINDOW) % PRESSURE_WINDOW;
+        const w = i + 1;
+        sum += pressureBuffer[idx] * w;
         weightSum += w;
     }
     return sum / weightSum;
@@ -148,19 +154,25 @@ function _catmullRomSegment(p0, p1, p2, p3, subdivisions) {
  * fromRawIdx: この生インデックス以降のセグメントを補間
  * returns: 新たに追加された smoothedPoints のインデックス範囲
  */
+// binary モードでは smoothedPoints = strokePoints を直接参照し、コピーを避ける
+let _binaryMode = false;
+
 function _rebuildSmoothedPoints(fromRawIdx) {
     const raw = strokePoints;
     if (raw.length < 2) {
-        smoothedPoints = [...raw];
+        _binaryMode = false;
+        smoothedPoints = raw;
         return;
     }
 
     // 2値ピクセルモードの場合は補間しない (ピクセルパーフェクト維持)
     const brush = _getDrawBrush();
     if (brush.binary) {
-        smoothedPoints = [...raw];
+        _binaryMode = true;
+        smoothedPoints = raw;
         return;
     }
+    _binaryMode = false;
 
     // fromRawIdx が 0 または 1 のときは全体を再構築
     const startIdx = Math.max(1, fromRawIdx);
@@ -187,7 +199,8 @@ function _rebuildSmoothedPoints(fromRawIdx) {
 
 export function startPenDrawing(x, y, pressure = 0.5) {
     state.isPenDrawing = true;
-    pressureBuffer = [];
+    pressureBufferLen = 0;
+    pressureBufferIdx = 0;
     const smoothedP = _smoothPressure(pressure);
     strokePoints = [{ x, y, pressure: smoothedP }];
     smoothedPoints = [{ x, y, pressure: smoothedP }];
@@ -295,8 +308,10 @@ export async function endPenDrawing() {
         state.isPenDrawing = false;
         strokePoints = [];
         smoothedPoints = [];
+        _binaryMode = false;
         lastDrawnIndex = 0;
-        pressureBuffer = [];
+        pressureBufferLen = 0;
+        pressureBufferIdx = 0;
         _usingStrokeCanvas = false;
     }
 }

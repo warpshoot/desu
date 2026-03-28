@@ -866,15 +866,21 @@ export function updateLayerThumbnail(layer) {
 
     ctx.drawImage(layer.canvas, 0, 0, sWidth, sHeight, offsetX, offsetY, drawW, drawH);
 
-    layer.thumbnail = state.thumbCanvas.toDataURL();
-
-    // Immediately update DOM
+    // toDataURL を避け、canvas を直接 blob URL に変換（非同期だが高速）
     const btn = document.querySelector(`.layer-btn[data-layer-id="${layer.id}"]`);
     if (btn) {
-        btn.style.backgroundImage = `url(${layer.thumbnail})`;
-        btn.style.backgroundSize = 'contain';
-        btn.style.backgroundRepeat = 'no-repeat';
-        btn.style.backgroundPosition = 'center';
+        state.thumbCanvas.toBlob((blob) => {
+            if (!blob) return;
+            // 以前の blob URL を解放
+            if (layer._thumbBlobUrl) {
+                URL.revokeObjectURL(layer._thumbBlobUrl);
+            }
+            layer._thumbBlobUrl = URL.createObjectURL(blob);
+            btn.style.backgroundImage = `url(${layer._thumbBlobUrl})`;
+            btn.style.backgroundSize = 'contain';
+            btn.style.backgroundRepeat = 'no-repeat';
+            btn.style.backgroundPosition = 'center';
+        });
     }
 }
 
