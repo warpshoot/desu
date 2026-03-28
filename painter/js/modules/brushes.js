@@ -160,10 +160,7 @@ function _drawPen(ctx, pts, fromIdx, isStart, b) {
     ctx.globalCompositeOperation = 'source-over';
 
     if (b.binary) {
-        // pixel-stamp mode
-        const size = Math.max(1, Math.round(baseSize));
-        const stamp = getPixelBrush(size, b.color);
-        const half = size / 2;
+        // pixel-stamp mode (pressure varies stamp size if pressureSize is on)
         const startI = isStart ? 0 : Math.max(1, fromIdx);
         for (let i = startI; i < pts.length; i++) {
             const p1 = pts[Math.max(0, i - 1)];
@@ -174,14 +171,17 @@ function _drawPen(ctx, pts, fromIdx, isStart, b) {
                 const t = steps === 0 ? 0 : j / steps;
                 const cx = p1.x + (p2.x - p1.x) * t;
                 const cy = p1.y + (p2.y - p1.y) * t;
-                ctx.drawImage(stamp, Math.floor(cx - half), Math.floor(cy - half));
+                const cp = p1.pressure + (p2.pressure - p1.pressure) * t;
+                const stampW = Math.max(1, Math.round(getW(cp)));
+                const stamp = getPixelBrush(stampW, b.color);
+                ctx.drawImage(stamp, Math.floor(cx - stampW / 2), Math.floor(cy - stampW / 2));
             }
         }
         return pts.length - 1;
     }
 
-    // smooth anti-aliased
-    ctx.fillStyle = _applyAlpha(b.color, b.opacity);
+    // smooth anti-aliased (opacity applied by stroke canvas compositing)
+    ctx.fillStyle = b.color;
     if (isStart) {
         const p = pts[0];
         const w = getW(p.pressure);
@@ -208,7 +208,8 @@ function _drawInk(ctx, pts, fromIdx, isStart, b) {
     if (isStart) {
         const p = pts[0];
         const w = getW(p.pressure);
-        const alpha = b.pressureOpacity ? b.opacity * (0.1 + 0.9 * p.pressure) : b.opacity;
+        // b.opacity は stroke canvas 合成時に globalAlpha で適用するためここでは除外
+        const alpha = b.pressureOpacity ? (0.1 + 0.9 * p.pressure) : 1.0;
         ctx.fillStyle = _applyAlpha(b.color, alpha);
         ctx.beginPath(); ctx.arc(p.x, p.y, w / 2, 0, Math.PI * 2); ctx.fill();
         return 0;
@@ -217,8 +218,8 @@ function _drawInk(ctx, pts, fromIdx, isStart, b) {
     for (let i = startI; i < pts.length; i++) {
         const p1 = pts[i-1], p2 = pts[i];
         const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
-        const a1 = b.pressureOpacity ? b.opacity * (0.1 + 0.9 * p1.pressure) : b.opacity;
-        const a2 = b.pressureOpacity ? b.opacity * (0.1 + 0.9 * p2.pressure) : b.opacity;
+        const a1 = b.pressureOpacity ? (0.1 + 0.9 * p1.pressure) : 1.0;
+        const a2 = b.pressureOpacity ? (0.1 + 0.9 * p2.pressure) : 1.0;
         const dx = p2.x - p1.x, dy = p2.y - p1.y;
         const dist = Math.hypot(dx, dy);
         
@@ -246,23 +247,24 @@ function _drawSketch(ctx, pts, fromIdx, isStart, b) {
     ctx.globalCompositeOperation = 'source-over';
 
     const w = b.size;
-    const baseAlpha = b.opacity;
+    // b.opacity は stroke canvas 合成時に globalAlpha で適用するためここでは除外
+    const baseAlpha = b.pressureOpacity ? 1.0 : 1.0;
 
     const startI = isStart ? 0 : Math.max(1, fromIdx);
     for (let i = startI; i < pts.length; i++) {
         const p1 = pts[Math.max(0, i - 1)], p2 = pts[i];
         const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-        
+
         // Sketch用密度調整: もともと薄いので少し細かめに
-        const spacing = Math.max(1.5, w * 0.15); 
+        const spacing = Math.max(1.5, w * 0.15);
         const steps = i === startI && isStart ? 0 : Math.max(1, Math.round(dist / spacing));
-        
+
         for (let j = 0; j <= steps; j++) {
             const t = steps === 0 ? 0 : j / steps;
             const cx = p1.x + (p2.x - p1.x) * t;
             const cy = p1.y + (p2.y - p1.y) * t;
             const pr = p1.pressure + (p2.pressure - p1.pressure) * t;
-            const alpha = b.pressureOpacity ? baseAlpha * (0.2 + 0.8 * pr) : baseAlpha;
+            const alpha = b.pressureOpacity ? (0.2 + 0.8 * pr) : baseAlpha;
             ctx.fillStyle = _applyAlpha(b.color, alpha);
             ctx.beginPath(); ctx.arc(cx, cy, w / 2, 0, Math.PI * 2); ctx.fill();
         }

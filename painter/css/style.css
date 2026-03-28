@@ -76,6 +76,17 @@ body {
     z-index: 100;
 }
 
+/* ストロークプレビュー用キャンバス */
+#stroke-canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+    pointer-events: none;
+    z-index: 150;
+}
+
 /* 保存範囲選択用オーバーレイキャンバス */
 #selection-canvas {
     display: none;

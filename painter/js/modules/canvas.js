@@ -6,6 +6,8 @@ import {
     selectionCanvas,
     eventCanvas,
     layerContainer,
+    strokeCanvas,
+    strokeCtx,
     createLayer,
     getActiveLayer
 } from './state.js';
@@ -56,6 +58,13 @@ export async function initCanvas() {
     selectionCanvas.style.width = w + 'px';
     selectionCanvas.style.height = h + 'px';
 
+    strokeCanvas.width = w * dpr;
+    strokeCanvas.height = h * dpr;
+    strokeCanvas.style.width = w + 'px';
+    strokeCanvas.style.height = h + 'px';
+    strokeCtx.setTransform(1, 0, 0, 1, 0, 0);
+    strokeCtx.scale(dpr, dpr);
+
     eventCanvas.width = w;
     eventCanvas.height = h;
 
@@ -102,6 +111,9 @@ export function applyTransform() {
     for (const layer of layers) {
         layer.canvas.style.transform = transform;
     }
+
+    // Stroke canvas follows same transform as layers
+    strokeCanvas.style.transform = transform;
 
     // Event canvas follows transform for coordinate mapping
     eventCanvas.style.transform = transform;
