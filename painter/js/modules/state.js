@@ -8,6 +8,8 @@ export let lassoCtx = null;
 export let selectionCanvas = null;
 export let eventCanvas = null;
 export let layerContainer = null;
+export let strokeCanvas = null;
+export let strokeCtx = null;
 
 // ============================================
 // Dynamic Layer Management
@@ -24,6 +26,8 @@ export function initDOM() {
     selectionCanvas = document.getElementById('selection-canvas');
     eventCanvas = document.getElementById('event-canvas');
     layerContainer = document.getElementById('layer-container');
+    strokeCanvas = document.getElementById('stroke-canvas');
+    strokeCtx = strokeCanvas.getContext('2d');
 }
 
 /**
