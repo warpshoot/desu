@@ -300,8 +300,6 @@ function setupLayerPanel() {
             const btn = document.createElement('div');
             btn.className = 'layer-btn' + (layer.id === state.activeLayer ? ' active' : '');
             btn.dataset.layerId = layer.id;
-            // Removed text content for thumbnail
-            // btn.textContent = layer.id;
 
             if (!layer.visible) {
                 btn.classList.add('hidden-layer');
@@ -1295,9 +1293,6 @@ function handlePointerCancel(e) {
         eventCanvas.style.cursor = '';
     }
 }
-
-// Separate Touch Handlers are no longer needed as Pointer Events handle everything
-// handleTouchStart, handleTouchMove, handleTouchEnd were removed.
 
 function handleWheel(e) {
     e.preventDefault();
