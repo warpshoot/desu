@@ -1726,7 +1726,7 @@ function openBrushSettings(idx) {
     document.getElementById('bs-opacity').value    = Math.round(brush.opacity * 100);
     document.getElementById('bs-opacity-val').textContent = Math.round(brush.opacity * 100);
     document.getElementById('bs-pressure-size').checked    = brush.pressureSize;
-    document.getElementById('bs-binary').checked           = brush.binary;
+    document.getElementById('bs-binary').checked           = !brush.binary;
     document.getElementById('bs-pressure-curve').value     = brush.pressureCurve ?? 1.0;
     document.getElementById('bs-pressure-curve-val').textContent = (brush.pressureCurve ?? 1.0).toFixed(1);
     document.getElementById('bs-stabilizer').checked = brush.stabilizerEnabled ?? false;
@@ -1749,7 +1749,7 @@ function openBrushSettings(idx) {
 
     // ペン系の表示制御
     const showPenSettings = !isStipple;
-    opacityRow.style.display = (showPenSettings && !brush.binary) ? '' : 'none';
+    opacityRow.style.display = showPenSettings ? '' : 'none';
     penPressureRow.style.display = showPenSettings ? '' : 'none';
     binaryRow.style.display = showPenSettings ? '' : 'none';
     pcurveRow.style.display = showPenSettings ? '' : 'none';
@@ -1813,7 +1813,7 @@ function setupBrushSettingsPanel() {
         b.pressureDensity = pdensityCheck.checked;
         b.opacity         = parseInt(opSlider.value) / 100;
         b.pressureSize    = psizeCheck.checked;
-        b.binary          = binaryCheck.checked;
+        b.binary          = !binaryCheck.checked;
         b.pressureCurve        = parseFloat(curveSlider.value);
         b.stabilizerEnabled    = stabCheck.checked;
         b.stabilizerDistance   = parseInt(stabDistSlider.value);
@@ -1839,7 +1839,7 @@ function setupBrushSettingsPanel() {
         if (pdensityRow) pdensityRow.style.display = isStipple ? '' : 'none';
 
         const showPenSettings = !isStipple;
-        opacityRow.style.display = (showPenSettings && !b.binary) ? '' : 'none';
+        opacityRow.style.display = showPenSettings ? '' : 'none';
         penPressureRow.style.display = showPenSettings ? '' : 'none';
         binaryRow.style.display = showPenSettings ? '' : 'none';
         pcurveRow.style.display = showPenSettings ? '' : 'none';
