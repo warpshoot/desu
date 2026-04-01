@@ -32,6 +32,25 @@ export const TONE_PRESETS = [
 // Current selected preset ID (default to first one)
 export let currentTonePresetId = 'coarse1';
 
+// Cache for CanvasPatterns
+const patternCache = new Map();
+
+/**
+ * Gets or creates a pattern for the given preset
+ */
+function getTonePattern(ctx, preset) {
+    const dpr = window.devicePixelRatio || 1;
+    const cacheKey = `${preset.id}_${dpr}`;
+    if (patternCache.has(cacheKey)) {
+        return patternCache.get(cacheKey);
+    }
+
+    const canvas = createPatternCanvas(preset, dpr);
+    const pattern = ctx.createPattern(canvas, 'repeat');
+    patternCache.set(cacheKey, pattern);
+    return pattern;
+}
+
 export function setTonePreset(presetId) {
     if (TONE_PRESETS.find(p => p.id === presetId)) {
         currentTonePresetId = presetId;
@@ -49,28 +68,22 @@ export function getCurrentTonePreset() {
 /**
  * Generates a tileable canvas for the given preset
  */
-function createPatternCanvas(preset) {
-    // Determine tile size based on pattern type and spacing
-    // For seamless tiling, size should be a multiple of spacing or calculated based on geometry
-    let size = 64; // Default base size
+function createPatternCanvas(preset, dpr = 1) {
+    let size = 64;
+    const spacing = Math.round(preset.spacing * dpr);
 
     if (preset.type === 'coarse' || preset.type === 'fine') {
-        // Dot patterns at 45 degree need specific sizing for seamless tiling
-        // The dot grid is rotated 45 deg.
-        // Grid spacing along axis = spacing
-        // Diagonal distance = spacing * sqrt(2)
-        // We need a tile size that matches the repetition
-        // Actually, easiest way is to draw a large enough area or calculate LCM
-        // For simple dots, let's use a large enough fixed tile or generate on fly.
-        // Generating a small seamless tile for rotated grid is tricky.
-        // Let's use a reasonably sized canvas that covers common LCMs or just enough.
-        size = 120; // Multiple of 2, 3, 4, 5, 8, 10, 12...
-    } else if (preset.type === 'diagonal') {
-        size = preset.spacing * 4; // Ensure it's a multiple of spacing
-    } else if (preset.type === 'grid') {
-        size = preset.spacing * 4;
+        // For a 45 degree rotated dot grid, we can use a square tile
+        // with dots at (0,0) and (S/2, S/2).
+        // This ensures seamless tiling and perfect 45 degree angle.
+        // We adjust the tile size S to be even and roughly match spacing * sqrt(2)
+        let s = Math.round(spacing * 1.4142);
+        if (s % 2 !== 0) s++; // Ensure even
+        size = s;
+    } else if (preset.type === 'diagonal' || preset.type === 'grid') {
+        size = spacing;
     } else if (preset.type === 'organic') {
-        size = 256; // Larger tile for randomness
+        size = 512;
     }
 
     const canvas = document.createElement('canvas');
@@ -78,11 +91,101 @@ function createPatternCanvas(preset) {
     canvas.height = size;
     const ctx = canvas.getContext('2d');
 
-    // Fill transparent
     ctx.clearRect(0, 0, size, size);
-    ctx.fillStyle = '#000000'; // Tone is always black
+    ctx.fillStyle = '#000000';
 
-    drawPatternOnCanvas(ctx, size, size, preset);
+    if (preset.type === 'diagonal') {
+        const lw = Math.max(1, Math.round(preset.width * dpr));
+        // Draw diagonal lines with correct 45-degree alignment for binary pixels
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                const diff = (x - y + size) % size;
+                if (diff < lw) {
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+        }
+    } else if (preset.type === 'grid') {
+        const lw = Math.max(1, Math.round(preset.width * dpr));
+        ctx.fillRect(0, 0, size, lw);
+        ctx.fillRect(0, 0, lw, size);
+    } else if (preset.type === 'organic') {
+        const dotSize = preset.dotSize * dpr;
+        const randomness = preset.randomness || 0.3;
+        
+        // Coordinate-based hash for seamless tiling
+        const hash = (x, y) => {
+            let h = Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453);
+            return h - Math.floor(h);
+        };
+
+        const step = spacing;
+        for (let y = 0; y < size; y += step) {
+            for (let x = 0; x < size; x += step) {
+                // Use fixed grid coordinates as seed for the hash
+                const gx = x;
+                const gy = y;
+                
+                const r1 = hash(gx, gy);
+                const r2 = hash(gx + 123.456, gy + 789.012);
+                const r3 = hash(gx - 456.789, gy - 234.567);
+
+                const offsetX = (r1 - 0.5) * step * randomness;
+                const offsetY = (r2 - 0.5) * step * randomness;
+                const px = x + offsetX;
+                const py = y + offsetY;
+                const sVar = 1 + (r3 - 0.5) * randomness;
+                const curSize = dotSize * sVar;
+
+                const drawWraparound = (cx, cy) => {
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, curSize / 2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Tiling neighbors
+                    const neighbors = [];
+                    if (cx < curSize) neighbors.push({ x: cx + size, y: cy });
+                    if (cx > size - curSize) neighbors.push({ x: cx - size, y: cy });
+                    if (cy < curSize) neighbors.push({ x: cx, y: cy + size });
+                    if (cy > size - curSize) neighbors.push({ x: cx, y: cy - size });
+                    
+                    // Corners
+                    if (cx < curSize && cy < curSize) neighbors.push({ x: cx + size, y: cy + size });
+                    if (cx > size - curSize && cy < curSize) neighbors.push({ x: cx - size, y: cy + size });
+                    if (cx < curSize && cy > size - curSize) neighbors.push({ x: cx + size, y: cy - size });
+                    if (cx > size - curSize && cy > size - curSize) neighbors.push({ x: cx - size, y: cy - size });
+
+                    neighbors.forEach(n => {
+                        ctx.beginPath();
+                        ctx.arc(n.x, n.y, curSize / 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                };
+
+                drawWraparound(px, py);
+            }
+        }
+    } else {
+        // Default dots (coarse, fine)
+        const dotSize = Math.max(1, Math.round(preset.dotSize * dpr));
+        const half = size / 2;
+
+        const drawDot = (cx, cy) => {
+            if (dotSize <= 1.5) {
+                ctx.fillRect(Math.round(cx), Math.round(cy), 1, 1);
+            } else {
+                ctx.beginPath();
+                ctx.arc(cx, cy, dotSize / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        };
+
+        drawDot(0, 0);
+        drawDot(size, 0);
+        drawDot(0, size);
+        drawDot(size, size);
+        drawDot(half, half);
+    }
 
     return canvas;
 }
@@ -461,144 +564,19 @@ function binarizeCanvas(ctx, width, height) {
 
 // Helper function to draw tone in a region
 function drawToneInRegion(ctx, minX, minY, maxX, maxY, preset) {
-    const spacing = preset.spacing;
+    const pattern = getTonePattern(ctx, preset);
+    if (!pattern) return;
 
-    if (preset.type === 'coarse' || preset.type === 'fine') {
-        const dotSize = Math.round(preset.dotSize);
-        const angle = Math.PI / 4;
-        const cos45 = Math.cos(angle);
-        const sin45 = Math.sin(angle);
+    ctx.save();
+    // Use fillRect for the entire bounding box.
+    // The context should already be clipped by the caller if needed.
+    ctx.fillStyle = pattern;
 
-        const corners = [
-            { x: minX, y: minY },
-            { x: maxX, y: minY },
-            { x: maxX, y: maxY },
-            { x: minX, y: maxY }
-        ];
-
-        let minGx = Infinity, maxGx = -Infinity;
-        let minGy = Infinity, maxGy = -Infinity;
-
-        corners.forEach(p => {
-            const gx = p.x * cos45 + p.y * sin45;
-            const gy = -p.x * sin45 + p.y * cos45;
-            minGx = Math.min(minGx, gx);
-            maxGx = Math.max(maxGx, gx);
-            minGy = Math.min(minGy, gy);
-            maxGy = Math.max(maxGy, gy);
-        });
-
-        const padding = spacing * 2;
-        minGx -= padding;
-        maxGx += padding;
-        minGy -= padding;
-        maxGy += padding;
-
-        const startGx = Math.floor(minGx / spacing) * spacing;
-        const startGy = Math.floor(minGy / spacing) * spacing;
-
-        for (let gy = startGy; gy < maxGy; gy += spacing) {
-            for (let gx = startGx; gx < maxGx; gx += spacing) {
-                const x = gx * cos45 - gy * sin45;
-                const y = gx * sin45 + gy * cos45;
-
-                // Draw square dots pixel-by-pixel to avoid antialiasing
-                const centerX = Math.round(x);
-                const centerY = Math.round(y);
-                const halfSize = Math.floor(dotSize / 2);
-
-                for (let dy = -halfSize; dy <= halfSize; dy++) {
-                    for (let dx = -halfSize; dx <= halfSize; dx++) {
-                        const px = centerX + dx;
-                        const py = centerY + dy;
-                        if (px >= minX && px < maxX && py >= minY && py < maxY) {
-                            ctx.fillRect(px, py, 1, 1);
-                        }
-                    }
-                }
-            }
-        }
-    } else if (preset.type === 'organic') {
-        const spacing = preset.spacing;
-        const dotSize = preset.dotSize;
-        const randomness = preset.randomness || 0.3;
-        const angle = Math.PI / 4;
-        const cos45 = Math.cos(angle);
-        const sin45 = Math.sin(angle);
-
-        const corners = [
-            { x: minX, y: minY }, { x: maxX, y: minY },
-            { x: maxX, y: maxY }, { x: minX, y: maxY }
-        ];
-
-        let minGx = Infinity, maxGx = -Infinity;
-        let minGy = Infinity, maxGy = -Infinity;
-
-        corners.forEach(p => {
-            const gx = p.x * cos45 + p.y * sin45;
-            const gy = -p.x * sin45 + p.y * cos45;
-            minGx = Math.min(minGx, gx);
-            maxGx = Math.max(maxGx, gx);
-            minGy = Math.min(minGy, gy);
-            maxGy = Math.max(maxGy, gy);
-        });
-
-        const startGx = Math.floor((minGx - spacing) / spacing) * spacing;
-        const startGy = Math.floor((minGy - spacing) / spacing) * spacing;
-        const endGx = maxGx + spacing;
-        const endGy = maxGy + spacing;
-
-        const hash = (x, y) => {
-            let h = Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453);
-            return h - Math.floor(h);
-        };
-
-        for (let gy = startGy; gy < endGy; gy += spacing) {
-            for (let gx = startGx; gx < endGx; gx += spacing) {
-                const r1 = hash(gx, gy);
-                const r2 = hash(gx + 1000, gy + 1000);
-                const r3 = hash(gx - 500, gy - 500);
-
-                const offsetX = (r1 - 0.5) * spacing * randomness;
-                const offsetY = (r2 - 0.5) * spacing * randomness;
-
-                const x = (gx + offsetX) * cos45 - (gy + offsetY) * sin45;
-                const y = (gx + offsetX) * sin45 + (gy + offsetY) * cos45;
-
-                const sizeVar = 1 + (r3 - 0.5) * randomness;
-                const currentDotSize = dotSize * sizeVar;
-
-                ctx.beginPath();
-                ctx.arc(x, y, currentDotSize / 2, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-    } else if (preset.type === 'diagonal') {
-        // Draw diagonal lines pixel-by-pixel to avoid antialiasing
-        const spacing = preset.spacing;
-        const lineWidth = Math.ceil(preset.width);
-
-        for (let y = minY; y < maxY; y++) {
-            for (let x = minX; x < maxX; x++) {
-                // Diagonal x - y
-                const diff = x - y;
-                const dist = ((diff % spacing) + spacing) % spacing;
-                const minDist = Math.min(dist, spacing - dist);
-                if (minDist < lineWidth) {
-                    ctx.fillRect(x, y, 1, 1);
-                }
-            }
-        }
-    } else if (preset.type === 'grid') {
-        const lw = preset.width;
-        const startGridX = Math.floor(minX / spacing) * spacing;
-        const startGridY = Math.floor(minY / spacing) * spacing;
-
-        for (let x = startGridX; x < maxX; x += spacing) {
-            ctx.fillRect(x, minY, lw, maxY - minY);
-        }
-        for (let y = startGridY; y < maxY; y += spacing) {
-            ctx.fillRect(minX, y, maxX - minX, lw);
-        }
-    }
+    // Pattern alignment: Default tiling starts at 0,0 of the canvas.
+    // Since we want the pattern to stay fixed relative to the image (page),
+    // and ctx might have a transform (e.g. for lasso offscreen), 
+    // we just use fillRect with the target bounds.
+    // CanvasPattern stays aligned to the origin of the coordinate space.
+    ctx.fillRect(minX, minY, maxX - minX, maxY - minY);
+    ctx.restore();
 }
