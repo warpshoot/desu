@@ -35,7 +35,7 @@ import {
     showSelectionUI, hideSelectionUI, confirmSelection, redoSelection,
     saveSelectedRegion, saveAllCanvas, copyToClipboard, saveRegion
 } from './save.js';
-import { applyTransform, updateBackgroundColor, hexToRgba } from './canvas.js';
+import { applyTransform, updateBackgroundColor, hexToRgba, resizePaper } from './canvas.js';
 import { getCanvasPoint } from './utils.js';
 import {
     TONE_PRESETS,
@@ -206,7 +206,14 @@ function setupFileUI() {
             hideAllMenus();
             if (confirm('新規プロジェクトを作成しますか？\n（現在の作業内容は破棄されます）')) {
                 // Reset Logic
-                // 1. Delete all layers except one
+                // 1. Reset canvas size and zoom
+                resizePaper(2000, 2000);
+                state.scale = 1.0;
+                state.translateX = 0;
+                state.translateY = 0;
+                applyTransform();
+
+                // 2. Delete all layers except one
                 while (layers.length > 1) {
                     deleteLayer(layers[layers.length - 1].id);
                 }

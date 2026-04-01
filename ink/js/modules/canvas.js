@@ -70,8 +70,8 @@ export async function initCanvas() {
     const isFirstInit = _paperW === 0 || _paperH === 0;
 
     if (isFirstInit) {
-        _paperW = vw;
-        _paperH = vh;
+        _paperW = state.paperW || 2000;
+        _paperH = state.paperH || 2000;
         // Also store on state so createLayer() and save code can read it
         state.paperW = _paperW;
         state.paperH = _paperH;

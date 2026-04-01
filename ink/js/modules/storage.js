@@ -99,8 +99,8 @@ export function loadLocalState() {
                 pw = tempImg.naturalWidth / dpr;
                 ph = tempImg.naturalHeight / dpr;
             } else if (!pw || !ph) {
-                pw = window.innerWidth;
-                ph = window.innerHeight;
+                pw = 2000;
+                ph = 2000;
             }
 
             // Resize paper to match the saved project aspect/size
@@ -210,8 +210,8 @@ export function importProject(file) {
                     pw = tempImg.naturalWidth / dpr;
                     ph = tempImg.naturalHeight / dpr;
                 } else if (!pw || !ph) {
-                    pw = window.innerWidth;
-                    ph = window.innerHeight;
+                    pw = 2000;
+                    ph = 2000;
                 }
 
                 // Resize paper to match the loaded project

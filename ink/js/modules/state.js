@@ -43,8 +43,8 @@ export function createLayer() {
     canvas.className = 'drawing-layer';
     
     // Use fixed paper size; fall back to current viewport only if not yet initialized
-    const w = state.paperW || window.innerWidth;
-    const h = state.paperH || window.innerHeight;
+    const w = state.paperW || 2000;
+    const h = state.paperH || 2000;
     const dpr = window.devicePixelRatio || 1;
 
     canvas.width = w * dpr;
