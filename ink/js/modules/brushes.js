@@ -82,9 +82,9 @@ export function applyPressureCurve(pressure, gamma) {
 // =============================================
 export function makeDefaultFillSlots() {
     return [
-        { id: 0, name: '1', subTool: 'fill', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 20 },
-        { id: 1, name: '2', subTool: 'tone', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 20 },
-        { id: 2, name: '3', subTool: 'fill', opacity: 0.5, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 20 },
+        { id: 0, name: '1', subTool: 'fill', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
+        { id: 1, name: '2', subTool: 'tone', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
+        { id: 2, name: '3', subTool: 'fill', opacity: 0.5, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
     ];
 }
 
@@ -93,9 +93,9 @@ export function makeDefaultFillSlots() {
 // =============================================
 export function makeDefaultEraserSlots() {
     return [
-        { id: 0, name: '1', subTool: 'pen', stabilizerEnabled: false, stabilizerDistance: 20, stabStringVisible: true, stabShowGuide: true },
-        { id: 1, name: '2', subTool: 'lasso', bucketEnabled: true, bucketTolerance: 'normal', stabilizerEnabled: false, stabilizerDistance: 20 },
-        { id: 2, name: '3', subTool: 'clear' },
+        { id: 0, name: '1', subTool: 'pen', stabilizerEnabled: false, stabilizerDistance: 20, stabStringVisible: true, stabShowGuide: true, antiAlias: false },
+        { id: 1, name: '2', subTool: 'lasso', bucketEnabled: true, bucketTolerance: 'normal', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
+        { id: 2, name: '3', subTool: 'clear', antiAlias: false },
     ];
 }
 

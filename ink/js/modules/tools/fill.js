@@ -30,16 +30,16 @@ export function _makeMatchFn(data, targetA, tolerance) {
         // 完全一致
         return (i) => data[i + 3] === targetA;
     }
-    if (tolerance === 'loose') {
-        // 192以上が壁 (太い線のみブロック)
-        return targetA < 192
-            ? (i) => data[i + 3] < 192
-            : (i) => data[i + 3] >= 192;
+    if (tolerance === 'normal') {
+        // 普通: アンチエイリアスの中間色まで塗り込む（Alpha 128 以上を壁とする）
+        return targetA < 128
+            ? (i) => data[i + 3] < 128
+            : (i) => data[i + 3] >= 128;
     }
-    // normal: 255のみ壁
-    return targetA < 255
-        ? (i) => data[i + 3] < 255
-        : (i) => data[i + 3] === 255;
+    // loose: より太い線などを対象に深く塗り込む（Alpha 240 以上を壁とする）
+    return targetA < 240
+        ? (i) => data[i + 3] < 240
+        : (i) => data[i + 3] >= 240;
 }
 
 export function floodFill(startX, startY, fillColor, tolerance = 'normal') {
@@ -278,6 +278,52 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
     }
 
     ctx.putImageData(imgData, bounds.minX, bounds.minY);
+}
+
+// Fill polygon with color (Anti-Aliased using native canvas fill)
+export function fillPolygonWithAA(points, r, g, b, alpha) {
+    if (points.length < 3) return;
+
+    const { canvas, ctx } = getActiveContextAndCanvas();
+    if (!canvas || !ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    
+    ctx.save();
+    ctx.scale(1 / dpr, 1 / dpr); // scale down because ctx draws in canvas pixel coordinates, whereas points are in unscaled canvas coordinates wait no, points are in canvas space (unscaled css pixels).
+    ctx.scale(dpr, dpr); 
+    // Wait, the active layer context already has scale(dpr, dpr) applied in createLayer().
+    // So unscaled CSS pixel 'points' are perfectly fine to draw directly to ctx!
+
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+}
+
+// Fill polygon transparent (Anti-Aliased using native canvas fill)
+export function fillPolygonTransparentWithAA(points) {
+    if (points.length < 3) return;
+
+    const { canvas, ctx } = getActiveContextAndCanvas();
+    if (!canvas || !ctx) return;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
 }
 
 // ============================================
