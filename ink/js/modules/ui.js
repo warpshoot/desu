@@ -52,7 +52,29 @@ import {
     createTonePreview,
     floodFillTone
 } from './tools/tone.js';
-import { exportProject, importProject, exportConfig, importConfig } from './storage.js';
+import { exportProject, importProject, exportConfig, importConfig, exportToolConfig, importToolConfig } from './storage.js';
+import {
+    initSelectionOverlay,
+    resizeSelectionOverlay,
+    hasSelection,
+    hasFloatingSelection,
+    isInSelection,
+    startRectSelect,
+    updateRectSelect,
+    finishRectSelect,
+    startLassoSelect,
+    updateLassoSelect,
+    finishLassoSelect,
+    clearSelection,
+    capturePreDraw,
+    applySelectionClip,
+    liftSelection,
+    dragFloating,
+    commitFloating,
+    copySelection,
+    pasteFromClipboard,
+    deleteSelectionContent
+} from './tools/selection.js';
 
 // ============================================
 // Debug Display
@@ -167,6 +189,8 @@ export function initUI() {
     setupCreditModal();
     setupOrientationHandler();
     setupKeyboardShortcuts();
+    setupSelectToolbar();
+    initSelectionOverlay();
     updateDebugDisplay();
 }
 
@@ -440,7 +464,104 @@ function setupLayerPanel() {
 }
 
 // ============================================
-// Tool Panel — 3-Mode Architecture
+// Select Toolbar
+// ============================================
+
+function updateSelectToolbar() {
+    const toolbar = document.getElementById('select-toolbar');
+    if (!toolbar) return;
+
+    if (hasSelection()) {
+        toolbar.classList.remove('hidden');
+    } else {
+        toolbar.classList.add('hidden');
+    }
+}
+
+function setupSelectToolbar() {
+    const toolbar   = document.getElementById('select-toolbar');
+    const moveBtn   = document.getElementById('sel-move-btn');
+    const copyBtn   = document.getElementById('sel-copy-btn');
+    const cutBtn    = document.getElementById('sel-cut-btn');
+    const pasteBtn  = document.getElementById('sel-paste-btn');
+    const deleteBtn = document.getElementById('sel-delete-btn');
+    const clearBtn  = document.getElementById('sel-clear-btn');
+
+    if (!toolbar) return;
+
+    // Prevent toolbar events from propagating to canvas
+    toolbar.addEventListener('pointerdown', e => e.stopPropagation());
+    toolbar.addEventListener('pointermove', e => e.stopPropagation());
+
+    moveBtn?.addEventListener('click', async () => {
+        if (!hasSelection()) return;
+
+        // Automatically switch to select mode if not in it
+        if (state.mode !== 'select') {
+            handleModeTap('select');
+        }
+
+        if (hasFloatingSelection()) {
+            await saveState();
+            commitFloating();
+            updateAllThumbnails();
+        } else {
+            await saveState();
+            liftSelection(true); // cut
+        }
+    });
+
+    copyBtn?.addEventListener('click', () => {
+        if (!hasSelection()) return;
+        copySelection();
+    });
+
+    cutBtn?.addEventListener('click', async () => {
+        if (!hasSelection()) return;
+        copySelection();
+        await saveState();
+        if (hasFloatingSelection()) {
+            state.floatingSelection = null;
+        } else {
+            deleteSelectionContent();
+        }
+        clearSelection();
+        updateSelectToolbar();
+        updateAllThumbnails();
+    });
+
+    pasteBtn?.addEventListener('click', async () => {
+        if (!state._selectionClipboard) return;
+        await saveState();
+        pasteFromClipboard();
+        updateSelectToolbar();
+    });
+
+    deleteBtn?.addEventListener('click', async () => {
+        if (!hasSelection()) return;
+        await saveState();
+        if (hasFloatingSelection()) {
+            state.floatingSelection = null;
+        } else {
+            deleteSelectionContent();
+        }
+        clearSelection();
+        updateSelectToolbar();
+        updateAllThumbnails();
+    });
+
+    clearBtn?.addEventListener('click', () => {
+        if (hasFloatingSelection()) {
+            // discard floating without commit
+            state.floatingSelection = null;
+        }
+        clearSelection();
+        updateSelectToolbar();
+    });
+}
+
+// ============================================
+// Tool Panel — 4-Mode Architecture
 // ============================================
 
 // スロットアイコン (flyout から流用)
@@ -506,6 +627,16 @@ function handleModeTap(mode) {
         return;
     }
 
+    // Leaving select mode: commit floating selection
+    if (state.mode === 'select' && mode !== 'select') {
+        if (hasFloatingSelection()) {
+            commitFloating();
+            updateAllThumbnails();
+        }
+        // Do NOT clearSelection() here so user can draw inside the bounds
+        updateSelectToolbar();
+    }
+
     if (state.mode === mode) {
         if (mode === 'pen') {
             state.activeBrushIndex = (state.activeBrushIndex + 1) % state.brushes.length;
@@ -519,6 +650,9 @@ function handleModeTap(mode) {
             state.activeEraserSlotIndex = (state.activeEraserSlotIndex + 1) % state.eraserSlots.length;
             const slot = state.eraserSlots[state.activeEraserSlotIndex];
             state.subTool = slot ? slot.subTool : 'pen';
+        } else if (mode === 'select') {
+            // Toggle rect ↔ lasso
+            state.subTool = state.subTool === 'rect' ? 'lasso' : 'rect';
         }
     } else {
         state.mode = mode;
@@ -531,6 +665,8 @@ function handleModeTap(mode) {
         } else if (mode === 'eraser') {
             const slot = state.eraserSlots[state.activeEraserSlotIndex];
             state.subTool = slot ? slot.subTool : 'pen';
+        } else if (mode === 'select') {
+            state.subTool = 'rect'; // default to rect on mode switch
         }
     }
 
@@ -564,12 +700,12 @@ function updateToolButtonStates() {
         fillBtn.classList.toggle('tone-active', state.mode === 'fill' && state.subTool === 'tone');
     }
 
-    // ブラシパレットは全モードで有効
+    // ブラシパレットは全モードで有効（selectモードでは無効化）
     const brushPalette = document.getElementById('brush-palette');
     const brushSettingsPanel = document.getElementById('brush-settings-panel');
 
     if (brushPalette) {
-        brushPalette.classList.remove('disabled');
+        brushPalette.classList.toggle('disabled', state.mode === 'select');
     }
 
     // ペンモード以外ではブラシ設定パネルを閉じる
@@ -578,6 +714,7 @@ function updateToolButtonStates() {
     }
 
     updateBrushSizeVisibility();
+    updateSelectToolbar();
 }
 
 // ============================================
@@ -1098,11 +1235,50 @@ async function handlePointerDown(e) {
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
         // --- Mode-based dispatch ---
-        // saveState を await してから描画開始 (レースコンディション防止)
-        // createImageBitmap は高速 (<5ms) なので体感遅延は最小限
-        // keepRedo: ジェスチャー(2/3本指タップ)で取り消される可能性があるため、
-        // redo スタックはストローク完了時まで保持する
-        if (state.mode === 'pen') {
+        if (state.mode === 'select') {
+            // Floating selection drag?
+            if (hasFloatingSelection()) {
+                if (isInSelection(canvasPoint.x, canvasPoint.y)) {
+                    state.isMovingSelection = true;
+                    state._selMoveStartX = e.clientX;
+                    state._selMoveStartY = e.clientY;
+                } else {
+                    // Clicked outside floating selection
+                    await saveState();
+                    commitFloating();
+                    clearSelection();
+                    updateAllThumbnails();
+                    
+                    state.isMovingSelection = false;
+                    if (state.subTool === 'rect') {
+                        startRectSelect(e.clientX, e.clientY);
+                    } else {
+                        startLassoSelect(e.clientX, e.clientY);
+                    }
+                }
+            } else if (hasSelection() && isInSelection(canvasPoint.x, canvasPoint.y)) {
+                // Tap inside selection with no floating → start move (lift)
+                state.isMovingSelection = true;
+                state._selMoveStartX = e.clientX;
+                state._selMoveStartY = e.clientY;
+                await saveState();
+                liftSelection(true);
+            } else {
+                // Start new selection
+                if (hasFloatingSelection()) {
+                    await saveState();
+                    commitFloating();
+                    updateAllThumbnails();
+                }
+                state.isMovingSelection = false;
+                if (state.subTool === 'rect') {
+                    startRectSelect(e.clientX, e.clientY);
+                } else {
+                    startLassoSelect(e.clientX, e.clientY);
+                }
+            }
+        } else if (state.mode === 'pen') {
+            await capturePreDraw();
             await saveState({ keepRedo: true });
             if (state.subTool === 'stipple') {
                 startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
@@ -1113,11 +1289,11 @@ async function handlePointerDown(e) {
             startLasso(e.clientX, e.clientY);
         } else if (state.mode === 'eraser') {
             if (state.subTool === 'clear') {
-                // clear は pointerDown でレイヤークリア実行
                 await executeClearLayer();
             } else if (state.subTool === 'lasso') {
                 startLasso(e.clientX, e.clientY);
             } else {
+                await capturePreDraw();
                 await saveState({ keepRedo: true });
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
@@ -1143,24 +1319,21 @@ function handleZoomClick(e) {
 
 function cancelCurrentOperation() {
     if (state.isLassoing) {
-        finishLasso(); // Just finish, don't fill
-        // Note: Don't call restoreLayer() here - lasso doesn't call saveState()
-        // on start, so there's nothing to restore. Calling restoreLayer() would
-        // restore to the state BEFORE the last completed operation.
+        finishLasso();
     }
     if (state.isPenDrawing) {
         const layer = getActiveLayer();
         if (layer) restoreLayer(layer.id);
-        // ストロークキャンバスのプレビューをクリア
         if (strokeCanvas && strokeCtx) {
             strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
             strokeCanvas.style.opacity = 1;
         }
-        // Remove the saveState() entry that was added when drawing started
-        // Otherwise undo() would restore to the same state (no visible change)
         state.undoStack.pop();
         state.isPenDrawing = false;
         state.lastPenPoint = null;
+    }
+    if (state.mode === 'select' && state.isMovingSelection) {
+        state.isMovingSelection = false;
     }
     state.drawingPointerId = null;
     state.isLassoing = false;
@@ -1246,7 +1419,23 @@ async function handlePointerMove(e) {
 
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
-        if (state.isLassoing) {
+        if (state.mode === 'select') {
+            if (state.isMovingSelection && hasFloatingSelection()) {
+                // Drag floating selection
+                const dx = (e.clientX - state._selMoveStartX) / state.scale;
+                const dy = (e.clientY - state._selMoveStartY) / state.scale;
+                state._selMoveStartX = e.clientX;
+                state._selMoveStartY = e.clientY;
+                dragFloating(dx, dy);
+                state.didInteract = true;
+            } else if (!state.isMovingSelection) {
+                if (state.subTool === 'rect') {
+                    updateRectSelect(e.clientX, e.clientY);
+                } else {
+                    updateLassoSelect(e.clientX, e.clientY);
+                }
+            }
+        } else if (state.isLassoing) {
             updateLasso(e.clientX, e.clientY);
         } else if (state.isPenDrawing) {
             const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
@@ -1337,7 +1526,28 @@ async function handlePointerUp(e) {
 
         // Finish Drawing Actions
         if (e.pointerId === state.drawingPointerId) {
-            if (state.isLassoing) {
+            if (state.mode === 'select') {
+                // --- Select mode: finalize selection or floating move ---
+                if (state.isMovingSelection) {
+                    // Floating selection drag complete: just update overlay (no commit yet)
+                    state.isMovingSelection = false;
+                    updateSelectToolbar();
+                } else {
+                    // Finish drawing the selection shape
+                    if (state.subTool === 'rect') {
+                        finishRectSelect();
+                    } else {
+                        finishLassoSelect();
+                    }
+                    // Tap outside selection (no drag) → clear
+                    const pointer2 = state.activePointers.size === 0 ? pointer : null;
+                    const wasClick = pointer && pointer.totalMove < 5;
+                    if (wasClick && !hasSelection()) {
+                        clearSelection();
+                    }
+                    updateSelectToolbar();
+                }
+            } else if (state.isLassoing) {
                 const points = finishLasso();
                 const wasClick = pointer && pointer.totalMove < 5;
 
@@ -1359,7 +1569,6 @@ async function handlePointerUp(e) {
                             if (state.subTool === 'tone') {
                                 floodFillTone(fx, fy, tolerance);
                             } else {
-                                // 統一バケツ: 黒 + スロットの不透明度
                                 const slotOpacity = fillSlot.opacity ?? 1.0;
                                 floodFill(fx, fy, [0, 0, 0, Math.round(slotOpacity * 255)], tolerance);
                             }
@@ -1367,6 +1576,8 @@ async function handlePointerUp(e) {
                             const tolerance = eraserSlot.bucketTolerance || 'normal';
                             floodFillTransparent(fx, fy, tolerance);
                         }
+                        // Apply selection clip post-process (flood fill areas)
+                        await applySelectionClip();
                         updateLayerThumbnail(getActiveLayer());
                     }
                 } else if (points && points.length >= 3 && !state.wasPanning && !state.wasPinching) {
@@ -1382,7 +1593,6 @@ async function handlePointerUp(e) {
                     } else if (state.subTool === 'tone') {
                         fillTone(points);
                     } else {
-                        // 統一ポリゴン塗り: 黒 + スロットの不透明度
                         const fillSlot = state.fillSlots[state.activeFillSlotIndex];
                         const slotOpacity = fillSlot.opacity ?? 1.0;
                         if (fillSlot.antiAlias) {
@@ -1391,6 +1601,8 @@ async function handlePointerUp(e) {
                             fillPolygonNoAA(points, 0, 0, 0, slotOpacity);
                         }
                     }
+                    // Apply selection clip post-process (lasso fill areas)
+                    await applySelectionClip();
                     updateLayerThumbnail(getActiveLayer());
                 }
             } else if (state.isPenDrawing) {
@@ -1401,6 +1613,8 @@ async function handlePointerUp(e) {
                 } else {
                     await endPenDrawing();
                 }
+                // Apply selection clip post-process (pen strokes)
+                await applySelectionClip();
                 updateLayerThumbnail(getActiveLayer());
             }
             state.drawingPointerId = null;
@@ -1919,6 +2133,32 @@ function setupBrushSettingsPanel() {
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
 
     closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+
+    const exportBtn = document.getElementById('bs-export-btn');
+    const importBtn = document.getElementById('bs-import-btn');
+    const importInput = document.getElementById('bs-import-input');
+
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            exportToolConfig('brush', state.brushes[_editingBrushIdx]);
+        });
+    }
+    if (importBtn && importInput) {
+        importBtn.addEventListener('click', () => importInput.click());
+        importInput.addEventListener('change', async (e) => {
+            if (e.target.files.length > 0) {
+                const data = await importToolConfig(e.target.files[0], 'brush');
+                if (data) {
+                    state.brushes[_editingBrushIdx] = data;
+                    openBrushSettings(_editingBrushIdx);
+                    syncBrushSliders();
+                    renderBrushPalette();
+                    document.dispatchEvent(new CustomEvent('desu:state-loaded'));
+                }
+                importInput.value = '';
+            }
+        });
+    }
 }
 
 // =============================================
@@ -2042,6 +2282,31 @@ function setupFillSettingsPanel() {
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
 
     closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+
+    const exportBtn = document.getElementById('fs-export-btn');
+    const importBtn = document.getElementById('fs-import-btn');
+    const importInput = document.getElementById('fs-import-input');
+
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            exportToolConfig('fill', state.fillSlots[_editingFillSlotIdx]);
+        });
+    }
+    if (importBtn && importInput) {
+        importBtn.addEventListener('click', () => importInput.click());
+        importInput.addEventListener('change', async (e) => {
+            if (e.target.files.length > 0) {
+                const data = await importToolConfig(e.target.files[0], 'fill');
+                if (data) {
+                    state.fillSlots[_editingFillSlotIdx] = data;
+                    openFillSettings(_editingFillSlotIdx);
+                    renderBrushPalette();
+                    document.dispatchEvent(new CustomEvent('desu:state-loaded'));
+                }
+                importInput.value = '';
+            }
+        });
+    }
 }
 
 // =============================================
@@ -2166,6 +2431,31 @@ function setupEraserSettingsPanel() {
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
 
     closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+
+    const exportBtn = document.getElementById('es-export-btn');
+    const importBtn = document.getElementById('es-import-btn');
+    const importInput = document.getElementById('es-import-input');
+
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            exportToolConfig('eraser', state.eraserSlots[_editingEraserSlotIdx]);
+        });
+    }
+    if (importBtn && importInput) {
+        importBtn.addEventListener('click', () => importInput.click());
+        importInput.addEventListener('change', async (e) => {
+            if (e.target.files.length > 0) {
+                const data = await importToolConfig(e.target.files[0], 'eraser');
+                if (data) {
+                    state.eraserSlots[_editingEraserSlotIdx] = data;
+                    openEraserSettings(_editingEraserSlotIdx);
+                    renderBrushPalette();
+                    document.dispatchEvent(new CustomEvent('desu:state-loaded'));
+                }
+                importInput.value = '';
+            }
+        });
+    }
 }
 
 // =============================================
@@ -2642,11 +2932,86 @@ function setupKeyboardShortcuts() {
             document.getElementById('saveBtn').click();
         }
 
-        // Clear: Delete or Backspace
+        // Copy: Ctrl/Cmd + C
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+            if (!e.target.matches('input, textarea')) {
+                if (state.mode === 'select' && hasSelection()) {
+                    e.preventDefault();
+                    copySelection();
+                }
+            }
+        }
+
+        // Cut: Ctrl/Cmd + X
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X')) {
+            if (!e.target.matches('input, textarea')) {
+                if (state.mode === 'select' && hasSelection()) {
+                    e.preventDefault();
+                    copySelection();
+                    await saveState();
+                    if (hasFloatingSelection()) {
+                        state.floatingSelection = null;
+                    } else {
+                        deleteSelectionContent();
+                    }
+                    clearSelection();
+                    updateSelectToolbar();
+                    updateAllThumbnails();
+                }
+            }
+        }
+
+        // Paste: Ctrl/Cmd + V
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+            if (!e.target.matches('input, textarea')) {
+                if (state._selectionClipboard) {
+                    e.preventDefault();
+                    // Switch to select mode if not already
+                    if (state.mode !== 'select') {
+                        handleModeTap('select');
+                    }
+                    if (hasFloatingSelection()) {
+                        await saveState();
+                        commitFloating();
+                    }
+                    await saveState();
+                    pasteFromClipboard();
+                    updateSelectToolbar();
+                }
+            }
+        }
+
+        // Escape: clear selection / commit floating
+        if (e.key === 'Escape') {
+            if (state.mode === 'select') {
+                e.preventDefault();
+                if (hasFloatingSelection()) {
+                    await saveState();
+                    commitFloating();
+                    updateAllThumbnails();
+                }
+                clearSelection();
+                updateSelectToolbar();
+            }
+        }
+
+        // Delete / Backspace: delete selection content OR clear all
         if (e.key === 'Delete' || e.key === 'Backspace') {
             if (!e.target.matches('input, textarea')) {
                 e.preventDefault();
-                clearAll();
+                if (state.mode === 'select' && hasSelection()) {
+                    await saveState();
+                    if (hasFloatingSelection()) {
+                        state.floatingSelection = null;
+                    } else {
+                        deleteSelectionContent();
+                    }
+                    clearSelection();
+                    updateSelectToolbar();
+                    updateAllThumbnails();
+                } else {
+                    clearAll();
+                }
             }
         }
 

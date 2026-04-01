@@ -2033,4 +2033,73 @@ a.credit-val {
     font-size: 10px;
     color: #888;
     white-space: nowrap;
+}
+
+/* ============================================
+   Selection Tool
+   ============================================ */
+#select-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 395; /* Above canvas, below toolbars */
+}
+
+#select-toolbar {
+    position: fixed;
+    /* Position below the main tool panel */
+    top: 15px;
+    left: 80px; 
+    display: flex;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 8px;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    z-index: 400;
+    transition: opacity 0.2s, transform 0.2s;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+#select-toolbar.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-10px);
+}
+
+.sel-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #333;
+    transition: background 0.1s;
+}
+
+.sel-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.sel-btn:active {
+    background: rgba(0, 0, 0, 0.1);
+    transform: scale(0.95);
+}
+
+.sel-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.sel-btn-danger {
+    color: #ff4757;
+}
+
+.sel-btn-danger:hover {
+    background: rgba(255, 71, 87, 0.1);
 }

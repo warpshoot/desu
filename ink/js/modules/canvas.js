@@ -137,6 +137,18 @@ export async function initCanvas() {
 
     applyTransform();
 
+    // Select overlay: screen-space, resize on every call
+    const selOverlay = document.getElementById('select-overlay');
+    if (selOverlay) {
+        selOverlay.width  = vw * dpr;
+        selOverlay.height = vh * dpr;
+        selOverlay.style.width  = vw + 'px';
+        selOverlay.style.height = vh + 'px';
+        const soCtx = selOverlay.getContext('2d');
+        soCtx.setTransform(1, 0, 0, 1, 0, 0);
+        soCtx.scale(dpr, dpr);
+    }
+
     return true;
 }
 
@@ -165,6 +177,18 @@ export function resizeViewport() {
 
     eventCanvas.width  = vw;
     eventCanvas.height = vh;
+
+    // Select overlay: screen-space, resize with viewport
+    const selOverlay = document.getElementById('select-overlay');
+    if (selOverlay) {
+        selOverlay.width  = vw * dpr;
+        selOverlay.height = vh * dpr;
+        selOverlay.style.width  = vw + 'px';
+        selOverlay.style.height = vh + 'px';
+        const soCtx = selOverlay.getContext('2d');
+        soCtx.setTransform(1, 0, 0, 1, 0, 0);
+        soCtx.scale(dpr, dpr);
+    }
 }
 
 // ============================================

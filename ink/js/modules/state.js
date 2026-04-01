@@ -209,12 +209,13 @@ export const state = {
     inkColor: '#000000',
     canvasColor: '#ffffff',
 
-    // Tool settings — 3-mode architecture
-    // mode:    'pen' (freehand stroke) | 'fill' (lasso/bucket) | 'eraser' (erase)
+    // Tool settings — 4-mode architecture
+    // mode:    'pen' (freehand stroke) | 'fill' (lasso/bucket) | 'eraser' (erase) | 'select' (selection)
     // subTool: per-mode sub-tool selection
     //   pen:    'pen' | 'stipple'
     //   fill:   'fill' | 'tone'
     //   eraser: 'pen' | 'lasso'
+    //   select: 'rect' | 'lasso'
     mode: 'pen',
     subTool: 'pen',
 
@@ -308,6 +309,14 @@ export const state = {
     confirmedSelection: null,
     selectedAspect: 'free',
     selectedScale: 1,
+
+    // Selection Tool
+    selectionMask: null,          // { type:'rect'|'lasso', rect?:{x,y,w,h}, points?:[...] }
+    floatingSelection: null,      // { imageData, srcX, srcY, w, h, offsetX, offsetY }
+    _selectionClipboard: null,    // { imageData, w, h }
+    isMovingSelection: false,
+    _selMoveStartX: 0,
+    _selMoveStartY: 0,
 
     // Brush Sizes
     penSize: 2,
