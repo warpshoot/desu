@@ -250,6 +250,7 @@ function _drawErase(ctx, pts, fromIdx, isStart, b) {
         const p = pts[0];
         const w = getW(p.pressure);
         ctx.beginPath(); ctx.arc(p.x, p.y, w / 2, 0, Math.PI * 2); ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
         return 0;
     }
     const startI = Math.max(1, fromIdx);

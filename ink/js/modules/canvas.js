@@ -16,61 +16,155 @@ import {
 // Canvas Initialization
 // ============================================
 
-/**
- * Initialize all canvases - called on app start and resize
- */
-export async function initCanvas() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    const dpr = window.devicePixelRatio || 1;
+// Paper size fixed at first init — module-level, never reset
+let _paperW = 0;
+let _paperH = 0;
 
-    // Initialize background
-    canvasBg.style.width = w + 'px';
+export function getPaperSize() {
+    return { w: _paperW, h: _paperH };
+}
+
+/**
+ * Manually resize the paper (drawing area) - used when loading projects
+ */
+export function resizePaper(w, h) {
+    const dpr = window.devicePixelRatio || 1;
+    _paperW = w;
+    _paperH = h;
+    state.paperW = w;
+    state.paperH = h;
+
+    canvasBg.style.width  = w + 'px';
     canvasBg.style.height = h + 'px';
 
-    // Resize all existing layers
     for (const layer of layers) {
-        layer.canvas.width = w * dpr;
+        layer.canvas.width  = w * dpr;
         layer.canvas.height = h * dpr;
-        layer.canvas.style.width = w + 'px';
+        layer.canvas.style.width  = w + 'px';
         layer.canvas.style.height = h + 'px';
+        
         layer.ctx.setTransform(1, 0, 0, 1, 0, 0);
         layer.ctx.scale(dpr, dpr);
+        layer.ctx.imageSmoothingEnabled = false;
         layer.ctx.clearRect(0, 0, w, h);
     }
+    
+    strokeCanvas.width  = w * dpr;
+    strokeCanvas.height = h * dpr;
+    strokeCanvas.style.width  = w + 'px';
+    strokeCanvas.style.height = h + 'px';
+    strokeCtx.setTransform(1, 0, 0, 1, 0, 0);
+    strokeCtx.scale(dpr, dpr);
+}
 
-    // Create initial layer if none exist
-    if (layers.length === 0) {
-        createLayer();
+/**
+ * Initialize all canvases - called on app start and resize.
+ * Drawing layers (paper) are fixed to the first-call viewport size.
+ * Only viewport overlays (event, lasso, selection) resize with the window.
+ */
+export async function initCanvas() {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+
+    const isFirstInit = _paperW === 0 || _paperH === 0;
+
+    if (isFirstInit) {
+        _paperW = vw;
+        _paperH = vh;
+        // Also store on state so createLayer() and save code can read it
+        state.paperW = _paperW;
+        state.paperH = _paperH;
     }
 
-    // Initialize utility canvases
-    lassoCanvas.width = w * dpr;
-    lassoCanvas.height = h * dpr;
-    lassoCanvas.style.width = w + 'px';
-    lassoCanvas.style.height = h + 'px';
+    const pw = _paperW;
+    const ph = _paperH;
+
+    // ── Drawing layers & background: fixed paper size, only on first init ──
+    if (isFirstInit) {
+        canvasBg.style.width  = pw + 'px';
+        canvasBg.style.height = ph + 'px';
+
+        for (const layer of layers) {
+            const oldW = layer.canvas.width;
+            const oldH = layer.canvas.height;
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width  = oldW;
+            tempCanvas.height = oldH;
+            tempCanvas.getContext('2d').drawImage(layer.canvas, 0, 0);
+
+            layer.canvas.width  = pw * dpr;
+            layer.canvas.height = ph * dpr;
+            layer.canvas.style.width  = pw + 'px';
+            layer.canvas.style.height = ph + 'px';
+
+            layer.ctx.setTransform(1, 0, 0, 1, 0, 0);
+            layer.ctx.scale(dpr, dpr);
+            layer.ctx.imageSmoothingEnabled = false;
+            layer.ctx.clearRect(0, 0, pw, ph);
+            layer.ctx.drawImage(tempCanvas, 0, 0, oldW / dpr, oldH / dpr);
+        }
+
+        if (layers.length === 0) {
+            createLayer();
+        }
+
+        // strokeCanvas is in paper coordinate space — fixed size
+        strokeCanvas.width  = pw * dpr;
+        strokeCanvas.height = ph * dpr;
+        strokeCanvas.style.width  = pw + 'px';
+        strokeCanvas.style.height = ph + 'px';
+        strokeCtx.setTransform(1, 0, 0, 1, 0, 0);
+        strokeCtx.scale(dpr, dpr);
+    }
+
+    // ── Viewport overlays: always match current window size ──
+    lassoCanvas.width  = vw * dpr;
+    lassoCanvas.height = vh * dpr;
+    lassoCanvas.style.width  = vw + 'px';
+    lassoCanvas.style.height = vh + 'px';
     const lCtx = lassoCanvas.getContext('2d');
     lCtx.setTransform(1, 0, 0, 1, 0, 0);
     lCtx.scale(dpr, dpr);
 
-    selectionCanvas.width = w * dpr;
-    selectionCanvas.height = h * dpr;
-    selectionCanvas.style.width = w + 'px';
-    selectionCanvas.style.height = h + 'px';
+    selectionCanvas.width  = vw * dpr;
+    selectionCanvas.height = vh * dpr;
+    selectionCanvas.style.width  = vw + 'px';
+    selectionCanvas.style.height = vh + 'px';
 
-    strokeCanvas.width = w * dpr;
-    strokeCanvas.height = h * dpr;
-    strokeCanvas.style.width = w + 'px';
-    strokeCanvas.style.height = h + 'px';
-    strokeCtx.setTransform(1, 0, 0, 1, 0, 0);
-    strokeCtx.scale(dpr, dpr);
-
-    eventCanvas.width = w;
-    eventCanvas.height = h;
+    eventCanvas.width  = vw;
+    eventCanvas.height = vh;
 
     applyTransform();
 
     return true;
+}
+
+/**
+ * Called only on window resize.
+ * Resizes viewport-overlay canvases (event, lasso, selection) to the new window size.
+ * Drawing layers and background are NEVER touched here.
+ */
+export function resizeViewport() {
+    const vw  = window.innerWidth;
+    const vh  = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+
+    lassoCanvas.width  = vw * dpr;
+    lassoCanvas.height = vh * dpr;
+    lassoCanvas.style.width  = vw + 'px';
+    lassoCanvas.style.height = vh + 'px';
+    const lCtx = lassoCanvas.getContext('2d');
+    lCtx.setTransform(1, 0, 0, 1, 0, 0);
+    lCtx.scale(dpr, dpr);
+
+    selectionCanvas.width  = vw * dpr;
+    selectionCanvas.height = vh * dpr;
+    selectionCanvas.style.width  = vw + 'px';
+    selectionCanvas.style.height = vh + 'px';
+
+    eventCanvas.width  = vw;
+    eventCanvas.height = vh;
 }
 
 // ============================================
@@ -114,9 +208,6 @@ export function applyTransform() {
 
     // Stroke canvas follows same transform as layers
     strokeCanvas.style.transform = transform;
-
-    // Event canvas follows transform for coordinate mapping
-    eventCanvas.style.transform = transform;
 
     // Apply to flash overlay if it exists
     const flashOverlay = document.getElementById('flash-overlay');

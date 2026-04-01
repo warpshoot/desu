@@ -1,6 +1,6 @@
-import { initDOM } from './modules/state.js';
-import { initCanvas } from './modules/canvas.js';
-import { initUI } from './modules/ui.js';
+import { initDOM, layers } from './modules/state.js';
+import { initCanvas, resizeViewport } from './modules/canvas.js';
+import { initUI, updateLayerThumbnail } from './modules/ui.js';
 import { saveInitialState } from './modules/history.js';
 import { loadLocalState, exportProject, importProject } from './modules/storage.js';
 window.onerror = function (msg, url, line, col, error) {
@@ -42,6 +42,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
             }
+        });
+
+        // Window Resize Handler — only resizes viewport overlays, never drawing layers
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                resizeViewport();
+            }, 100);
         });
 
     } catch (e) {

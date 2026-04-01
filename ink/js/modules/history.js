@@ -30,12 +30,17 @@ export function markLayerDirty(layerId) {
 /**
  * Save current state of all layers to undo stack
  * 差分保存: 前回のスナップショットと比較し、変更レイヤーのみ新規Bitmap作成
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.keepRedo=false] — true の場合 redo スタックをクリアしない。
+ *   handlePointerDown のように「ジェスチャーで取り消される可能性がある操作の開始時」に使う。
+ *   描画が完了確定したら呼び出し元で commitRedoClear() を呼ぶこと。
  */
-export async function saveState() {
-    // Redo スタックを同期的にクリア (await 前)
-    // これにより、非同期 bitmap 作成中に undo が実行されても
-    // redo エントリが誤って消されることを防ぐ
-    _clearRedoStack();
+export async function saveState({ keepRedo = false } = {}) {
+    if (!keepRedo) {
+        // Redo スタックを同期的にクリア (await 前)
+        _clearRedoStack();
+    }
 
     const snapshot = {
         bitmaps: new Map(),
@@ -58,6 +63,13 @@ export async function saveState() {
         const old = state.undoStack.shift();
         _closeSnapshotBitmaps(old, state.undoStack[0]);
     }
+}
+
+/**
+ * Redo スタックを明示的にクリア (描画完了確定時に呼ぶ)
+ */
+export function commitRedoClear() {
+    _clearRedoStack();
 }
 
 /**
@@ -134,6 +146,8 @@ function restoreSnapshot(snapshot) {
     for (const layer of layers) {
         const bitmap = bitmaps instanceof Map ? bitmaps.get(layer.id) : bitmaps.get(layer.id);
         if (bitmap) {
+            // 消しゴム等で汚染された合成モードをリセット
+            layer.ctx.globalCompositeOperation = 'source-over';
             layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
             layer.ctx.imageSmoothingEnabled = false;
             layer.ctx.drawImage(bitmap, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
@@ -168,6 +182,8 @@ export function restoreLayer(layerId) {
 
     if (bitmap && layer) {
         const dpr = window.devicePixelRatio || 1;
+        // 消しゴム等で汚染された合成モードをリセット
+        layer.ctx.globalCompositeOperation = 'source-over';
         layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
         layer.ctx.imageSmoothingEnabled = false;
         layer.ctx.drawImage(bitmap, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);

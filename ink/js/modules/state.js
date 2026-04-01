@@ -42,8 +42,9 @@ export function createLayer() {
     canvas.id = `layer-${id}`;
     canvas.className = 'drawing-layer';
     
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    // Use fixed paper size; fall back to current viewport only if not yet initialized
+    const w = state.paperW || window.innerWidth;
+    const h = state.paperH || window.innerHeight;
     const dpr = window.devicePixelRatio || 1;
 
     canvas.width = w * dpr;
@@ -244,6 +245,10 @@ export const state = {
     eraserSlots: makeDefaultEraserSlots(),
     activeEraserSlotIndex: 0,
     get activeEraserSlot() { return this.eraserSlots[this.activeEraserSlotIndex]; },
+
+    // Fixed canvas paper size (set once at first init, never changes)
+    paperW: 0,
+    paperH: 0,
 
     // Zoom & Pan
     scale: 1,

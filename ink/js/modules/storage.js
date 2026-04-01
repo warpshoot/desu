@@ -1,4 +1,5 @@
 import { state, layers, createLayer, deleteLayer } from './state.js';
+import { resizePaper } from './canvas.js';
 
 const STORAGE_KEY = 'desu-draw-state';
 let saveTimeout = null;
@@ -10,6 +11,8 @@ export function saveLocalState() {
         try {
             const data = {
                 timestamp: Date.now(),
+                paperW: state.paperW,
+                paperH: state.paperH,
                 layers: [],
                 // Also save current tools for persistence
                 settings: {
@@ -52,7 +55,7 @@ export function saveLocalState() {
 
 // Load state
 export function loadLocalState() {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
         try {
             const json = localStorage.getItem(STORAGE_KEY);
             if (!json) {
@@ -81,8 +84,29 @@ export function loadLocalState() {
                 deleteLayer(layers[layers.length - 1].id);
             }
 
-            // Restore content
             const dpr = window.devicePixelRatio || 1;
+
+            // Determine paper size to prevent aspect ratio distortion
+            let pw = data.paperW;
+            let ph = data.paperH;
+
+            if ((!pw || !ph) && data.layers.length > 0) {
+                const tempImg = new Image();
+                await new Promise(res => {
+                    tempImg.onload = res;
+                    tempImg.src = data.layers[0].image;
+                });
+                pw = tempImg.naturalWidth / dpr;
+                ph = tempImg.naturalHeight / dpr;
+            } else if (!pw || !ph) {
+                pw = window.innerWidth;
+                ph = window.innerHeight;
+            }
+
+            // Resize paper to match the saved project aspect/size
+            resizePaper(pw, ph);
+
+            // Restore content
             let loadedCount = 0;
             data.layers.forEach((saved, index) => {
                 if (index >= layers.length) return;
@@ -121,6 +145,8 @@ export async function exportProject() {
         const data = {
             version: 1,
             timestamp: Date.now(),
+            paperW: state.paperW,
+            paperH: state.paperH,
             layers: []
             // Project export currently intentionally omits settings as requested
         };
@@ -170,6 +196,27 @@ export function importProject(file) {
                 }
 
                 const dpr = window.devicePixelRatio || 1;
+
+                // Determine paper size to prevent aspect ratio distortion
+                let pw = data.paperW;
+                let ph = data.paperH;
+
+                if ((!pw || !ph) && data.layers.length > 0) {
+                    const tempImg = new Image();
+                    await new Promise(res => {
+                        tempImg.onload = res;
+                        tempImg.src = data.layers[0].image;
+                    });
+                    pw = tempImg.naturalWidth / dpr;
+                    ph = tempImg.naturalHeight / dpr;
+                } else if (!pw || !ph) {
+                    pw = window.innerWidth;
+                    ph = window.innerHeight;
+                }
+
+                // Resize paper to match the loaded project
+                resizePaper(pw, ph);
+
                 let loadedCount = 0;
                 data.layers.forEach((saved, index) => {
                     if (index >= layers.length) return;

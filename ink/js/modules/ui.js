@@ -30,7 +30,7 @@ import {
     startLasso, updateLasso, finishLasso,
     fillPolygonNoAA, fillPolygonTransparent, floodFill, floodFillTransparent,
 } from './tools/fill.js';
-import { saveState, undo, redo, restoreLayer, resetHistory, saveLayerChangeState } from './history.js';
+import { saveState, commitRedoClear, undo, redo, restoreLayer, resetHistory, saveLayerChangeState } from './history.js';
 import {
     showSelectionUI, hideSelectionUI, confirmSelection, redoSelection,
     saveSelectedRegion, saveAllCanvas, copyToClipboard, saveRegion
@@ -373,12 +373,6 @@ function setupLayerPanel() {
             } else {
                 // Generate initial thumbnail if missing (e.g. new layer)
                 updateLayerThumbnail(layer);
-                if (layer.thumbnail) {
-                    btn.style.backgroundImage = `url(${layer.thumbnail})`;
-                    btn.style.backgroundSize = 'contain';
-                    btn.style.backgroundRepeat = 'no-repeat';
-                    btn.style.backgroundPosition = 'center';
-                }
             }
 
             layerButtons.appendChild(btn);
@@ -863,21 +857,23 @@ export function updateLayerThumbnail(layer) {
     ctx.drawImage(layer.canvas, 0, 0, sWidth, sHeight, offsetX, offsetY, drawW, drawH);
 
     // toDataURL を避け、canvas を直接 blob URL に変換（非同期だが高速）
-    const btn = document.querySelector(`.layer-btn[data-layer-id="${layer.id}"]`);
-    if (btn) {
-        state.thumbCanvas.toBlob((blob) => {
-            if (!blob) return;
-            // 以前の blob URL を解放
-            if (layer._thumbBlobUrl) {
-                URL.revokeObjectURL(layer._thumbBlobUrl);
-            }
-            layer._thumbBlobUrl = URL.createObjectURL(blob);
-            btn.style.backgroundImage = `url(${layer._thumbBlobUrl})`;
+    state.thumbCanvas.toBlob((blob) => {
+        if (!blob) return;
+        // 以前の blob URL を解放
+        if (layer.thumbnail && layer.thumbnail.startsWith('blob:')) {
+            URL.revokeObjectURL(layer.thumbnail);
+        }
+        layer.thumbnail = URL.createObjectURL(blob);
+        
+        // 現在の DOM 上のボタンを探して更新を試みる
+        const btn = document.querySelector(`.layer-btn[data-layer-id="${layer.id}"]`);
+        if (btn) {
+            btn.style.backgroundImage = `url(${layer.thumbnail})`;
             btn.style.backgroundSize = 'contain';
             btn.style.backgroundRepeat = 'no-repeat';
             btn.style.backgroundPosition = 'center';
-        });
-    }
+        }
+    });
 }
 
 function flashLayer(layerId) {
@@ -1074,8 +1070,10 @@ async function handlePointerDown(e) {
         // --- Mode-based dispatch ---
         // saveState を await してから描画開始 (レースコンディション防止)
         // createImageBitmap は高速 (<5ms) なので体感遅延は最小限
+        // keepRedo: ジェスチャー(2/3本指タップ)で取り消される可能性があるため、
+        // redo スタックはストローク完了時まで保持する
         if (state.mode === 'pen') {
-            await saveState();
+            await saveState({ keepRedo: true });
             if (state.subTool === 'stipple') {
                 startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             } else {
@@ -1090,7 +1088,7 @@ async function handlePointerDown(e) {
             } else if (state.subTool === 'lasso') {
                 startLasso(e.clientX, e.clientY);
             } else {
-                await saveState();
+                await saveState({ keepRedo: true });
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
         }
@@ -1357,6 +1355,8 @@ async function handlePointerUp(e) {
                     updateLayerThumbnail(getActiveLayer());
                 }
             } else if (state.isPenDrawing) {
+                // ストローク確定 → redo スタックをクリア
+                commitRedoClear();
                 if (state.mode === 'pen' && state.subTool === 'stipple') {
                     endStippleDrawing();
                 } else {
@@ -2123,7 +2123,6 @@ async function executeClearLayer() {
         layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
         updateLayerThumbnail(layer);
     }
-    await saveState();
 }
 
 // ============================================
@@ -2537,77 +2536,6 @@ function setupCreditModal() {
 // ============================================
 
 function setupOrientationHandler() {
-    async function resizeAllCanvases() {
-        // Save all layer contents as ImageBitmaps
-        const layerBitmaps = await Promise.all(
-            layers.map(layer => createImageBitmap(layer.canvas))
-        );
-
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        const dpr = window.devicePixelRatio || 1;
-
-        // Background div
-        canvasBg.style.width = w + 'px';
-        canvasBg.style.height = h + 'px';
-
-        // Lasso canvas
-        lassoCanvas.width = w * dpr;
-        lassoCanvas.height = h * dpr;
-        lassoCanvas.style.width = w + 'px';
-        lassoCanvas.style.height = h + 'px';
-        const lCtx = lassoCanvas.getContext('2d');
-        lCtx.setTransform(1, 0, 0, 1, 0, 0);
-        lCtx.scale(dpr, dpr);
-
-        // Selection canvas
-        selectionCanvas.width = w * dpr;
-        selectionCanvas.height = h * dpr;
-        selectionCanvas.style.width = w + 'px';
-        selectionCanvas.style.height = h + 'px';
-
-        // Stroke canvas
-        strokeCanvas.width = w * dpr;
-        strokeCanvas.height = h * dpr;
-        strokeCanvas.style.width = w + 'px';
-        strokeCanvas.style.height = h + 'px';
-        strokeCtx.setTransform(1, 0, 0, 1, 0, 0);
-        strokeCtx.scale(dpr, dpr);
-
-        // Event canvas (no DPR, CSS pixel sized)
-        eventCanvas.width = w;
-        eventCanvas.height = h;
-
-        // Restore each layer
-        for (let i = 0; i < layers.length; i++) {
-            const layer = layers[i];
-            layer.canvas.width = w * dpr;
-            layer.canvas.height = h * dpr;
-            layer.canvas.style.width = w + 'px';
-            layer.canvas.style.height = h + 'px';
-            layer.ctx.setTransform(1, 0, 0, 1, 0, 0);
-            layer.ctx.scale(dpr, dpr);
-            layer.ctx.imageSmoothingEnabled = false;
-            layer.ctx.drawImage(layerBitmaps[i], 0, 0, w, h);
-            layer.ctx.imageSmoothingEnabled = true;
-            layerBitmaps[i].close();
-        }
-
-        applyTransform();
-    }
-
-    // Handle orientation change
-    window.addEventListener('orientationchange', () => {
-        setTimeout(resizeAllCanvases, 100);
-    });
-
-    // Handle resize (e.g., browser chrome appearing/disappearing on iOS)
-    let resizeTimeout;
-    window.addEventListener('resize', () => {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(resizeAllCanvases, 250);
-    });
-
     // Handle returning from another app (visibility restored)
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
