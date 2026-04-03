@@ -251,7 +251,6 @@ export function startPenDrawing(x, y, pressure = 0.5) {
     _stabAnchorX = x;
     _stabAnchorY = y;
 
-    const brush = _getDrawBrush();
     if (brush.stabilizerEnabled) {
         lassoCanvas.style.display = 'block';
         lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
