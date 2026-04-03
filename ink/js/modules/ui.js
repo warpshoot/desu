@@ -21,10 +21,10 @@ import {
     MAX_LAYERS
 } from './state.js';
 import {
-    startPenDrawing, drawPenLine, endPenDrawing
+    startPenDrawing, drawPenLine, endPenDrawing, getPenDirtyRect, clearPenDirtyRect
 } from './tools/pen.js';
 import {
-    startStippleDrawing, drawStippleLine, endStippleDrawing
+    startStippleDrawing, drawStippleLine, endStippleDrawing, getStippleDirtyRect, clearStippleDirtyRect
 } from './tools/stipple.js';
 import {
     startLasso,
@@ -37,7 +37,7 @@ import {
     fillPolygonTransparent,
     fillPolygonTransparentWithAA
 } from './tools/fill.js';
-import { saveState, commitRedoClear, undo, redo, restoreLayer, resetHistory, saveLayerChangeState } from './history.js';
+import { saveState, commitRedoClear, undo, redo, restoreLayer, resetHistory, saveLayerChangeState, shrinkLastUndoEntry } from './history.js';
 import {
     showSelectionUI, hideSelectionUI, confirmSelection, redoSelection,
     saveSelectedRegion, saveAllCanvas, copyToClipboard, saveRegion
@@ -1627,9 +1627,17 @@ async function handlePointerUp(e) {
                 // ストローク確定 → redo スタックをクリア
                 commitRedoClear();
                 if (state.mode === 'pen' && state.subTool === 'stipple') {
+                    const dirtyRect = getStippleDirtyRect();
+                    clearStippleDirtyRect();
                     endStippleDrawing();
+                    const layer = getActiveLayer();
+                    if (layer && dirtyRect) await shrinkLastUndoEntry(layer.id, dirtyRect);
                 } else {
                     await endPenDrawing();
+                    const dirtyRect = getPenDirtyRect();
+                    clearPenDirtyRect();
+                    const layer = getActiveLayer();
+                    if (layer && dirtyRect) await shrinkLastUndoEntry(layer.id, dirtyRect);
                 }
                 // Apply selection clip post-process (pen strokes)
                 await applySelectionClip();

@@ -66,6 +66,41 @@ export async function saveState({ keepRedo = false } = {}) {
 }
 
 /**
+ * Undo スタックの最新エントリを Dirty Rect パッチに縮小する
+ *
+ * ストローク完了後、変化した領域 (dirtyRect) のみを保存することで
+ * メモリを大幅に削減する。フルキャンバスの ImageBitmap を解放し、
+ * 矩形切り抜きのパッチ ImageBitmap に差し替える。
+ *
+ * @param {number} layerId
+ * @param {{ x: number, y: number, w: number, h: number }} dirtyRect  CSS px 単位
+ */
+export async function shrinkLastUndoEntry(layerId, dirtyRect) {
+    if (state.undoStack.length === 0) return;
+    const entry = state.undoStack[state.undoStack.length - 1];
+    const fullBitmap = entry.bitmaps && entry.bitmaps.get(layerId);
+    if (!fullBitmap) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const sx = Math.max(0, Math.floor(dirtyRect.x * dpr));
+    const sy = Math.max(0, Math.floor(dirtyRect.y * dpr));
+    const sw = Math.min(fullBitmap.width  - sx, Math.ceil(dirtyRect.w * dpr));
+    const sh = Math.min(fullBitmap.height - sy, Math.ceil(dirtyRect.h * dpr));
+
+    if (sw <= 0 || sh <= 0) return;
+
+    // 75% 以上を覆うなら縮小効果が薄いのでフルのまま維持
+    if (sw * sh > fullBitmap.width * fullBitmap.height * 0.75) return;
+
+    const patchBitmap = await createImageBitmap(fullBitmap, sx, sy, sw, sh);
+    fullBitmap.close();
+    entry.bitmaps.delete(layerId);
+
+    if (!entry.patches) entry.patches = new Map();
+    entry.patches.set(layerId, { bitmap: patchBitmap, x: sx / dpr, y: sy / dpr });
+}
+
+/**
  * Redo スタックを明示的にクリア (描画完了確定時に呼ぶ)
  */
 export function commitRedoClear() {
@@ -142,15 +177,27 @@ export async function redo() {
 function restoreSnapshot(snapshot) {
     const dpr = window.devicePixelRatio || 1;
     const bitmaps = snapshot.bitmaps || snapshot; // 後方互換: 旧形式は Map 直接
+    const patches = snapshot.patches || new Map();
 
     for (const layer of layers) {
-        const bitmap = bitmaps instanceof Map ? bitmaps.get(layer.id) : bitmaps.get(layer.id);
+        // 消しゴム等で汚染された合成モードをリセット
+        layer.ctx.globalCompositeOperation = 'source-over';
+
+        const bitmap = bitmaps instanceof Map ? bitmaps.get(layer.id) : undefined;
         if (bitmap) {
-            // 消しゴム等で汚染された合成モードをリセット
-            layer.ctx.globalCompositeOperation = 'source-over';
+            // フルスナップショット: キャンバス全体を置き換え
             layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
             layer.ctx.imageSmoothingEnabled = false;
             layer.ctx.drawImage(bitmap, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
+            layer.ctx.imageSmoothingEnabled = true;
+        } else if (patches.has(layer.id)) {
+            // パッチ: dirty rect 領域のみを復元
+            const patch = patches.get(layer.id);
+            const pw = patch.bitmap.width  / dpr;
+            const ph = patch.bitmap.height / dpr;
+            layer.ctx.clearRect(patch.x, patch.y, pw, ph);
+            layer.ctx.imageSmoothingEnabled = false;
+            layer.ctx.drawImage(patch.bitmap, patch.x, patch.y, pw, ph);
             layer.ctx.imageSmoothingEnabled = true;
         }
     }
@@ -227,6 +274,13 @@ function _closeAllBitmaps(snapshot) {
             }
         }
     }
+    if (snapshot.patches instanceof Map) {
+        for (const patch of snapshot.patches.values()) {
+            if (patch.bitmap && typeof patch.bitmap.close === 'function') {
+                patch.bitmap.close();
+            }
+        }
+    }
 }
 
 function _closeSnapshotBitmaps(oldSnapshot, nextSnapshot) {
@@ -238,6 +292,15 @@ function _closeSnapshotBitmaps(oldSnapshot, nextSnapshot) {
     for (const [id, bitmap] of oldBitmaps) {
         if (bitmap && typeof bitmap.close === 'function' && bitmap !== nextBitmaps.get(id)) {
             bitmap.close();
+        }
+    }
+
+    // パッチは参照共有しないので無条件で解放
+    if (oldSnapshot.patches instanceof Map) {
+        for (const patch of oldSnapshot.patches.values()) {
+            if (patch.bitmap && typeof patch.bitmap.close === 'function') {
+                patch.bitmap.close();
+            }
         }
     }
 }
