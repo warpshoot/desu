@@ -1,5 +1,6 @@
 import { state, layers, createLayer, deleteLayer } from './state.js';
 import { resizePaper } from './canvas.js';
+import { makeDefaultBrushes, makeDefaultFillSlots, makeDefaultEraserSlots } from './brushes.js';
 
 const STORAGE_KEY = 'desu-draw-state';
 let saveTimeout = null;
@@ -258,17 +259,8 @@ export async function exportConfig() {
         const config = {
             brushes: state.brushes,
             fillSlots: state.fillSlots,
-            eraserSlots: state.eraserSlots,
-            activeBrushIndex: state.activeBrushIndex,
-            activeFillSlotIndex: state.activeFillSlotIndex,
-            activeEraserSlotIndex: state.activeEraserSlotIndex,
-            mode: state.mode,
-            subTool: state.subTool,
-            penSize: state.penSize,
-            eraserSize: state.eraserSize,
-            stippleSize: state.stippleSize,
-            inkColor: state.inkColor,
-            canvasColor: state.canvasColor
+            eraserSlots: state.eraserSlots
+            // Omit active indices, sizes, modes, etc. for simplicity
         };
         const json = JSON.stringify(config);
         const filename = 'desu_ink_config_' + Date.now() + '.json';
@@ -280,6 +272,7 @@ export async function exportConfig() {
     }
 }
 
+
 export function importConfig(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -287,6 +280,14 @@ export function importConfig(file) {
             try {
                 const config = JSON.parse(e.target.result);
                 _restoreSettings(config);
+                
+                // 初期選択状態のリセット
+                state.mode = 'pen';
+                state.subTool = state.brushes[0]?.subTool ?? 'pen';
+                state.activeBrushIndex = 0;
+                state.activeFillSlotIndex = 0;
+                state.activeEraserSlotIndex = 0;
+
                 document.dispatchEvent(new CustomEvent('desu:state-loaded'));
                 resolve(true);
             } catch (err) {
@@ -296,6 +297,31 @@ export function importConfig(file) {
         };
         reader.readAsText(file);
     });
+}
+
+
+/**
+ * すべての設定を初期値にリセットする
+ */
+export function resetSettings() {
+    const config = {
+        brushes: makeDefaultBrushes(),
+        fillSlots: makeDefaultFillSlots(),
+        eraserSlots: makeDefaultEraserSlots(),
+        activeBrushIndex: 0,
+        activeFillSlotIndex: 0,
+        activeEraserSlotIndex: 0,
+        mode: 'pen',
+        subTool: 'pen',
+        penSize: 2,
+        eraserSize: 5,
+        stippleSize: 31,
+        inkColor: '#000000',
+        canvasColor: '#ffffff'
+    };
+    _restoreSettings(config);
+    saveLocalState();
+    document.dispatchEvent(new CustomEvent('desu:state-loaded'));
 }
 
 // --- Internal Helpers ---

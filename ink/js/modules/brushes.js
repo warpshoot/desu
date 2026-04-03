@@ -19,30 +19,26 @@ const BRUSH_CACHE_MAX = 50;
 export function makeDefaultBrushes() {
     return [
         {
-            id: 0,
-            name: '1',
             subTool: 'pen',
-            size: 3,
+            size: 2,
             opacity: 1.0,
             pressureSize: true,
             pressureDensity: false,
             binary: false,
             stippleDensity: 5,
-            pressureCurve: 1.0,
-            stabilizerEnabled: false,
-            stabilizerDistance: 20,
+            pressureCurve: 1.2,
+            stabilizerEnabled: true,
+            stabilizerDistance: 10,
             stabStringVisible: true,
             stabShowGuide: true,
         },
         {
-            id: 1,
-            name: '2',
             subTool: 'pen',
-            size: 6,
-            opacity: 0.9,
-            pressureSize: true,
+            size: 8,
+            opacity: 0.2,
+            pressureSize: false,
             pressureDensity: false,
-            binary: false,
+            binary: true,
             stippleDensity: 5,
             pressureCurve: 1.0,
             stabilizerEnabled: false,
@@ -51,15 +47,13 @@ export function makeDefaultBrushes() {
             stabShowGuide: true,
         },
         {
-            id: 3,
-            name: '3',
             subTool: 'stipple',
             size: 4,
             opacity: 0.3,
             pressureSize: false,
-            pressureDensity: true,
+            pressureDensity: false,
             binary: false,
-            stippleDensity: 5,
+            stippleDensity: 10,
             pressureCurve: 1.0,
             stabilizerEnabled: false,
             stabilizerDistance: 20,
@@ -68,6 +62,8 @@ export function makeDefaultBrushes() {
         }
     ];
 }
+
+
 
 /**
  * 筆圧カーブを適用
@@ -82,22 +78,27 @@ export function applyPressureCurve(pressure, gamma) {
 // =============================================
 export function makeDefaultFillSlots() {
     return [
-        { id: 0, name: '1', subTool: 'fill', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
-        { id: 1, name: '2', subTool: 'tone', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
-        { id: 2, name: '3', subTool: 'fill', opacity: 0.5, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
+        { subTool: 'fill', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', stabilizerEnabled: true, stabilizerDistance: 5, antiAlias: true },
+        { subTool: 'tone', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse2', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
+        { subTool: 'fill', opacity: 0.1, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 5, antiAlias: false },
     ];
 }
+
+
 
 // =============================================
 // デフォルト消しゴムスロット定義
 // =============================================
 export function makeDefaultEraserSlots() {
     return [
-        { id: 0, name: '1', subTool: 'pen', stabilizerEnabled: false, stabilizerDistance: 20, stabStringVisible: true, stabShowGuide: true, antiAlias: false },
-        { id: 1, name: '2', subTool: 'lasso', bucketEnabled: true, bucketTolerance: 'normal', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
-        { id: 2, name: '3', subTool: 'clear', antiAlias: false },
+        { subTool: 'pen', stabilizerEnabled: false, stabilizerDistance: 20, stabStringVisible: true, stabShowGuide: true, pressureSize: true, pressureCurve: 1.0 },
+        { subTool: 'lasso', bucketEnabled: true, bucketTolerance: 'normal', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
+        { subTool: 'clear', antiAlias: false },
     ];
 }
+
+
+
 
 // =============================================
 // 2値ブラシスタンプキャッシュ

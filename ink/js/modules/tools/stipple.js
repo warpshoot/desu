@@ -1,4 +1,5 @@
 import { state, getActiveLayerCtx } from '../state.js';
+import { applyPressureCurve } from '../brushes.js';
 
 /**
  * Stipple brush — フリーハンドで点描濃淡をつけるツール
@@ -55,7 +56,10 @@ function _scatterDots(cx, cy, pressure) {
     // 密度設定でドット数を決定 (密度1〜20、デフォルト5)
     const density = state.activeBrush ? (state.activeBrush.stippleDensity ?? 5) : 5;
     const pressureDensity = state.activeBrush ? (state.activeBrush.pressureDensity ?? true) : true;
-    const dotCount = Math.max(1, Math.round(density * (pressureDensity ? pressure : 1.0)));
+    const gamma = state.activeBrush ? (state.activeBrush.pressureCurve ?? 1.0) : 1.0;
+
+    const effectivePressure = pressureDensity ? applyPressureCurve(pressure, gamma) : 1.0;
+    const dotCount = Math.max(1, Math.round(density * effectivePressure));
 
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = '#000000';

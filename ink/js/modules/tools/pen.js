@@ -89,7 +89,8 @@ function _getDrawBrush() {
         return {
             ...state.activeBrush,
             size: state.eraserSize,
-            pressureSize: true,
+            pressureSize: eraserSlot.pressureSize ?? true,
+            pressureCurve: eraserSlot.pressureCurve ?? 1.0,
             stabilizerEnabled:  eraserSlot.stabilizerEnabled  ?? false,
             stabilizerDistance: eraserSlot.stabilizerDistance ?? 20,
             stabStringVisible:  eraserSlot.stabStringVisible  ?? true,

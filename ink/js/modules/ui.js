@@ -52,7 +52,7 @@ import {
     createTonePreview,
     floodFillTone
 } from './tools/tone.js';
-import { exportProject, importProject, exportConfig, importConfig, exportToolConfig, importToolConfig } from './storage.js';
+import { exportProject, importProject, exportConfig, importConfig, exportToolConfig, importToolConfig, resetSettings } from './storage.js';
 import {
     initSelectionOverlay,
     resizeSelectionOverlay,
@@ -339,6 +339,24 @@ function setupFileUI() {
         importConfigBtn.addEventListener('click', () => {
             hideAllMenus();
             configInput.click();
+        });
+    }
+
+    const resetConfigBtn = document.getElementById('resetConfigBtn');
+    if (resetConfigBtn) {
+        resetConfigBtn.addEventListener('click', () => {
+            hideAllMenus();
+            if (confirm('すべてのツール設定を初期状態にリセットしますか？')) {
+                resetSettings();
+                // UIリフレッシュ
+                updateModeButtonIcon(state.mode, state.subTool);
+                updateToolButtonStates();
+                updateToneMenuVisibility();
+                updateBrushSizeVisibility();
+                updateBrushSizeSlider();
+                renderBrushPalette();
+                if (typeof syncBrushSliders === 'function') syncBrushSliders();
+            }
         });
     }
 
@@ -2015,6 +2033,11 @@ function openBrushSettings(idx) {
 
     panel.classList.remove('hidden');
     panel.style.display = ''; // インラインの残りカスを掃除
+
+    // 筆圧カーブの有効/無効状態を更新
+    const isPressureOn = isStipple ? (brush.pressureDensity ?? true) : brush.pressureSize;
+    pcurveRow.style.opacity = isPressureOn ? '1' : '0.5';
+    pcurveRow.style.pointerEvents = isPressureOn ? 'auto' : 'none';
     
     // スロットボタンの位置を取得してパネルの位置を調整
     const activeSlot = document.querySelector(`.brush-slot[data-idx="${idx}"]`);
@@ -2072,18 +2095,27 @@ function setupBrushSettingsPanel() {
         b.stabilizerDistance   = parseInt(stabDistSlider.value);
         b.stabStringVisible    = stabStringCheck.checked;
         b.stabShowGuide        = stabGuideCheck.checked;
-        // color removed: monochrome only (INK_COLOR = #000000)
+        // density/opacity/curve/stabDist display sync
         densityVal.textContent   = b.stippleDensity;
         opVal.textContent        = Math.round(b.opacity * 100);
         curveVal.textContent     = b.pressureCurve.toFixed(1);
         stabDistVal.textContent  = b.stabilizerDistance;
+
+        // 筆圧カーブの有効/無効状態を更新
+        const isPressureOn = isStipple ? b.pressureDensity : b.pressureSize;
+        const pcurveRow = document.getElementById('bs-pressure-curve-row');
+        if (pcurveRow) {
+            pcurveRow.style.opacity = isPressureOn ? '1' : '0.5';
+            pcurveRow.style.pointerEvents = isPressureOn ? 'auto' : 'none';
+        }
+
         // 表示/非表示の同期
         const densityRow      = document.getElementById('bs-density-row');
         const pdensityRow     = document.getElementById('bs-pressure-density-row');
         const opacityRow      = document.getElementById('bs-opacity-row');
         const penPressureRow  = document.getElementById('bs-pen-pressure-row');
         const binaryRow       = document.getElementById('bs-binary-row');
-        const pcurveRow       = document.getElementById('bs-pressure-curve-row');
+        const pcurveRowEl     = document.getElementById('bs-pressure-curve-row');
         const stabRow         = document.getElementById('bs-stabilizer-row');
         const stabDistRow     = document.getElementById('bs-stabilizer-dist-row');
         const stabVizRow      = document.getElementById('bs-stab-viz-row');
@@ -2095,7 +2127,8 @@ function setupBrushSettingsPanel() {
         opacityRow.style.display = showPenSettings ? '' : 'none';
         penPressureRow.style.display = showPenSettings ? '' : 'none';
         binaryRow.style.display = showPenSettings ? '' : 'none';
-        pcurveRow.style.display = showPenSettings ? '' : 'none';
+        // pcurveRowEl.style.display は showPenSettings または isStipple で常に表示（筆圧反映可能なため）
+        pcurveRowEl.style.display = ''; 
 
         const stabOn = b.stabilizerEnabled;
         stabRow.style.display = showPenSettings ? '' : 'none';
@@ -2133,32 +2166,8 @@ function setupBrushSettingsPanel() {
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
 
     closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
-
-    const exportBtn = document.getElementById('bs-export-btn');
-    const importBtn = document.getElementById('bs-import-btn');
-    const importInput = document.getElementById('bs-import-input');
-
-    if (exportBtn) {
-        exportBtn.addEventListener('click', () => {
-            exportToolConfig('brush', state.brushes[_editingBrushIdx]);
-        });
-    }
-    if (importBtn && importInput) {
-        importBtn.addEventListener('click', () => importInput.click());
-        importInput.addEventListener('change', async (e) => {
-            if (e.target.files.length > 0) {
-                const data = await importToolConfig(e.target.files[0], 'brush');
-                if (data) {
-                    state.brushes[_editingBrushIdx] = data;
-                    openBrushSettings(_editingBrushIdx);
-                    syncBrushSliders();
-                    renderBrushPalette();
-                    document.dispatchEvent(new CustomEvent('desu:state-loaded'));
-                }
-                importInput.value = '';
-            }
-        });
-    }
+    
+    // (Export/Import buttons logic removed)
 }
 
 // =============================================
@@ -2282,31 +2291,8 @@ function setupFillSettingsPanel() {
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
 
     closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
-
-    const exportBtn = document.getElementById('fs-export-btn');
-    const importBtn = document.getElementById('fs-import-btn');
-    const importInput = document.getElementById('fs-import-input');
-
-    if (exportBtn) {
-        exportBtn.addEventListener('click', () => {
-            exportToolConfig('fill', state.fillSlots[_editingFillSlotIdx]);
-        });
-    }
-    if (importBtn && importInput) {
-        importBtn.addEventListener('click', () => importInput.click());
-        importInput.addEventListener('change', async (e) => {
-            if (e.target.files.length > 0) {
-                const data = await importToolConfig(e.target.files[0], 'fill');
-                if (data) {
-                    state.fillSlots[_editingFillSlotIdx] = data;
-                    openFillSettings(_editingFillSlotIdx);
-                    renderBrushPalette();
-                    document.dispatchEvent(new CustomEvent('desu:state-loaded'));
-                }
-                importInput.value = '';
-            }
-        });
-    }
+    
+    // (Export/Import buttons removed)
 }
 
 // =============================================
@@ -2332,6 +2318,11 @@ function openEraserSettings(idx) {
     document.getElementById('es-stab-string').checked = slot.stabStringVisible ?? true;
     document.getElementById('es-stab-guide').checked = slot.stabShowGuide ?? true;
 
+    // 消しゴム(ペン)筆圧設定
+    document.getElementById('es-pressure-size').checked = slot.pressureSize ?? true;
+    document.getElementById('es-pressure-curve').value = slot.pressureCurve ?? 1.0;
+    document.getElementById('es-pressure-curve-val').textContent = (slot.pressureCurve ?? 1.0).toFixed(1);
+
     // lasso のみバケツ設定やAAを表示
     const isLasso = slot.subTool === 'lasso';
     const isPen   = slot.subTool === 'pen';
@@ -2347,6 +2338,18 @@ function openEraserSettings(idx) {
     // viz オプション (ライン/ガイド) はペンのみ
     document.getElementById('es-stab-viz-row').style.display = (isPen && stabOn) ? '' : 'none';
 
+    // 消しゴム(ペン)筆圧設定の表示制御
+    const penPressureSettings = document.getElementById('es-pen-pressure-settings');
+    if (penPressureSettings) {
+        penPressureSettings.style.display = isPen ? '' : 'none';
+        const pcurveRow = document.getElementById('es-pressure-curve-row');
+        const isPressureOn = slot.pressureSize ?? true;
+        if (pcurveRow) {
+            pcurveRow.style.opacity = isPressureOn ? '1' : '0.5';
+            pcurveRow.style.pointerEvents = isPressureOn ? 'auto' : 'none';
+        }
+    }
+
     panel.classList.remove('hidden');
     panel.style.display = '';
 
@@ -2356,7 +2359,7 @@ function openEraserSettings(idx) {
         const toolbarWidth = 64;
         panel.style.left = `${toolbarWidth}px`;
 
-        const panelHeight = 280;
+        const panelHeight = 350;
         let topPos = rect.top - 60;
         const winHeight = window.innerHeight;
         if (topPos + panelHeight > winHeight - 12) {
@@ -2382,6 +2385,9 @@ function setupEraserSettingsPanel() {
     const stabDistVal    = document.getElementById('es-stabilizer-dist-val');
     const stabStringCheck = document.getElementById('es-stab-string');
     const stabGuideCheck  = document.getElementById('es-stab-guide');
+    const psizeCheck      = document.getElementById('es-pressure-size');
+    const curveSlider     = document.getElementById('es-pressure-curve');
+    const curveVal        = document.getElementById('es-pressure-curve-val');
 
     const sync = () => {
         const slot = state.eraserSlots[_editingEraserSlotIdx];
@@ -2393,7 +2399,11 @@ function setupEraserSettingsPanel() {
         slot.stabilizerDistance = parseInt(stabDistSlider.value);
         slot.stabStringVisible  = stabStringCheck.checked;
         slot.stabShowGuide      = stabGuideCheck.checked;
+        slot.pressureSize       = psizeCheck.checked;
+        slot.pressureCurve      = parseFloat(curveSlider.value);
+        
         stabDistVal.textContent = slot.stabilizerDistance;
+        curveVal.textContent = slot.pressureCurve.toFixed(1);
 
         const isLasso = slot.subTool === 'lasso';
         const isPen   = slot.subTool === 'pen';
@@ -2407,6 +2417,17 @@ function setupEraserSettingsPanel() {
         document.getElementById('es-stabilizer-dist-row').style.display = stabOn ? '' : 'none';
         document.getElementById('es-stab-viz-row').style.display = (isPen && stabOn) ? '' : 'none';
 
+        const penPressureSettings = document.getElementById('es-pen-pressure-settings');
+        if (penPressureSettings) {
+            penPressureSettings.style.display = isPen ? '' : 'none';
+            const pcurveRow = document.getElementById('es-pressure-curve-row');
+            const isPressureOn = slot.pressureSize;
+            if (pcurveRow) {
+                pcurveRow.style.opacity = isPressureOn ? '1' : '0.5';
+                pcurveRow.style.pointerEvents = isPressureOn ? 'auto' : 'none';
+            }
+        }
+
         // アクティブスロットならモード反映
         if (_editingEraserSlotIdx === state.activeEraserSlotIndex && state.mode === 'eraser') {
             state.subTool = slot.subTool;
@@ -2418,44 +2439,15 @@ function setupEraserSettingsPanel() {
         renderBrushPalette();
     };
 
-    subToolSel.addEventListener('input', sync);
-    bucketCheck.addEventListener('input', sync);
-    toleranceSel.addEventListener('input', sync);
-    aaCheck.addEventListener('input', sync);
-    stabCheck.addEventListener('input', sync);
-    stabDistSlider.addEventListener('input', sync);
-    stabStringCheck.addEventListener('input', sync);
-    stabGuideCheck.addEventListener('input', sync);
+    [subToolSel, bucketCheck, toleranceSel, aaCheck, stabCheck, stabDistSlider, stabStringCheck, stabGuideCheck, psizeCheck, curveSlider]
+        .forEach(el => el.addEventListener('input', sync));
 
     panel.addEventListener('pointerdown', (e) => e.stopPropagation());
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
 
     closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
 
-    const exportBtn = document.getElementById('es-export-btn');
-    const importBtn = document.getElementById('es-import-btn');
-    const importInput = document.getElementById('es-import-input');
-
-    if (exportBtn) {
-        exportBtn.addEventListener('click', () => {
-            exportToolConfig('eraser', state.eraserSlots[_editingEraserSlotIdx]);
-        });
-    }
-    if (importBtn && importInput) {
-        importBtn.addEventListener('click', () => importInput.click());
-        importInput.addEventListener('change', async (e) => {
-            if (e.target.files.length > 0) {
-                const data = await importToolConfig(e.target.files[0], 'eraser');
-                if (data) {
-                    state.eraserSlots[_editingEraserSlotIdx] = data;
-                    openEraserSettings(_editingEraserSlotIdx);
-                    renderBrushPalette();
-                    document.dispatchEvent(new CustomEvent('desu:state-loaded'));
-                }
-                importInput.value = '';
-            }
-        });
-    }
+    // (Export/Import buttons removed)
 }
 
 // =============================================

@@ -152,6 +152,10 @@
         <div class="menu-item" id="importConfigBtn">
             <span>設定の読み込み</span>
         </div>
+        <div class="menu-divider"></div>
+        <div class="menu-item" id="resetConfigBtn" style="color: #d33;">
+            <span>設定のリセット</span>
+        </div>
         
         <!-- Project Save Input -->
         <input type="file" id="fileInput" accept=".json,.desu" style="display:none;">
@@ -378,11 +382,8 @@
                 <label>補正距離 <span id="fs-stabilizer-dist-val">20</span></label>
                 <input type="range" id="fs-stabilizer-dist" min="5" max="150" value="20">
             </div>
-            <div class="bs-row" style="margin-top: 15px; display: flex; gap: 8px; justify-content: space-between;">
-                <button id="fs-export-btn" style="flex:1; padding:6px; font-size:12px; border-radius:4px; border:1px solid #ddd; background:#fff; color:#333; cursor:pointer;">書き出し</button>
-                <button id="fs-import-btn" style="flex:1; padding:6px; font-size:12px; border-radius:4px; border:1px solid #ddd; background:#fff; color:#333; cursor:pointer;">読み込み</button>
-                <input type="file" id="fs-import-input" accept=".json" style="display:none;">
-            </div>
+            <!-- (Export/Import buttons removed) -->
+
         </div>
     </div>
 
@@ -436,11 +437,24 @@
                     <input type="checkbox" id="es-stab-guide" checked> ガイド
                 </label>
             </div>
-            <div class="bs-row" style="margin-top: 15px; display: flex; gap: 8px; justify-content: space-between;">
-                <button id="es-export-btn" style="flex:1; padding:6px; font-size:12px; border-radius:4px; border:1px solid #ddd; background:#fff; color:#333; cursor:pointer;">書き出し</button>
-                <button id="es-import-btn" style="flex:1; padding:6px; font-size:12px; border-radius:4px; border:1px solid #ddd; background:#fff; color:#333; cursor:pointer;">読み込み</button>
-                <input type="file" id="es-import-input" accept=".json" style="display:none;">
+
+            <!-- 消しゴム(ペン)専用: 筆圧設定 -->
+            <div id="es-pen-pressure-settings">
+                <div class="bs-row bs-toggles">
+                    <label class="bs-toggle-label">
+                        <input type="checkbox" id="es-pressure-size"> 筆圧→幅
+                    </label>
+                </div>
+                <div class="bs-row" id="es-pressure-curve-row">
+                    <label>筆圧カーブ <span id="es-pressure-curve-val">1.0</span></label>
+                    <div class="bs-pressure-curve-container">
+                        <input type="range" id="es-pressure-curve" min="0.3" max="3.0" step="0.1" value="1.0">
+                    </div>
+                </div>
             </div>
+
+            <!-- (Export/Import buttons removed) -->
+
         </div>
     </div>
 
@@ -480,19 +494,19 @@
                     <input type="checkbox" id="bs-pressure-size"> 筆圧→幅
                 </label>
             </div>
-            <div class="bs-row bs-toggles" id="bs-binary-row">
-                <label class="bs-toggle-label">
-                    <input type="checkbox" id="bs-binary" checked> アンチエイリアス
-                </label>
-            </div>
-
-            <!-- 筆圧カーブ設定 -->
+            <!-- 筆圧カーブ設定 (筆圧→幅の直下に移動) -->
             <div class="bs-row" id="bs-pressure-curve-row">
                 <label>筆圧カーブ <span id="bs-pressure-curve-val">1.0</span></label>
                 <div class="bs-pressure-curve-container">
                     <input type="range" id="bs-pressure-curve" min="0.3" max="3.0" step="0.1" value="1.0">
                 </div>
             </div>
+            <div class="bs-row bs-toggles" id="bs-binary-row">
+                <label class="bs-toggle-label">
+                    <input type="checkbox" id="bs-binary" checked> アンチエイリアス
+                </label>
+            </div>
+
 
             <!-- 手ぶれ補正 (糸引きスタビライザー) -->
             <div class="bs-row bs-toggles" id="bs-stabilizer-row">
@@ -512,13 +526,10 @@
                     <input type="checkbox" id="bs-stab-guide" checked> ガイド
                 </label>
             </div>
-            <div class="bs-row" style="margin-top: 15px; display: flex; gap: 8px; justify-content: space-between;">
-                <button id="bs-export-btn" style="flex:1; padding:6px; font-size:12px; border-radius:4px; border:1px solid #ddd; background:#fff; color:#333; cursor:pointer;">書き出し</button>
-                <button id="bs-import-btn" style="flex:1; padding:6px; font-size:12px; border-radius:4px; border:1px solid #ddd; background:#fff; color:#333; cursor:pointer;">読み込み</button>
-                <input type="file" id="bs-import-input" accept=".json" style="display:none;">
-            </div>
+            <!-- (Export/Import buttons removed) -->
         </div>
     </div>
+
 
     <!-- Debug Display (set DEBUG_MODE = true in ui.js to enable) -->
     <div id="debug-display"

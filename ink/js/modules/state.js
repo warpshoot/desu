@@ -321,7 +321,7 @@ export const state = {
     // Brush Sizes
     penSize: 2,
     eraserSize: 5,
-    stippleSize: 3,
+    stippleSize: 31,
 
     // Tone Menu State
     isToneMenuPinned: false
