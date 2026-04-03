@@ -7,6 +7,32 @@ let lastDrawnIndex = 0;
 let _strokeOpacity = 1.0;
 let _usingStrokeCanvas = false;
 
+// Dirty rect tracking — 現在のストロークが触れた領域 (キャンバス座標)
+let _dirtyMinX = Infinity, _dirtyMinY = Infinity;
+let _dirtyMaxX = -Infinity, _dirtyMaxY = -Infinity;
+let _dirtyMargin = 2; // ブラシ半径 + 余白
+
+/**
+ * 現ストロークの dirty rect を返す (キャンバス座標, CSS px 基準)
+ * まだ何も描いていない場合は null
+ */
+export function getPenDirtyRect() {
+    if (_dirtyMinX > _dirtyMaxX) return null;
+    const m = _dirtyMargin;
+    return {
+        x: _dirtyMinX - m,
+        y: _dirtyMinY - m,
+        w: (_dirtyMaxX - _dirtyMinX) + m * 2,
+        h: (_dirtyMaxY - _dirtyMinY) + m * 2
+    };
+}
+
+export function clearPenDirtyRect() {
+    _dirtyMinX = Infinity; _dirtyMinY = Infinity;
+    _dirtyMaxX = -Infinity; _dirtyMaxY = -Infinity;
+    _dirtyMargin = 2;
+}
+
 // 手ぶれ補正 (糸引きスタビライザー) の状態
 let _stabAnchorX = 0;  // ブラシの実際の位置 (カーソルより遅れる)
 let _stabAnchorY = 0;
@@ -216,6 +242,11 @@ export function startPenDrawing(x, y, pressure = 0.5) {
     smoothedPoints = [{ x, y, pressure: smoothedP }];
     lastDrawnIndex = 0;
 
+    // Dirty rect 初期化
+    const brush = _getDrawBrush();
+    _dirtyMargin = Math.ceil(brush.size * 0.75) + 2; // max radius + 余白
+    _dirtyMinX = x; _dirtyMinY = y; _dirtyMaxX = x; _dirtyMaxY = y;
+
     // 手ぶれ補正: アンカーをカーソル位置で初期化
     _stabAnchorX = x;
     _stabAnchorY = y;
@@ -271,6 +302,12 @@ export function drawPenLine(x, y, pressure = 0.5) {
     const lastPoint = strokePoints[strokePoints.length - 1];
     const dist = Math.hypot(x - lastPoint.x, y - lastPoint.y);
     if (dist < 0.5) return;
+
+    // Dirty rect を拡張
+    if (x < _dirtyMinX) _dirtyMinX = x;
+    if (y < _dirtyMinY) _dirtyMinY = y;
+    if (x > _dirtyMaxX) _dirtyMaxX = x;
+    if (y > _dirtyMaxY) _dirtyMaxY = y;
 
     // 5点ウィンドウ加重移動平均で筆圧スムージング
     const smoothedP = _smoothPressure(pressure);

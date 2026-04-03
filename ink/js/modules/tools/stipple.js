@@ -13,9 +13,30 @@ const DOT_SIZE = 1;
 
 let strokePoints = [];
 
+// Dirty rect tracking
+let _dirtyMinX = Infinity, _dirtyMinY = Infinity;
+let _dirtyMaxX = -Infinity, _dirtyMaxY = -Infinity;
+
+export function getStippleDirtyRect() {
+    if (_dirtyMinX > _dirtyMaxX) return null;
+    const margin = (state.stippleSize || 31) + 2;
+    return {
+        x: _dirtyMinX - margin,
+        y: _dirtyMinY - margin,
+        w: (_dirtyMaxX - _dirtyMinX) + margin * 2,
+        h: (_dirtyMaxY - _dirtyMinY) + margin * 2
+    };
+}
+
+export function clearStippleDirtyRect() {
+    _dirtyMinX = Infinity; _dirtyMinY = Infinity;
+    _dirtyMaxX = -Infinity; _dirtyMaxY = -Infinity;
+}
+
 export function startStippleDrawing(x, y, pressure = 0.5) {
     state.isPenDrawing = true;
     strokePoints = [{ x, y, pressure }];
+    _dirtyMinX = x; _dirtyMinY = y; _dirtyMaxX = x; _dirtyMaxY = y;
     _scatterDots(x, y, pressure);
 }
 
@@ -29,6 +50,11 @@ export function drawStippleLine(x, y, pressure = 0.5) {
     if (dist < 0.5) return;
 
     strokePoints.push({ x, y, pressure: smoothedPressure });
+
+    if (x < _dirtyMinX) _dirtyMinX = x;
+    if (y < _dirtyMinY) _dirtyMinY = y;
+    if (x > _dirtyMaxX) _dirtyMaxX = x;
+    if (y > _dirtyMaxY) _dirtyMaxY = y;
 
     // Scatter dots along the segment
     const steps = Math.max(1, Math.ceil(dist / 2));
