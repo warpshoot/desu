@@ -244,6 +244,20 @@
         </div>
     </div>
 
+    <!-- 塗りつぶしオプションパネル (fill/sketch ツール選択時に表示) -->
+    <div id="fill-options-menu" class="fill-options-menu hidden">
+        <div class="fill-option-row">
+            <label class="fill-option-label">許容範囲</label>
+            <input type="range" id="fillTolerance" min="0" max="255" value="32" class="fill-option-slider">
+            <span id="fillToleranceVal" class="fill-option-val">32</span>
+        </div>
+        <div class="fill-option-row">
+            <label class="fill-option-label">隙間閉じ</label>
+            <input type="range" id="fillGapClose" min="0" max="10" value="0" class="fill-option-slider">
+            <span id="fillGapCloseVal" class="fill-option-val">0</span>
+        </div>
+    </div>
+
     <!-- トーン選択メニュー (ツールバーの上に表示) -->
     <div id="tone-menu" class="tone-menu hidden">
         <div class="tone-menu-header">

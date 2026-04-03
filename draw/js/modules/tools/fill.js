@@ -21,7 +21,101 @@ function getActiveContextAndCanvas() {
 // 塗りつぶし（スキャンライン法）
 // ============================================
 
-export function floodFill(startX, startY, fillColor) {
+/**
+ * 境界ピクセルをボックス膨張させて隙間を閉じるマスクを生成する。
+ * セパラブル処理（横→縦）で O(w×h) の高速実装。
+ * @returns {Uint8Array} 1=境界(通行不可), 0=通行可能
+ */
+function dilateBox(boundary, w, h, radius) {
+    const temp = new Uint8Array(w * h);
+
+    // 横方向パス（プレフィックスサム）
+    for (let y = 0; y < h; y++) {
+        const prefix = new Int32Array(w + 1);
+        for (let x = 0; x < w; x++) {
+            prefix[x + 1] = prefix[x] + boundary[y * w + x];
+        }
+        for (let x = 0; x < w; x++) {
+            const l = Math.max(0, x - radius);
+            const r = Math.min(w, x + radius + 1);
+            if (prefix[r] - prefix[l] > 0) temp[y * w + x] = 1;
+        }
+    }
+
+    // 縦方向パス（プレフィックスサム）
+    const result = new Uint8Array(w * h);
+    for (let x = 0; x < w; x++) {
+        const prefix = new Int32Array(h + 1);
+        for (let y = 0; y < h; y++) {
+            prefix[y + 1] = prefix[y] + temp[y * w + x];
+        }
+        for (let y = 0; y < h; y++) {
+            const t = Math.max(0, y - radius);
+            const b = Math.min(h, y + radius + 1);
+            if (prefix[b] - prefix[t] > 0) result[y * w + x] = 1;
+        }
+    }
+
+    return result;
+}
+
+/**
+ * スキャンライン塗りつぶし共通処理。
+ * closedBoundary が null のときは matchFn のみで判定（高速パス）。
+ * closedBoundary があるときは visited 配列を使って隙間越え塗りを行い、
+ * 実際に色を変えるのは matchFn が真の元ピクセルのみ。
+ */
+function runScanline(w, h, startX, startY, matchFn, setFn, closedBoundary) {
+    const useGap = closedBoundary !== null;
+    const visited = useGap ? new Uint8Array(w * h) : null;
+
+    const passable = useGap
+        ? (x, y) => !closedBoundary[y * w + x] && !visited[y * w + x]
+        : (x, y) => matchFn((y * w + x) * 4);
+
+    // 開始点チェック
+    if (!passable(startX, startY)) return;
+
+    const stack = [[startX, startY]];
+
+    while (stack.length > 0) {
+        let [x, y] = stack.pop();
+        if (!passable(x, y)) continue;
+
+        // 左端を探す
+        while (x > 0 && passable(x - 1, y)) x--;
+
+        let spanAbove = false, spanBelow = false;
+
+        while (x < w && passable(x, y)) {
+            if (visited) visited[y * w + x] = 1;
+
+            // 実ピクセルが対象に一致する場合のみ塗る
+            const i = (y * w + x) * 4;
+            if (!useGap || matchFn(i)) setFn(i);
+
+            if (y > 0) {
+                if (passable(x, y - 1)) {
+                    if (!spanAbove) { stack.push([x, y - 1]); spanAbove = true; }
+                } else {
+                    spanAbove = false;
+                }
+            }
+
+            if (y < h - 1) {
+                if (passable(x, y + 1)) {
+                    if (!spanBelow) { stack.push([x, y + 1]); spanBelow = true; }
+                } else {
+                    spanBelow = false;
+                }
+            }
+
+            x++;
+        }
+    }
+}
+
+export function floodFill(startX, startY, fillColor, colorTolerance = 0, gapClose = 0) {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
@@ -35,68 +129,44 @@ export function floodFill(startX, startY, fillColor) {
     const idx = (startY * w + startX) * 4;
     const targetR = data[idx], targetG = data[idx + 1], targetB = data[idx + 2], targetA = data[idx + 3];
 
-    if (targetR === fillColor[0] && targetG === fillColor[1] && targetB === fillColor[2] && targetA === fillColor[3]) return;
+    // 許容範囲なしで既に同色なら何もしない
+    if (colorTolerance === 0 &&
+        targetR === fillColor[0] && targetG === fillColor[1] &&
+        targetB === fillColor[2] && targetA === fillColor[3]) return;
 
-    const matchTarget = (i) => data[i] === targetR && data[i + 1] === targetG && data[i + 2] === targetB && data[i + 3] === targetA;
+    // 色マッチ関数（許容範囲対応）
+    const tol2 = colorTolerance * colorTolerance * 4; // 4チャンネル分スケール
+    const matchTarget = colorTolerance === 0
+        ? (i) => data[i] === targetR && data[i + 1] === targetG && data[i + 2] === targetB && data[i + 3] === targetA
+        : (i) => {
+            const dr = data[i] - targetR, dg = data[i + 1] - targetG;
+            const db = data[i + 2] - targetB, da = data[i + 3] - targetA;
+            return (dr * dr + dg * dg + db * db + da * da) <= tol2;
+        };
+
     const setPixel = (i) => {
-        data[i] = fillColor[0];
-        data[i + 1] = fillColor[1];
-        data[i + 2] = fillColor[2];
-        data[i + 3] = fillColor[3];
+        data[i] = fillColor[0]; data[i + 1] = fillColor[1];
+        data[i + 2] = fillColor[2]; data[i + 3] = fillColor[3];
     };
 
-    const stack = [[startX, startY]];
-
-    while (stack.length > 0) {
-        let [x, y] = stack.pop();
-        let i = (y * w + x) * 4;
-
-        while (x >= 0 && matchTarget(i)) {
-            x--;
-            i -= 4;
+    // 隙間閉じ用のクローズド境界を生成
+    let closedBoundary = null;
+    if (gapClose > 0) {
+        const radius = Math.ceil(gapClose / 2);
+        const boundary = new Uint8Array(w * h);
+        for (let j = 0; j < w * h; j++) {
+            if (!matchTarget(j * 4)) boundary[j] = 1;
         }
-        x++;
-        i += 4;
-
-        let spanAbove = false, spanBelow = false;
-
-        while (x < w && matchTarget(i)) {
-            setPixel(i);
-
-            if (y > 0) {
-                const above = i - w * 4;
-                if (matchTarget(above)) {
-                    if (!spanAbove) {
-                        stack.push([x, y - 1]);
-                        spanAbove = true;
-                    }
-                } else {
-                    spanAbove = false;
-                }
-            }
-
-            if (y < h - 1) {
-                const below = i + w * 4;
-                if (matchTarget(below)) {
-                    if (!spanBelow) {
-                        stack.push([x, y + 1]);
-                        spanBelow = true;
-                    }
-                } else {
-                    spanBelow = false;
-                }
-            }
-
-            x++;
-            i += 4;
-        }
+        closedBoundary = dilateBox(boundary, w, h, radius);
     }
+
+    runScanline(w, h, startX, startY, matchTarget, setPixel, closedBoundary);
 
     ctx.putImageData(imgData, 0, 0);
 }
 
 // 透明で塗りつぶし
-export function floodFillTransparent(startX, startY) {
+export function floodFillTransparent(startX, startY, gapClose = 0) {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
@@ -113,56 +183,19 @@ export function floodFillTransparent(startX, startY) {
     if (targetA === 0) return;
 
     const matchTarget = (i) => data[i] === targetR && data[i + 1] === targetG && data[i + 2] === targetB && data[i + 3] === targetA;
-    const setPixel = (i) => {
-        data[i + 3] = 0;
-    };
+    const setPixel = (i) => { data[i + 3] = 0; };
 
-    const stack = [[startX, startY]];
-
-    while (stack.length > 0) {
-        let [x, y] = stack.pop();
-        let i = (y * w + x) * 4;
-
-        while (x >= 0 && matchTarget(i)) {
-            x--;
-            i -= 4;
+    let closedBoundary = null;
+    if (gapClose > 0) {
+        const radius = Math.ceil(gapClose / 2);
+        const boundary = new Uint8Array(w * h);
+        for (let j = 0; j < w * h; j++) {
+            if (!matchTarget(j * 4)) boundary[j] = 1;
         }
-        x++;
-        i += 4;
-
-        let spanAbove = false, spanBelow = false;
-
-        while (x < w && matchTarget(i)) {
-            setPixel(i);
-
-            if (y > 0) {
-                const above = i - w * 4;
-                if (matchTarget(above)) {
-                    if (!spanAbove) {
-                        stack.push([x, y - 1]);
-                        spanAbove = true;
-                    }
-                } else {
-                    spanAbove = false;
-                }
-            }
-
-            if (y < h - 1) {
-                const below = i + w * 4;
-                if (matchTarget(below)) {
-                    if (!spanBelow) {
-                        stack.push([x, y + 1]);
-                        spanBelow = true;
-                    }
-                } else {
-                    spanBelow = false;
-                }
-            }
-
-            x++;
-            i += 4;
-        }
+        closedBoundary = dilateBox(boundary, w, h, radius);
     }
+
+    runScanline(w, h, startX, startY, matchTarget, setPixel, closedBoundary);
 
     ctx.putImageData(imgData, 0, 0);
 }
@@ -250,7 +283,7 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
 }
 
 // Sketch flood fill (semi-transparent grey with multiply blend)
-export function floodFillSketch(startX, startY) {
+export function floodFillSketch(startX, startY, gapClose = 0) {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) {
         return;
@@ -270,46 +303,20 @@ export function floodFillSketch(startX, startY) {
 
     const matchTarget = (i) => data[i] === targetR && data[i + 1] === targetG && data[i + 2] === targetB && data[i + 3] === targetA;
 
-    const mask = new Uint8Array(w * h);
-    const stack = [[startX, startY]];
-    let iterations = 0;
-    while (stack.length > 0 && iterations < w * h) {
-        iterations++;
-        let [x, y] = stack.pop();
-        let i = (y * w + x) * 4;
-
-        while (x >= 0 && matchTarget(i) && mask[y * w + x] === 0) {
-            x--;
-            i -= 4;
+    // 隙間閉じ用クローズド境界
+    let closedBoundary = null;
+    if (gapClose > 0) {
+        const radius = Math.ceil(gapClose / 2);
+        const boundary = new Uint8Array(w * h);
+        for (let j = 0; j < w * h; j++) {
+            if (!matchTarget(j * 4)) boundary[j] = 1;
         }
-        x++;
-        i += 4;
-
-        let spanAbove = false, spanBelow = false;
-        while (x < w && matchTarget(i) && mask[y * w + x] === 0) {
-            mask[y * w + x] = 255;
-            if (y > 0) {
-                const aboveIdx = ((y - 1) * w + x) * 4;
-                if (!spanAbove && matchTarget(aboveIdx) && mask[(y - 1) * w + x] === 0) {
-                    stack.push([x, y - 1]);
-                    spanAbove = true;
-                } else if (spanAbove && (!matchTarget(aboveIdx) || mask[(y - 1) * w + x] !== 0)) {
-                    spanAbove = false;
-                }
-            }
-            if (y < h - 1) {
-                const belowIdx = ((y + 1) * w + x) * 4;
-                if (!spanBelow && matchTarget(belowIdx) && mask[(y + 1) * w + x] === 0) {
-                    stack.push([x, y + 1]);
-                    spanBelow = true;
-                } else if (spanBelow && (!matchTarget(belowIdx) || mask[(y + 1) * w + x] !== 0)) {
-                    spanBelow = false;
-                }
-            }
-            x++;
-            i += 4;
-        }
+        closedBoundary = dilateBox(boundary, w, h, radius);
     }
+
+    const mask = new Uint8Array(w * h);
+    const setMask = (i) => { mask[i / 4] = 255; };
+    runScanline(w, h, startX, startY, matchTarget, setMask, closedBoundary);
 
 
     // Create a temporary canvas for the final result

@@ -940,6 +940,57 @@ body.help-mode #tool-panel {
 }
 
 /* ============================================
+   Fill Options Panel
+   ============================================ */
+.fill-options-menu {
+    position: fixed;
+    left: 70px;
+    bottom: 80px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 200px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    z-index: 290;
+}
+
+.fill-options-menu.hidden {
+    display: none;
+}
+
+.fill-option-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fill-option-label {
+    font-size: 11px;
+    color: #555;
+    width: 52px;
+    flex-shrink: 0;
+}
+
+.fill-option-slider {
+    flex: 1;
+    height: 4px;
+    accent-color: #333;
+    cursor: pointer;
+}
+
+.fill-option-val {
+    font-size: 11px;
+    color: #333;
+    width: 24px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* ============================================
    Tone Menu
    ============================================ */
 .tone-menu {
