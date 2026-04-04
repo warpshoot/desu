@@ -48,7 +48,7 @@ export function _makeMatchFn(data, targetA, tolerance) {
  * セパラブル処理（横→縦）で O(w×h) の高速実装。
  * @returns {Uint8Array} 1=境界(通行不可), 0=通行可能
  */
-function dilateBox(boundary, w, h, radius) {
+export function dilateBox(boundary, w, h, radius) {
     const temp = new Uint8Array(w * h);
     // 横方向パス
     for (let y = 0; y < h; y++) {
@@ -108,7 +108,7 @@ export function floodFill(startX, startY, fillColor, tolerance = 'normal', gapCl
     let closedBoundary = null;
     let gapRadius = 0;
     if (gapClose > 0) {
-        gapRadius = Math.ceil(gapClose / 2);
+        gapRadius = Math.ceil(gapClose / 2 * dpr);
         const boundary = new Uint8Array(w * h);
         for (let j = 0; j < w * h; j++) {
             if (!matchTarget(j * 4)) boundary[j] = 1;
@@ -195,7 +195,7 @@ export function floodFillTransparent(startX, startY, tolerance = 'normal', gapCl
     let closedBoundary = null;
     let gapRadius = 0;
     if (gapClose > 0) {
-        gapRadius = Math.ceil(gapClose / 2);
+        gapRadius = Math.ceil(gapClose / 2 * dpr);
         const boundary = new Uint8Array(w * h);
         for (let j = 0; j < w * h; j++) {
             if (!matchTarget(j * 4)) boundary[j] = 1;

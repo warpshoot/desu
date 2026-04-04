@@ -35,7 +35,8 @@ import {
     fillPolygonNoAA,
     fillPolygonWithAA,
     fillPolygonTransparent,
-    fillPolygonTransparentWithAA
+    fillPolygonTransparentWithAA,
+    dilateBox
 } from './tools/fill.js';
 import { saveState, commitRedoClear, undo, redo, restoreLayer, resetHistory, saveLayerChangeState, shrinkLastUndoEntry } from './history.js';
 import {
@@ -2181,6 +2182,80 @@ function setupBrushSettingsPanel() {
 }
 
 // =============================================
+// Gap Close Preview (隙間閉じプレビュー)
+// =============================================
+
+let _gapPreviewTimer = null;
+
+function _showGapClosePreview(gapClose) {
+    if (gapClose <= 0) {
+        _hideGapClosePreview();
+        return;
+    }
+    const layer = getActiveLayer();
+    if (!layer) return;
+
+    const { canvas, ctx } = layer;
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.width;
+    const h = canvas.height;
+
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+
+    // 境界マスク: 不透明ピクセル = インク線
+    const boundary = new Uint8Array(w * h);
+    for (let j = 0; j < w * h; j++) {
+        if (data[j * 4 + 3] >= 128) boundary[j] = 1;
+    }
+
+    const gapRadius = Math.ceil(gapClose / 2 * dpr);
+    if (gapRadius <= 0) return;
+
+    const dilated = dilateBox(boundary, w, h, gapRadius);
+
+    // ハロー: 膨張後 - 元境界 = 隙間閉じで追加される仮想バリア帯
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = w;
+    tempCanvas.height = h;
+    const tctx = tempCanvas.getContext('2d');
+    const haloData = tctx.createImageData(w, h);
+    const hd = haloData.data;
+    for (let j = 0; j < w * h; j++) {
+        if (dilated[j] && !boundary[j]) {
+            hd[j * 4]     = 0;
+            hd[j * 4 + 1] = 120;
+            hd[j * 4 + 2] = 255;
+            hd[j * 4 + 3] = 90;
+        }
+    }
+    tctx.putImageData(haloData, 0, 0);
+
+    // lasso canvas (スクリーン座標系) にペーパートランスフォームを適用して描画
+    const pw = w / dpr;
+    const ph = h / dpr;
+    lassoCtx.clearRect(0, 0, lassoCanvas.width / dpr, lassoCanvas.height / dpr);
+    lassoCtx.drawImage(tempCanvas, state.translateX, state.translateY, pw * state.scale, ph * state.scale);
+    lassoCanvas.style.display = 'block';
+}
+
+function _hideGapClosePreview() {
+    clearTimeout(_gapPreviewTimer);
+    _gapPreviewTimer = null;
+    const dpr = window.devicePixelRatio || 1;
+    lassoCtx.clearRect(0, 0, lassoCanvas.width / dpr, lassoCanvas.height / dpr);
+}
+
+function _triggerGapClosePreview(gapClose) {
+    clearTimeout(_gapPreviewTimer);
+    if (gapClose <= 0) {
+        _hideGapClosePreview();
+        return;
+    }
+    _gapPreviewTimer = setTimeout(() => _showGapClosePreview(gapClose), 80);
+}
+
+// =============================================
 // Fill Settings Panel (投げ縄設定パネル)
 // =============================================
 
@@ -2302,7 +2377,11 @@ function setupFillSettingsPanel() {
     opSlider.addEventListener('input', sync);
     bucketCheck.addEventListener('input', sync);
     toleranceSel.addEventListener('input', sync);
-    gapCloseSlider.addEventListener('input', sync);
+    gapCloseSlider.addEventListener('input', () => {
+        sync();
+        _triggerGapClosePreview(parseInt(gapCloseSlider.value));
+    });
+    gapCloseSlider.addEventListener('change', () => _hideGapClosePreview());
     aaCheck.addEventListener('input', sync);
     stabCheck.addEventListener('input', sync);
     stabDistSlider.addEventListener('input', sync);
@@ -2310,7 +2389,7 @@ function setupFillSettingsPanel() {
     panel.addEventListener('pointerdown', (e) => e.stopPropagation());
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
 
-    closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+    closeBtn.addEventListener('click', () => { panel.classList.add('hidden'); _hideGapClosePreview(); });
     
     // (Export/Import buttons removed)
 }
@@ -2468,13 +2547,19 @@ function setupEraserSettingsPanel() {
         renderBrushPalette();
     };
 
-    [subToolSel, bucketCheck, toleranceSel, gapCloseSlider, aaCheck, stabCheck, stabDistSlider, stabStringCheck, stabGuideCheck, psizeCheck, curveSlider]
+    [subToolSel, bucketCheck, toleranceSel, aaCheck, stabCheck, stabDistSlider, stabStringCheck, stabGuideCheck, psizeCheck, curveSlider]
         .forEach(el => el.addEventListener('input', sync));
+
+    gapCloseSlider.addEventListener('input', () => {
+        sync();
+        _triggerGapClosePreview(parseInt(gapCloseSlider.value));
+    });
+    gapCloseSlider.addEventListener('change', () => _hideGapClosePreview());
 
     panel.addEventListener('pointerdown', (e) => e.stopPropagation());
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
 
-    closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+    closeBtn.addEventListener('click', () => { panel.classList.add('hidden'); _hideGapClosePreview(); });
 
     // (Export/Import buttons removed)
 }
