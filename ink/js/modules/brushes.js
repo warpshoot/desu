@@ -28,7 +28,7 @@ export function makeDefaultBrushes() {
             stippleDensity: 5,
             pressureCurve: 1.2,
             stabilizerEnabled: true,
-            stabilizerDistance: 10,
+            stabilizerDistance: 5,
             stabStringVisible: true,
             stabShowGuide: true,
         },

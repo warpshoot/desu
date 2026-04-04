@@ -15,10 +15,22 @@ import { saveLocalState } from './storage.js';
 // Entry format: { bitmaps: Map<layerId, ImageBitmap>, layerMeta: [{id, opacity, visible}] }
 // layerMeta はレイヤー構成変更の undo/redo をサポート
 
-// 各レイヤーの「前回保存時のピクセルハッシュ」を保持
-// (実際にはcanvasのサイズ＋最終変更タイムスタンプで判定)
 const _layerFingerprints = new Map();
 let _fingerprintCounter = 0;
+
+// 直近でキューに投げられた（保存予定の）指紋
+const _lastDispatchedFingerprints = new Map();
+
+// 履歴操作の直列実行キュー (Promise Queue)
+let _historyQueue = Promise.resolve();
+
+function _enqueue(task) {
+    const p = _historyQueue.then(() => task()).catch(err => {
+        console.error('[History Queue Error]', err);
+    });
+    _historyQueue = p;
+    return p;
+}
 
 /**
  * レイヤーに変更があったことをマーク (描画操作の完了時に呼ぶ)
@@ -27,42 +39,61 @@ export function markLayerDirty(layerId) {
     _layerFingerprints.set(layerId, ++_fingerprintCounter);
 }
 
-/**
- * Save current state of all layers to undo stack
- * 差分保存: 前回のスナップショットと比較し、変更レイヤーのみ新規Bitmap作成
- *
- * @param {object} [options]
- * @param {boolean} [options.keepRedo=false] — true の場合 redo スタックをクリアしない。
- *   handlePointerDown のように「ジェスチャーで取り消される可能性がある操作の開始時」に使う。
- *   描画が完了確定したら呼び出し元で commitRedoClear() を呼ぶこと。
- */
 export async function saveState({ keepRedo = false } = {}) {
-    if (!keepRedo) {
-        // Redo スタックを同期的にクリア (await 前)
-        _clearRedoStack();
+    // 1. 変更があるレイヤーを同期的に特定し、即座にキャプチャを開始 (ペンの進行を防ぐ)
+    const snapshotPromises = new Map();
+    const snapshotFingerprints = new Map(_layerFingerprints);
+
+    for (const layer of layers) {
+        const currentFp = snapshotFingerprints.get(layer.id) || 0;
+        const lastSavedFp = _lastDispatchedFingerprints.get(layer.id) || 0;
+
+        if (currentFp !== lastSavedFp) {
+            snapshotPromises.set(layer.id, createImageBitmap(layer.canvas));
+            // 予約した指紋を最新として記録
+            _lastDispatchedFingerprints.set(layer.id, currentFp);
+        }
     }
 
-    const snapshot = {
-        bitmaps: new Map(),
-        layerMeta: layers.map(l => ({ id: l.id, opacity: l.opacity, visible: l.visible }))
-    };
+    // 2. キューに登録して順番待ち
+    return _enqueue(async () => {
+        if (!keepRedo) {
+            _clearRedoStack();
+        }
 
-    // 全レイヤーを並列でスナップショット
-    const bitmaps = await Promise.all(
-        layers.map(layer => createImageBitmap(layer.canvas))
-    );
-    for (let i = 0; i < layers.length; i++) {
-        snapshot.bitmaps.set(layers[i].id, bitmaps[i]);
-    }
+        const prevEntry = state.undoStack.length > 0 ? state.undoStack[state.undoStack.length - 1] : null;
 
-    state.undoStack.push(snapshot);
-    saveLocalState();
+        const snapshot = {
+            bitmaps: new Map(),
+            layerMeta: layers.map(l => ({ id: l.id, opacity: l.opacity, visible: l.visible })),
+            fingerprints: snapshotFingerprints
+        };
 
-    // Limit history size
-    if (state.undoStack.length > state.MAX_HISTORY) {
-        const old = state.undoStack.shift();
-        _closeSnapshotBitmaps(old, state.undoStack[0]);
-    }
+        // 並列でキャプチャ完了を待つ ＆ 未変更レイヤーは参照を共有
+        const captureTasks = layers.map(async (layer) => {
+            if (snapshotPromises.has(layer.id)) {
+                const bmp = await snapshotPromises.get(layer.id);
+                snapshot.bitmaps.set(layer.id, bmp);
+            } else if (prevEntry && prevEntry.bitmaps.has(layer.id)) {
+                // 変更がないので前回の Bitmap 参照をそのまま使う (差分保存)
+                snapshot.bitmaps.set(layer.id, prevEntry.bitmaps.get(layer.id));
+            } else {
+                // 初回保存など、どちらもない場合はキャプチャ
+                const bmp = await createImageBitmap(layer.canvas);
+                snapshot.bitmaps.set(layer.id, bmp);
+            }
+        });
+
+        await Promise.all(captureTasks);
+
+        state.undoStack.push(snapshot);
+        saveLocalState();
+
+        if (state.undoStack.length > state.MAX_HISTORY) {
+            const old = state.undoStack.shift();
+            _closeSnapshotBitmaps(old, state.undoStack[0]);
+        }
+    });
 }
 
 /**
@@ -76,28 +107,37 @@ export async function saveState({ keepRedo = false } = {}) {
  * @param {{ x: number, y: number, w: number, h: number }} dirtyRect  CSS px 単位
  */
 export async function shrinkLastUndoEntry(layerId, dirtyRect) {
-    if (state.undoStack.length === 0) return;
-    const entry = state.undoStack[state.undoStack.length - 1];
-    const fullBitmap = entry.bitmaps && entry.bitmaps.get(layerId);
-    if (!fullBitmap) return;
+    return _enqueue(async () => {
+        if (state.undoStack.length === 0) return;
+        const entry = state.undoStack[state.undoStack.length - 1];
+        const fullBitmap = entry.bitmaps && entry.bitmaps.get(layerId);
+        if (!fullBitmap) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const sx = Math.max(0, Math.floor(dirtyRect.x * dpr));
-    const sy = Math.max(0, Math.floor(dirtyRect.y * dpr));
-    const sw = Math.min(fullBitmap.width  - sx, Math.ceil(dirtyRect.w * dpr));
-    const sh = Math.min(fullBitmap.height - sy, Math.ceil(dirtyRect.h * dpr));
+        // 【安全性】もしこの Bitmap が一つ前のエントリと共有されている場合、
+        // オリジナルを close してはいけない (共有先も消えるため)。
+        const prevEntry = state.undoStack.length > 1 ? state.undoStack[state.undoStack.length - 2] : null;
+        const isShared = prevEntry && prevEntry.bitmaps.get(layerId) === fullBitmap;
 
-    if (sw <= 0 || sh <= 0) return;
+        const dpr = window.devicePixelRatio || 1;
+        const sx = Math.max(0, Math.floor(dirtyRect.x * dpr));
+        const sy = Math.max(0, Math.floor(dirtyRect.y * dpr));
+        const sw = Math.min(fullBitmap.width  - sx, Math.ceil(dirtyRect.w * dpr));
+        const sh = Math.min(fullBitmap.height - sy, Math.ceil(dirtyRect.h * dpr));
 
-    // 75% 以上を覆うなら縮小効果が薄いのでフルのまま維持
-    if (sw * sh > fullBitmap.width * fullBitmap.height * 0.75) return;
+        if (sw <= 0 || sh <= 0) return;
+        if (sw * sh > fullBitmap.width * fullBitmap.height * 0.75) return;
 
-    const patchBitmap = await createImageBitmap(fullBitmap, sx, sy, sw, sh);
-    fullBitmap.close();
-    entry.bitmaps.delete(layerId);
-
-    if (!entry.patches) entry.patches = new Map();
-    entry.patches.set(layerId, { bitmap: patchBitmap, x: sx / dpr, y: sy / dpr });
+        const patchBitmap = await createImageBitmap(fullBitmap, sx, sy, sw, sh);
+        
+        // 共有されていない場合のみ元のフルサイズを close
+        if (!isShared) {
+            fullBitmap.close();
+        }
+        
+        entry.bitmaps.delete(layerId);
+        if (!entry.patches) entry.patches = new Map();
+        entry.patches.set(layerId, { bitmap: patchBitmap, x: sx / dpr, y: sy / dpr });
+    });
 }
 
 /**
@@ -130,7 +170,8 @@ export async function saveInitialState() {
 async function createSnapshot() {
     const snapshot = {
         bitmaps: new Map(),
-        layerMeta: layers.map(l => ({ id: l.id, opacity: l.opacity, visible: l.visible }))
+        layerMeta: layers.map(l => ({ id: l.id, opacity: l.opacity, visible: l.visible })),
+        fingerprints: new Map(_layerFingerprints)
     };
     const bitmaps = await Promise.all(
         layers.map(layer => createImageBitmap(layer.canvas))
@@ -145,30 +186,46 @@ async function createSnapshot() {
  * Undo last action
  */
 export async function undo() {
-    if (state.undoStack.length === 0) {
-        return;
-    }
+    return _enqueue(async () => {
+        if (state.undoStack.length === 0) return;
 
-    const currentFn = await createSnapshot();
-    state.redoStack.push(currentFn);
+        const currentFn = await createSnapshot();
+        state.redoStack.push(currentFn);
 
-    const prev = state.undoStack.pop();
-    restoreSnapshot(prev);
-    saveLocalState();
+        const prev = state.undoStack.pop();
+        restoreSnapshot(prev);
+        
+        if (prev.fingerprints) {
+            for (const [id, fp] of prev.fingerprints) {
+                _layerFingerprints.set(id, fp);
+                _lastDispatchedFingerprints.set(id, fp); // キュー同期用
+            }
+        }
+        saveLocalState();
+    });
 }
 
 /**
  * Redo last undone action
  */
 export async function redo() {
-    if (state.redoStack.length === 0) return;
+    return _enqueue(async () => {
+        if (state.redoStack.length === 0) return;
 
-    const currentFn = await createSnapshot();
-    state.undoStack.push(currentFn);
+        const currentFn = await createSnapshot();
+        state.undoStack.push(currentFn);
 
-    const next = state.redoStack.pop();
-    restoreSnapshot(next);
-    saveLocalState();
+        const next = state.redoStack.pop();
+        restoreSnapshot(next);
+
+        if (next.fingerprints) {
+            for (const [id, fp] of next.fingerprints) {
+                _layerFingerprints.set(id, fp);
+                _lastDispatchedFingerprints.set(id, fp);
+            }
+        }
+        saveLocalState();
+    });
 }
 
 /**

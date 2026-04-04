@@ -134,8 +134,15 @@ export async function initCanvas() {
 
     eventCanvas.width  = vw;
     eventCanvas.height = vh;
+    eventCanvas.style.width  = vw + 'px';
+    eventCanvas.style.height = vh + 'px';
 
+    // すべての初期化が終わったら、現在の座標(0,0)を反映させる
     applyTransform();
+
+    if (isFirstInit) {
+        centerCanvas();
+    }
 
     // Select overlay: screen-space, resize on every call
     const selOverlay = document.getElementById('select-overlay');
@@ -242,10 +249,34 @@ export function applyTransform() {
 
     const resetBtn = document.getElementById('resetZoomBtn');
     if (resetBtn) {
-        if (Math.abs(state.scale - 1) > 0.01 || Math.abs(state.translateX) > 1 || Math.abs(state.translateY) > 1) {
+        // Calculate centered position for "Reset" check
+        const pw = state.paperW || 2000;
+        const ph = state.paperH || 2000;
+        const targetX = Math.round((window.innerWidth - pw) / 2);
+        const targetY = Math.round((window.innerHeight - ph) / 2);
+
+        const isCentered = Math.abs(state.scale - 1) < 0.01 && 
+                           Math.abs(state.translateX - targetX) < 1 && 
+                           Math.abs(state.translateY - targetY) < 1;
+
+        if (!isCentered) {
             resetBtn.classList.add('visible');
         } else {
             resetBtn.classList.remove('visible');
         }
     }
+}
+
+/**
+ * Center the canvas in the viewport
+ */
+export function centerCanvas() {
+    const pw = state.paperW || 2000;
+    const ph = state.paperH || 2000;
+    
+    state.scale = 1;
+    state.translateX = Math.round((window.innerWidth - pw * state.scale) / 2);
+    state.translateY = Math.round((window.innerHeight - ph * state.scale) / 2);
+    
+    applyTransform();
 }

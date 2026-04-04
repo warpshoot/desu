@@ -1808,11 +1808,13 @@ a.credit-val {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    overflow: hidden;
 }
 
 .brush-dot-preview {
     background-color: #000;
     border-radius: 50% !important;
+    flex-shrink: 0;
     transition: width 0.1s, height 0.1s;
 }
 

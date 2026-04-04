@@ -43,7 +43,7 @@ import {
     showSelectionUI, hideSelectionUI, confirmSelection, redoSelection,
     saveSelectedRegion, saveAllCanvas, copyToClipboard, saveRegion
 } from './save.js';
-import { applyTransform, updateBackgroundColor, hexToRgba, resizePaper } from './canvas.js';
+import { applyTransform, updateBackgroundColor, hexToRgba, resizePaper, centerCanvas } from './canvas.js';
 import { getCanvasPoint } from './utils.js';
 import {
     TONE_PRESETS,
@@ -1297,8 +1297,7 @@ async function handlePointerDown(e) {
                 }
             }
         } else if (state.mode === 'pen') {
-            await capturePreDraw();
-            await saveState({ keepRedo: true });
+            state._pendingSave = saveState({ keepRedo: true });
             if (state.subTool === 'stipple') {
                 startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             } else {
@@ -1312,8 +1311,7 @@ async function handlePointerDown(e) {
             } else if (state.subTool === 'lasso') {
                 startLasso(e.clientX, e.clientY);
             } else {
-                await capturePreDraw();
-                await saveState({ keepRedo: true });
+                state._pendingSave = saveState({ keepRedo: true });
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
         }
@@ -1560,7 +1558,7 @@ async function handlePointerUp(e) {
                     }
                     // Tap outside selection (no drag) → clear
                     const pointer2 = state.activePointers.size === 0 ? pointer : null;
-                    const wasClick = pointer && pointer.totalMove < 5;
+                    const wasClick = pointer && pointer.totalMove < 15;
                     if (wasClick && !hasSelection()) {
                         clearSelection();
                     }
@@ -1568,9 +1566,9 @@ async function handlePointerUp(e) {
                 }
             } else if (state.isLassoing) {
                 const points = finishLasso();
-                const wasClick = pointer && pointer.totalMove < 5;
+                const wasClick = pointer && pointer.totalMove < 15;
 
-                if (wasClick && duration < 300 && !state.wasPanning && !state.wasPinching) {
+                if (wasClick && duration < 500 && !state.wasPanning && !state.wasPinching) {
                     // Tap detected → bucket fill (バケツ)
                     const fillSlot = state.mode === 'fill' ? state.fillSlots[state.activeFillSlotIndex] : null;
                     const eraserSlot = state.mode === 'eraser' ? state.eraserSlots[state.activeEraserSlotIndex] : null;
@@ -1583,52 +1581,80 @@ async function handlePointerUp(e) {
                         const fy = Math.floor(canvasPoint.y);
 
                         await saveState();
-                        if (state.mode === 'fill') {
-                            const tolerance = fillSlot.bucketTolerance || 'normal';
-                            const gapClose = fillSlot.bucketGapClose ?? 0;
-                            if (state.subTool === 'tone') {
-                                floodFillTone(fx, fy, tolerance);
-                            } else {
-                                const slotOpacity = fillSlot.opacity ?? 1.0;
-                                floodFill(fx, fy, [0, 0, 0, Math.round(slotOpacity * 255)], tolerance, gapClose);
+                        
+                        const ctx = getActiveLayerCtx();
+                        if (ctx) {
+                            const { pushSelectionClip, popSelectionClip } = await import('./tools/selection.js');
+                            const clipped = pushSelectionClip(ctx);
+
+                            if (state.mode === 'fill') {
+                                const tolerance = fillSlot.bucketTolerance || 'normal';
+                                const gapClose = fillSlot.bucketGapClose ?? 0;
+                                if (state.subTool === 'tone') {
+                                    floodFillTone(fx, fy, tolerance);
+                                } else {
+                                    const slotOpacity = fillSlot.opacity ?? 1.0;
+                                    floodFill(fx, fy, [0, 0, 0, Math.round(slotOpacity * 255)], tolerance, gapClose);
+                                }
+                            } else if (state.mode === 'eraser' && state.subTool === 'lasso') {
+                                const tolerance = eraserSlot.bucketTolerance || 'normal';
+                                const gapClose = eraserSlot.bucketGapClose ?? 0;
+                                floodFillTransparent(fx, fy, tolerance, gapClose);
                             }
-                        } else if (state.mode === 'eraser' && state.subTool === 'lasso') {
-                            const tolerance = eraserSlot.bucketTolerance || 'normal';
-                            const gapClose = eraserSlot.bucketGapClose ?? 0;
-                            floodFillTransparent(fx, fy, tolerance, gapClose);
+
+                            if (clipped) popSelectionClip(ctx);
                         }
-                        // Apply selection clip post-process (flood fill areas)
-                        await applySelectionClip();
                         updateLayerThumbnail(getActiveLayer());
                     }
                 } else if (points && points.length >= 3 && !state.wasPanning && !state.wasPinching) {
                     // Drag detected → polygon fill (投げ縄)
-                    await saveState();
-                    if (state.mode === 'eraser') {
+                    if (state.mode === 'eraser' && state.subTool === 'lasso') {
                         const eraserSlot = state.eraserSlots[state.activeEraserSlotIndex];
+                        
+                        const ctx = getActiveLayerCtx();
+                        const { pushSelectionClip, popSelectionClip } = await import('./tools/selection.js');
+                        const clipped = pushSelectionClip(ctx);
+
                         if (eraserSlot.antiAlias) {
                             fillPolygonTransparentWithAA(points);
                         } else {
                             fillPolygonTransparent(points);
                         }
+
+                        if (clipped) popSelectionClip(ctx);
                     } else if (state.subTool === 'tone') {
+                        const ctx = getActiveLayerCtx();
+                        const { pushSelectionClip, popSelectionClip } = await import('./tools/selection.js');
+                        const clipped = pushSelectionClip(ctx);
                         fillTone(points);
+                        if (clipped) popSelectionClip(ctx);
                     } else {
                         const fillSlot = state.fillSlots[state.activeFillSlotIndex];
                         const slotOpacity = fillSlot.opacity ?? 1.0;
+                        
+                        const ctx = getActiveLayerCtx();
+                        const { pushSelectionClip, popSelectionClip } = await import('./tools/selection.js');
+                        const clipped = pushSelectionClip(ctx);
+
                         if (fillSlot.antiAlias) {
                             fillPolygonWithAA(points, 0, 0, 0, slotOpacity);
                         } else {
                             fillPolygonNoAA(points, 0, 0, 0, slotOpacity);
                         }
+
+                        if (clipped) popSelectionClip(ctx);
                     }
-                    // Apply selection clip post-process (lasso fill areas)
-                    await applySelectionClip();
                     updateLayerThumbnail(getActiveLayer());
                 }
             } else if (state.isPenDrawing) {
                 // ストローク確定 → redo スタックをクリア
                 commitRedoClear();
+                
+                if (state._pendingSave) {
+                    await state._pendingSave;
+                    state._pendingSave = null;
+                }
+
                 if (state.mode === 'pen' && state.subTool === 'stipple') {
                     const dirtyRect = getStippleDirtyRect();
                     clearStippleDirtyRect();
@@ -1642,8 +1668,6 @@ async function handlePointerUp(e) {
                     const layer = getActiveLayer();
                     if (layer && dirtyRect) await shrinkLastUndoEntry(layer.id, dirtyRect);
                 }
-                // Apply selection clip post-process (pen strokes)
-                await applySelectionClip();
                 updateLayerThumbnail(getActiveLayer());
             }
             state.drawingPointerId = null;
@@ -1778,7 +1802,7 @@ function setupColorPickers() {
             const activeIdx = state.activeBrushIndex;
             const activeSlotDot = document.querySelector(`.brush-slot[data-idx="${activeIdx}"] .brush-dot-preview`);
             if (activeSlotDot) {
-                const slotDotSize = Math.max(2, Math.min(34, Math.round(size * 0.34)));
+                const slotDotSize = Math.max(1, size || 1);
                 activeSlotDot.style.width = `${slotDotSize}px`;
                 activeSlotDot.style.height = `${slotDotSize}px`;
                 // ペン時のみ不透明度を反映 (点描は常に不透明)
@@ -1873,7 +1897,7 @@ function renderBrushPalette() {
 
         const dot = document.createElement('div');
         dot.className = 'brush-dot-preview';
-        const displaySize = Math.max(2, Math.min(34, Math.round(brush.size * 0.34)));
+        const displaySize = Math.max(1, brush.size || 1);
         dot.style.width = `${displaySize}px`;
         dot.style.height = `${displaySize}px`;
         dot.style.backgroundColor = '#000';
@@ -2572,7 +2596,10 @@ async function executeClearLayer() {
     await saveState();
     const layer = getActiveLayer();
     if (layer) {
+        const { pushSelectionClip, popSelectionClip } = await import('./tools/selection.js');
+        const clipped = pushSelectionClip(layer.ctx);
         layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+        if (clipped) popSelectionClip(layer.ctx);
         updateLayerThumbnail(layer);
     }
 }
@@ -2584,9 +2611,13 @@ async function executeClearLayer() {
 async function clearAll() {
     await saveState();
 
+    const { pushSelectionClip, popSelectionClip } = await import('./tools/selection.js');
+
     // Clear all layers
     for (const layer of layers) {
+        const clipped = pushSelectionClip(layer.ctx);
         layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+        if (clipped) popSelectionClip(layer.ctx);
         updateLayerThumbnail(layer);
     }
 
@@ -2601,10 +2632,7 @@ function setupZoomControls() {
     const resetBtn = document.getElementById('resetZoomBtn');
 
     resetBtn.addEventListener('click', () => {
-        state.scale = 1;
-        state.translateX = 0;
-        state.translateY = 0;
-        applyTransform();
+        centerCanvas();
     });
 }
 
