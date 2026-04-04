@@ -263,5 +263,9 @@ export const state = {
     eraserSize: 5,
 
     // Tone Menu State
-    isToneMenuPinned: false
+    isToneMenuPinned: false,
+
+    // Fill Tool Settings
+    fillColorTolerance: 32,  // 0–255: 色の許容範囲
+    fillGapClose: 0          // 0–10px: 隙間を閉じるピクセル数
 };

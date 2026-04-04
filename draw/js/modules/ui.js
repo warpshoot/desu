@@ -150,6 +150,7 @@ export function initUI() {
     setupSaveUI();
     setupFileUI();
     setupToneMenu();
+    setupFillOptions();
     setupCreditModal();
     setupOrientationHandler();
     setupKeyboardShortcuts();
@@ -456,6 +457,7 @@ function setupToolPanel() {
 
                         // Explicitly update Tone menu visibility when toggling via button
                         updateToneMenuVisibility();
+                        updateFillOptionsVisibility();
                     }
                 } else {
                     // Activate
@@ -464,6 +466,7 @@ function setupToolPanel() {
 
                     // Explicitly update Tone menu visibility when switching from eraser
                     updateToneMenuVisibility();
+                    updateFillOptionsVisibility();
                 }
             }
             updateToolButtonStates();
@@ -531,6 +534,7 @@ function setupToolPanel() {
 
     // Update tone menu visibility initially
     updateToneMenuVisibility();
+    updateFillOptionsVisibility();
 }
 
 function updateDrawToolIcon() {
@@ -556,6 +560,7 @@ function updateDrawToolIcon() {
     }
 
     updateToneMenuVisibility();
+    updateFillOptionsVisibility();
 }
 
 function updateEraserToolIcon() {
@@ -1302,7 +1307,7 @@ async function handlePointerUp(e) {
             // Fill tool tap
             if (state.currentTool === 'fill' && !state.isEraserActive) {
                 await saveState();
-                floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), hexToRgba(state.color));
+                floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), hexToRgba(state.inkColor), state.fillColorTolerance, state.fillGapClose);
                 updateLayerThumbnail(getActiveLayer());
             } else if (state.currentTool === 'tone' && !state.isEraserActive) {
                 // Tone fill tap
@@ -1329,7 +1334,7 @@ async function handlePointerUp(e) {
 
                     if (state.currentTool === 'fill' && !state.isEraserActive) {
                         await saveState();
-                        floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), [0, 0, 0, 255]);
+                        floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), hexToRgba(state.inkColor), state.fillColorTolerance, state.fillGapClose);
                         updateLayerThumbnail(getActiveLayer());
                     } else if (state.currentTool === 'tone' && !state.isEraserActive) {
                         await saveState();
@@ -1337,11 +1342,11 @@ async function handlePointerUp(e) {
                         updateLayerThumbnail(getActiveLayer());
                     } else if (state.currentTool === 'sketch' && !state.isEraserActive) {
                         await saveState();
-                        floodFillSketch(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
+                        floodFillSketch(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), state.fillGapClose);
                         updateLayerThumbnail(getActiveLayer());
                     } else if (state.isEraserActive && state.currentEraser === 'lasso') {
                         await saveState();
-                        floodFillTransparent(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
+                        floodFillTransparent(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), state.fillGapClose);
                         updateLayerThumbnail(getActiveLayer());
                     }
                 } else if (points && points.length >= 3 && !state.wasPanning && !state.wasPinching) {
@@ -1552,6 +1557,44 @@ function updateToneMenuVisibility() {
     if (!menu) return;
 
     if (state.currentTool === 'tone' && !state.isEraserActive) {
+        menu.classList.remove('hidden');
+    } else {
+        menu.classList.add('hidden');
+    }
+}
+
+// ============================================
+// Fill Options Panel
+// ============================================
+
+function setupFillOptions() {
+    const toleranceSlider = document.getElementById('fillTolerance');
+    const toleranceVal = document.getElementById('fillToleranceVal');
+    const gapSlider = document.getElementById('fillGapClose');
+    const gapVal = document.getElementById('fillGapCloseVal');
+    if (!toleranceSlider || !gapSlider) return;
+
+    toleranceSlider.value = state.fillColorTolerance;
+    toleranceVal.textContent = state.fillColorTolerance;
+    gapSlider.value = state.fillGapClose;
+    gapVal.textContent = state.fillGapClose;
+
+    toleranceSlider.addEventListener('input', () => {
+        state.fillColorTolerance = parseInt(toleranceSlider.value);
+        toleranceVal.textContent = state.fillColorTolerance;
+    });
+
+    gapSlider.addEventListener('input', () => {
+        state.fillGapClose = parseInt(gapSlider.value);
+        gapVal.textContent = state.fillGapClose;
+    });
+}
+
+function updateFillOptionsVisibility() {
+    const menu = document.getElementById('fill-options-menu');
+    if (!menu) return;
+
+    if ((state.currentTool === 'fill' || state.currentTool === 'sketch') && !state.isEraserActive) {
         menu.classList.remove('hidden');
     } else {
         menu.classList.add('hidden');
