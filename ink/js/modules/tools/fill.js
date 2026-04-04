@@ -106,13 +106,14 @@ export function floodFill(startX, startY, fillColor, tolerance = 'normal', gapCl
 
     // 隙間閉じ: 境界ピクセルを膨張した仮想バリアを生成
     let closedBoundary = null;
+    let gapRadius = 0;
     if (gapClose > 0) {
-        const radius = Math.ceil(gapClose / 2);
+        gapRadius = Math.ceil(gapClose / 2);
         const boundary = new Uint8Array(w * h);
         for (let j = 0; j < w * h; j++) {
             if (!matchTarget(j * 4)) boundary[j] = 1;
         }
-        closedBoundary = dilateBox(boundary, w, h, radius);
+        closedBoundary = dilateBox(boundary, w, h, gapRadius);
     }
 
     // 通行可能判定: gapClose なしは matchTarget のみ、あれば closedBoundary で判定
@@ -135,10 +136,7 @@ export function floodFill(startX, startY, fillColor, tolerance = 'normal', gapCl
 
         while (x < w && isPassable(x, y)) {
             visited[y * w + x] = 1;
-
-            // 隙間越え時は元ピクセルが対象のときのみ塗る
-            const i = (y * w + x) * 4;
-            if (!closedBoundary || matchTarget(i)) setPixel(i);
+            setPixel((y * w + x) * 4);
 
             if (y > 0 && isPassable(x, y - 1)) {
                 if (!spanAbove) { stack.push([x, y - 1]); spanAbove = true; }
@@ -149,6 +147,17 @@ export function floodFill(startX, startY, fillColor, tolerance = 'normal', gapCl
             } else { spanBelow = false; }
 
             x++;
+        }
+    }
+
+    // 隙間閉じ後処理: visited を radius 分拡張して仮想バリア帯内の
+    // ターゲットピクセル（線際の空きピクセル）も塗りつぶす
+    if (closedBoundary) {
+        const expandedVisited = dilateBox(visited, w, h, gapRadius);
+        for (let j = 0; j < w * h; j++) {
+            if (expandedVisited[j] && matchTarget(j * 4)) {
+                setPixel(j * 4);
+            }
         }
     }
 
@@ -184,13 +193,14 @@ export function floodFillTransparent(startX, startY, tolerance = 'normal', gapCl
     const visited = new Uint8Array(w * h);
 
     let closedBoundary = null;
+    let gapRadius = 0;
     if (gapClose > 0) {
-        const radius = Math.ceil(gapClose / 2);
+        gapRadius = Math.ceil(gapClose / 2);
         const boundary = new Uint8Array(w * h);
         for (let j = 0; j < w * h; j++) {
             if (!matchTarget(j * 4)) boundary[j] = 1;
         }
-        closedBoundary = dilateBox(boundary, w, h, radius);
+        closedBoundary = dilateBox(boundary, w, h, gapRadius);
     }
 
     const isPassable = closedBoundary
@@ -211,9 +221,7 @@ export function floodFillTransparent(startX, startY, tolerance = 'normal', gapCl
 
         while (x < w && isPassable(x, y)) {
             visited[y * w + x] = 1;
-
-            const i = (y * w + x) * 4;
-            if (!closedBoundary || matchTarget(i)) setPixel(i);
+            setPixel((y * w + x) * 4);
 
             if (y > 0 && isPassable(x, y - 1)) {
                 if (!spanAbove) { stack.push([x, y - 1]); spanAbove = true; }
@@ -224,6 +232,15 @@ export function floodFillTransparent(startX, startY, tolerance = 'normal', gapCl
             } else { spanBelow = false; }
 
             x++;
+        }
+    }
+
+    if (closedBoundary) {
+        const expandedVisited = dilateBox(visited, w, h, gapRadius);
+        for (let j = 0; j < w * h; j++) {
+            if (expandedVisited[j] && matchTarget(j * 4)) {
+                setPixel(j * 4);
+            }
         }
     }
 
