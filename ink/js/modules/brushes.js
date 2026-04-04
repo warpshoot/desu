@@ -78,9 +78,9 @@ export function applyPressureCurve(pressure, gamma) {
 // =============================================
 export function makeDefaultFillSlots() {
     return [
-        { subTool: 'fill', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', stabilizerEnabled: true, stabilizerDistance: 5, antiAlias: true },
-        { subTool: 'tone', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse2', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
-        { subTool: 'fill', opacity: 0.1, bucketEnabled: true, bucketTolerance: 'normal', tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 5, antiAlias: false },
+        { subTool: 'fill', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', bucketGapClose: 0, tonePresetId: 'coarse1', stabilizerEnabled: true, stabilizerDistance: 5, antiAlias: true },
+        { subTool: 'tone', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', bucketGapClose: 0, tonePresetId: 'coarse2', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
+        { subTool: 'fill', opacity: 0.1, bucketEnabled: true, bucketTolerance: 'normal', bucketGapClose: 0, tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 5, antiAlias: false },
     ];
 }
 
@@ -92,7 +92,7 @@ export function makeDefaultFillSlots() {
 export function makeDefaultEraserSlots() {
     return [
         { subTool: 'pen', stabilizerEnabled: false, stabilizerDistance: 20, stabStringVisible: true, stabShowGuide: true, pressureSize: true, pressureCurve: 1.0 },
-        { subTool: 'lasso', bucketEnabled: true, bucketTolerance: 'normal', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
+        { subTool: 'lasso', bucketEnabled: true, bucketTolerance: 'normal', bucketGapClose: 0, stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
         { subTool: 'clear', antiAlias: false },
     ];
 }

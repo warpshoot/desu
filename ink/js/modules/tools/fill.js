@@ -23,6 +23,7 @@ function getActiveContextAndCanvas() {
 //   strict: 完全一致のみ
 //   normal: 完全不透明(255)のみ壁 (デフォルト)
 //   loose:  alpha >= 192 が壁
+// gapClose: 0–10px — 線の隙間をこのピクセル数まで閉じているとみなす
 // ============================================
 
 export function _makeMatchFn(data, targetA, tolerance) {
@@ -42,7 +43,36 @@ export function _makeMatchFn(data, targetA, tolerance) {
         : (i) => data[i + 3] >= 240;
 }
 
-export function floodFill(startX, startY, fillColor, tolerance = 'normal') {
+/**
+ * 境界ピクセルをボックス膨張して隙間を閉じるマスクを生成。
+ * セパラブル処理（横→縦）で O(w×h) の高速実装。
+ * @returns {Uint8Array} 1=境界(通行不可), 0=通行可能
+ */
+function dilateBox(boundary, w, h, radius) {
+    const temp = new Uint8Array(w * h);
+    // 横方向パス
+    for (let y = 0; y < h; y++) {
+        const prefix = new Int32Array(w + 1);
+        for (let x = 0; x < w; x++) prefix[x + 1] = prefix[x] + boundary[y * w + x];
+        for (let x = 0; x < w; x++) {
+            if (prefix[Math.min(w, x + radius + 1)] - prefix[Math.max(0, x - radius)] > 0)
+                temp[y * w + x] = 1;
+        }
+    }
+    // 縦方向パス
+    const result = new Uint8Array(w * h);
+    for (let x = 0; x < w; x++) {
+        const prefix = new Int32Array(h + 1);
+        for (let y = 0; y < h; y++) prefix[y + 1] = prefix[y] + temp[y * w + x];
+        for (let y = 0; y < h; y++) {
+            if (prefix[Math.min(h, y + radius + 1)] - prefix[Math.max(0, y - radius)] > 0)
+                result[y * w + x] = 1;
+        }
+    }
+    return result;
+}
+
+export function floodFill(startX, startY, fillColor, tolerance = 'normal', gapClose = 0) {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
@@ -73,51 +103,52 @@ export function floodFill(startX, startY, fillColor, tolerance = 'normal') {
     };
 
     const visited = new Uint8Array(w * h);
+
+    // 隙間閉じ: 境界ピクセルを膨張した仮想バリアを生成
+    let closedBoundary = null;
+    if (gapClose > 0) {
+        const radius = Math.ceil(gapClose / 2);
+        const boundary = new Uint8Array(w * h);
+        for (let j = 0; j < w * h; j++) {
+            if (!matchTarget(j * 4)) boundary[j] = 1;
+        }
+        closedBoundary = dilateBox(boundary, w, h, radius);
+    }
+
+    // 通行可能判定: gapClose なしは matchTarget のみ、あれば closedBoundary で判定
+    const isPassable = closedBoundary
+        ? (x, y) => !closedBoundary[y * w + x] && !visited[y * w + x]
+        : (x, y) => matchTarget((y * w + x) * 4) && !visited[y * w + x];
+
+    if (!isPassable(startX, startY)) return;
+
     const stack = [[startX, startY]];
 
     while (stack.length > 0) {
         let [x, y] = stack.pop();
-        let i = (y * w + x) * 4;
+        if (!isPassable(x, y)) continue;
 
-        while (x >= 0 && matchTarget(i) && !visited[y * w + x]) {
-            x--;
-            i -= 4;
-        }
-        x++;
-        i += 4;
+        // 左端を探す
+        while (x > 0 && isPassable(x - 1, y)) x--;
 
         let spanAbove = false, spanBelow = false;
 
-        while (x < w && matchTarget(i) && !visited[y * w + x]) {
+        while (x < w && isPassable(x, y)) {
             visited[y * w + x] = 1;
-            setPixel(i);
 
-            if (y > 0) {
-                const above = i - w * 4;
-                if (matchTarget(above) && !visited[(y - 1) * w + x]) {
-                    if (!spanAbove) {
-                        stack.push([x, y - 1]);
-                        spanAbove = true;
-                    }
-                } else {
-                    spanAbove = false;
-                }
-            }
+            // 隙間越え時は元ピクセルが対象のときのみ塗る
+            const i = (y * w + x) * 4;
+            if (!closedBoundary || matchTarget(i)) setPixel(i);
 
-            if (y < h - 1) {
-                const below = i + w * 4;
-                if (matchTarget(below) && !visited[(y + 1) * w + x]) {
-                    if (!spanBelow) {
-                        stack.push([x, y + 1]);
-                        spanBelow = true;
-                    }
-                } else {
-                    spanBelow = false;
-                }
-            }
+            if (y > 0 && isPassable(x, y - 1)) {
+                if (!spanAbove) { stack.push([x, y - 1]); spanAbove = true; }
+            } else { spanAbove = false; }
+
+            if (y < h - 1 && isPassable(x, y + 1)) {
+                if (!spanBelow) { stack.push([x, y + 1]); spanBelow = true; }
+            } else { spanBelow = false; }
 
             x++;
-            i += 4;
         }
     }
 
@@ -125,7 +156,7 @@ export function floodFill(startX, startY, fillColor, tolerance = 'normal') {
 }
 
 // 透明で塗りつぶし (トレランス付き)
-export function floodFillTransparent(startX, startY, tolerance = 'normal') {
+export function floodFillTransparent(startX, startY, tolerance = 'normal', gapClose = 0) {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
@@ -151,41 +182,48 @@ export function floodFillTransparent(startX, startY, tolerance = 'normal') {
     };
 
     const visited = new Uint8Array(w * h);
+
+    let closedBoundary = null;
+    if (gapClose > 0) {
+        const radius = Math.ceil(gapClose / 2);
+        const boundary = new Uint8Array(w * h);
+        for (let j = 0; j < w * h; j++) {
+            if (!matchTarget(j * 4)) boundary[j] = 1;
+        }
+        closedBoundary = dilateBox(boundary, w, h, radius);
+    }
+
+    const isPassable = closedBoundary
+        ? (x, y) => !closedBoundary[y * w + x] && !visited[y * w + x]
+        : (x, y) => matchTarget((y * w + x) * 4) && !visited[y * w + x];
+
+    if (!isPassable(startX, startY)) return;
+
     const stack = [[startX, startY]];
 
     while (stack.length > 0) {
         let [x, y] = stack.pop();
-        let i = (y * w + x) * 4;
+        if (!isPassable(x, y)) continue;
 
-        while (x >= 0 && matchTarget(i) && !visited[y * w + x]) {
-            x--;
-            i -= 4;
-        }
-        x++;
-        i += 4;
+        while (x > 0 && isPassable(x - 1, y)) x--;
 
         let spanAbove = false, spanBelow = false;
 
-        while (x < w && matchTarget(i) && !visited[y * w + x]) {
+        while (x < w && isPassable(x, y)) {
             visited[y * w + x] = 1;
-            setPixel(i);
 
-            if (y > 0) {
-                const above = i - w * 4;
-                if (matchTarget(above) && !visited[(y - 1) * w + x]) {
-                    if (!spanAbove) { stack.push([x, y - 1]); spanAbove = true; }
-                } else { spanAbove = false; }
-            }
+            const i = (y * w + x) * 4;
+            if (!closedBoundary || matchTarget(i)) setPixel(i);
 
-            if (y < h - 1) {
-                const below = i + w * 4;
-                if (matchTarget(below) && !visited[(y + 1) * w + x]) {
-                    if (!spanBelow) { stack.push([x, y + 1]); spanBelow = true; }
-                } else { spanBelow = false; }
-            }
+            if (y > 0 && isPassable(x, y - 1)) {
+                if (!spanAbove) { stack.push([x, y - 1]); spanAbove = true; }
+            } else { spanAbove = false; }
+
+            if (y < h - 1 && isPassable(x, y + 1)) {
+                if (!spanBelow) { stack.push([x, y + 1]); spanBelow = true; }
+            } else { spanBelow = false; }
 
             x++;
-            i += 4;
         }
     }
 

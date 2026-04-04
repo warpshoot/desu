@@ -1584,15 +1584,17 @@ async function handlePointerUp(e) {
                         await saveState();
                         if (state.mode === 'fill') {
                             const tolerance = fillSlot.bucketTolerance || 'normal';
+                            const gapClose = fillSlot.bucketGapClose ?? 0;
                             if (state.subTool === 'tone') {
                                 floodFillTone(fx, fy, tolerance);
                             } else {
                                 const slotOpacity = fillSlot.opacity ?? 1.0;
-                                floodFill(fx, fy, [0, 0, 0, Math.round(slotOpacity * 255)], tolerance);
+                                floodFill(fx, fy, [0, 0, 0, Math.round(slotOpacity * 255)], tolerance, gapClose);
                             }
                         } else if (state.mode === 'eraser' && state.subTool === 'lasso') {
                             const tolerance = eraserSlot.bucketTolerance || 'normal';
-                            floodFillTransparent(fx, fy, tolerance);
+                            const gapClose = eraserSlot.bucketGapClose ?? 0;
+                            floodFillTransparent(fx, fy, tolerance, gapClose);
                         }
                         // Apply selection clip post-process (flood fill areas)
                         await applySelectionClip();
@@ -2196,15 +2198,18 @@ function openFillSettings(idx) {
     document.getElementById('fs-opacity-val').textContent = Math.round((slot.opacity ?? 1.0) * 100);
     document.getElementById('fs-bucket').checked = slot.bucketEnabled !== false;
     document.getElementById('fs-tolerance').value = slot.bucketTolerance || 'normal';
+    document.getElementById('fs-gap-close').value = slot.bucketGapClose ?? 0;
+    document.getElementById('fs-gap-close-val').textContent = slot.bucketGapClose ?? 0;
     document.getElementById('fs-aa').checked = slot.antiAlias ?? false;
     document.getElementById('fs-stabilizer').checked = slot.stabilizerEnabled ?? false;
     document.getElementById('fs-stabilizer-dist').value = slot.stabilizerDistance ?? 20;
     document.getElementById('fs-stabilizer-dist-val').textContent = slot.stabilizerDistance ?? 20;
-    // バケツ有効時のみ許容値表示
+    // バケツ有効時のみ許容値・隙間閉じ表示
     const isTone = slot.subTool === 'tone';
     const bucketOn = slot.bucketEnabled !== false;
     document.getElementById('fs-bucket-row').style.display = isTone ? 'none' : '';
     document.getElementById('fs-tolerance-row').style.display = (bucketOn && !isTone) ? '' : 'none';
+    document.getElementById('fs-gap-close-row').style.display = (bucketOn && !isTone) ? '' : 'none';
     document.getElementById('fs-aa-row').style.display = !isTone ? '' : 'none';
 
     // トーン時: 不透明度は非表示 (トーンは2値パターン)
@@ -2249,6 +2254,8 @@ function setupFillSettingsPanel() {
     const opVal          = document.getElementById('fs-opacity-val');
     const bucketCheck    = document.getElementById('fs-bucket');
     const toleranceSel   = document.getElementById('fs-tolerance');
+    const gapCloseSlider = document.getElementById('fs-gap-close');
+    const gapCloseVal    = document.getElementById('fs-gap-close-val');
     const aaCheck        = document.getElementById('fs-aa');
     const stabCheck      = document.getElementById('fs-stabilizer');
     const stabDistSlider = document.getElementById('fs-stabilizer-dist');
@@ -2260,18 +2267,22 @@ function setupFillSettingsPanel() {
         slot.opacity            = opSlider.value / 100;
         slot.bucketEnabled      = bucketCheck.checked;
         slot.bucketTolerance    = toleranceSel.value;
+        slot.bucketGapClose     = parseInt(gapCloseSlider.value);
         slot.antiAlias          = aaCheck.checked;
         slot.stabilizerEnabled  = stabCheck.checked;
         slot.stabilizerDistance = parseInt(stabDistSlider.value);
         opVal.textContent       = Math.round(slot.opacity * 100);
+        gapCloseVal.textContent = slot.bucketGapClose;
         stabDistVal.textContent = slot.stabilizerDistance;
 
         const isTone = slot.subTool === 'tone';
+        const bucketOn = bucketCheck.checked && !isTone;
         document.getElementById('fs-bucket-row').style.display = isTone ? 'none' : '';
-        document.getElementById('fs-tolerance-row').style.display = (bucketCheck.checked && !isTone) ? '' : 'none';
+        document.getElementById('fs-tolerance-row').style.display = bucketOn ? '' : 'none';
+        document.getElementById('fs-gap-close-row').style.display = bucketOn ? '' : 'none';
         document.getElementById('fs-aa-row').style.display = !isTone ? '' : 'none';
         document.getElementById('fs-opacity-row').style.display = isTone ? 'none' : '';
-        
+
         const stabOn = !isTone && slot.stabilizerEnabled;
         document.getElementById('fs-stabilizer-row').style.display = !isTone ? '' : 'none';
         document.getElementById('fs-stabilizer-dist-row').style.display = stabOn ? '' : 'none';
@@ -2291,6 +2302,7 @@ function setupFillSettingsPanel() {
     opSlider.addEventListener('input', sync);
     bucketCheck.addEventListener('input', sync);
     toleranceSel.addEventListener('input', sync);
+    gapCloseSlider.addEventListener('input', sync);
     aaCheck.addEventListener('input', sync);
     stabCheck.addEventListener('input', sync);
     stabDistSlider.addEventListener('input', sync);
@@ -2319,6 +2331,8 @@ function openEraserSettings(idx) {
     document.getElementById('es-subtool').value = slot.subTool || 'pen';
     document.getElementById('es-bucket').checked = slot.bucketEnabled !== false;
     document.getElementById('es-tolerance').value = slot.bucketTolerance || 'normal';
+    document.getElementById('es-gap-close').value = slot.bucketGapClose ?? 0;
+    document.getElementById('es-gap-close-val').textContent = slot.bucketGapClose ?? 0;
     document.getElementById('es-aa').checked = slot.antiAlias ?? false;
     document.getElementById('es-stabilizer').checked = slot.stabilizerEnabled ?? false;
     document.getElementById('es-stabilizer-dist').value = slot.stabilizerDistance ?? 20;
@@ -2337,6 +2351,7 @@ function openEraserSettings(idx) {
     document.getElementById('es-bucket-row').style.display = isLasso ? '' : 'none';
     const bucketOn = isLasso && slot.bucketEnabled !== false;
     document.getElementById('es-tolerance-row').style.display = bucketOn ? '' : 'none';
+    document.getElementById('es-gap-close-row').style.display = bucketOn ? '' : 'none';
     document.getElementById('es-aa-row').style.display = isLasso ? '' : 'none';
     // pen/lasso のみ手ぶれ補正を表示 (clear は非表示)
     const showStab = isPen || isLasso;
@@ -2387,6 +2402,8 @@ function setupEraserSettingsPanel() {
     const subToolSel     = document.getElementById('es-subtool');
     const bucketCheck    = document.getElementById('es-bucket');
     const toleranceSel   = document.getElementById('es-tolerance');
+    const gapCloseSlider = document.getElementById('es-gap-close');
+    const gapCloseVal    = document.getElementById('es-gap-close-val');
     const aaCheck        = document.getElementById('es-aa');
     const stabCheck      = document.getElementById('es-stabilizer');
     const stabDistSlider = document.getElementById('es-stabilizer-dist');
@@ -2402,6 +2419,7 @@ function setupEraserSettingsPanel() {
         slot.subTool            = subToolSel.value;
         slot.bucketEnabled      = bucketCheck.checked;
         slot.bucketTolerance    = toleranceSel.value;
+        slot.bucketGapClose     = parseInt(gapCloseSlider.value);
         slot.antiAlias          = aaCheck.checked;
         slot.stabilizerEnabled  = stabCheck.checked;
         slot.stabilizerDistance = parseInt(stabDistSlider.value);
@@ -2409,14 +2427,17 @@ function setupEraserSettingsPanel() {
         slot.stabShowGuide      = stabGuideCheck.checked;
         slot.pressureSize       = psizeCheck.checked;
         slot.pressureCurve      = parseFloat(curveSlider.value);
-        
+
+        gapCloseVal.textContent = slot.bucketGapClose;
         stabDistVal.textContent = slot.stabilizerDistance;
         curveVal.textContent = slot.pressureCurve.toFixed(1);
 
         const isLasso = slot.subTool === 'lasso';
         const isPen   = slot.subTool === 'pen';
+        const bucketOn = isLasso && bucketCheck.checked;
         document.getElementById('es-bucket-row').style.display = isLasso ? '' : 'none';
-        document.getElementById('es-tolerance-row').style.display = (isLasso && bucketCheck.checked) ? '' : 'none';
+        document.getElementById('es-tolerance-row').style.display = bucketOn ? '' : 'none';
+        document.getElementById('es-gap-close-row').style.display = bucketOn ? '' : 'none';
         document.getElementById('es-aa-row').style.display = isLasso ? '' : 'none';
 
         const showStab = isPen || isLasso;
@@ -2447,7 +2468,7 @@ function setupEraserSettingsPanel() {
         renderBrushPalette();
     };
 
-    [subToolSel, bucketCheck, toleranceSel, aaCheck, stabCheck, stabDistSlider, stabStringCheck, stabGuideCheck, psizeCheck, curveSlider]
+    [subToolSel, bucketCheck, toleranceSel, gapCloseSlider, aaCheck, stabCheck, stabDistSlider, stabStringCheck, stabGuideCheck, psizeCheck, curveSlider]
         .forEach(el => el.addEventListener('input', sync));
 
     panel.addEventListener('pointerdown', (e) => e.stopPropagation());
