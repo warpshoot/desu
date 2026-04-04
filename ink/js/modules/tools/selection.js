@@ -417,11 +417,11 @@ export async function applySelectionClip() {
     ctx.globalAlpha = 1;
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, pw, ph);
-    ctx.drawImage(_preDrawBitmap, 0, 0);
+    ctx.drawImage(_preDrawBitmap, 0, 0, cssW, cssH);
 
     // 4. マスク済みの描画結果を上に合成
     ctx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(tmp, 0, 0);
+    ctx.drawImage(tmp, 0, 0, cssW, cssH);
     ctx.restore();
 
     _preDrawBitmap = null;
@@ -522,12 +522,12 @@ function _eraseSelection(layer) {
 
     if (mask.type === 'rect') {
         const { x, y, w, h } = mask.rect;
-        ctx.fillRect(x * dpr, y * dpr, w * dpr, h * dpr);
+        ctx.fillRect(x, y, w, h);
     } else if (mask.type === 'lasso' && mask.points) {
         ctx.beginPath();
-        ctx.moveTo(mask.points[0].x * dpr, mask.points[0].y * dpr);
+        ctx.moveTo(mask.points[0].x, mask.points[0].y);
         for (let i = 1; i < mask.points.length; i++) {
-            ctx.lineTo(mask.points[i].x * dpr, mask.points[i].y * dpr);
+            ctx.lineTo(mask.points[i].x, mask.points[i].y);
         }
         ctx.closePath();
         ctx.fill();
@@ -567,7 +567,7 @@ export function commitFloating() {
 
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(tmp, Math.round(destX * dpr), Math.round(destY * dpr));
+    ctx.drawImage(tmp, destX, destY, tmp.width / dpr, tmp.height / dpr);
     ctx.restore();
 
     state.floatingSelection = null;
