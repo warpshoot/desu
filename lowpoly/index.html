@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LOWPOLY | DESU™</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
+      }
+    }
+    </script>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">LOWPOLY | DESU™</div>
+        <div class="actions">
+            <button id="btn-undo" title="Undo">Undo</button>
+            <button id="btn-redo" title="Redo">Redo</button>
+            <button id="btn-export" class="primary">Export</button>
+        </div>
+    </header>
+
+    <main id="viewport-container">
+        <!-- Canvas will be injected here -->
+    </main>
+
+    <div id="context-menu" class="hidden">
+        <button id="ctx-extrude">Extrude</button>
+        <button id="ctx-color">Paint</button>
+        <button id="ctx-delete">Delete</button>
+    </div>
+
+    <footer class="bottom-bar">
+        <div class="tool-group">
+            <button id="btn-add" class="tool-btn">Add▼</button>
+            <div id="add-menu" class="hidden floating-menu">
+                <button data-type="box">Box</button>
+                <button data-type="sphere">Icosphere</button>
+                <button data-type="cylinder">Cylinder</button>
+            </div>
+        </div>
+        <div class="tool-group">
+            <div class="color-preview" id="current-color"></div>
+            <input type="color" id="color-picker" hidden>
+        </div>
+        <div class="palette" id="palette">
+            <!-- Palette colors will be generated here -->
+        </div>
+    </footer>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
