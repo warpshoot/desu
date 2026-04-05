@@ -1,16 +1,16 @@
 import { state } from './state.js';
 import { initScene, render, updateWireframe } from './scene.js';
 import { initControls, updateControls } from './controls.js';
-import { initUI, showContextMenu, hideContextMenu } from './ui.js';
+import { initUI } from './ui.js';
 import { selectFace, deselectAll } from './selection.js';
 import { startExtrude, updateExtrude, endExtrude, cancelExtrude } from './extrude.js';
+import { applyColorToFace, addToPalette } from './color.js';
 import { createBox } from './primitives.js';
 import { pushHistory } from './history.js';
 
 let scene, camera, renderer, controls;
 let touchStartX = 0, touchStartY = 0;
-let touchTimer = null;
-let lastTouchTime = 0;
+let isDragging = false;
 
 function init() {
     ({ scene, camera, renderer } = initScene());
@@ -31,7 +31,7 @@ function init() {
 function setupInteractions() {
     const canvas = renderer.domElement;
 
-    // MOUSE FALLBACK
+    // MOUSE
     canvas.addEventListener('mousedown', onPointerDown);
     window.addEventListener('mousemove', onPointerMove);
     window.addEventListener('mouseup', onPointerUp);
@@ -52,20 +52,17 @@ function onPointerMove(e) {
 }
 
 function onPointerUp(e) {
-    handlePointerUp();
+    handlePointerUp(e.clientX, e.clientY);
 }
 
 function onTouchStart(e) {
     // Multi-finger: cancel any ongoing extrude
-    if (e.touches.length >= 2 && state.isExtruding) {
-        cancelExtrude();
-        updateWireframe(state.mesh);
-        controls.enabled = true;
-    }
-
-    // 3-FINGER TAP: DESELECT ALL
-    if (e.touches.length === 3) {
-        deselectAll(state.mesh);
+    if (e.touches.length >= 2) {
+        if (state.isExtruding) {
+            cancelExtrude();
+            updateWireframe(state.mesh);
+            controls.enabled = true;
+        }
         return;
     }
 
@@ -80,61 +77,81 @@ function onTouchMove(e) {
     if (e.touches.length === 1) {
         const touch = e.touches[0];
         handlePointerMove(touch.clientX, touch.clientY);
-        if (state.isExtruding) e.preventDefault(); // Stop scroll
+        if (state.isExtruding) e.preventDefault();
     }
 }
 
 function onTouchEnd(e) {
-    handlePointerUp();
+    handlePointerUp(touchStartX, touchStartY);
 }
 
 function handlePointerDown(x, y) {
-    hideContextMenu();
     touchStartX = x;
     touchStartY = y;
-    
-    // LONG PRESS TIMER
-    clearTimeout(touchTimer);
-    touchTimer = setTimeout(() => {
-        if (!state.isExtruding && Math.abs(touchStartX - x) < 5 && Math.abs(touchStartY - y) < 5) {
-            // Long press on selected face -> start extrude
-            if (state.selection.faceIndex !== -1) {
-                startExtrude(state.mesh, state.selection.faceIndex);
-                state.extrudeStartY = y;
-                controls.enabled = false;
-            } else {
-                showContextMenu(x, y);
-            }
-        }
-    }, 400);
+    isDragging = false;
 
-    // TAP TO SELECT (no auto-extrude)
-    const hitIndex = selectFace(x, y, camera, state.mesh);
-    updateWireframe(state.mesh);
-    controls.enabled = true;
+    if (state.tool === 'select') {
+        // Select: just pick face on down
+        selectFace(x, y, camera, state.mesh);
+        updateWireframe(state.mesh);
+
+    } else if (state.tool === 'extrude') {
+        // Extrude: select face and begin extrude immediately
+        const hitIndex = selectFace(x, y, camera, state.mesh);
+        if (hitIndex >= 0) {
+            startExtrude(state.mesh, hitIndex);
+            state.extrudeStartY = y;
+            controls.enabled = false;
+        }
+
+    } else if (state.tool === 'paint') {
+        // Paint: select face and paint immediately
+        const hitIndex = selectFace(x, y, camera, state.mesh);
+        if (hitIndex >= 0) {
+            applyColorToFace(state.mesh, hitIndex, state.currentColor);
+            addToPalette(state.currentColor);
+            deselectAll(state.mesh);
+            updateWireframe(state.mesh);
+            pushHistory(state.mesh);
+        }
+    }
 }
 
 function handlePointerMove(x, y) {
+    const dx = Math.abs(x - touchStartX);
+    const dy = Math.abs(y - touchStartY);
+    if (dx > 5 || dy > 5) isDragging = true;
+
     if (state.isExtruding) {
-        const deltaY = (state.extrudeStartY - y) * 0.05; 
+        const deltaY = (state.extrudeStartY - y) * 0.05;
         updateExtrude(state.mesh, deltaY);
         updateWireframe(state.mesh);
-    } else {
-        if (Math.abs(touchStartX - x) > 5 || Math.abs(touchStartY - y) > 5) {
-            clearTimeout(touchTimer);
-        }
     }
 }
 
-function handlePointerUp() {
-    clearTimeout(touchTimer);
+function handlePointerUp(x, y) {
     if (state.isExtruding) {
-        endExtrude(state.mesh);
+        // If the user didn't actually drag, cancel instead of committing 0-height extrude
+        if (!isDragging) {
+            cancelExtrude();
+            // Undo the geometry changes by restoring last history
+            const lastEntry = state.history[state.historyIndex];
+            if (lastEntry) {
+                const geometry = state.mesh.geometry;
+                geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(lastEntry.pos), 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(lastEntry.col), 3));
+                geometry.computeVertexNormals();
+                geometry.computeBoundingSphere();
+            }
+        } else {
+            endExtrude(state.mesh);
+            pushHistory(state.mesh);
+        }
         deselectAll(state.mesh);
         updateWireframe(state.mesh);
-        pushHistory(state.mesh);
         controls.enabled = true;
     }
+    isDragging = false;
 }
 
 function animate() {
@@ -142,5 +159,8 @@ function animate() {
     updateControls();
     render();
 }
+
+// Need THREE for BufferAttribute in handlePointerUp
+import * as THREE from 'three';
 
 init();
