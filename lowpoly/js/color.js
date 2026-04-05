@@ -33,6 +33,10 @@ export function initPalette() {
     renderPalette(paletteEl);
 }
 
+// Optional callback for when a palette color is picked
+let onPaletteSelect = null;
+export function setOnPaletteSelect(cb) { onPaletteSelect = cb; }
+
 function renderPalette(container) {
     container.innerHTML = '';
     state.palette.forEach(color => {
@@ -42,6 +46,7 @@ function renderPalette(container) {
         div.addEventListener('click', () => {
             state.currentColor = color;
             document.getElementById('current-color').style.backgroundColor = color;
+            if (onPaletteSelect) onPaletteSelect(color);
         });
         container.appendChild(div);
     });

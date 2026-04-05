@@ -2,7 +2,7 @@ import { state } from './state.js';
 import * as primitives from './primitives.js';
 import { undo, redo, pushHistory } from './history.js';
 import { exportGLB } from './export.js';
-import { applyColorToFace, initPalette, addToPalette } from './color.js';
+import { applyColorToFace, initPalette, addToPalette, setOnPaletteSelect } from './color.js';
 import { scene, updateWireframe } from './scene.js';
 
 export function initUI(callbacks) {
@@ -68,6 +68,14 @@ export function initUI(callbacks) {
     };
 
     initPalette();
+
+    // PALETTE COLOR -> APPLY TO SELECTED FACE
+    setOnPaletteSelect((color) => {
+        if (state.selection.faceIndex !== -1) {
+            applyColorToFace(state.mesh, state.selection.faceIndex, color);
+            pushHistory(state.mesh);
+        }
+    });
 
     // TOOLBAR OUTSIDE CLICKS
     window.onclick = (e) => {
