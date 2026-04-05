@@ -2,10 +2,14 @@ import * as THREE from 'three';
 import { state } from './state.js';
 
 export function applyColorToFace(mesh, faceIndex, hexColor) {
-    if (!mesh || faceIndex === -1) return;
+    if (!mesh || faceIndex < 0) return;
 
     const geometry = mesh.geometry;
     const colorAttr = geometry.attributes.color;
+
+    // Bounds check
+    if (faceIndex * 3 + 2 >= colorAttr.count) return;
+
     const color = new THREE.Color(hexColor);
 
     // Update the face color

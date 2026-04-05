@@ -3,7 +3,7 @@ import { initScene, render, updateWireframe } from './scene.js';
 import { initControls, updateControls } from './controls.js';
 import { initUI, showContextMenu, hideContextMenu } from './ui.js';
 import { selectFace, deselectAll } from './selection.js';
-import { startExtrude, updateExtrude, endExtrude } from './extrude.js';
+import { startExtrude, updateExtrude, endExtrude, cancelExtrude } from './extrude.js';
 import { createBox } from './primitives.js';
 import { pushHistory } from './history.js';
 
@@ -56,12 +56,19 @@ function onPointerUp(e) {
 }
 
 function onTouchStart(e) {
+    // Multi-finger: cancel any ongoing extrude
+    if (e.touches.length >= 2 && state.isExtruding) {
+        cancelExtrude();
+        updateWireframe(state.mesh);
+        controls.enabled = true;
+    }
+
     // 3-FINGER TAP: DESELECT ALL
     if (e.touches.length === 3) {
         deselectAll(state.mesh);
         return;
     }
-    
+
     // 1-FINGER ONLY
     if (e.touches.length === 1) {
         const touch = e.touches[0];

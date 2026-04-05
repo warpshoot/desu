@@ -39,17 +39,20 @@ function applyHistory(mesh, entry) {
     if (!mesh || !entry) return;
 
     const geometry = mesh.geometry;
-    
-    // Replace attributes
+
+    // Rebuild attributes from snapshot (vertex count may differ after extrude)
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(entry.pos), 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(entry.col), 3));
-    
+
     geometry.attributes.position.needsUpdate = true;
     geometry.attributes.color.needsUpdate = true;
     geometry.computeVertexNormals();
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
 
     updateWireframe(mesh);
 
-    // Reset selection because indices might have changed
+    // Reset selection because face indices may have changed
     state.selection.faceIndex = -1;
+    state.selection.originalColors = null;
 }
