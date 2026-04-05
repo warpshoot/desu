@@ -2,10 +2,14 @@ import * as THREE from 'three';
 import { state } from './state.js';
 
 export function applyColorToFace(mesh, faceIndex, hexColor) {
-    if (!mesh || faceIndex === -1) return;
+    if (!mesh || faceIndex < 0) return;
 
     const geometry = mesh.geometry;
     const colorAttr = geometry.attributes.color;
+
+    // Bounds check
+    if (faceIndex * 3 + 2 >= colorAttr.count) return;
+
     const color = new THREE.Color(hexColor);
 
     // Update the face color
@@ -33,6 +37,10 @@ export function initPalette() {
     renderPalette(paletteEl);
 }
 
+// Optional callback for when a palette color is picked
+let onPaletteSelect = null;
+export function setOnPaletteSelect(cb) { onPaletteSelect = cb; }
+
 function renderPalette(container) {
     container.innerHTML = '';
     state.palette.forEach(color => {
@@ -42,6 +50,7 @@ function renderPalette(container) {
         div.addEventListener('click', () => {
             state.currentColor = color;
             document.getElementById('current-color').style.backgroundColor = color;
+            if (onPaletteSelect) onPaletteSelect(color);
         });
         container.appendChild(div);
     });

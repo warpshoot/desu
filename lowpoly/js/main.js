@@ -3,7 +3,7 @@ import { initScene, render, updateWireframe } from './scene.js';
 import { initControls, updateControls } from './controls.js';
 import { initUI, showContextMenu, hideContextMenu } from './ui.js';
 import { selectFace, deselectAll } from './selection.js';
-import { startExtrude, updateExtrude, endExtrude } from './extrude.js';
+import { startExtrude, updateExtrude, endExtrude, cancelExtrude } from './extrude.js';
 import { createBox } from './primitives.js';
 import { pushHistory } from './history.js';
 
@@ -56,12 +56,19 @@ function onPointerUp(e) {
 }
 
 function onTouchStart(e) {
+    // Multi-finger: cancel any ongoing extrude
+    if (e.touches.length >= 2 && state.isExtruding) {
+        cancelExtrude();
+        updateWireframe(state.mesh);
+        controls.enabled = true;
+    }
+
     // 3-FINGER TAP: DESELECT ALL
     if (e.touches.length === 3) {
         deselectAll(state.mesh);
         return;
     }
-    
+
     // 1-FINGER ONLY
     if (e.touches.length === 1) {
         const touch = e.touches[0];
@@ -86,32 +93,25 @@ function handlePointerDown(x, y) {
     touchStartX = x;
     touchStartY = y;
     
-    // Remember previous selection
-    const previousIndex = state.selection.faceIndex;
-
     // LONG PRESS TIMER
     clearTimeout(touchTimer);
     touchTimer = setTimeout(() => {
         if (!state.isExtruding && Math.abs(touchStartX - x) < 5 && Math.abs(touchStartY - y) < 5) {
-            showContextMenu(x, y);
+            // Long press on selected face -> start extrude
+            if (state.selection.faceIndex !== -1) {
+                startExtrude(state.mesh, state.selection.faceIndex);
+                state.extrudeStartY = y;
+                controls.enabled = false;
+            } else {
+                showContextMenu(x, y);
+            }
         }
-    }, 500);
+    }, 400);
 
-    // TAP TO SELECT
+    // TAP TO SELECT (no auto-extrude)
     const hitIndex = selectFace(x, y, camera, state.mesh);
     updateWireframe(state.mesh);
-
-    // START EXTRUDE ONLY IF ALREADY SELECTED
-    if (hitIndex !== -1 && hitIndex === previousIndex) {
-        startExtrude(state.mesh, hitIndex);
-        state.extrudeStartY = y;
-        controls.enabled = false;
-    } else if (hitIndex === -1) {
-        controls.enabled = true;
-    } else {
-        // Just selected a new face, keep orbit enabled
-        controls.enabled = true;
-    }
+    controls.enabled = true;
 }
 
 function handlePointerMove(x, y) {
