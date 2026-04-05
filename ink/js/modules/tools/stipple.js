@@ -1,5 +1,7 @@
-import { state, getActiveLayerCtx } from '../state.js';
+import { state, getActiveLayerCtx, getActiveLayer } from '../state.js';
 import { applyPressureCurve } from '../brushes.js';
+import { markLayerDirty } from '../history.js';
+import { pushSelectionClip, popSelectionClip } from './selection.js';
 
 /**
  * Stipple brush — フリーハンドで点描濃淡をつけるツール
@@ -71,6 +73,8 @@ export function endStippleDrawing() {
     if (state.isPenDrawing) {
         state.isPenDrawing = false;
         strokePoints = [];
+        const layer = getActiveLayer();
+        if (layer) markLayerDirty(layer.id);
     }
 }
 
@@ -90,6 +94,8 @@ function _scatterDots(cx, cy, pressure) {
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = '#000000';
 
+    const clipped = pushSelectionClip(ctx);
+
     for (let d = 0; d < dotCount; d++) {
         const angle = Math.random() * Math.PI * 2;
         const r = Math.sqrt(Math.random()) * radius;
@@ -97,4 +103,6 @@ function _scatterDots(cx, cy, pressure) {
         const dy = Math.round(cy + Math.sin(angle) * r);
         ctx.fillRect(dx, dy, DOT_SIZE, DOT_SIZE);
     }
+
+    if (clipped) popSelectionClip(ctx);
 }

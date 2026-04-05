@@ -368,63 +368,56 @@ async function _buildMaskBitmap(physW, physH) {
 }
 
 /**
- * 描画開始前に呼ぶ。アクティブレイヤーのスナップショットを保存。
+ * 描画開始前に呼ぶ (旧方式) — 廃止予定
  */
 export async function capturePreDraw() {
-    if (!state.selectionMask) return;
-    const layer = getActiveLayer();
-    if (!layer) return;
-    _preDrawBitmap = await createImageBitmap(layer.canvas);
+    // No-op in new clipping mode
 }
 
 /**
- * 描画完了後に呼ぶ。選択範囲外のピクセルを元に戻す。
+ * 描画完了後に呼ぶ (旧方式) — 廃止予定
  */
 export async function applySelectionClip() {
-    if (!state.selectionMask || !_preDrawBitmap) return;
+    // No-op in new clipping mode
+}
 
-    const layer = getActiveLayer();
-    if (!layer) return;
+/**
+ * アクティブレイヤーのコンテキストに現在の選択範囲でクリッピングを適用
+ * 描画操作の直前に呼ぶ。必ず popSelectionClip(ctx) とペアで使う。
+ */
+export function pushSelectionClip(ctx) {
+    if (!state.selectionMask) return false;
 
-    const { canvas, ctx } = layer;
+    const mask = state.selectionMask;
     const dpr  = window.devicePixelRatio || 1;
-    const pw   = canvas.width;
-    const ph   = canvas.height;
-    const cssW = pw / dpr;
-    const cssH = ph / dpr;
 
-    // Build mask if needed
-    if (!_maskBitmap) {
-        await _buildMaskBitmap(pw, ph);
+    ctx.save();
+    ctx.beginPath();
+
+    if (mask.type === 'rect') {
+        const { x, y, w, h } = mask.rect;
+        ctx.rect(x, y, w, h);
+    } else if (mask.type === 'lasso' && mask.points) {
+        const pts = mask.points;
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) {
+            ctx.lineTo(pts[i].x, pts[i].y);
+        }
+        ctx.closePath();
     }
 
-    // 1. 現在の描画結果を temp canvas に取り込む
-    const tmp  = document.createElement('canvas');
-    tmp.width  = pw;
-    tmp.height = ph;
-    const tctx = tmp.getContext('2d');
-    tctx.drawImage(canvas, 0, 0);
+    ctx.clip();
+    return true;
+}
 
-    // 2. temp を選択マスクで切り抜く (destination-in)
-    tctx.save();
-    tctx.globalCompositeOperation = 'destination-in';
-    tctx.drawImage(_maskBitmap, 0, 0);
-    tctx.restore();
-
-    // 3. レイヤーを描画前スナップショットに戻す
-    ctx.save();
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = 1;
-    ctx.imageSmoothingEnabled = false;
-    ctx.clearRect(0, 0, pw, ph);
-    ctx.drawImage(_preDrawBitmap, 0, 0);
-
-    // 4. マスク済みの描画結果を上に合成
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(tmp, 0, 0);
+/**
+ * クリップ設定を解除
+ */
+export function popSelectionClip(ctx) {
+    // 選択範囲がない場合でも ctx.save() しているわけではないので、
+    // push側で返したフラグを元に呼ぶか、または単に restore を慎重に行う
+    // ここでは push が成功している（saveされている）前提で呼ぶ設計にする
     ctx.restore();
-
-    _preDrawBitmap = null;
 }
 
 // ============================================
@@ -522,12 +515,12 @@ function _eraseSelection(layer) {
 
     if (mask.type === 'rect') {
         const { x, y, w, h } = mask.rect;
-        ctx.fillRect(x * dpr, y * dpr, w * dpr, h * dpr);
+        ctx.fillRect(x, y, w, h);
     } else if (mask.type === 'lasso' && mask.points) {
         ctx.beginPath();
-        ctx.moveTo(mask.points[0].x * dpr, mask.points[0].y * dpr);
+        ctx.moveTo(mask.points[0].x, mask.points[0].y);
         for (let i = 1; i < mask.points.length; i++) {
-            ctx.lineTo(mask.points[i].x * dpr, mask.points[i].y * dpr);
+            ctx.lineTo(mask.points[i].x, mask.points[i].y);
         }
         ctx.closePath();
         ctx.fill();
@@ -567,7 +560,7 @@ export function commitFloating() {
 
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(tmp, Math.round(destX * dpr), Math.round(destY * dpr));
+    ctx.drawImage(tmp, destX, destY, tmp.width / dpr, tmp.height / dpr);
     ctx.restore();
 
     state.floatingSelection = null;

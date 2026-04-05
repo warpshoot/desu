@@ -2,10 +2,12 @@ import {
     state,
     lassoCanvas,
     lassoCtx,
+    getActiveLayer,
     getActiveLayerCtx,
     getActiveLayerCanvas
 } from '../state.js';
 import { getCanvasPoint, getBounds, isPointInPolygon } from '../utils.js';
+import { markLayerDirty } from '../history.js';
 
 /**
  * Get active layer's canvas and context
@@ -48,7 +50,7 @@ export function _makeMatchFn(data, targetA, tolerance) {
  * セパラブル処理（横→縦）で O(w×h) の高速実装。
  * @returns {Uint8Array} 1=境界(通行不可), 0=通行可能
  */
-function dilateBox(boundary, w, h, radius) {
+export function dilateBox(boundary, w, h, radius) {
     const temp = new Uint8Array(w * h);
     // 横方向パス
     for (let y = 0; y < h; y++) {
@@ -108,7 +110,7 @@ export function floodFill(startX, startY, fillColor, tolerance = 'normal', gapCl
     let closedBoundary = null;
     let gapRadius = 0;
     if (gapClose > 0) {
-        gapRadius = Math.ceil(gapClose / 2);
+        gapRadius = Math.ceil(gapClose / 2 * dpr);
         const boundary = new Uint8Array(w * h);
         for (let j = 0; j < w * h; j++) {
             if (!matchTarget(j * 4)) boundary[j] = 1;
@@ -161,7 +163,17 @@ export function floodFill(startX, startY, fillColor, tolerance = 'normal', gapCl
         }
     }
 
-    ctx.putImageData(imgData, 0, 0);
+    // Draw to a temporary canvas first, then draw that to the main ctx.
+    // This allows ctx.clip() and globalCompositeOperation to work even with pixel manipulation results.
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = w;
+    tempCanvas.height = h;
+    tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+
+    ctx.drawImage(tempCanvas, 0, 0, w / dpr, h / dpr);
+
+    const layer = getActiveLayer();
+    if (layer) markLayerDirty(layer.id);
 }
 
 // 透明で塗りつぶし (トレランス付き)
@@ -195,7 +207,7 @@ export function floodFillTransparent(startX, startY, tolerance = 'normal', gapCl
     let closedBoundary = null;
     let gapRadius = 0;
     if (gapClose > 0) {
-        gapRadius = Math.ceil(gapClose / 2);
+        gapRadius = Math.ceil(gapClose / 2 * dpr);
         const boundary = new Uint8Array(w * h);
         for (let j = 0; j < w * h; j++) {
             if (!matchTarget(j * 4)) boundary[j] = 1;
@@ -244,7 +256,17 @@ export function floodFillTransparent(startX, startY, tolerance = 'normal', gapCl
         }
     }
 
-    ctx.putImageData(imgData, 0, 0);
+    // Draw to a temporary canvas first, then draw that to the main ctx.
+    // This allows ctx.clip() and globalCompositeOperation to work even with pixel manipulation results.
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = w;
+    tempCanvas.height = h;
+    tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+
+    ctx.drawImage(tempCanvas, 0, 0, w / dpr, h / dpr);
+
+    const layer = getActiveLayer();
+    if (layer) markLayerDirty(layer.id);
 }
 
 // 投げ縄で透明塗りつぶし（消しゴム用）
@@ -276,7 +298,15 @@ export function fillPolygonTransparent(points) {
         }
     }
 
-    ctx.putImageData(imgData, bounds.minX, bounds.minY);
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = bounds.width;
+    tempCanvas.height = bounds.height;
+    tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+
+    ctx.drawImage(tempCanvas, bounds.minX / dpr, bounds.minY / dpr, bounds.width / dpr, bounds.height / dpr);
+
+    const layer = getActiveLayer();
+    if (layer) markLayerDirty(layer.id);
 }
 
 // Fill polygon with color (alpha compositing)
@@ -332,7 +362,15 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
         }
     }
 
-    ctx.putImageData(imgData, bounds.minX, bounds.minY);
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = bounds.width;
+    tempCanvas.height = bounds.height;
+    tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
+
+    ctx.drawImage(tempCanvas, bounds.minX / dpr, bounds.minY / dpr, bounds.width / dpr, bounds.height / dpr);
+
+    const layer = getActiveLayer();
+    if (layer) markLayerDirty(layer.id);
 }
 
 // Fill polygon with color (Anti-Aliased using native canvas fill)
@@ -359,6 +397,8 @@ export function fillPolygonWithAA(points, r, g, b, alpha) {
     ctx.closePath();
     ctx.fill();
     ctx.restore();
+    const layer = getActiveLayer();
+    if (layer) markLayerDirty(layer.id);
 }
 
 // Fill polygon transparent (Anti-Aliased using native canvas fill)
@@ -379,6 +419,8 @@ export function fillPolygonTransparentWithAA(points) {
     ctx.closePath();
     ctx.fill();
     ctx.restore();
+    const layer = getActiveLayer();
+    if (layer) markLayerDirty(layer.id);
 }
 
 // ============================================

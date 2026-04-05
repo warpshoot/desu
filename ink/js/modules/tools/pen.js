@@ -1,11 +1,14 @@
-import { state, getActiveLayerCtx, strokeCanvas, strokeCtx, lassoCanvas, lassoCtx } from '../state.js';
+import { state, getActiveLayerCtx, getActiveLayer, strokeCanvas, strokeCtx, lassoCanvas, lassoCtx } from '../state.js';
 import { drawBrushSegment } from '../brushes.js';
+import { markLayerDirty } from '../history.js';
+import { pushSelectionClip, popSelectionClip } from './selection.js';
 
 let strokePoints = [];      // 生の入力点列
 let smoothedPoints = [];    // スムージング済みの点列 (描画に使用)
 let lastDrawnIndex = 0;
 let _strokeOpacity = 1.0;
 let _usingStrokeCanvas = false;
+let _strokeCtxSaved = false;
 
 // Dirty rect tracking — 現在のストロークが触れた領域 (キャンバス座標)
 let _dirtyMinX = Infinity, _dirtyMinY = Infinity;
@@ -257,16 +260,29 @@ export function startPenDrawing(x, y, pressure = 0.5) {
     }
 
     _strokeOpacity = brush.opacity ?? 1.0;
-    _usingStrokeCanvas = !state.isErasing && !!strokeCanvas && !!strokeCtx;
+    // 消しゴム時は即時反映（レイヤー直描き）に戻す
+    _usingStrokeCanvas = !!strokeCanvas && !!strokeCtx && !state.isErasing;
+    _strokeCtxSaved = false;
 
     if (_usingStrokeCanvas) {
+        strokeCtx.save();
+        _strokeCtxSaved = true;
         strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
         strokeCanvas.style.opacity = _strokeOpacity;
+        
+        const clipped = pushSelectionClip(strokeCtx);
         drawBrushSegment(strokeCtx, smoothedPoints, 0, true, brush, false);
     } else {
         const ctx = getActiveLayerCtx();
         if (!ctx) return;
+        
+        const clipped = pushSelectionClip(ctx);
         drawBrushSegment(ctx, smoothedPoints, 0, true, brush, state.isErasing);
+        if (clipped) popSelectionClip(ctx);
+        
+        // レイヤー直描きの場合は即座にDirtyマーク
+        const layer = getActiveLayer();
+        if (layer) markLayerDirty(layer.id);
     }
 }
 
@@ -323,26 +339,57 @@ export function drawPenLine(x, y, pressure = 0.5) {
     const drawFrom = Math.max(1, prevSmoothedLen - 1);
 
     if (_usingStrokeCanvas) {
-        lastDrawnIndex = drawBrushSegment(strokeCtx, smoothedPoints, drawFrom, false, brush, false);
+        if (state.isErasing) {
+            strokeCtx.save();
+            strokeCtx.fillStyle = '#fff';
+            lastDrawnIndex = drawBrushSegment(strokeCtx, smoothedPoints, drawFrom, false, brush, false);
+            strokeCtx.restore();
+        } else {
+            lastDrawnIndex = drawBrushSegment(strokeCtx, smoothedPoints, drawFrom, false, brush, false);
+        }
     } else {
         const ctx = getActiveLayerCtx();
-        if (!ctx) return;
-        lastDrawnIndex = drawBrushSegment(ctx, smoothedPoints, drawFrom, false, brush, state.isErasing);
+        if (ctx) {
+            const clipped = pushSelectionClip(ctx);
+            lastDrawnIndex = drawBrushSegment(ctx, smoothedPoints, drawFrom, false, brush, state.isErasing);
+            if (clipped) popSelectionClip(ctx);
+        }
     }
 }
 
 export async function endPenDrawing() {
     if (state.isPenDrawing) {
         if (_usingStrokeCanvas) {
-            const mainCtx = getActiveLayerCtx();
+            const layer = getActiveLayer();
+            const mainCtx = layer ? layer.ctx : null;
             if (mainCtx) {
                 const brush = _getDrawBrush();
                 mainCtx.save();
-                mainCtx.globalAlpha = _strokeOpacity;
+                
+                if (state.isErasing) {
+                    // 消しゴム時は合成モードを変更して strokeCanvas の内容（白）で削る
+                    mainCtx.globalCompositeOperation = 'destination-out';
+                    mainCtx.globalAlpha = 1.0;
+                } else {
+                    mainCtx.globalAlpha = _strokeOpacity;
+                }
+                
                 if (brush.binary) mainCtx.imageSmoothingEnabled = false;
+                
+                const clipped = pushSelectionClip(mainCtx);
+
                 const dpr = window.devicePixelRatio || 1;
                 mainCtx.drawImage(strokeCanvas, 0, 0, strokeCanvas.width / dpr, strokeCanvas.height / dpr);
+                
+                if (clipped) popSelectionClip(mainCtx);
                 mainCtx.restore();
+
+                // 履歴管理用にレイヤーの状態変更を通知
+                markLayerDirty(layer.id);
+            }
+            if (_strokeCtxSaved) {
+                strokeCtx.restore();
+                _strokeCtxSaved = false;
             }
             strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
             strokeCanvas.style.opacity = 1;
