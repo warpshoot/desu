@@ -1649,24 +1649,23 @@ async function handlePointerUp(e) {
             } else if (state.isPenDrawing) {
                 // ストローク確定 → redo スタックをクリア
                 commitRedoClear();
-                
-                if (state._pendingSave) {
-                    await state._pendingSave;
-                    state._pendingSave = null;
-                }
+                // _pendingSave (pointerdown 時に発行した saveState) は
+                // _enqueue キューが shrinkLastUndoEntry より先に実行することを保証するため
+                // ここで await する必要はない。即座に描画を確定させる。
+                state._pendingSave = null;
 
                 if (state.mode === 'pen' && state.subTool === 'stipple') {
                     const dirtyRect = getStippleDirtyRect();
                     clearStippleDirtyRect();
                     endStippleDrawing();
                     const layer = getActiveLayer();
-                    if (layer && dirtyRect) await shrinkLastUndoEntry(layer.id, dirtyRect);
+                    if (layer && dirtyRect) shrinkLastUndoEntry(layer.id, dirtyRect);
                 } else {
                     await endPenDrawing();
                     const dirtyRect = getPenDirtyRect();
                     clearPenDirtyRect();
                     const layer = getActiveLayer();
-                    if (layer && dirtyRect) await shrinkLastUndoEntry(layer.id, dirtyRect);
+                    if (layer && dirtyRect) shrinkLastUndoEntry(layer.id, dirtyRect);
                 }
                 updateLayerThumbnail(getActiveLayer());
             }
