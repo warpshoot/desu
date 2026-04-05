@@ -5,7 +5,7 @@ import { exportGLB } from './export.js';
 import { applyColorToFace, initPalette, addToPalette, setOnPaletteSelect } from './color.js';
 import { scene, updateWireframe } from './scene.js';
 
-export function initUI(callbacks) {
+export function initUI() {
     // ADD BUTTON & MENU
     const btnAdd = document.getElementById('btn-add');
     const addMenu = document.getElementById('add-menu');
@@ -18,7 +18,7 @@ export function initUI(callbacks) {
             if (type === 'box') newMesh = primitives.createBox();
             if (type === 'sphere') newMesh = primitives.createIcosphere(1);
             if (type === 'cylinder') newMesh = primitives.createCylinder(8);
-            
+
             if (newMesh) {
                 if (state.mesh) scene.remove(state.mesh);
                 state.mesh = newMesh;
@@ -27,6 +27,16 @@ export function initUI(callbacks) {
                 pushHistory(newMesh);
             }
             addMenu.classList.add('hidden');
+        };
+    });
+
+    // MODE BUTTONS
+    const modeButtons = document.querySelectorAll('.mode-btn');
+    modeButtons.forEach(btn => {
+        btn.onclick = () => {
+            modeButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.tool = btn.dataset.mode;
         };
     });
 
@@ -48,24 +58,9 @@ export function initUI(callbacks) {
     // UNDO / REDO
     document.getElementById('btn-undo').onclick = () => undo(state.mesh);
     document.getElementById('btn-redo').onclick = () => redo(state.mesh);
-    
+
     // EXPORT
     document.getElementById('btn-export').onclick = () => exportGLB(state.mesh);
-
-    // CONTEXT MENU
-    const ctxMenu = document.getElementById('context-menu');
-    document.getElementById('ctx-extrude').onclick = () => {
-        // This is just a hint, extrusion happens via drag
-        ctxMenu.classList.add('hidden');
-    };
-    document.getElementById('ctx-color').onclick = () => {
-        if (state.selection.faceIndex !== -1) {
-            applyColorToFace(state.mesh, state.selection.faceIndex, state.currentColor);
-            pushHistory(state.mesh);
-            addToPalette(state.currentColor);
-        }
-        ctxMenu.classList.add('hidden');
-    };
 
     initPalette();
 
@@ -83,15 +78,4 @@ export function initUI(callbacks) {
             addMenu.classList.add('hidden');
         }
     };
-}
-
-export function showContextMenu(x, y) {
-    const ctxMenu = document.getElementById('context-menu');
-    ctxMenu.style.left = x + 'px';
-    ctxMenu.style.top = y + 'px';
-    ctxMenu.classList.remove('hidden');
-}
-
-export function hideContextMenu() {
-    document.getElementById('context-menu').classList.add('hidden');
 }
