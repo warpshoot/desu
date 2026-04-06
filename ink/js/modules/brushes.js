@@ -167,6 +167,9 @@ function _drawStroke(ctx, pts, fromIdx, isStart, b) {
 
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = INK_COLOR;
+    ctx.strokeStyle = INK_COLOR;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
     if (isStart) {
         const p = pts[0];
@@ -176,11 +179,42 @@ function _drawStroke(ctx, pts, fromIdx, isStart, b) {
     }
 
     const startI = Math.max(1, fromIdx);
+
+    // Pass 1: ストローク骨格 — セグメントごとに lineWidth を変えるため個別発行
+    // (iOS では arc fill に比べ stroke は安価なため問題なし)
     for (let i = startI; i < pts.length; i++) {
         const p1 = pts[i-1], p2 = pts[i];
         const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
-        _stampSegment(ctx, p1, p2, w1, w2);
+        ctx.lineWidth = (w1 + w2) / 2;
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
     }
+
+    // Pass 2: 可変幅 arc を全セグメント分まとめて 1 回の fill() で描画
+    // (iOS Core Graphics では fill() 1回ごとに flush が走るため致命的に遅い — バッチ化で解決)
+    ctx.beginPath();
+    let hasArcs = false;
+    for (let i = startI; i < pts.length; i++) {
+        const p1 = pts[i-1], p2 = pts[i];
+        const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
+        const dx = p2.x - p1.x, dy = p2.y - p1.y;
+        const dist = Math.hypot(dx, dy);
+        if (Math.abs(w1 - w2) > 1 || dist > 5) {
+            hasArcs = true;
+            const spacing = Math.max(2.0, Math.min(w1, w2) * 0.3);
+            const steps = Math.max(1, Math.ceil(dist / spacing));
+            for (let j = 0; j <= steps; j++) {
+                const t = j / steps;
+                const cx = p1.x + dx * t, cy = p1.y + dy * t;
+                const cw = w1 + (w2 - w1) * t;
+                if (cw > 0) ctx.arc(cx, cy, cw / 2, 0, Math.PI * 2);
+            }
+        }
+    }
+    if (hasArcs) ctx.fill(); // 全 arc を 1 回の GPU flush で完了
+
     return pts.length - 1;
 }
 
@@ -241,6 +275,9 @@ function _drawBinary(ctx, pts, fromIdx, isStart, b) {
 function _drawErase(ctx, pts, fromIdx, isStart, b) {
     ctx.globalCompositeOperation = 'destination-out';
     ctx.fillStyle = '#000000';
+    ctx.strokeStyle = '#000000';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
     const gamma = b.pressureCurve ?? 1.0;
     const getW = (p) => b.pressureSize
@@ -254,43 +291,45 @@ function _drawErase(ctx, pts, fromIdx, isStart, b) {
         ctx.globalCompositeOperation = 'source-over';
         return 0;
     }
+
     const startI = Math.max(1, fromIdx);
+
+    // Pass 1: ストローク骨格
     for (let i = startI; i < pts.length; i++) {
         const p1 = pts[i-1], p2 = pts[i];
-        _stampSegment(ctx, p1, p2, getW(p1.pressure), getW(p2.pressure));
+        const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
+        ctx.lineWidth = (w1 + w2) / 2;
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
     }
+
+    // Pass 2: 可変幅 arc をバッチ fill
+    ctx.beginPath();
+    let hasArcs = false;
+    for (let i = startI; i < pts.length; i++) {
+        const p1 = pts[i-1], p2 = pts[i];
+        const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
+        const dx = p2.x - p1.x, dy = p2.y - p1.y;
+        const dist = Math.hypot(dx, dy);
+        if (Math.abs(w1 - w2) > 1 || dist > 5) {
+            hasArcs = true;
+            const spacing = Math.max(2.0, Math.min(w1, w2) * 0.3);
+            const steps = Math.max(1, Math.ceil(dist / spacing));
+            for (let j = 0; j <= steps; j++) {
+                const t = j / steps;
+                const cx = p1.x + dx * t, cy = p1.y + dy * t;
+                const cw = w1 + (w2 - w1) * t;
+                if (cw > 0) ctx.arc(cx, cy, cw / 2, 0, Math.PI * 2);
+            }
+        }
+    }
+    if (hasArcs) ctx.fill();
+
     ctx.globalCompositeOperation = 'source-over';
     return pts.length - 1;
 }
 
-// =============================================
-// 共通ヘルパー
-// =============================================
-
-function _stampSegment(ctx, p1, p2, w1, w2) {
-    const dx = p2.x - p1.x, dy = p2.y - p1.y;
-    const dist = Math.hypot(dx, dy);
-
-    ctx.strokeStyle = ctx.fillStyle;
-    ctx.lineWidth = (w1 + w2) / 2;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.stroke();
-
-    if (Math.abs(w1 - w2) > 1 || dist > 5) {
-        const spacing = Math.max(2.0, Math.min(w1, w2) * 0.3);
-        const steps = Math.max(1, Math.ceil(dist / spacing));
-        for (let j = 0; j <= steps; j++) {
-            const t = j / steps;
-            const cx = p1.x + dx * t, cy = p1.y + dy * t;
-            const cw = (w1 + (w2 - w1) * t);
-            if (cw > 0) {
-                ctx.beginPath(); ctx.arc(cx, cy, cw / 2, 0, Math.PI * 2); ctx.fill();
-            }
-        }
-    }
-}
+// _stampSegment は _drawStroke / _drawErase にインライン化したため削除済み
 

@@ -21,7 +21,8 @@ import {
     MAX_LAYERS
 } from './state.js';
 import {
-    startPenDrawing, drawPenLine, endPenDrawing, getPenDirtyRect, clearPenDirtyRect, previewStraightLine
+    startPenDrawing, drawPenLine, endPenDrawing, getPenDirtyRect, clearPenDirtyRect, previewStraightLine,
+    beginPenBatch, flushPenBatch
 } from './tools/pen.js';
 import {
     startStippleDrawing, drawStippleLine, endStippleDrawing, getStippleDirtyRect, clearStippleDirtyRect
@@ -206,12 +207,30 @@ function _flushDrawPoints() {
     if (_pendingDrawPoints.length === 0) return;
     const pts = _pendingDrawPoints;
     _pendingDrawPoints = [];
+
+    // stipple が含まれるかチェック (stipple はバッチ未対応のため個別処理)
+    let hasPen = false, hasStipple = false;
     for (let i = 0; i < pts.length; i++) {
-        const { x, y, pressure, isStipple } = pts[i];
-        if (isStipple) {
-            drawStippleLine(x, y, pressure);
-        } else {
-            drawPenLine(x, y, pressure);
+        if (pts[i].isStipple) hasStipple = true; else hasPen = true;
+    }
+
+    if (hasPen && !hasStipple) {
+        // ペンのみ: beginPenBatch → 全点の smoothedPoints 構築 → 1回の drawBrushSegment
+        // iOS では RAF ごとの GPU flush が N→1 に削減されもたつきが大幅解消
+        beginPenBatch();
+        for (let i = 0; i < pts.length; i++) {
+            drawPenLine(pts[i].x, pts[i].y, pts[i].pressure);
+        }
+        flushPenBatch();
+    } else {
+        // stipple 混在または stipple のみ: 従来通り個別処理
+        for (let i = 0; i < pts.length; i++) {
+            const { x, y, pressure, isStipple } = pts[i];
+            if (isStipple) {
+                drawStippleLine(x, y, pressure);
+            } else {
+                drawPenLine(x, y, pressure);
+            }
         }
     }
 }
@@ -1524,7 +1543,7 @@ function cancelCurrentOperation() {
     state.didInteract = false;
 }
 
-async function handlePointerMove(e) {
+function handlePointerMove(e) {
     if (state.isSaveMode) return;
     if (!state.activePointers.has(e.pointerId)) return;
 
