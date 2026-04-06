@@ -87,7 +87,8 @@ const DEBUG_MODE = false;
 // RAF-based draw batching — prevents pointermove backlog on iPad
 let _pendingDrawPoints = [];
 let _drawRafId = null;
-let _straightLineEnd = null;   // Shift+直線: pointermove で更新される最新終点 { x, y, pressure }
+let _straightLineEnd = null;   // Shift+直線: RAF pending 更新用 (flushで null にリセット)
+let _lastStraightEnd = null;   // Shift+直線: ストローク中の最新終点 (pointerup まで保持)
 let _strokeStartPoint = null;  // Shift+直線: ストローク開始点 (ガイド描画に使用)
 
 // 仮想Shiftボタンの状態: 'idle' | 'held' | 'locked'
@@ -221,6 +222,7 @@ function _cancelAndFlushDrawPoints() {
         _drawRafId = null;
     }
     _straightLineEnd = null;
+    _lastStraightEnd = null;
     _clearStraightLineGuide();
     _flushDrawPoints();
 }
@@ -1460,6 +1462,7 @@ async function handlePointerDown(e) {
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
             _strokeStartPoint = { x: canvasPoint.x, y: canvasPoint.y };
+            _lastStraightEnd = null;
         } else if (state.mode === 'fill') {
             startLasso(e.clientX, e.clientY);
         } else if (state.mode === 'eraser') {
@@ -1471,6 +1474,7 @@ async function handlePointerDown(e) {
                 state._pendingSave = saveState({ keepRedo: true });
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
                 _strokeStartPoint = { x: canvasPoint.x, y: canvasPoint.y };
+                _lastStraightEnd = null;
             }
         }
         state.strokeMade = true;
@@ -1620,6 +1624,7 @@ async function handlePointerMove(e) {
                 // ペンモード(strokeCanvas)のみライブプレビューをRAFでリクエスト
                 const pt = getCanvasPoint(e.clientX, e.clientY);
                 _straightLineEnd = { x: pt.x, y: pt.y, pressure: e.pressure };
+                _lastStraightEnd = _straightLineEnd; // pointerup まで保持
                 _pendingDrawPoints = [];
                 if (!_drawRafId) {
                     _drawRafId = requestAnimationFrame(_flushDrawPoints);
@@ -1819,8 +1824,9 @@ async function handlePointerUp(e) {
                     updateLayerThumbnail(getActiveLayer());
                 }
             } else if (state.isPenDrawing) {
-                // 直線確定: キャンセル前に終点を保存
-                const straightEnd = _straightLineEnd;
+                // 直線確定: RAF が _straightLineEnd を null 化済みでも _lastStraightEnd は保持されている
+                const straightEnd = _lastStraightEnd;
+                _lastStraightEnd = null;
 
                 // RAFキューに残っている点を即時フラッシュ (直線モード時は何もしない)
                 _cancelAndFlushDrawPoints();
