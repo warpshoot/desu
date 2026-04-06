@@ -15,7 +15,8 @@ import {
     lassoCanvas,
     getActiveLayer,
     getActiveLayerCtx,
-    getActiveLayerCanvas
+    getActiveLayerCanvas,
+    CANVAS_DPR
 } from '../state.js';
 import { getCanvasPoint, isPointInPolygon } from '../utils.js';
 
@@ -37,7 +38,7 @@ export function resizeSelectionOverlay() {
     if (!_overlayCanvas) return;
     const vw  = window.innerWidth;
     const vh  = window.innerHeight;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
     _overlayCanvas.width  = vw * dpr;
     _overlayCanvas.height = vh * dpr;
     _overlayCanvas.style.width  = vw + 'px';
@@ -345,7 +346,7 @@ async function _buildMaskBitmap(physW, physH) {
     mc.width  = physW;
     mc.height = physH;
     const mctx = mc.getContext('2d');
-    const dpr  = window.devicePixelRatio || 1;
+    const dpr  = CANVAS_DPR;
 
     mctx.fillStyle = '#fff';
 
@@ -389,7 +390,7 @@ export function pushSelectionClip(ctx) {
     if (!state.selectionMask) return false;
 
     const mask = state.selectionMask;
-    const dpr  = window.devicePixelRatio || 1;
+    const dpr  = CANVAS_DPR;
 
     ctx.save();
     ctx.beginPath();
@@ -436,7 +437,7 @@ export function liftSelection(cut = true) {
     if (!layer) return;
 
     const { canvas, ctx } = layer;
-    const dpr  = window.devicePixelRatio || 1;
+    const dpr  = CANVAS_DPR;
     const pw   = canvas.width;
     const ph   = canvas.height;
 
@@ -507,7 +508,7 @@ export function liftSelection(cut = true) {
 function _eraseSelection(layer) {
     const { ctx } = layer;
     const mask = state.selectionMask;
-    const dpr  = window.devicePixelRatio || 1;
+    const dpr  = CANVAS_DPR;
 
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
@@ -547,7 +548,7 @@ export function commitFloating() {
 
     const { ctx } = layer;
     const fs  = state.floatingSelection;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
 
     // ImageData を temp canvas に書き出し、layer ctx に drawImage で貼る
     const tmp  = document.createElement('canvas');
@@ -598,7 +599,7 @@ export function copySelection() {
             src.width,
             src.height
         );
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = CANVAS_DPR;
         state._selectionClipboard = {
             imageData: cloned,
             w: src.width / dpr,
@@ -611,7 +612,7 @@ export function copySelection() {
     if (!layer) return;
 
     const { canvas, ctx } = layer;
-    const dpr  = window.devicePixelRatio || 1;
+    const dpr  = CANVAS_DPR;
     const mask = state.selectionMask;
 
     let x0, y0, w0, h0;
@@ -682,7 +683,7 @@ export function pasteFromClipboard() {
     _invalidateMaskCache();
 
     // Clone ImageData
-    const dpr  = window.devicePixelRatio || 1;
+    const dpr  = CANVAS_DPR;
     const physW = Math.round(cb.w * dpr);
     const physH = Math.round(cb.h * dpr);
     const cloned = new ImageData(

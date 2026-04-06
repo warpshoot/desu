@@ -1,4 +1,4 @@
-import { state, getActiveLayerCtx, getActiveLayer, strokeCanvas, strokeCtx, lassoCanvas, lassoCtx } from '../state.js';
+import { state, getActiveLayerCtx, getActiveLayer, strokeCanvas, strokeCtx, lassoCanvas, lassoCtx, CANVAS_DPR } from '../state.js';
 import { drawBrushSegment } from '../brushes.js';
 import { markLayerDirty } from '../history.js';
 import { pushSelectionClip, popSelectionClip } from './selection.js';
@@ -450,7 +450,7 @@ export async function endPenDrawing() {
                 
                 const clipped = pushSelectionClip(mainCtx);
 
-                const dpr = window.devicePixelRatio || 1;
+                const dpr = CANVAS_DPR;
                 mainCtx.drawImage(strokeCanvas, 0, 0, strokeCanvas.width / dpr, strokeCanvas.height / dpr);
                 
                 if (clipped) popSelectionClip(mainCtx);

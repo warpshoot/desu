@@ -4,7 +4,8 @@ import {
     lassoCtx,
     getActiveLayer,
     getActiveLayerCtx,
-    getActiveLayerCanvas
+    getActiveLayerCanvas,
+    CANVAS_DPR
 } from '../state.js';
 import { getCanvasPoint, getBounds, isPointInPolygon } from '../utils.js';
 import { markLayerDirty } from '../history.js';
@@ -78,7 +79,7 @@ export function floodFill(startX, startY, fillColor, tolerance = 'normal', gapCl
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
     startX = Math.round(startX * dpr);
     startY = Math.round(startY * dpr);
 
@@ -183,7 +184,7 @@ export function floodFillTransparent(startX, startY, tolerance = 'normal', gapCl
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
     startX = Math.round(startX * dpr);
     startY = Math.round(startY * dpr);
 
@@ -281,7 +282,7 @@ export function fillPolygonTransparent(points) {
     if (!canvas || !ctx) return;
 
     // getImageData/putImageData は物理ピクセル座標で動作するため dpr でスケーリング
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
     const physicalPoints = points.map(p => ({ x: p.x * dpr, y: p.y * dpr }));
     const bounds = getBounds(physicalPoints, canvas.width, canvas.height);
 
@@ -323,7 +324,7 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
     if (!canvas || !ctx) return;
 
     // getImageData/putImageData は物理ピクセル座標で動作するため dpr でスケーリング
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
     const physicalPoints = points.map(p => ({ x: p.x * dpr, y: p.y * dpr }));
     const bounds = getBounds(physicalPoints, canvas.width, canvas.height);
 
@@ -388,7 +389,7 @@ export function fillPolygonWithAA(points, r, g, b, alpha) {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
     
     ctx.save();
     ctx.scale(1 / dpr, 1 / dpr); // scale down because ctx draws in canvas pixel coordinates, whereas points are in unscaled canvas coordinates wait no, points are in canvas space (unscaled css pixels).

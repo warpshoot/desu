@@ -1,4 +1,8 @@
 import { makeDefaultBrushes, makeDefaultFillSlots, makeDefaultEraserSlots } from './brushes.js';
+
+// キャンバス用 DPR: iOS 3x 等で 6000×6000 になるのを防ぐため 2 に上限設定
+// 2x で十分なシャープさを保ちつつ、GPU/メモリ負荷を大幅削減
+export const CANVAS_DPR = Math.min(window.devicePixelRatio || 1, 2);
 // ============================================
 // DOM Elements - Utility Canvases (always present)
 // ============================================
@@ -45,15 +49,14 @@ export function createLayer() {
     // Use fixed paper size; fall back to current viewport only if not yet initialized
     const w = state.paperW || 2000;
     const h = state.paperH || 2000;
-    const dpr = window.devicePixelRatio || 1;
 
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
+    canvas.width = w * CANVAS_DPR;
+    canvas.height = h * CANVAS_DPR;
     canvas.style.width = w + 'px';
     canvas.style.height = h + 'px';
 
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    ctx.scale(dpr, dpr);
+    ctx.scale(CANVAS_DPR, CANVAS_DPR);
     ctx.clearRect(0, 0, w, h);
 
     // Insert canvas into DOM (before lasso-canvas to keep proper z-order)
@@ -183,8 +186,7 @@ export function mergeLayerDown(id) {
     // Use globalAlpha to preserve top layer's opacity
     bottomLayer.ctx.save();
     bottomLayer.ctx.globalAlpha = topLayer.opacity;
-    const dpr = window.devicePixelRatio || 1;
-    bottomLayer.ctx.drawImage(topLayer.canvas, 0, 0, topLayer.canvas.width / dpr, topLayer.canvas.height / dpr);
+    bottomLayer.ctx.drawImage(topLayer.canvas, 0, 0, topLayer.canvas.width / CANVAS_DPR, topLayer.canvas.height / CANVAS_DPR);
     bottomLayer.ctx.restore();
 
     // Remove the top layer

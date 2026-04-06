@@ -9,7 +9,8 @@ import {
     strokeCanvas,
     strokeCtx,
     createLayer,
-    getActiveLayer
+    getActiveLayer,
+    CANVAS_DPR
 } from './state.js';
 
 // ============================================
@@ -28,7 +29,7 @@ export function getPaperSize() {
  * Manually resize the paper (drawing area) - used when loading projects
  */
 export function resizePaper(w, h) {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
     _paperW = w;
     _paperH = h;
     state.paperW = w;
@@ -65,7 +66,7 @@ export function resizePaper(w, h) {
 export async function initCanvas() {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
 
     const isFirstInit = _paperW === 0 || _paperH === 0;
 
@@ -167,7 +168,7 @@ export async function initCanvas() {
 export function resizeViewport() {
     const vw  = window.innerWidth;
     const vh  = window.innerHeight;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
 
     lassoCanvas.width  = vw * dpr;
     lassoCanvas.height = vh * dpr;
