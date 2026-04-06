@@ -1474,12 +1474,16 @@ async function handlePointerDown(e) {
                 }
             }
         } else if (state.mode === 'pen') {
-            // pen は strokeCanvas に描くため layer は pointerup まで変化しない。
-            // saveState (createImageBitmap) を pointerup まで遅延させてストローク開始の遅延を防ぐ。
-            state._pendingSave = null;
             if (state.subTool === 'stipple') {
+                // stipple はレイヤー直描きのため pointerup まで saveState を遅延
+                state._pendingSave = null;
                 startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             } else {
+                // strokeCanvas に描くため layer は pointerup まで変化しない。
+                // createImageBitmap をストローク開始時点で先行起動しておくことで、
+                // pointerup までに完了し「書き終わりの遅れ」を解消する。
+                // (eraser の pointerdown saveState と同じパターン)
+                state._pendingSave = saveState({ keepRedo: true });
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
             _strokeStartPoint = { x: canvasPoint.x, y: canvasPoint.y };
