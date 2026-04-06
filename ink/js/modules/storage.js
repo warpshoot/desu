@@ -34,11 +34,15 @@ export function saveLocalState() {
             };
 
             for (const layer of layers) {
+                // canvas.toDataURL() は大サイズキャンバスでメインスレッドを数秒ブロックする。
+                // iOS 3x (6000×6000) では localStorage の 5MB 制限を超えるため常に失敗する。
+                // キャンバスデータのローカル保存はスキップし、設定のみを保存する。
+                // (ブロックが "連続で描画できなくなる" 現象の原因)
                 data.layers.push({
                     id: layer.id,
                     opacity: layer.opacity,
                     visible: layer.visible,
-                    image: layer.canvas.toDataURL()
+                    image: null
                 });
             }
 
