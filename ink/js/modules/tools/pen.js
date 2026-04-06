@@ -437,7 +437,7 @@ export async function endPenDrawing() {
             if (mainCtx) {
                 const brush = _getDrawBrush();
                 mainCtx.save();
-                
+
                 if (state.isErasing) {
                     // 消しゴム時は合成モードを変更して strokeCanvas の内容（白）で削る
                     mainCtx.globalCompositeOperation = 'destination-out';
@@ -445,14 +445,36 @@ export async function endPenDrawing() {
                 } else {
                     mainCtx.globalAlpha = _strokeOpacity;
                 }
-                
+
                 if (brush.binary) mainCtx.imageSmoothingEnabled = false;
-                
+
                 const clipped = pushSelectionClip(mainCtx);
 
                 const dpr = CANVAS_DPR;
-                mainCtx.drawImage(strokeCanvas, 0, 0, strokeCanvas.width / dpr, strokeCanvas.height / dpr);
-                
+
+                // Dirty Rect 最適化: ストロークが触れた領域だけ strokeCanvas → layer にコピー
+                // 全面コピー (4000×4000) は iOS Metal で大きな GPU 負荷になる。
+                // 典型的なストロークは canvas の一部なので dirty rect だけコピーすることで
+                // GPU 転送量を大幅削減できる。
+                if (_dirtyMinX <= _dirtyMaxX) {
+                    const m = _dirtyMargin;
+                    // 物理ピクセル座標 (strokeCanvas の座標系)
+                    const psx = Math.max(0, Math.floor((_dirtyMinX - m) * dpr));
+                    const psy = Math.max(0, Math.floor((_dirtyMinY - m) * dpr));
+                    const pex = Math.min(strokeCanvas.width,  Math.ceil((_dirtyMaxX + m) * dpr));
+                    const pey = Math.min(strokeCanvas.height, Math.ceil((_dirtyMaxY + m) * dpr));
+                    const psw = pex - psx;
+                    const psh = pey - psy;
+                    if (psw > 0 && psh > 0) {
+                        // dest は mainCtx の CSS 座標系 (scale(dpr) 済み)
+                        mainCtx.drawImage(strokeCanvas, psx, psy, psw, psh,
+                            psx / dpr, psy / dpr, psw / dpr, psh / dpr);
+                    }
+                } else {
+                    // dirty rect 未計算 (点描など) → 全面フォールバック
+                    mainCtx.drawImage(strokeCanvas, 0, 0, strokeCanvas.width / dpr, strokeCanvas.height / dpr);
+                }
+
                 if (clipped) popSelectionClip(mainCtx);
                 mainCtx.restore();
 
@@ -463,7 +485,17 @@ export async function endPenDrawing() {
                 strokeCtx.restore();
                 _strokeCtxSaved = false;
             }
-            strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
+            // clearRect も dirty rect だけに限定 (strokeCtx は scale(dpr) 済みなので CSS 座標)
+            if (_dirtyMinX <= _dirtyMaxX) {
+                const m = _dirtyMargin;
+                const cx = Math.max(0, _dirtyMinX - m);
+                const cy = Math.max(0, _dirtyMinY - m);
+                const cw = Math.min(strokeCanvas.width / CANVAS_DPR - cx, (_dirtyMaxX - _dirtyMinX) + m * 2);
+                const ch = Math.min(strokeCanvas.height / CANVAS_DPR - cy, (_dirtyMaxY - _dirtyMinY) + m * 2);
+                if (cw > 0 && ch > 0) strokeCtx.clearRect(cx, cy, cw, ch);
+            } else {
+                strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
+            }
             strokeCanvas.style.opacity = 1;
         }
 
