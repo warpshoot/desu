@@ -1,4 +1,4 @@
-﻿import {
+import {
     state,
     lassoCanvas,
     lassoCtx,
@@ -70,13 +70,14 @@ function runScanline(w, h, startX, startY, matchFn, setFn, closedBoundary) {
     const visited = useGap ? new Uint8Array(w * h) : null;
 
     const passable = useGap
-        ? (x, y) => !closedBoundary[y * w + x] && !visited[y * w + x]
-        : (x, y) => matchFn((y * w + x) * 4);
+        ? (x, y) => x >= 0 && x < w && y >= 0 && y < h && !closedBoundary[y * w + x] && !visited[y * w + x]
+        : (x, y) => x >= 0 && x < w && y >= 0 && y < h && matchFn((y * w + x) * 4);
 
     // 開始点チェック
-    if (!passable(startX, startY)) return;
+    if (!passable(startX, startY)) return null;
 
     const stack = [[startX, startY]];
+    let minX = startX, minY = startY, maxX = startX, maxY = startY;
 
     while (stack.length > 0) {
         let [x, y] = stack.pop();
@@ -92,7 +93,14 @@ function runScanline(w, h, startX, startY, matchFn, setFn, closedBoundary) {
 
             // 実ピクセルが対象に一致する場合のみ塗る
             const i = (y * w + x) * 4;
-            if (!useGap || matchFn(i)) setFn(i);
+            if (!useGap || matchFn(i)) {
+                setFn(i);
+                // 範囲更新
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
 
             if (y > 0) {
                 if (passable(x, y - 1)) {
@@ -113,6 +121,8 @@ function runScanline(w, h, startX, startY, matchFn, setFn, closedBoundary) {
             x++;
         }
     }
+
+    return { minX, minY, maxX, maxY };
 }
 
 export function floodFill(startX, startY, fillColor, colorTolerance = 0, gapClose = 0) {
@@ -160,9 +170,14 @@ export function floodFill(startX, startY, fillColor, colorTolerance = 0, gapClos
         closedBoundary = dilateBox(boundary, w, h, radius);
     }
 
-    runScanline(w, h, startX, startY, matchTarget, setPixel, closedBoundary);
+    const bounds = runScanline(w, h, startX, startY, matchTarget, setPixel, closedBoundary);
 
-    ctx.putImageData(imgData, 0, 0);
+    if (bounds) {
+        // 書き戻し範囲を限定することで、無関係な領域のピクセル劣化を防ぐ
+        const bw = bounds.maxX - bounds.minX + 1;
+        const bh = bounds.maxY - bounds.minY + 1;
+        ctx.putImageData(imgData, 0, 0, bounds.minX, bounds.minY, bw, bh);
+    }
 }
 
 // 透明で塗りつぶし
@@ -195,9 +210,13 @@ export function floodFillTransparent(startX, startY, gapClose = 0) {
         closedBoundary = dilateBox(boundary, w, h, radius);
     }
 
-    runScanline(w, h, startX, startY, matchTarget, setPixel, closedBoundary);
+    const bounds = runScanline(w, h, startX, startY, matchTarget, setPixel, closedBoundary);
 
-    ctx.putImageData(imgData, 0, 0);
+    if (bounds) {
+        const bw = bounds.maxX - bounds.minX + 1;
+        const bh = bounds.maxY - bounds.minY + 1;
+        ctx.putImageData(imgData, 0, 0, bounds.minX, bounds.minY, bw, bh);
+    }
 }
 
 // 投げ縄で透明塗りつぶし（消しゴム用）
@@ -207,26 +226,17 @@ export function fillPolygonTransparent(points) {
     const { canvas, ctx } = getActiveContextAndCanvas();
     if (!canvas || !ctx) return;
 
-    const bounds = getBounds(points, canvas.width, canvas.height);
-
-    if (bounds.width <= 0 || bounds.height <= 0) return;
-
-    const imgData = ctx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
-    const data = imgData.data;
-
-    for (let py = 0; py < bounds.height; py++) {
-        for (let px = 0; px < bounds.width; px++) {
-            const canvasX = bounds.minX + px;
-            const canvasY = bounds.minY + py;
-
-            if (isPointInPolygon(canvasX, canvasY, points)) {
-                const i = (py * bounds.width + px) * 4;
-                data[i + 3] = 0;
-            }
-        }
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = '#000000'; // Color doesn't matter for destination-out
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
     }
-
-    ctx.putImageData(imgData, bounds.minX, bounds.minY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
 }
 
 // Fill polygon with color (alpha compositing)
@@ -237,10 +247,17 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
     if (!canvas || !ctx) return;
 
     const bounds = getBounds(points, canvas.width, canvas.height);
-
     if (bounds.width <= 0 || bounds.height <= 0) return;
 
-    const imgData = ctx.getImageData(bounds.minX, bounds.minY, bounds.width, bounds.height);
+    // Create a temporary offscreen canvas for the shape
+    // This allows us to use native blending and avoid putImageData bit-rot on background pixels
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = bounds.width;
+    tempCanvas.height = bounds.height;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    // Generate the mask/shape on temporary canvas
+    const imgData = tempCtx.createImageData(bounds.width, bounds.height);
     const data = imgData.data;
 
     for (let py = 0; py < bounds.height; py++) {
@@ -250,36 +267,19 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
 
             if (isPointInPolygon(canvasX, canvasY, points)) {
                 const i = (py * bounds.width + px) * 4;
-
-                const dr = data[i];
-                const dg = data[i + 1];
-                const db = data[i + 2];
-                const da = data[i + 3] / 255.0;
-
-                const sr = r;
-                const sg = g;
-                const sb = b;
-                const sa = alpha;
-
-                const outA = sa + da * (1.0 - sa);
-
-                if (outA > 0) {
-                    const outR = (sr * sa + dr * da * (1.0 - sa)) / outA;
-                    const outG = (sg * sa + dg * da * (1.0 - sa)) / outA;
-                    const outB = (sb * sa + db * da * (1.0 - sa)) / outA;
-
-                    data[i] = outR;
-                    data[i + 1] = outG;
-                    data[i + 2] = outB;
-                    data[i + 3] = outA * 255.0;
-                } else {
-                    data[i + 3] = 0;
-                }
+                data[i] = r;
+                data[i + 1] = g;
+                data[i + 2] = b;
+                data[i + 3] = alpha * 255;
             }
         }
     }
 
-    ctx.putImageData(imgData, bounds.minX, bounds.minY);
+    tempCtx.putImageData(imgData, 0, 0);
+
+    // Draw the temporary canvas to the main context
+    // This uses native hardware-accelerated blending
+    ctx.drawImage(tempCanvas, bounds.minX, bounds.minY);
 }
 
 // Sketch flood fill (semi-transparent grey with multiply blend)
@@ -316,35 +316,40 @@ export function floodFillSketch(startX, startY, gapClose = 0) {
 
     const mask = new Uint8Array(w * h);
     const setMask = (i) => { mask[i / 4] = 255; };
-    runScanline(w, h, startX, startY, matchTarget, setMask, closedBoundary);
+    const bounds = runScanline(w, h, startX, startY, matchTarget, setMask, closedBoundary);
 
+    if (!bounds) return;
+
+    const bw = bounds.maxX - bounds.minX + 1;
+    const bh = bounds.maxY - bounds.minY + 1;
 
     // Create a temporary canvas for the final result
     const resultCanvas = document.createElement('canvas');
-    resultCanvas.width = w;
-    resultCanvas.height = h;
+    resultCanvas.width = bw;
+    resultCanvas.height = bh;
     const resultCtx = resultCanvas.getContext('2d');
 
     // 1. Fill result with solid semi-transparent grey
     resultCtx.fillStyle = '#808080';
     resultCtx.globalAlpha = 0.5;
-    resultCtx.fillRect(0, 0, w, h);
+    resultCtx.fillRect(0, 0, bw, bh);
 
     // 2. Apply the mask using destination-in
     const tempMaskCanvas = document.createElement('canvas');
-    tempMaskCanvas.width = w;
-    tempMaskCanvas.height = h;
+    tempMaskCanvas.width = bw;
+    tempMaskCanvas.height = bh;
     const tempMaskCtx = tempMaskCanvas.getContext('2d');
-    const maskImgData = tempMaskCtx.createImageData(w, h);
+    const maskImgData = tempMaskCtx.createImageData(bw, bh);
     const mData = maskImgData.data;
 
-    for (let i = 0; i < mask.length; i++) {
-        if (mask[i] === 255) {
-            const idx = i * 4;
-            mData[idx] = 0;
-            mData[idx + 1] = 0;
-            mData[idx + 2] = 0;
-            mData[idx + 3] = 255;
+    for (let y = 0; y < bh; y++) {
+        for (let x = 0; x < bw; x++) {
+            const gy = bounds.minY + y;
+            const gx = bounds.minX + x;
+            if (mask[gy * w + gx] === 255) {
+                const midx = (y * bw + x) * 4;
+                mData[midx + 3] = 255;
+            }
         }
     }
     tempMaskCtx.putImageData(maskImgData, 0, 0);
@@ -356,9 +361,8 @@ export function floodFillSketch(startX, startY, gapClose = 0) {
     // 3. Composite to active layer using multiply
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
-    ctx.drawImage(resultCanvas, 0, 0);
+    ctx.drawImage(resultCanvas, bounds.minX, bounds.minY);
     ctx.restore();
-
 }
 
 export function fillPolygon(points) {
