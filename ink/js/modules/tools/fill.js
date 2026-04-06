@@ -165,11 +165,13 @@ export function floodFill(startX, startY, fillColor, tolerance = 'normal', gapCl
 
     // Draw to a temporary canvas first, then draw that to the main ctx.
     // This allows ctx.clip() and globalCompositeOperation to work even with pixel manipulation results.
+    // clearRect before drawImage to avoid double-compositing unmodified pixels (opacity bug).
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = w;
     tempCanvas.height = h;
     tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
 
+    ctx.clearRect(0, 0, w / dpr, h / dpr);
     ctx.drawImage(tempCanvas, 0, 0, w / dpr, h / dpr);
 
     const layer = getActiveLayer();
@@ -258,11 +260,13 @@ export function floodFillTransparent(startX, startY, tolerance = 'normal', gapCl
 
     // Draw to a temporary canvas first, then draw that to the main ctx.
     // This allows ctx.clip() and globalCompositeOperation to work even with pixel manipulation results.
+    // clearRect before drawImage to avoid double-compositing unmodified pixels (opacity bug).
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = w;
     tempCanvas.height = h;
     tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
 
+    ctx.clearRect(0, 0, w / dpr, h / dpr);
     ctx.drawImage(tempCanvas, 0, 0, w / dpr, h / dpr);
 
     const layer = getActiveLayer();
@@ -303,6 +307,8 @@ export function fillPolygonTransparent(points) {
     tempCanvas.height = bounds.height;
     tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
 
+    // clearRect before drawImage to avoid double-compositing pixels outside the polygon (opacity bug).
+    ctx.clearRect(bounds.minX / dpr, bounds.minY / dpr, bounds.width / dpr, bounds.height / dpr);
     ctx.drawImage(tempCanvas, bounds.minX / dpr, bounds.minY / dpr, bounds.width / dpr, bounds.height / dpr);
 
     const layer = getActiveLayer();
@@ -367,6 +373,8 @@ export function fillPolygonNoAA(points, r, g, b, alpha) {
     tempCanvas.height = bounds.height;
     tempCanvas.getContext('2d').putImageData(imgData, 0, 0);
 
+    // clearRect before drawImage to avoid double-compositing pixels outside the polygon (opacity bug).
+    ctx.clearRect(bounds.minX / dpr, bounds.minY / dpr, bounds.width / dpr, bounds.height / dpr);
     ctx.drawImage(tempCanvas, bounds.minX / dpr, bounds.minY / dpr, bounds.width / dpr, bounds.height / dpr);
 
     const layer = getActiveLayer();
