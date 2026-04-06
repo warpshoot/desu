@@ -1857,12 +1857,12 @@ async function handlePointerUp(e) {
 
                 // pen mode: saveState を pointerdown から遅延していた場合はここで実行
                 // (strokeCanvas に描画していたため layer は未変更のまま → 正しい "before" を取得できる)
+                // ※ createImageBitmap はコール時点でスナップショットを取るため、
+                //   endPenDrawing より先に await する必要はない。
+                //   await を後回しにすることで strokeCanvas → layer 合成を即座に行い、
+                //   「書き終わりが1テンポ遅れる」問題を解消する。
                 if (!state._pendingSave) {
                     state._pendingSave = saveState({ keepRedo: true });
-                }
-                if (state._pendingSave) {
-                    await state._pendingSave;
-                    state._pendingSave = null;
                 }
 
                 if (state.mode === 'pen' && state.subTool === 'stipple') {
@@ -1871,6 +1871,10 @@ async function handlePointerUp(e) {
                     const dirtyRect = getStippleDirtyRect();
                     clearStippleDirtyRect();
                     endStippleDrawing();
+                    if (state._pendingSave) {
+                        await state._pendingSave;
+                        state._pendingSave = null;
+                    }
                     const layer = getActiveLayer();
                     // shrink は非同期最適化のため await 不要 (キュー順序は保証される)
                     if (layer && dirtyRect) shrinkLastUndoEntry(layer.id, dirtyRect);
@@ -1884,9 +1888,15 @@ async function handlePointerUp(e) {
                             drawPenLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
                         }
                     }
-                    await endPenDrawing();
+                    await endPenDrawing(); // strokeCanvas → layer を即座に反映
                     const dirtyRect = getPenDirtyRect();
                     clearPenDirtyRect();
+                    // saveState の完了を待ってから shrink (キュー順序は history.js が保証するが
+                    // _pendingSave が null でない場合は明示的に待つ)
+                    if (state._pendingSave) {
+                        await state._pendingSave;
+                        state._pendingSave = null;
+                    }
                     const layer = getActiveLayer();
                     // shrink は非同期最適化のため await 不要 (キュー順序は保証される)
                     if (layer && dirtyRect) shrinkLastUndoEntry(layer.id, dirtyRect);
