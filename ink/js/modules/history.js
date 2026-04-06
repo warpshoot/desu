@@ -149,6 +149,50 @@ export function commitRedoClear() {
 }
 
 /**
+ * ストローク前の "before" dirty rect パッチを履歴エントリとして保存する
+ *
+ * pen mode 専用: strokeCanvas に描いていたため layer.canvas は未変更。
+ * pointerup で endPenDrawing() を呼ぶ前に layer.canvas の dirty 領域だけを
+ * createImageBitmap でキャプチャし、フルキャンバスキャプチャを完全に省略する。
+ *
+ * @param {number} layerId
+ * @param {{ x: number, y: number }} patchOrigin  パッチ左上座標 (CSS px)
+ * @param {Promise<ImageBitmap>}     patchPromise  dirty rect の ImageBitmap Promise
+ * @param {boolean}                  keepRedo
+ */
+export function savePatchState({ layerId, patchOrigin, patchPromise, keepRedo = false }) {
+    return _enqueue(async () => {
+        if (!keepRedo) _clearRedoStack();
+
+        const prevEntry = state.undoStack.length > 0 ? state.undoStack[state.undoStack.length - 1] : null;
+
+        const snapshot = {
+            bitmaps: new Map(),
+            patches: new Map(),
+            layerMeta: layers.map(l => ({ id: l.id, opacity: l.opacity, visible: l.visible }))
+        };
+
+        // 変更のない他レイヤーは前回スナップショットの参照を再利用 (差分保存)
+        for (const layer of layers) {
+            if (layer.id !== layerId && prevEntry && prevEntry.bitmaps.has(layer.id)) {
+                snapshot.bitmaps.set(layer.id, prevEntry.bitmaps.get(layer.id));
+            }
+        }
+
+        const patchBitmap = await patchPromise;
+        snapshot.patches.set(layerId, { bitmap: patchBitmap, x: patchOrigin.x, y: patchOrigin.y });
+
+        state.undoStack.push(snapshot);
+        saveLocalState();
+
+        if (state.undoStack.length > state.MAX_HISTORY) {
+            const old = state.undoStack.shift();
+            _closeSnapshotBitmaps(old, state.undoStack[0]);
+        }
+    });
+}
+
+/**
  * Save state for initialization (no redo clear)
  */
 export async function saveInitialState() {

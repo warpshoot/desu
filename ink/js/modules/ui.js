@@ -40,7 +40,7 @@ import {
     fillPolygonTransparentWithAA,
     dilateBox
 } from './tools/fill.js';
-import { saveState, commitRedoClear, undo, redo, restoreLayer, resetHistory, saveLayerChangeState, shrinkLastUndoEntry } from './history.js';
+import { saveState, commitRedoClear, undo, redo, restoreLayer, resetHistory, saveLayerChangeState, shrinkLastUndoEntry, savePatchState } from './history.js';
 import {
     showSelectionUI, hideSelectionUI, confirmSelection, redoSelection,
     saveSelectedRegion, saveAllCanvas, copyToClipboard, saveRegion
@@ -1481,10 +1481,9 @@ async function handlePointerDown(e) {
                 startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             } else {
                 // strokeCanvas に描くため layer は pointerup まで変化しない。
-                // createImageBitmap をストローク開始時点で先行起動しておくことで、
-                // pointerup までに完了し「書き終わりの遅れ」を解消する。
-                // (eraser の pointerdown saveState と同じパターン)
-                state._pendingSave = saveState({ keepRedo: true });
+                // pointerup で dirty rect だけをキャプチャして savePatchState を呼ぶため、
+                // pointerdown での全キャンバスキャプチャは不要。
+                state._pendingSave = null;
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
             _strokeStartPoint = { x: canvasPoint.x, y: canvasPoint.y };
@@ -1860,45 +1859,56 @@ async function handlePointerUp(e) {
                 // ストローク確定 → redo スタックをクリア
                 commitRedoClear();
 
-                // pen mode: saveState を pointerdown から遅延していた場合はここで実行
-                // (strokeCanvas に描画していたため layer は未変更のまま → 正しい "before" を取得できる)
-                // ※ createImageBitmap はコール時点でスナップショットを取るため、
-                //   endPenDrawing より先に await する必要はない。
-                //   await を後回しにすることで strokeCanvas → layer 合成を即座に行い、
-                //   「書き終わりが1テンポ遅れる」問題を解消する。
-                if (!state._pendingSave) {
-                    state._pendingSave = saveState({ keepRedo: true });
-                }
-
                 if (state.mode === 'pen' && state.subTool === 'stipple') {
+                    // stipple: レイヤー直描きのため pointerup 時点で saveState
+                    if (!state._pendingSave) {
+                        state._pendingSave = saveState({ keepRedo: true });
+                    }
                     // 点描直線: 始点→終点間にstippleドットを一括描画
                     if (straightEnd) drawStippleLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
-                    const dirtyRect = getStippleDirtyRect();
+                    const stippleDirtyRect = getStippleDirtyRect();
                     clearStippleDirtyRect();
                     endStippleDrawing();
                     state._pendingSave = null; // _historyQueue が順序を保証
-                    const layer = getActiveLayer();
-                    if (layer && dirtyRect) shrinkLastUndoEntry(layer.id, dirtyRect);
-                } else {
-                    if (straightEnd) {
-                        if (state.mode === 'pen') {
-                            // ペン直線: strokeCanvasに最終ラインを確定描画
-                            previewStraightLine(straightEnd.x, straightEnd.y);
-                        } else {
-                            // 消しゴムペン直線: 始点→終点をレイヤーに直接描画
-                            drawPenLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
+                    const stippleLayer = getActiveLayer();
+                    if (stippleLayer && stippleDirtyRect) shrinkLastUndoEntry(stippleLayer.id, stippleDirtyRect);
+                } else if (state.mode === 'pen') {
+                    // pen (非stipple): strokeCanvas → layer。
+                    // endPenDrawing() より前に layer.canvas は未変更のため、
+                    // dirty rect だけを createImageBitmap でキャプチャして "before" として保存。
+                    // フルキャンバス (4000×4000) のキャプチャを完全に省略し、GPU 競合を排除する。
+                    const dirtyRect = getPenDirtyRect();
+                    const penLayer = getActiveLayer();
+                    if (straightEnd) previewStraightLine(straightEnd.x, straightEnd.y);
+                    if (penLayer && dirtyRect) {
+                        const dpr = CANVAS_DPR;
+                        const sx = Math.max(0, Math.floor(dirtyRect.x * dpr));
+                        const sy = Math.max(0, Math.floor(dirtyRect.y * dpr));
+                        const sw = Math.min(penLayer.canvas.width  - sx, Math.ceil(dirtyRect.w * dpr));
+                        const sh = Math.min(penLayer.canvas.height - sy, Math.ceil(dirtyRect.h * dpr));
+                        if (sw > 0 && sh > 0) {
+                            // GPU pending write なし (strokeCanvas のみ使用) → 即時に小領域だけキャプチャ
+                            const patchPromise = createImageBitmap(penLayer.canvas, sx, sy, sw, sh);
+                            savePatchState({ layerId: penLayer.id, patchOrigin: { x: sx / dpr, y: sy / dpr }, patchPromise, keepRedo: true });
                         }
                     }
-                    // await 不要: endPenDrawing に内部 await なし。
-                    // await するとマイクロタスク境界でブラウザがフレームを描画するタイミングに
-                    // strokeCanvas がクリア済み・layer がまだ GPU 書き込み中という状態が生まれ、
-                    // ストローク末端が一瞬消えて見える原因になる。
+                    // strokeCanvas → layer 合成。await 不要 (内部 await なし)。
+                    endPenDrawing();
+                    clearPenDirtyRect();
+                    state._pendingSave = null;
+                } else {
+                    // eraser (非lasso、非clear): レイヤー直描き。pointerdown で saveState 済み。
+                    if (!state._pendingSave) {
+                        state._pendingSave = saveState({ keepRedo: true });
+                    }
+                    // 消しゴムペン直線: 始点→終点をレイヤーに直接描画
+                    if (straightEnd) drawPenLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
                     endPenDrawing();
                     const dirtyRect = getPenDirtyRect();
                     clearPenDirtyRect();
                     state._pendingSave = null;
-                    const layer = getActiveLayer();
-                    if (layer && dirtyRect) shrinkLastUndoEntry(layer.id, dirtyRect);
+                    const eraserLayer = getActiveLayer();
+                    if (eraserLayer && dirtyRect) shrinkLastUndoEntry(eraserLayer.id, dirtyRect);
                 }
                 // サムネイル更新を次の RAF に遅延:
                 // endPenDrawing() が layer.canvas へ GPU 書き込みした直後に
