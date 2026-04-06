@@ -87,7 +87,7 @@ button.primary {
   display: flex;
   align-items: center;
   padding: 0 15px;
-  gap: 20px;
+  gap: 12px;
   z-index: 100;
 }
 
@@ -122,6 +122,32 @@ button.primary {
   display: none;
 }
 
+/* Mode buttons */
+.mode-group {
+  display: flex;
+  gap: 2px;
+  background: #1a1a1a;
+  border-radius: 4px;
+  padding: 2px;
+  border: 1px solid var(--border);
+}
+
+.mode-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 10px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #888;
+  min-width: 40px;
+}
+
+.mode-btn.active {
+  background: var(--accent);
+  color: white;
+  border: none;
+}
+
 .color-preview {
   width: 36px;
   height: 36px;
@@ -129,6 +155,7 @@ button.primary {
   border: 2px solid var(--fg);
   cursor: pointer;
   background-color: var(--accent);
+  flex-shrink: 0;
 }
 
 .palette {
@@ -149,28 +176,13 @@ button.primary {
   border-radius: 2px;
   border: 1px solid var(--border);
   cursor: pointer;
-}
-
-#context-menu {
-  position: absolute;
-  background: var(--panel-bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 5px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  z-index: 200;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-}
-
-#context-menu.hidden {
-  display: none;
+  flex-shrink: 0;
 }
 
 @media (max-width: 600px) {
   .logo { font-size: 14px; }
   .header { padding: 0 10px; }
   .actions button { padding: 4px 8px; font-size: 12px; }
-  .bottom-bar { padding: 0 10px; gap: 10px; }
+  .bottom-bar { padding: 0 10px; gap: 8px; }
+  .mode-btn { padding: 6px 8px; font-size: 11px; }
 }

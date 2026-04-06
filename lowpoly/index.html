@@ -31,12 +31,6 @@
         <!-- Canvas will be injected here -->
     </main>
 
-    <div id="context-menu" class="hidden">
-        <button id="ctx-extrude">Extrude</button>
-        <button id="ctx-color">Paint</button>
-        <button id="ctx-delete">Delete</button>
-    </div>
-
     <footer class="bottom-bar">
         <div class="tool-group">
             <button id="btn-add" class="tool-btn">Add▼</button>
@@ -45,6 +39,11 @@
                 <button data-type="sphere">Icosphere</button>
                 <button data-type="cylinder">Cylinder</button>
             </div>
+        </div>
+        <div class="mode-group">
+            <button id="btn-mode-select" class="mode-btn active" data-mode="select">Sel</button>
+            <button id="btn-mode-extrude" class="mode-btn" data-mode="extrude">Ext</button>
+            <button id="btn-mode-paint" class="mode-btn" data-mode="paint">Paint</button>
         </div>
         <div class="tool-group">
             <div class="color-preview" id="current-color"></div>

@@ -24,9 +24,17 @@ export function initScene() {
     renderer.setSize(width, height);
     container.appendChild(renderer.domElement);
 
-    // LIGHTING - Start with just ambient as requested
-    ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+    // LIGHTING
+    ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(5, 10, 7);
+    scene.add(dirLight);
+
+    const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+    dirLight2.position.set(-3, -5, -5);
+    scene.add(dirLight2);
 
     // GRID & HELPERS
     const grid = new THREE.GridHelper(20, 20, '#333333', '#222222');
