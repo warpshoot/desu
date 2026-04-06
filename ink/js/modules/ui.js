@@ -1888,16 +1888,24 @@ async function handlePointerUp(e) {
                             drawPenLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
                         }
                     }
-                    await endPenDrawing(); // strokeCanvas → layer を即座に反映
+                    // await 不要: endPenDrawing に内部 await なし。
+                    // await するとマイクロタスク境界でブラウザがフレームを描画するタイミングに
+                    // strokeCanvas がクリア済み・layer がまだ GPU 書き込み中という状態が生まれ、
+                    // ストローク末端が一瞬消えて見える原因になる。
+                    endPenDrawing();
                     const dirtyRect = getPenDirtyRect();
                     clearPenDirtyRect();
-                    // _historyQueue が saveState → shrink の順序を保証するため await 不要
-                    // (await するとiOSで createImageBitmap の GPU sync に引っかかり遅延が生じる)
                     state._pendingSave = null;
                     const layer = getActiveLayer();
                     if (layer && dirtyRect) shrinkLastUndoEntry(layer.id, dirtyRect);
                 }
-                updateLayerThumbnail(getActiveLayer());
+                // サムネイル更新を次の RAF に遅延:
+                // endPenDrawing() が layer.canvas へ GPU 書き込みした直後に
+                // drawImage(layer.canvas → thumb) すると iOS GPU パイプライン同期が発生し
+                // メインスレッドがブロックされる（＝末端遅延の主因）。
+                // RAF 後はフレーム描画済みで GPU 書き込み完了が保証されるため sync なし。
+                const _thumbLayer = getActiveLayer();
+                requestAnimationFrame(() => updateLayerThumbnail(_thumbLayer));
                 _clearStraightLineGuide();
             }
             state.drawingPointerId = null;
