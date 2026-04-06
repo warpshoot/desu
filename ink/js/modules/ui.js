@@ -1324,6 +1324,8 @@ async function handlePointerDown(e) {
     }
 
     // Track active pointers with detailed state
+    if (e.target !== eventCanvas) return;
+
     state.activePointers.set(e.pointerId, {
         x: e.clientX,
         y: e.clientY,
