@@ -89,19 +89,41 @@ let _pendingDrawPoints = [];
 let _drawRafId = null;
 let _straightLineEnd = null; // Shift+直線プレビュー用: 最新終点
 
-// 仮想Shiftボタン (one-shot: ストローク完了後に自動解除)
-let _virtualShiftOn = false;
+// 仮想Shiftボタンの状態: 'idle' | 'held' | 'locked'
+// held  = 押している間だけ有効 (pointerup で解除)
+// locked = ダブルタップでロック、タップで解除
+let _modShiftState = 'idle';
+let _modShiftLastTapTime = 0;
+const _MOD_DOUBLE_TAP_MS = 300;
 
-/** キーボード Shift または仮想 Shift ボタンのどちらかが ON かを返す */
+/** キーボード Shift または仮想 Shift (held/locked) のどちらかが ON かを返す */
 function _isShiftActive() {
-    return state.isShiftPressed || _virtualShiftOn;
+    return state.isShiftPressed || _modShiftState !== 'idle';
 }
 
-/** 仮想Shiftのon/offを切り替えてボタン見た目を更新 */
-function _setVirtualShift(on) {
-    _virtualShiftOn = on;
+/** モディファイアバーの Shift ボタン見た目を状態に合わせて更新 */
+function _updateModShiftBtn() {
     const btn = document.getElementById('mod-shift');
-    if (btn) btn.classList.toggle('active', on);
+    if (!btn) return;
+    btn.classList.toggle('active',  _modShiftState === 'held');
+    btn.classList.toggle('locked',  _modShiftState === 'locked');
+}
+
+/**
+ * モディファイアバーの各ボタンをモード/サブツールに合わせて更新
+ * モード切替・サブツール切替のたびに呼ぶ
+ */
+function updateModifierBar() {
+    const shiftBtn = document.getElementById('mod-shift');
+    if (!shiftBtn) return;
+    // 直線: ペンモードかつ stipple 以外のときのみ有効
+    const shiftAvailable = state.mode === 'pen' && state.subTool !== 'stipple';
+    shiftBtn.classList.toggle('unavailable', !shiftAvailable);
+    // 使用不可になったらロックも解除
+    if (!shiftAvailable && _modShiftState !== 'idle') {
+        _modShiftState = 'idle';
+        _updateModShiftBtn();
+    }
 }
 
 function _flushDrawPoints() {
@@ -248,6 +270,7 @@ export function initUI() {
     setupKeyboardShortcuts();
     setupSelectToolbar();
     initSelectionOverlay();
+    updateModifierBar();
     updateDebugDisplay();
 }
 
@@ -751,6 +774,7 @@ function handleModeTap(mode) {
     updateBrushSizeVisibility();
     updateBrushSizeSlider();
     renderBrushPalette();
+    updateModifierBar();
 }
 
 // --- Update the mode button to show the selected sub-tool icon ---
@@ -1719,9 +1743,6 @@ async function handlePointerUp(e) {
             } else if (state.isPenDrawing) {
                 // RAFキューに残っている点を即時フラッシュ
                 _cancelAndFlushDrawPoints();
-
-                // 仮想Shift: one-shot なのでストローク完了後に自動解除
-                if (_virtualShiftOn) _setVirtualShift(false);
 
                 // ストローク確定 → redo スタックをクリア
                 commitRedoClear();
@@ -2730,12 +2751,43 @@ function setupModifierBar() {
     shiftBtn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        // ポインターキャプチャで、指が離れてもpointerupを確実に受け取る
+        try { shiftBtn.setPointerCapture(e.pointerId); } catch (_) {}
+
+        const now = Date.now();
+
+        if (_modShiftState === 'locked') {
+            // ロック中にタップ → 解除
+            _modShiftState = 'idle';
+            _modShiftLastTapTime = 0;
+        } else if (now - _modShiftLastTapTime < _MOD_DOUBLE_TAP_MS) {
+            // ダブルタップ → ロック
+            _modShiftState = 'locked';
+            _modShiftLastTapTime = 0;
+        } else {
+            // 通常押下 → held (離すまで有効)
+            _modShiftState = 'held';
+            _modShiftLastTapTime = now;
+        }
+        _updateModShiftBtn();
     });
 
     shiftBtn.addEventListener('pointerup', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        _setVirtualShift(!_virtualShiftOn);
+        if (_modShiftState === 'held') {
+            // ホールド解除
+            _modShiftState = 'idle';
+            _updateModShiftBtn();
+        }
+        // locked の場合は pointerup では解除しない
+    });
+
+    shiftBtn.addEventListener('pointercancel', (e) => {
+        if (_modShiftState === 'held') {
+            _modShiftState = 'idle';
+            _updateModShiftBtn();
+        }
     });
 }
 

@@ -150,40 +150,62 @@ canvas {
 }
 
 .mod-btn {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: transparent;
-    border: 1px solid rgba(0, 0, 0, 0.15);
+    border: none;
     cursor: pointer;
-    color: #444;
+    padding: 0;
     position: relative;
-    transition: background 0.1s, color 0.1s;
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
+    transition: opacity 0.15s;
 }
 
-.mod-btn svg {
-    width: 18px;
-    height: 18px;
-    pointer-events: none;
+/* 見た目は薄い円のみ、アイコンなし */
+.mod-btn::before {
+    content: '';
+    width: 22px;
+    height: 22px;
+    border-radius: 50% !important;
+    border: 1.5px solid rgba(0, 0, 0, 0.25);
+    background: transparent;
+    transition: background 0.12s, border-color 0.12s;
 }
 
-.mod-btn:active {
-    transform: scale(0.92);
+.mod-btn:active::before {
+    background: rgba(0, 0, 0, 0.08);
 }
 
-/* アクティブ状態 (one-shot 待機中) */
-.mod-btn.active {
+/* held: 押している間 → 塗りつぶし円 */
+.mod-btn.active::before {
     background: #111;
-    color: #fff;
     border-color: #111;
 }
 
-.mod-btn.active svg {
-    stroke: #fff;
+/* locked: ダブルタップでロック → 塗りつぶし + 白い中心点 */
+.mod-btn.locked::before {
+    background: #111;
+    border-color: #111;
+}
+
+.mod-btn.locked::after {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50% !important;
+    background: #fff;
+    pointer-events: none;
+}
+
+/* 使用不可 (モード非対応時) */
+.mod-btn.unavailable {
+    opacity: 0.2;
+    pointer-events: none;
 }
 
 /* ============================================
