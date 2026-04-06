@@ -84,6 +84,33 @@ import {
 // Set to true to show debug overlay (top-left corner)
 const DEBUG_MODE = false;
 
+// RAF-based draw batching — prevents pointermove backlog on iPad
+let _pendingDrawPoints = [];
+let _drawRafId = null;
+
+function _flushDrawPoints() {
+    _drawRafId = null;
+    if (_pendingDrawPoints.length === 0) return;
+    const pts = _pendingDrawPoints;
+    _pendingDrawPoints = [];
+    for (let i = 0; i < pts.length; i++) {
+        const { x, y, pressure, isStipple } = pts[i];
+        if (isStipple) {
+            drawStippleLine(x, y, pressure);
+        } else {
+            drawPenLine(x, y, pressure);
+        }
+    }
+}
+
+function _cancelAndFlushDrawPoints() {
+    if (_drawRafId) {
+        cancelAnimationFrame(_drawRafId);
+        _drawRafId = null;
+    }
+    _flushDrawPoints();
+}
+
 let lastUndoCheck = null;
 let undoCallCount = 0;
 const suppressedWarnings = {
@@ -1297,7 +1324,9 @@ async function handlePointerDown(e) {
                 }
             }
         } else if (state.mode === 'pen') {
-            state._pendingSave = saveState({ keepRedo: true });
+            // pen は strokeCanvas に描くため layer は pointerup まで変化しない。
+            // saveState (createImageBitmap) を pointerup まで遅延させてストローク開始の遅延を防ぐ。
+            state._pendingSave = null;
             if (state.subTool === 'stipple') {
                 startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             } else {
@@ -1335,6 +1364,8 @@ function handleZoomClick(e) {
 }
 
 function cancelCurrentOperation() {
+    _cancelAndFlushDrawPoints();
+    _pendingDrawPoints = [];
     if (state.isLassoing) {
         finishLasso();
     }
@@ -1456,13 +1487,14 @@ async function handlePointerMove(e) {
             updateLasso(e.clientX, e.clientY);
         } else if (state.isPenDrawing) {
             const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-            for (const ev of events) {
+            const isStipple = state.mode === 'pen' && state.subTool === 'stipple';
+            for (let i = 0; i < events.length; i++) {
+                const ev = events[i];
                 const pt = getCanvasPoint(ev.clientX, ev.clientY);
-                if (state.mode === 'pen' && state.subTool === 'stipple') {
-                    drawStippleLine(pt.x, pt.y, ev.pressure);
-                } else {
-                    drawPenLine(pt.x, pt.y, ev.pressure);
-                }
+                _pendingDrawPoints.push({ x: pt.x, y: pt.y, pressure: ev.pressure, isStipple });
+            }
+            if (!_drawRafId) {
+                _drawRafId = requestAnimationFrame(_flushDrawPoints);
             }
         }
     }
@@ -1647,9 +1679,17 @@ async function handlePointerUp(e) {
                     updateLayerThumbnail(getActiveLayer());
                 }
             } else if (state.isPenDrawing) {
+                // RAFキューに残っている点を即時フラッシュ
+                _cancelAndFlushDrawPoints();
+
                 // ストローク確定 → redo スタックをクリア
                 commitRedoClear();
-                
+
+                // pen mode: saveState を pointerdown から遅延していた場合はここで実行
+                // (strokeCanvas に描画していたため layer は未変更のまま → 正しい "before" を取得できる)
+                if (!state._pendingSave) {
+                    state._pendingSave = saveState({ keepRedo: true });
+                }
                 if (state._pendingSave) {
                     await state._pendingSave;
                     state._pendingSave = null;
@@ -1660,13 +1700,15 @@ async function handlePointerUp(e) {
                     clearStippleDirtyRect();
                     endStippleDrawing();
                     const layer = getActiveLayer();
-                    if (layer && dirtyRect) await shrinkLastUndoEntry(layer.id, dirtyRect);
+                    // shrink は非同期最適化のため await 不要 (キュー順序は保証される)
+                    if (layer && dirtyRect) shrinkLastUndoEntry(layer.id, dirtyRect);
                 } else {
                     await endPenDrawing();
                     const dirtyRect = getPenDirtyRect();
                     clearPenDirtyRect();
                     const layer = getActiveLayer();
-                    if (layer && dirtyRect) await shrinkLastUndoEntry(layer.id, dirtyRect);
+                    // shrink は非同期最適化のため await 不要 (キュー順序は保証される)
+                    if (layer && dirtyRect) shrinkLastUndoEntry(layer.id, dirtyRect);
                 }
                 updateLayerThumbnail(getActiveLayer());
             }

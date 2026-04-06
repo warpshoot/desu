@@ -232,7 +232,7 @@ function _rebuildSmoothedPoints(fromRawIdx) {
         const subdivisions = Math.max(2, Math.min(8, Math.ceil(dist / 3)));
 
         const interpolated = _catmullRomSegment(p0, p1, p2, p3, subdivisions);
-        smoothedPoints.push(...interpolated);
+        for (let j = 0; j < interpolated.length; j++) smoothedPoints.push(interpolated[j]);
     }
 }
 
