@@ -87,7 +87,8 @@ const DEBUG_MODE = false;
 // RAF-based draw batching — prevents pointermove backlog on iPad
 let _pendingDrawPoints = [];
 let _drawRafId = null;
-let _straightLineEnd = null; // Shift+直線プレビュー用: 最新終点
+let _straightLineEnd = null;   // Shift+直線: pointermove で更新される最新終点 { x, y, pressure }
+let _strokeStartPoint = null;  // Shift+直線: ストローク開始点 (ガイド描画に使用)
 
 // 仮想Shiftボタンの状態: 'idle' | 'held' | 'locked'
 // held  = 押している間だけ有効 (pointerup で解除)
@@ -127,15 +128,77 @@ function updateModifierBar() {
     }
 }
 
+/**
+ * 消しゴムペン / 点描の直線プレビューをlassoCanvasに描画
+ * ブラシ幅を反映したコリドー（半透明帯 + 中心ダッシュ線）を表示する
+ */
+function _drawStraightLineGuide(endX, endY) {
+    if (!_strokeStartPoint || !lassoCtx || !lassoCanvas) return;
+
+    const isEraser = state.mode === 'eraser';
+    const brushSize = isEraser ? state.eraserSize : (state.activeBrush?.size ?? 4);
+    const screenW = Math.max(4, brushSize * state.scale);
+
+    const sx0 = _strokeStartPoint.x * state.scale + state.translateX;
+    const sy0 = _strokeStartPoint.y * state.scale + state.translateY;
+    const sx1 = endX * state.scale + state.translateX;
+    const sy1 = endY * state.scale + state.translateY;
+
+    // 色: 消しゴム=赤系、点描=青系
+    const rgb = isEraser ? '200, 60, 60' : '60, 120, 220';
+
+    lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+    lassoCtx.save();
+    lassoCtx.lineCap = 'round';
+    lassoCtx.setLineDash([]);
+
+    // 白縁 (視認性)
+    lassoCtx.lineWidth = screenW + 3;
+    lassoCtx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+    lassoCtx.beginPath();
+    lassoCtx.moveTo(sx0, sy0);
+    lassoCtx.lineTo(sx1, sy1);
+    lassoCtx.stroke();
+
+    // 半透明コリドー (ブラシ幅)
+    lassoCtx.lineWidth = screenW;
+    lassoCtx.strokeStyle = `rgba(${rgb}, 0.18)`;
+    lassoCtx.stroke();
+
+    // 中心ダッシュ線
+    lassoCtx.lineWidth = 1.5;
+    lassoCtx.strokeStyle = `rgba(${rgb}, 0.75)`;
+    lassoCtx.setLineDash([5, 5]);
+    lassoCtx.beginPath();
+    lassoCtx.moveTo(sx0, sy0);
+    lassoCtx.lineTo(sx1, sy1);
+    lassoCtx.stroke();
+
+    lassoCtx.restore();
+    lassoCanvas.style.display = 'block';
+}
+
 function _flushDrawPoints() {
     _drawRafId = null;
 
-    // Shift+直線プレビューモード: 溜まったフリーハンド点は捨てて直線を描く
+    // Shift+直線モード: フリーハンド点は捨て、モードに応じたプレビューを更新
     if (_straightLineEnd !== null) {
         const { x, y } = _straightLineEnd;
         _straightLineEnd = null;
         _pendingDrawPoints = [];
-        if (state.isPenDrawing) previewStraightLine(x, y);
+        if (!state.isPenDrawing) return;
+
+        const isPenStroke  = state.mode === 'pen' && state.subTool !== 'stipple';
+        const isEraserPen  = state.mode === 'eraser' && state.subTool === 'pen';
+        const isStipple    = state.mode === 'pen' && state.subTool === 'stipple';
+
+        if (isPenStroke) {
+            // strokeCanvas にリアルタイム描画プレビュー (既存)
+            previewStraightLine(x, y);
+        } else if (isEraserPen || isStipple) {
+            // lassoCanvas にガイドコリドーを表示
+            _drawStraightLineGuide(x, y);
+        }
         return;
     }
 
@@ -158,7 +221,15 @@ function _cancelAndFlushDrawPoints() {
         _drawRafId = null;
     }
     _straightLineEnd = null;
+    _clearStraightLineGuide();
     _flushDrawPoints();
+}
+
+/** ガイドコリドーをクリアして非表示にする */
+function _clearStraightLineGuide() {
+    if (!lassoCtx || !lassoCanvas) return;
+    lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+    lassoCanvas.style.display = 'none';
 }
 
 let lastUndoCheck = null;
@@ -1388,6 +1459,7 @@ async function handlePointerDown(e) {
             } else {
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
+            _strokeStartPoint = { x: canvasPoint.x, y: canvasPoint.y };
         } else if (state.mode === 'fill') {
             startLasso(e.clientX, e.clientY);
         } else if (state.mode === 'eraser') {
@@ -1398,6 +1470,7 @@ async function handlePointerDown(e) {
             } else {
                 state._pendingSave = saveState({ keepRedo: true });
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
+                _strokeStartPoint = { x: canvasPoint.x, y: canvasPoint.y };
             }
         }
         state.strokeMade = true;
@@ -1548,8 +1621,7 @@ async function handlePointerMove(e) {
                 const pt = getCanvasPoint(e.clientX, e.clientY);
                 _straightLineEnd = { x: pt.x, y: pt.y, pressure: e.pressure };
                 _pendingDrawPoints = [];
-                const canPreview = state.mode === 'pen' && state.subTool !== 'stipple';
-                if (canPreview && !_drawRafId) {
+                if (!_drawRafId) {
                     _drawRafId = requestAnimationFrame(_flushDrawPoints);
                 }
             } else {
@@ -1793,6 +1865,7 @@ async function handlePointerUp(e) {
                     if (layer && dirtyRect) shrinkLastUndoEntry(layer.id, dirtyRect);
                 }
                 updateLayerThumbnail(getActiveLayer());
+                _clearStraightLineGuide();
             }
             state.drawingPointerId = null;
         }
