@@ -1,4 +1,4 @@
-﻿import {
+import {
     state,
     layers,
     lassoCanvas,
@@ -833,49 +833,10 @@ export function updateLayerThumbnail(layer) {
     const ctx = state.thumbCtx;
     ctx.clearRect(0, 0, 48, 32);
 
-    // Draw layer content scaled down
-    // We need to keep aspect ratio or fill? 48x32 is 3:2. Screen is 9:16 approx.
-    // Let's fit "contain" style.
     const sWidth = layer.canvas.width;
     const sHeight = layer.canvas.height;
     const dWidth = 48;
     const dHeight = 32;
-
-    // Simple scale to fit height or width?
-    // Let's just draw the whole canvas into the thumbnail rect directly (stretch)
-    // or maintain aspect ratio?
-    // Stretcing might look weird but "contain" in button background handles display.
-    // But if we generate a distorted image, "contain" will show distorted image.
-    // Better generate a proper thumbnail.
-    // Actually, let's just draw full canvas to small canvas.
-    // If the aspect ratios differ, it will stretch.
-    // Layer buttons are 48x32. Window is variable.
-    // Let's rely on the button's background-size: contain.
-    // The generated image should be representative.
-    // Drawing the whole canvas into 48x32 will stretch it.
-    // If we use it as background-image with 'contain', it will un-stretch it IF the element has same aspect ratio.
-    // The button is 48x32 fixed.
-    // So we should generate an image that represents the whole canvas.
-    // If we stretch it here, and then show it in 48x32 button, it will fill the button.
-    // If the canvas is tall (mobile), and button is wide, the image is squashed vertically.
-    // If we use background-size: contain, we want the source image to have correct aspect ratio?
-    // No, 'contain' scales the image to fit.
-    // If we create a 48x32 image that is a squashed version of the canvas...
-    // displaying it 'contain' inside a 48x32 button will show the squashed image filling the button.
-    // We want to show the layer content with correct aspect ratio.
-    // So we should capture the canvas as is (or scaled maintaining aspect ratio).
-    // Actually, `toDataURL` returns the full image if we don't draw to a temp canvas.
-    // But full image is too big (~MBs). We MUST scale down.
-    // So:
-    // 1. Calculate aspect ratio.
-    // 2. Draw scaled image to temp canvas (centering it?)
-    // OR just draw distinct pixels?
-    // Let's just draw the full canvas into 48x32 and let it stretch.
-    // Wait, if it stretches, it looks bad.
-    // We should preserve aspect ratio in the thumbnail canvas.
-    // Canvas: W x H. Thumb: 48 x 32.
-    // Scale = min(48/W, 32/H).
-    // Draw at center.
 
     const scale = Math.min(dWidth / sWidth, dHeight / sHeight);
     const drawW = sWidth * scale;
@@ -885,7 +846,7 @@ export function updateLayerThumbnail(layer) {
 
     ctx.drawImage(layer.canvas, 0, 0, sWidth, sHeight, offsetX, offsetY, drawW, drawH);
 
-    layer.thumbnail = state.thumbCanvas.toDataURL();
+    layer.thumbnail = state.thumbCanvas.toDataURL('image/webp', 0.5); // Use webp/lower quality for speed
 
     // Immediately update DOM
     const btn = document.querySelector(`.layer-btn[data-layer-id="${layer.id}"]`);
@@ -894,6 +855,46 @@ export function updateLayerThumbnail(layer) {
         btn.style.backgroundSize = 'contain';
         btn.style.backgroundRepeat = 'no-repeat';
         btn.style.backgroundPosition = 'center';
+    }
+}
+
+// Deferred thumbnail update to prevent blocking UI
+const thumbnailUpdateQueue = new Set();
+let isThumbnailUpdateScheduled = false;
+
+export function scheduleThumbnailUpdate(layer) {
+    if (!layer) return;
+    thumbnailUpdateQueue.add(layer.id);
+    
+    if (!isThumbnailUpdateScheduled) {
+        isThumbnailUpdateScheduled = true;
+        
+        const runUpdate = () => {
+            const idleCallback = window.requestIdleCallback || ((cb) => setTimeout(cb, 1));
+            
+            idleCallback(() => {
+                if (thumbnailUpdateQueue.size === 0) {
+                    isThumbnailUpdateScheduled = false;
+                    return;
+                }
+                
+                const layerId = thumbnailUpdateQueue.values().next().value;
+                thumbnailUpdateQueue.delete(layerId);
+                
+                const layer = getLayer(layerId);
+                if (layer) {
+                    updateLayerThumbnail(layer);
+                }
+                
+                if (thumbnailUpdateQueue.size > 0) {
+                    runUpdate();
+                } else {
+                    isThumbnailUpdateScheduled = false;
+                }
+            });
+        };
+        
+        runUpdate();
     }
 }
 
@@ -1155,82 +1156,88 @@ async function handlePointerMove(e) {
 
     e.preventDefault();
 
-    const pointer = state.activePointers.get(e.pointerId);
-    const dx = e.clientX - pointer.x;
-    const dy = e.clientY - pointer.y;
-    const moveDist = Math.hypot(dx, dy);
+    const events = (e.getCoalescedEvents && e.pointerType !== 'mouse') ? e.getCoalescedEvents() : [e];
 
-    pointer.totalMove = (pointer.totalMove || 0) + moveDist;
-    pointer.x = e.clientX;
-    pointer.y = e.clientY;
-    state.activePointers.set(e.pointerId, pointer);
+    for (const ev of events) {
+        const pointer = state.activePointers.get(ev.pointerId);
+        if (!pointer) continue;
 
-    // 2 Fingers = Pinch / Pan
-    if (state.activePointers.size === 2) {
-        const pts = Array.from(state.activePointers.values());
-        const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-        const center = {
-            x: (pts[0].x + pts[1].x) / 2,
-            y: (pts[0].y + pts[1].y) / 2
-        };
+        const dx = ev.clientX - pointer.x;
+        const dy = ev.clientY - pointer.y;
+        const moveDist = Math.hypot(dx, dy);
 
-        // Threshold check
-        const distDelta = Math.abs(dist - state.initialPinchDist);
-        const centerDelta = Math.hypot(center.x - state.initialPinchCenter.x, center.y - state.initialPinchCenter.y);
+        pointer.totalMove = (pointer.totalMove || 0) + moveDist;
+        pointer.x = ev.clientX;
+        pointer.y = ev.clientY;
+        state.activePointers.set(ev.pointerId, pointer);
 
-        if (distDelta > 20 || centerDelta > 20) {
-            state.isPinching = true;
-            state.wasPinching = true;
+        // 2 Fingers = Pinch / Pan
+        if (state.activePointers.size === 2) {
+            const pts = Array.from(state.activePointers.values());
+            const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+            const center = {
+                x: (pts[0].x + pts[1].x) / 2,
+                y: (pts[0].y + pts[1].y) / 2
+            };
+
+            // Threshold check
+            const distDelta = Math.abs(dist - state.initialPinchDist);
+            const centerDelta = Math.hypot(center.x - state.initialPinchCenter.x, center.y - state.initialPinchCenter.y);
+
+            if (distDelta > 20 || centerDelta > 20) {
+                state.isPinching = true;
+                state.wasPinching = true;
+                state.didInteract = true;
+            }
+
+            if (state.isPinching) {
+                const zoomFactor = dist / state.lastPinchDist;
+                const oldScale = state.scale;
+                state.scale = Math.min(Math.max(state.scale * zoomFactor, 0.1), 10);
+
+                // Zoom anchored
+                state.translateX = center.x - (center.x - state.translateX) * (state.scale / oldScale);
+                state.translateY = center.y - (center.y - state.translateY) * (state.scale / oldScale);
+
+                // Pan during pinch
+                state.translateX += center.x - state.lastPinchCenter.x;
+                state.translateY += center.y - state.lastPinchCenter.y;
+
+                applyTransform();
+            }
+
+            state.lastPinchDist = dist;
+            state.lastPinchCenter = center;
+            continue; // Skip drawing for pinch
+        }
+
+        // Pan
+        if (state.isPanning && state.activePointers.size === 1) {
+            state.translateX = state.panStartTranslateX + (ev.clientX - state.panStartX);
+            state.translateY = state.panStartTranslateY + (ev.clientY - state.panStartY);
+            applyTransform();
+            state.wasPanning = true;
+            state.didInteract = true;
+            continue; // Skip drawing for pan
+        }
+
+        // Interaction threshold
+        if (pointer.totalMove > 20) {
             state.didInteract = true;
         }
 
-        if (state.isPinching) {
-            const zoomFactor = dist / state.lastPinchDist;
-            const oldScale = state.scale;
-            state.scale = Math.min(Math.max(state.scale * zoomFactor, 0.1), 10);
+        // Drawing
+        if (ev.pointerId === state.drawingPointerId) {
+            // Skip drawing if we just finished a pinch/pan or moved too little
+            if (state.wasPinching || state.wasPanning) continue;
 
-            // Zoom anchored
-            state.translateX = center.x - (center.x - state.translateX) * (state.scale / oldScale);
-            state.translateY = center.y - (center.y - state.translateY) * (state.scale / oldScale);
+            const canvasPoint = getCanvasPoint(ev.clientX, ev.clientY);
 
-            // Pan during pinch
-            state.translateX += center.x - state.lastPinchCenter.x;
-            state.translateY += center.y - state.lastPinchCenter.y;
-
-            applyTransform();
-        }
-
-        state.lastPinchDist = dist;
-        state.lastPinchCenter = center;
-        return;
-    }
-
-    // Pan
-    if (state.isPanning && state.activePointers.size === 1) {
-        state.translateX = state.panStartTranslateX + (e.clientX - state.panStartX);
-        state.translateY = state.panStartTranslateY + (e.clientY - state.panStartY);
-        applyTransform();
-        state.wasPanning = true;
-        state.didInteract = true;
-        return;
-    }
-
-    // Interaction threshold
-    if (pointer.totalMove > 20) {
-        state.didInteract = true;
-    }
-
-    // Drawing
-    if (e.pointerId === state.drawingPointerId) {
-        // Skip drawing if we just finished a pinch/pan or moved too little
-        if (state.wasPinching || state.wasPanning) return;
-
-        const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
-
-        if (state.isLassoing) {
-            updateLasso(e.clientX, e.clientY);
-        } else if (state.isPenDrawing) {
-            drawPenLine(canvasPoint.x, canvasPoint.y);
+            if (state.isLassoing) {
+                updateLasso(ev.clientX, ev.clientY);
+            } else if (state.isPenDrawing) {
+                drawPenLine(canvasPoint.x, canvasPoint.y);
+            }
         }
     }
 }
@@ -1308,12 +1315,12 @@ async function handlePointerUp(e) {
             if (state.currentTool === 'fill' && !state.isEraserActive) {
                 await saveState();
                 floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), hexToRgba(state.inkColor), state.fillColorTolerance, state.fillGapClose);
-                updateLayerThumbnail(getActiveLayer());
+                scheduleThumbnailUpdate(getActiveLayer());
             } else if (state.currentTool === 'tone' && !state.isEraserActive) {
                 // Tone fill tap
                 await saveState();
                 floodFillTone(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
-                updateLayerThumbnail(getActiveLayer());
+                scheduleThumbnailUpdate(getActiveLayer());
             } else if (state.isEraserActive && state.currentEraser === 'lasso') {
                 // Eraser does not have tap fill (could add flood erase?)
             }
@@ -1335,19 +1342,19 @@ async function handlePointerUp(e) {
                     if (state.currentTool === 'fill' && !state.isEraserActive) {
                         await saveState();
                         floodFill(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), hexToRgba(state.inkColor), state.fillColorTolerance, state.fillGapClose);
-                        updateLayerThumbnail(getActiveLayer());
+                        scheduleThumbnailUpdate(getActiveLayer());
                     } else if (state.currentTool === 'tone' && !state.isEraserActive) {
                         await saveState();
                         floodFillTone(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y));
-                        updateLayerThumbnail(getActiveLayer());
+                        scheduleThumbnailUpdate(getActiveLayer());
                     } else if (state.currentTool === 'sketch' && !state.isEraserActive) {
                         await saveState();
                         floodFillSketch(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), state.fillGapClose);
-                        updateLayerThumbnail(getActiveLayer());
+                        scheduleThumbnailUpdate(getActiveLayer());
                     } else if (state.isEraserActive && state.currentEraser === 'lasso') {
                         await saveState();
                         floodFillTransparent(Math.floor(canvasPoint.x), Math.floor(canvasPoint.y), state.fillGapClose);
-                        updateLayerThumbnail(getActiveLayer());
+                        scheduleThumbnailUpdate(getActiveLayer());
                     }
                 } else if (points && points.length >= 3 && !state.wasPanning && !state.wasPinching) {
                     // Drag detected - normal polygon fill
@@ -1359,11 +1366,11 @@ async function handlePointerUp(e) {
                     } else {
                         fillPolygon(points);
                     }
-                    updateLayerThumbnail(getActiveLayer());
+                    requestIdleCallback(() => updateLayerThumbnail(getActiveLayer()));
                 }
             } else if (state.isPenDrawing) {
                 await endPenDrawing();
-                updateLayerThumbnail(getActiveLayer());
+                requestIdleCallback(() => scheduleThumbnailUpdate(getActiveLayer()));
             }
             state.drawingPointerId = null;
         }
@@ -1461,7 +1468,7 @@ async function clearAll() {
     // Clear all layers
     for (const layer of layers) {
         layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
-        updateLayerThumbnail(layer);
+        scheduleThumbnailUpdate(layer);
     }
 
     await saveState();

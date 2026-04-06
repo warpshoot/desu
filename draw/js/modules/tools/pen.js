@@ -92,7 +92,11 @@ export function drawPenLine(x, y) {
     const end = { x, y };
 
     const dist = Math.hypot(end.x - start.x, end.y - start.y);
-    const steps = Math.ceil(dist);
+    
+    // Optimize steps: don't draw every pixel if the brush is large.
+    // A step size of ~1/3 of the brush size (min 1px) is usually enough for a smooth line.
+    const stepDist = Math.max(1, size / 3);
+    const steps = Math.ceil(dist / stepDist);
 
     if (state.isErasing) {
         ctx.globalCompositeOperation = 'destination-out';
