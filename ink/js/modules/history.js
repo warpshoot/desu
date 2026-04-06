@@ -2,7 +2,8 @@ import {
     state,
     layers,
     getLayer,
-    getActiveLayer
+    getActiveLayer,
+    CANVAS_DPR
 } from './state.js';
 import { saveLocalState } from './storage.js';
 
@@ -118,7 +119,7 @@ export async function shrinkLastUndoEntry(layerId, dirtyRect) {
         const prevEntry = state.undoStack.length > 1 ? state.undoStack[state.undoStack.length - 2] : null;
         const isShared = prevEntry && prevEntry.bitmaps.get(layerId) === fullBitmap;
 
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = CANVAS_DPR;
         const sx = Math.max(0, Math.floor(dirtyRect.x * dpr));
         const sy = Math.max(0, Math.floor(dirtyRect.y * dpr));
         const sw = Math.min(fullBitmap.width  - sx, Math.ceil(dirtyRect.w * dpr));
@@ -232,7 +233,7 @@ export async function redo() {
  * Restore canvas contents from a snapshot
  */
 function restoreSnapshot(snapshot) {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
     const bitmaps = snapshot.bitmaps || snapshot; // 後方互換: 旧形式は Map 直接
     const patches = snapshot.patches || new Map();
 
@@ -285,7 +286,7 @@ export function restoreLayer(layerId) {
     const layer = getLayer(layerId);
 
     if (bitmap && layer) {
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = CANVAS_DPR;
         // 消しゴム等で汚染された合成モードをリセット
         layer.ctx.globalCompositeOperation = 'source-over';
         layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);

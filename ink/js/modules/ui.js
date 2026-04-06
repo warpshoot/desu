@@ -18,7 +18,8 @@ import {
     clearLayer,
     moveLayer,
     mergeLayerDown,
-    MAX_LAYERS
+    MAX_LAYERS,
+    CANVAS_DPR
 } from './state.js';
 import {
     startPenDrawing, drawPenLine, endPenDrawing, getPenDirtyRect, clearPenDirtyRect, previewStraightLine,
@@ -1280,7 +1281,7 @@ function flashLayer(layerId) {
     flashCanvas.style.transform = layer.canvas.style.transform;
     flashCanvas.width = layer.canvas.width;
     flashCanvas.height = layer.canvas.height;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
     flashCanvas.style.width = (layer.canvas.width / dpr) + 'px';
     flashCanvas.style.height = (layer.canvas.height / dpr) + 'px';
 
@@ -2458,7 +2459,7 @@ function _showGapClosePreview(gapClose) {
     if (!layer) return;
 
     const { canvas, ctx } = layer;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
     const w = canvas.width;
     const h = canvas.height;
 
@@ -2504,7 +2505,7 @@ function _showGapClosePreview(gapClose) {
 function _hideGapClosePreview() {
     clearTimeout(_gapPreviewTimer);
     _gapPreviewTimer = null;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
     lassoCtx.clearRect(0, 0, lassoCanvas.width / dpr, lassoCanvas.height / dpr);
 }
 

@@ -1,4 +1,4 @@
-import { state, getActiveLayerCtx } from '../state.js';
+import { state, getActiveLayerCtx, CANVAS_DPR } from '../state.js';
 import { getBounds, isPointInPolygon } from '../utils.js';
 import { _makeMatchFn } from './fill.js';
 
@@ -39,7 +39,7 @@ const patternCache = new Map();
  * Gets or creates a pattern for the given preset
  */
 function getTonePattern(ctx, preset) {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
     const cacheKey = `${preset.id}_${dpr}`;
     if (patternCache.has(cacheKey)) {
         return patternCache.get(cacheKey);
@@ -354,7 +354,7 @@ export function fillTone(points) {
     const preset = getCurrentTonePreset();
     if (!preset) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
 
     const minX = Math.floor(Math.min(...points.map(p => p.x)));
     const minY = Math.floor(Math.min(...points.map(p => p.y)));
@@ -409,7 +409,7 @@ export function floodFillTone(startX, startY, tolerance = 'normal') {
     const h = canvas.height;
 
     // CSS座標を物理ピクセル座標に変換
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = CANVAS_DPR;
     startX = Math.round(startX * dpr);
     startY = Math.round(startY * dpr);
 

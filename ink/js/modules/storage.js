@@ -1,4 +1,4 @@
-import { state, layers, createLayer, deleteLayer } from './state.js';
+import { state, layers, createLayer, deleteLayer, CANVAS_DPR } from './state.js';
 import { resizePaper } from './canvas.js';
 import { makeDefaultBrushes, makeDefaultFillSlots, makeDefaultEraserSlots } from './brushes.js';
 
@@ -89,7 +89,7 @@ export function loadLocalState() {
                 deleteLayer(layers[layers.length - 1].id);
             }
 
-            const dpr = window.devicePixelRatio || 1;
+            const dpr = CANVAS_DPR;
 
             // Determine paper size to prevent aspect ratio distortion
             let pw = data.paperW;
@@ -200,7 +200,7 @@ export function importProject(file) {
                     createLayer();
                 }
 
-                const dpr = window.devicePixelRatio || 1;
+                const dpr = CANVAS_DPR;
 
                 // Determine paper size to prevent aspect ratio distortion
                 let pw = data.paperW;
