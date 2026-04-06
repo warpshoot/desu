@@ -116,8 +116,9 @@ function _updateModShiftBtn() {
 function updateModifierBar() {
     const shiftBtn = document.getElementById('mod-shift');
     if (!shiftBtn) return;
-    // 直線: ペンモードかつ stipple 以外のときのみ有効
-    const shiftAvailable = state.mode === 'pen' && state.subTool !== 'stipple';
+    // 直線: ペン操作ツール (ペン全種 + 消しゴムペン) で有効
+    const shiftAvailable = state.mode === 'pen' ||
+        (state.mode === 'eraser' && state.subTool === 'pen');
     shiftBtn.classList.toggle('unavailable', !shiftAvailable);
     // 使用不可になったらロックも解除
     if (!shiftAvailable && _modShiftState !== 'idle') {
@@ -1541,11 +1542,16 @@ async function handlePointerMove(e) {
         } else if (state.isLassoing) {
             updateLasso(e.clientX, e.clientY);
         } else if (state.isPenDrawing) {
-            if (_isShiftActive() && state.subTool !== 'stipple') {
-                // Shift+直線プレビュー: 最新点だけ保持、フリーハンドキューは捨てる
+            if (_isShiftActive()) {
+                // Shift+直線: 最新点を保持。フリーハンドキューは捨てる。
+                // ペンモード(strokeCanvas)のみライブプレビューをRAFでリクエスト
                 const pt = getCanvasPoint(e.clientX, e.clientY);
-                _straightLineEnd = { x: pt.x, y: pt.y };
+                _straightLineEnd = { x: pt.x, y: pt.y, pressure: e.pressure };
                 _pendingDrawPoints = [];
+                const canPreview = state.mode === 'pen' && state.subTool !== 'stipple';
+                if (canPreview && !_drawRafId) {
+                    _drawRafId = requestAnimationFrame(_flushDrawPoints);
+                }
             } else {
                 const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
                 const isStipple = state.mode === 'pen' && state.subTool === 'stipple';
@@ -1554,9 +1560,9 @@ async function handlePointerMove(e) {
                     const pt = getCanvasPoint(ev.clientX, ev.clientY);
                     _pendingDrawPoints.push({ x: pt.x, y: pt.y, pressure: ev.pressure, isStipple });
                 }
-            }
-            if (!_drawRafId) {
-                _drawRafId = requestAnimationFrame(_flushDrawPoints);
+                if (!_drawRafId) {
+                    _drawRafId = requestAnimationFrame(_flushDrawPoints);
+                }
             }
         }
     }
@@ -1741,7 +1747,10 @@ async function handlePointerUp(e) {
                     updateLayerThumbnail(getActiveLayer());
                 }
             } else if (state.isPenDrawing) {
-                // RAFキューに残っている点を即時フラッシュ
+                // 直線確定: キャンセル前に終点を保存
+                const straightEnd = _straightLineEnd;
+
+                // RAFキューに残っている点を即時フラッシュ (直線モード時は何もしない)
                 _cancelAndFlushDrawPoints();
 
                 // ストローク確定 → redo スタックをクリア
@@ -1758,6 +1767,8 @@ async function handlePointerUp(e) {
                 }
 
                 if (state.mode === 'pen' && state.subTool === 'stipple') {
+                    // 点描直線: 始点→終点間にstippleドットを一括描画
+                    if (straightEnd) drawStippleLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
                     const dirtyRect = getStippleDirtyRect();
                     clearStippleDirtyRect();
                     endStippleDrawing();
@@ -1765,6 +1776,15 @@ async function handlePointerUp(e) {
                     // shrink は非同期最適化のため await 不要 (キュー順序は保証される)
                     if (layer && dirtyRect) shrinkLastUndoEntry(layer.id, dirtyRect);
                 } else {
+                    if (straightEnd) {
+                        if (state.mode === 'pen') {
+                            // ペン直線: strokeCanvasに最終ラインを確定描画
+                            previewStraightLine(straightEnd.x, straightEnd.y);
+                        } else {
+                            // 消しゴムペン直線: 始点→終点をレイヤーに直接描画
+                            drawPenLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
+                        }
+                    }
                     await endPenDrawing();
                     const dirtyRect = getPenDirtyRect();
                     clearPenDirtyRect();
