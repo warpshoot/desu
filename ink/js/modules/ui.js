@@ -89,6 +89,21 @@ let _pendingDrawPoints = [];
 let _drawRafId = null;
 let _straightLineEnd = null; // Shift+直線プレビュー用: 最新終点
 
+// 仮想Shiftボタン (one-shot: ストローク完了後に自動解除)
+let _virtualShiftOn = false;
+
+/** キーボード Shift または仮想 Shift ボタンのどちらかが ON かを返す */
+function _isShiftActive() {
+    return state.isShiftPressed || _virtualShiftOn;
+}
+
+/** 仮想Shiftのon/offを切り替えてボタン見た目を更新 */
+function _setVirtualShift(on) {
+    _virtualShiftOn = on;
+    const btn = document.getElementById('mod-shift');
+    if (btn) btn.classList.toggle('active', on);
+}
+
 function _flushDrawPoints() {
     _drawRafId = null;
 
@@ -226,6 +241,7 @@ export function initUI() {
     setupSaveUI();
     setupFileUI();
     setupSettingsPanel();
+    setupModifierBar();
     setupToneMenu();
     setupCreditModal();
     setupOrientationHandler();
@@ -1501,7 +1517,7 @@ async function handlePointerMove(e) {
         } else if (state.isLassoing) {
             updateLasso(e.clientX, e.clientY);
         } else if (state.isPenDrawing) {
-            if (state.isShiftPressed && state.subTool !== 'stipple') {
+            if (_isShiftActive() && state.subTool !== 'stipple') {
                 // Shift+直線プレビュー: 最新点だけ保持、フリーハンドキューは捨てる
                 const pt = getCanvasPoint(e.clientX, e.clientY);
                 _straightLineEnd = { x: pt.x, y: pt.y };
@@ -1703,6 +1719,9 @@ async function handlePointerUp(e) {
             } else if (state.isPenDrawing) {
                 // RAFキューに残っている点を即時フラッシュ
                 _cancelAndFlushDrawPoints();
+
+                // 仮想Shift: one-shot なのでストローク完了後に自動解除
+                if (_virtualShiftOn) _setVirtualShift(false);
 
                 // ストローク確定 → redo スタックをクリア
                 commitRedoClear();
@@ -2697,6 +2716,26 @@ function setupZoomControls() {
 
     resetBtn.addEventListener('click', () => {
         centerCanvas();
+    });
+}
+
+// ============================================
+// Modifier Bar (仮想修飾キー)
+// ============================================
+
+function setupModifierBar() {
+    const shiftBtn = document.getElementById('mod-shift');
+    if (!shiftBtn) return;
+
+    shiftBtn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    });
+
+    shiftBtn.addEventListener('pointerup', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        _setVirtualShift(!_virtualShiftOn);
     });
 }
 

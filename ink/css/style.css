@@ -131,6 +131,62 @@ canvas {
 }
 
 /* ============================================
+   Modifier Bar (左下の仮想修飾キー群)
+   ============================================ */
+#modifier-bar {
+    position: fixed;
+    left: 8px;
+    bottom: max(16px, env(safe-area-inset-bottom, 16px));
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    z-index: 300;
+    padding: 5px;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.05);
+}
+
+.mod-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    color: #444;
+    position: relative;
+    transition: background 0.1s, color 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+}
+
+.mod-btn svg {
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+}
+
+.mod-btn:active {
+    transform: scale(0.92);
+}
+
+/* アクティブ状態 (one-shot 待機中) */
+.mod-btn.active {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+}
+
+.mod-btn.active svg {
+    stroke: #fff;
+}
+
+/* ============================================
    Left Toolbar (Layer Panel + Tool Panel)
    ============================================ */
 #toolbar-left {
