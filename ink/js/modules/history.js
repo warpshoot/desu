@@ -41,26 +41,48 @@ export function markLayerDirty(layerId) {
 }
 
 export async function saveState({ keepRedo = false } = {}) {
-    // 1. 変更があるレイヤーを同期的に特定し、即座にキャプチャを開始 (ペンの進行を防ぐ)
-    const snapshotPromises = new Map();
+    // 1. 変更があるレイヤーを同期的に特定 (指紋チェック)
+    //    createImageBitmap の呼び出し自体は RAF まで遅延する:
+    //    - pen mode では RAF 発火時も layer.canvas が "ストローク前" 状態を保っている
+    //      (ストロークは strokeCanvas に描かれ、endPenDrawing まで layer には触れない)
+    //    - RAF は前フレームの GPU 書き込みが確実に完了した後に発火するため、
+    //      GPU パイプライン同期のブロッキングが発生しない
     const snapshotFingerprints = new Map(_layerFingerprints);
+    const layersToCaptureIds = new Set();
 
     for (const layer of layers) {
         const currentFp = snapshotFingerprints.get(layer.id) || 0;
         const lastSavedFp = _lastDispatchedFingerprints.get(layer.id) || 0;
 
         if (currentFp !== lastSavedFp) {
-            snapshotPromises.set(layer.id, createImageBitmap(layer.canvas));
-            // 予約した指紋を最新として記録
+            layersToCaptureIds.add(layer.id);
+            // 予約した指紋を即座に記録 (連続 saveState 呼び出しで重複キャプチャを防ぐ)
             _lastDispatchedFingerprints.set(layer.id, currentFp);
         }
     }
 
-    // 2. キューに登録して順番待ち
+    // 2. RAF で GPU アイドル後に createImageBitmap を呼び出す
+    //    RAF に入った時点では layer.canvas への書き込みは完了している
+    const capturePromise = new Promise(resolve => {
+        requestAnimationFrame(() => {
+            const promises = new Map();
+            for (const layer of layers) {
+                if (layersToCaptureIds.has(layer.id)) {
+                    promises.set(layer.id, createImageBitmap(layer.canvas));
+                }
+            }
+            resolve(promises);
+        });
+    });
+
+    // 3. キューには即時登録 (shrinkLastUndoEntry との順序を保証)
     return _enqueue(async () => {
         if (!keepRedo) {
             _clearRedoStack();
         }
+
+        // RAF が完了するまで待機 (= GPU アイドル後)
+        const snapshotPromises = await capturePromise;
 
         const prevEntry = state.undoStack.length > 0 ? state.undoStack[state.undoStack.length - 1] : null;
 

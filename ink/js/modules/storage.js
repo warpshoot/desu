@@ -113,8 +113,21 @@ export function loadLocalState() {
 
             // Restore content
             let loadedCount = 0;
+            const totalLayers = data.layers.length;
+
+            function onLayerLoaded() {
+                loadedCount++;
+                if (loadedCount === totalLayers) {
+                    document.dispatchEvent(new CustomEvent('desu:state-loaded'));
+                    resolve(true);
+                }
+            }
+
             data.layers.forEach((saved, index) => {
-                if (index >= layers.length) return;
+                if (index >= layers.length) {
+                    onLayerLoaded();
+                    return;
+                }
                 const layer = layers[index];
 
                 layer.opacity = saved.opacity ?? 1.0;
@@ -122,17 +135,23 @@ export function loadLocalState() {
                 layer.canvas.style.opacity = layer.opacity;
                 layer.canvas.style.display = layer.visible ? 'block' : 'none';
 
+                // image が null の場合はキャンバスデータなし (空レイヤー) → スキップ
+                if (!saved.image) {
+                    onLayerLoaded();
+                    return;
+                }
+
                 const img = new Image();
                 img.onload = () => {
                     layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
                     layer.ctx.imageSmoothingEnabled = false;
                     layer.ctx.drawImage(img, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
                     layer.ctx.imageSmoothingEnabled = true;
-                    loadedCount++;
-                    if (loadedCount === data.layers.length) {
-                        document.dispatchEvent(new CustomEvent('desu:state-loaded'));
-                        resolve(true);
-                    }
+                    onLayerLoaded();
+                };
+                img.onerror = () => {
+                    console.warn('[Storage] Failed to load layer image, leaving layer empty');
+                    onLayerLoaded();
                 };
                 img.src = saved.image;
             });
