@@ -10,6 +10,11 @@ let _strokeOpacity = 1.0;
 let _usingStrokeCanvas = false;
 let _strokeCtxSaved = false;
 
+// バッチモード — 複数の drawPenLine() 呼び出しをまとめて 1 回の drawBrushSegment で描画
+// iOS では RAF ごとに N 回 drawBrushSegment していたのを 1 回に削減するための仕組み
+let _batchMode = false;
+let _batchDrawFrom = 1;
+
 // Dirty rect tracking — 現在のストロークが触れた領域 (キャンバス座標)
 let _dirtyMinX = Infinity, _dirtyMinY = Infinity;
 let _dirtyMaxX = -Infinity, _dirtyMaxY = -Infinity;
@@ -359,6 +364,12 @@ export function drawPenLine(x, y, pressure = 0.5) {
     // 前回の末尾から描画再開
     const drawFrom = Math.max(1, prevSmoothedLen - 1);
 
+    if (_batchMode) {
+        // バッチモード: 描画は flushPenBatch() に委ねる
+        // smoothedPoints への追加だけ行い、GPU 呼び出しは一切しない
+        return;
+    }
+
     if (_usingStrokeCanvas) {
         if (state.isErasing) {
             strokeCtx.save();
@@ -368,6 +379,46 @@ export function drawPenLine(x, y, pressure = 0.5) {
         } else {
             lastDrawnIndex = drawBrushSegment(strokeCtx, smoothedPoints, drawFrom, false, brush, false);
         }
+    } else {
+        const ctx = getActiveLayerCtx();
+        if (ctx) {
+            const clipped = pushSelectionClip(ctx);
+            lastDrawnIndex = drawBrushSegment(ctx, smoothedPoints, drawFrom, false, brush, state.isErasing);
+            if (clipped) popSelectionClip(ctx);
+        }
+    }
+}
+
+/**
+ * 1 RAF フレーム分のペン描画をバッチ実行する関数群
+ *
+ * 使い方:
+ *   beginPenBatch();
+ *   for (each point) drawPenLine(x, y, p);  // GPU 呼び出しなし
+ *   flushPenBatch();                         // ここで 1 回だけ drawBrushSegment
+ *
+ * iOS では drawBrushSegment ごとに Core Graphics flush が走るため、
+ * N 点 → N flush していたものを 1 flush に削減できる。
+ */
+export function beginPenBatch() {
+    _batchMode = true;
+    // バッチ開始時点の描画済みインデックスを記録
+    _batchDrawFrom = Math.max(1, lastDrawnIndex);
+}
+
+export function flushPenBatch() {
+    if (!_batchMode) return;
+    _batchMode = false;
+
+    if (!state.isPenDrawing) return;
+
+    const drawFrom = _batchDrawFrom;
+    if (drawFrom >= smoothedPoints.length) return; // 新規点なし
+
+    const brush = _getDrawBrush();
+
+    if (_usingStrokeCanvas) {
+        lastDrawnIndex = drawBrushSegment(strokeCtx, smoothedPoints, drawFrom, false, brush, false);
     } else {
         const ctx = getActiveLayerCtx();
         if (ctx) {
