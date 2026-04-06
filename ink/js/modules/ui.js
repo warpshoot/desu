@@ -1875,12 +1875,8 @@ async function handlePointerUp(e) {
                     const dirtyRect = getStippleDirtyRect();
                     clearStippleDirtyRect();
                     endStippleDrawing();
-                    if (state._pendingSave) {
-                        await state._pendingSave;
-                        state._pendingSave = null;
-                    }
+                    state._pendingSave = null; // _historyQueue が順序を保証
                     const layer = getActiveLayer();
-                    // shrink は非同期最適化のため await 不要 (キュー順序は保証される)
                     if (layer && dirtyRect) shrinkLastUndoEntry(layer.id, dirtyRect);
                 } else {
                     if (straightEnd) {
@@ -1895,14 +1891,10 @@ async function handlePointerUp(e) {
                     await endPenDrawing(); // strokeCanvas → layer を即座に反映
                     const dirtyRect = getPenDirtyRect();
                     clearPenDirtyRect();
-                    // saveState の完了を待ってから shrink (キュー順序は history.js が保証するが
-                    // _pendingSave が null でない場合は明示的に待つ)
-                    if (state._pendingSave) {
-                        await state._pendingSave;
-                        state._pendingSave = null;
-                    }
+                    // _historyQueue が saveState → shrink の順序を保証するため await 不要
+                    // (await するとiOSで createImageBitmap の GPU sync に引っかかり遅延が生じる)
+                    state._pendingSave = null;
                     const layer = getActiveLayer();
-                    // shrink は非同期最適化のため await 不要 (キュー順序は保証される)
                     if (layer && dirtyRect) shrinkLastUndoEntry(layer.id, dirtyRect);
                 }
                 updateLayerThumbnail(getActiveLayer());
