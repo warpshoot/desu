@@ -111,6 +111,12 @@
     <!-- 右上ツールバー -->
     <div id="toolbar-right">
 
+        <div class="tool-btn" id="settingsBtn" title="設定">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+            </svg>
+        </div>
 
         <div class="tool-btn" id="fileBtn">
             <img src="icons/file.svg" alt="File" style="width: 24px; height: 24px;">
@@ -130,6 +136,20 @@
             <circle cx="12" cy="12" r="8" />
             <path d="M12 7 L12 17 M7 12 L17 12" />
         </svg>
+    </div>
+
+    <!-- 設定パネル -->
+    <div id="settings-panel" class="hidden">
+        <div id="settings-header">
+            <span>設定</span>
+            <button id="settings-close">×</button>
+        </div>
+        <div id="settings-body">
+            <div class="settings-section-label">背景色</div>
+            <div id="bg-color-swatches">
+                <!-- JSで動的生成 -->
+            </div>
+        </div>
     </div>
 
     <!-- ファイル管理メニュー -->

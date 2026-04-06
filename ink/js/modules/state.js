@@ -288,6 +288,7 @@ export const state = {
     isSpacePressed: false,
     isCtrlPressed: false,
     isAltPressed: false,
+    isShiftPressed: false,
     isPanning: false,
     panStartX: 0,
     panStartY: 0,

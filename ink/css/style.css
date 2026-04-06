@@ -1849,6 +1849,85 @@ a.credit-val {
 }
 
 /* ============================================
+   Settings Panel (右上歯車ボタン)
+   ============================================ */
+#settings-panel {
+    position: fixed;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    z-index: 400;
+    width: 220px;
+    font-size: 13px;
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+}
+
+#settings-panel.hidden { display: none; }
+
+#settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
+}
+
+#settings-header button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: #888;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+#settings-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.settings-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+#bg-color-swatches {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.bg-color-swatch {
+    width: 28px;
+    height: 28px;
+    border: 1.5px solid rgba(0, 0, 0, 0.18);
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    transition: transform 0.1s;
+}
+
+.bg-color-swatch:active {
+    transform: scale(0.88);
+}
+
+.bg-color-swatch.active {
+    border-color: #000;
+    border-width: 2px;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25);
+}
+
+/* ============================================
    Brush Settings Panel
    ============================================ */
 #brush-settings-panel,

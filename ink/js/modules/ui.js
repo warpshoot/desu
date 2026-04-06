@@ -21,7 +21,7 @@ import {
     MAX_LAYERS
 } from './state.js';
 import {
-    startPenDrawing, drawPenLine, endPenDrawing, getPenDirtyRect, clearPenDirtyRect
+    startPenDrawing, drawPenLine, endPenDrawing, getPenDirtyRect, clearPenDirtyRect, previewStraightLine
 } from './tools/pen.js';
 import {
     startStippleDrawing, drawStippleLine, endStippleDrawing, getStippleDirtyRect, clearStippleDirtyRect
@@ -53,7 +53,7 @@ import {
     createTonePreview,
     floodFillTone
 } from './tools/tone.js';
-import { exportProject, importProject, exportConfig, importConfig, exportToolConfig, importToolConfig, resetSettings } from './storage.js';
+import { exportProject, importProject, exportConfig, importConfig, exportToolConfig, importToolConfig, resetSettings, saveLocalState } from './storage.js';
 import {
     initSelectionOverlay,
     resizeSelectionOverlay,
@@ -87,9 +87,20 @@ const DEBUG_MODE = false;
 // RAF-based draw batching — prevents pointermove backlog on iPad
 let _pendingDrawPoints = [];
 let _drawRafId = null;
+let _straightLineEnd = null; // Shift+直線プレビュー用: 最新終点
 
 function _flushDrawPoints() {
     _drawRafId = null;
+
+    // Shift+直線プレビューモード: 溜まったフリーハンド点は捨てて直線を描く
+    if (_straightLineEnd !== null) {
+        const { x, y } = _straightLineEnd;
+        _straightLineEnd = null;
+        _pendingDrawPoints = [];
+        if (state.isPenDrawing) previewStraightLine(x, y);
+        return;
+    }
+
     if (_pendingDrawPoints.length === 0) return;
     const pts = _pendingDrawPoints;
     _pendingDrawPoints = [];
@@ -108,6 +119,7 @@ function _cancelAndFlushDrawPoints() {
         cancelAnimationFrame(_drawRafId);
         _drawRafId = null;
     }
+    _straightLineEnd = null;
     _flushDrawPoints();
 }
 
@@ -213,6 +225,7 @@ export function initUI() {
     setupZoomControls();
     setupSaveUI();
     setupFileUI();
+    setupSettingsPanel();
     setupToneMenu();
     setupCreditModal();
     setupOrientationHandler();
@@ -930,9 +943,11 @@ function hideAllMenus() {
         toneMenu.classList.add('hidden');
     }
 
-    // ファイルメニューなども閉じられていることを確実に
+    // ファイルメニュー / 設定パネルも閉じる
     const fileMenu = document.getElementById('file-menu');
     if (fileMenu) fileMenu.classList.add('hidden');
+    const settingsPanel = document.getElementById('settings-panel');
+    if (settingsPanel) settingsPanel.classList.add('hidden');
 
     document.removeEventListener('pointerdown', handleOutsideClick);
 }
@@ -1486,12 +1501,19 @@ async function handlePointerMove(e) {
         } else if (state.isLassoing) {
             updateLasso(e.clientX, e.clientY);
         } else if (state.isPenDrawing) {
-            const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-            const isStipple = state.mode === 'pen' && state.subTool === 'stipple';
-            for (let i = 0; i < events.length; i++) {
-                const ev = events[i];
-                const pt = getCanvasPoint(ev.clientX, ev.clientY);
-                _pendingDrawPoints.push({ x: pt.x, y: pt.y, pressure: ev.pressure, isStipple });
+            if (state.isShiftPressed && state.subTool !== 'stipple') {
+                // Shift+直線プレビュー: 最新点だけ保持、フリーハンドキューは捨てる
+                const pt = getCanvasPoint(e.clientX, e.clientY);
+                _straightLineEnd = { x: pt.x, y: pt.y };
+                _pendingDrawPoints = [];
+            } else {
+                const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+                const isStipple = state.mode === 'pen' && state.subTool === 'stipple';
+                for (let i = 0; i < events.length; i++) {
+                    const ev = events[i];
+                    const pt = getCanvasPoint(ev.clientX, ev.clientY);
+                    _pendingDrawPoints.push({ x: pt.x, y: pt.y, pressure: ev.pressure, isStipple });
+                }
             }
             if (!_drawRafId) {
                 _drawRafId = requestAnimationFrame(_flushDrawPoints);
@@ -2679,6 +2701,61 @@ function setupZoomControls() {
 }
 
 // ============================================
+// Settings Panel (歯車ボタン)
+// ============================================
+
+const BG_COLORS = [
+    { label: '白',          value: '#ffffff' },
+    { label: 'オフホワイト', value: '#f8f7f2' },
+    { label: 'クリーム',     value: '#f0ead6' },
+    { label: '薄グレー',     value: '#e0e0d8' },
+    { label: 'ベージュ',     value: '#d4c5a9' },
+    { label: 'ダーク',       value: '#2c2c2c' },
+];
+
+function setupSettingsPanel() {
+    const btn = document.getElementById('settingsBtn');
+    const panel = document.getElementById('settings-panel');
+    const closeBtn = document.getElementById('settings-close');
+    const swatchContainer = document.getElementById('bg-color-swatches');
+    if (!btn || !panel || !swatchContainer) return;
+
+    function renderSwatches() {
+        swatchContainer.innerHTML = '';
+        for (const { label, value } of BG_COLORS) {
+            const sw = document.createElement('div');
+            sw.className = 'bg-color-swatch';
+            sw.style.backgroundColor = value;
+            sw.title = label;
+            if (state.canvasColor === value) sw.classList.add('active');
+            sw.addEventListener('click', () => {
+                updateBackgroundColor(value);
+                saveLocalState();
+                renderSwatches();
+            });
+            swatchContainer.appendChild(sw);
+        }
+    }
+
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isHidden = panel.classList.contains('hidden');
+        hideAllMenus();
+        if (isHidden) {
+            renderSwatches();
+            const rect = btn.getBoundingClientRect();
+            panel.style.right = (window.innerWidth - rect.right) + 'px';
+            panel.style.top = rect.bottom + 10 + 'px';
+            panel.classList.remove('hidden');
+        }
+    });
+
+    closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+    panel.addEventListener('pointerdown', e => e.stopPropagation());
+    panel.addEventListener('pointermove', e => e.stopPropagation());
+}
+
+// ============================================
 // Tone Menu
 // ============================================
 
@@ -3080,6 +3157,7 @@ function setupKeyboardShortcuts() {
         }
         if (e.ctrlKey || e.metaKey) state.isCtrlPressed = true;
         if (e.altKey) state.isAltPressed = true;
+        if (e.key === 'Shift') state.isShiftPressed = true;
 
 
 
@@ -3291,6 +3369,7 @@ function setupKeyboardShortcuts() {
         }
         if (!e.ctrlKey && !e.metaKey) state.isCtrlPressed = false;
         if (!e.altKey) state.isAltPressed = false;
+        if (e.key === 'Shift') state.isShiftPressed = false;
     });
 }
 

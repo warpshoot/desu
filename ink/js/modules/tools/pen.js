@@ -236,6 +236,27 @@ function _rebuildSmoothedPoints(fromRawIdx) {
     }
 }
 
+/**
+ * Shift+直線プレビュー: strokeCanvas をクリアして始点→(x,y) の直線を描画
+ * pointermove で Shift が押されている間、RAF ごとに呼ばれる
+ */
+export function previewStraightLine(x, y) {
+    if (!state.isPenDrawing || !_usingStrokeCanvas || strokePoints.length === 0) return;
+    const brush = _getDrawBrush();
+    const start = strokePoints[0];
+
+    // dirty rect をこの直線に更新
+    _dirtyMinX = Math.min(start.x, x);
+    _dirtyMinY = Math.min(start.y, y);
+    _dirtyMaxX = Math.max(start.x, x);
+    _dirtyMaxY = Math.max(start.y, y);
+
+    strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
+    const pts = [start, { x, y, pressure: start.pressure }];
+    drawBrushSegment(strokeCtx, pts, 0, true, brush, false);
+    drawBrushSegment(strokeCtx, pts, 1, false, brush, false);
+}
+
 export function startPenDrawing(x, y, pressure = 0.5) {
     state.isPenDrawing = true;
     pressureBufferLen = 0;
