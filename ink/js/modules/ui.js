@@ -40,7 +40,7 @@ import {
     fillPolygonTransparentWithAA,
     dilateBox
 } from './tools/fill.js';
-import { saveState, savePatchState, commitRedoClear, undo, redo, restoreLayer, resetHistory, saveLayerChangeState, shrinkLastUndoEntry } from './history.js';
+import { saveState, commitRedoClear, undo, redo, restoreLayer, resetHistory, saveLayerChangeState } from './history.js';
 import {
     showSelectionUI, hideSelectionUI, confirmSelection, redoSelection,
     saveSelectedRegion, saveAllCanvas, copyToClipboard, saveRegion
