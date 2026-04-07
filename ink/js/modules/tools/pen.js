@@ -15,6 +15,12 @@ let _strokeCtxSaved = false;
 let _batchMode = false;
 let _batchDrawFrom = 1;
 
+// strokeCanvas の遅延クリア用 RAF ID
+// endPenDrawing() で strokeCanvas をすぐにクリアすると、drawImage(strokeCanvas→layer) の
+// GPU コミットが完了する前に clear が走り、コンポジタが 1 フレーム「末尾なし」で描画する。
+// RAF まで遅延することで drawImage の GPU コミット完了を待ってからクリアする。
+let _pendingClearRafId = null;
+
 // Dirty rect tracking — 現在のストロークが触れた領域 (キャンバス座標)
 let _dirtyMinX = Infinity, _dirtyMinY = Infinity;
 let _dirtyMaxX = -Infinity, _dirtyMaxY = -Infinity;
@@ -158,37 +164,67 @@ function _smoothPressure(rawPressure) {
 }
 
 /**
- * Catmull-Rom スプライン補間で滑らかな点列を生成
+ * 遠心 (centripetal) Catmull-Rom スプライン補間で滑らかな点列を生成
+ * alpha=0.5 の Barry-Goldman アルゴリズムで鋭角ターンでもオーバーシュートしない。
  * 入力点 p0,p1,p2,p3 間の p1→p2 区間を subdivisions 分割して返す
  */
 function _catmullRomSegment(p0, p1, p2, p3, subdivisions) {
+    // 各区間の chord 長を alpha 乗した値をノット差として使う (alpha=0.5 = centripetal)
+    const d01 = Math.pow(Math.max(Math.hypot(p1.x - p0.x, p1.y - p0.y), 1e-6), 0.5);
+    const d12 = Math.pow(Math.max(Math.hypot(p2.x - p1.x, p2.y - p1.y), 1e-6), 0.5);
+    const d23 = Math.pow(Math.max(Math.hypot(p3.x - p2.x, p3.y - p2.y), 1e-6), 0.5);
+
+    const t0 = 0;
+    const t1 = d01;
+    const t2 = t1 + d12;
+    const t3 = t2 + d23;
+
+    const dt01 = t1 - t0;  // = d01
+    const dt12 = t2 - t1;  // = d12
+    const dt23 = t3 - t2;  // = d23
+    const dt02 = t2 - t0;
+    const dt13 = t3 - t1;
+
     const result = [];
     for (let i = 1; i <= subdivisions; i++) {
-        const t = i / subdivisions;
-        const t2 = t * t;
-        const t3 = t2 * t;
+        const t = t1 + dt12 * (i / subdivisions);
 
-        // Catmull-Rom 行列 (tension=0, uniform)
-        const x = 0.5 * (
-            (2 * p1.x) +
-            (-p0.x + p2.x) * t +
-            (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
-            (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3
-        );
-        const y = 0.5 * (
-            (2 * p1.y) +
-            (-p0.y + p2.y) * t +
-            (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
-            (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3
-        );
-        const pressure = 0.5 * (
-            (2 * p1.pressure) +
-            (-p0.pressure + p2.pressure) * t +
-            (2 * p0.pressure - 5 * p1.pressure + 4 * p2.pressure - p3.pressure) * t2 +
-            (-p0.pressure + 3 * p1.pressure - 3 * p2.pressure + p3.pressure) * t3
-        );
+        // A1 = lerp(p0, p1, t0, t1)
+        const r01 = dt01 < 1e-10 ? 0 : (t - t0) / dt01;
+        const A1x = p0.x + (p1.x - p0.x) * r01;
+        const A1y = p0.y + (p1.y - p0.y) * r01;
+        const A1p = p0.pressure + (p1.pressure - p0.pressure) * r01;
 
-        result.push({ x, y, pressure: Math.max(0, Math.min(1, pressure)) });
+        // A2 = lerp(p1, p2, t1, t2)
+        const r12 = dt12 < 1e-10 ? 0 : (t - t1) / dt12;
+        const A2x = p1.x + (p2.x - p1.x) * r12;
+        const A2y = p1.y + (p2.y - p1.y) * r12;
+        const A2p = p1.pressure + (p2.pressure - p1.pressure) * r12;
+
+        // A3 = lerp(p2, p3, t2, t3)
+        const r23 = dt23 < 1e-10 ? 0 : (t - t2) / dt23;
+        const A3x = p2.x + (p3.x - p2.x) * r23;
+        const A3y = p2.y + (p3.y - p2.y) * r23;
+        const A3p = p2.pressure + (p3.pressure - p2.pressure) * r23;
+
+        // B1 = lerp(A1, A2, t0, t2)
+        const rB1 = dt02 < 1e-10 ? 0 : (t - t0) / dt02;
+        const B1x = A1x + (A2x - A1x) * rB1;
+        const B1y = A1y + (A2y - A1y) * rB1;
+        const B1p = A1p + (A2p - A1p) * rB1;
+
+        // B2 = lerp(A2, A3, t1, t3)
+        const rB2 = dt13 < 1e-10 ? 0 : (t - t1) / dt13;
+        const B2x = A2x + (A3x - A2x) * rB2;
+        const B2y = A2y + (A3y - A2y) * rB2;
+        const B2p = A2p + (A3p - A2p) * rB2;
+
+        // C = lerp(B1, B2, t1, t2) — same ratio as r12
+        const Cx = B1x + (B2x - B1x) * r12;
+        const Cy = B1y + (B2y - B1y) * r12;
+        const Cp = B1p + (B2p - B1p) * r12;
+
+        result.push({ x: Cx, y: Cy, pressure: Math.max(0, Math.min(1, Cp)) });
     }
     return result;
 }
@@ -291,6 +327,13 @@ export function startPenDrawing(x, y, pressure = 0.5) {
     _strokeCtxSaved = false;
 
     if (_usingStrokeCanvas) {
+        // 前ストロークの遅延クリア RAF が残っている場合はキャンセル。
+        // 新ストロークの clearRect(full) で内容を消去するので RAF は不要。
+        // RAF が後から発火すると新ストロークの opacity を上書きするため必ずキャンセルする。
+        if (_pendingClearRafId) {
+            cancelAnimationFrame(_pendingClearRafId);
+            _pendingClearRafId = null;
+        }
         strokeCtx.save();
         _strokeCtxSaved = true;
         strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
@@ -485,18 +528,40 @@ export async function endPenDrawing() {
                 strokeCtx.restore();
                 _strokeCtxSaved = false;
             }
-            // clearRect も dirty rect だけに限定 (strokeCtx は scale(dpr) 済みなので CSS 座標)
-            if (_dirtyMinX <= _dirtyMaxX) {
-                const m = _dirtyMargin;
-                const cx = Math.max(0, _dirtyMinX - m);
-                const cy = Math.max(0, _dirtyMinY - m);
-                const cw = Math.min(strokeCanvas.width / CANVAS_DPR - cx, (_dirtyMaxX - _dirtyMinX) + m * 2);
-                const ch = Math.min(strokeCanvas.height / CANVAS_DPR - cy, (_dirtyMaxY - _dirtyMinY) + m * 2);
-                if (cw > 0 && ch > 0) strokeCtx.clearRect(cx, cy, cw, ch);
-            } else {
-                strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
+            // strokeCanvas のクリアを次の RAF まで遅延する。
+            //
+            // 理由: drawImage(strokeCanvas → layer) の GPU コマンドは同一 JS ティックで
+            //       キューされるが、iOS Metal TBDR では GPU コミットは非同期。
+            //       同一ティックで clearRect(strokeCanvas) を実行すると、
+            //       コンポジタが「layer に stroke なし + strokeCanvas が空」の状態を
+            //       1 フレーム見てしまい、末尾が消える "もたつき" の原因になる。
+            //
+            //       RAF まで遅延すれば前フレームの drawImage GPU コミットが完了しており、
+            //       コンポジタは「layer に stroke あり + strokeCanvas が空」を正しく表示する。
+            //       RAF が発火するまでの間、strokeCanvas は CSS opacity を維持したまま
+            //       stroke を表示し続けるため視覚的な空白フレームが発生しない。
+            {
+                const clearDirtyMinX = _dirtyMinX;
+                const clearDirtyMinY = _dirtyMinY;
+                const clearDirtyMaxX = _dirtyMaxX;
+                const clearDirtyMaxY = _dirtyMaxY;
+                const clearMargin = _dirtyMargin;
+                if (_pendingClearRafId) cancelAnimationFrame(_pendingClearRafId);
+                _pendingClearRafId = requestAnimationFrame(() => {
+                    _pendingClearRafId = null;
+                    if (clearDirtyMinX <= clearDirtyMaxX) {
+                        const m = clearMargin;
+                        const cx = Math.max(0, clearDirtyMinX - m);
+                        const cy = Math.max(0, clearDirtyMinY - m);
+                        const cw = Math.min(strokeCanvas.width / CANVAS_DPR - cx, (clearDirtyMaxX - clearDirtyMinX) + m * 2);
+                        const ch = Math.min(strokeCanvas.height / CANVAS_DPR - cy, (clearDirtyMaxY - clearDirtyMinY) + m * 2);
+                        if (cw > 0 && ch > 0) strokeCtx.clearRect(cx, cy, cw, ch);
+                    } else {
+                        strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
+                    }
+                    strokeCanvas.style.opacity = 1;
+                });
             }
-            strokeCanvas.style.opacity = 1;
         }
 
         if (lassoCtx) {
