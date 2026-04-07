@@ -37,73 +37,60 @@ export function saveLocalState() {
 }
 
 // Load state
-export function loadLocalState() {
-    return new Promise((resolve) => {
-        try {
-            const json = localStorage.getItem(STORAGE_KEY);
-            if (!json) {
-                resolve(false);
+export async function loadLocalState() {
+    try {
+        const json = localStorage.getItem(STORAGE_KEY);
+        if (!json) return false;
+
+        const data = JSON.parse(json);
+        if (!data.layers || !Array.isArray(data.layers)) return false;
+
+        console.log('[Storage] Loading state from', new Date(data.timestamp));
+
+        // Adjust layer count
+        while (layers.length < data.layers.length) {
+            createLayer();
+        }
+        while (layers.length > data.layers.length) {
+            deleteLayer(layers[layers.length - 1].id);
+        }
+
+        // Restore content
+        const loadPromises = data.layers.map(async (saved, index) => {
+            if (index >= layers.length) return;
+            const layer = layers[index];
+
+            layer.opacity = saved.opacity ?? 1.0;
+            layer.visible = saved.visible ?? true;
+            layer.canvas.style.opacity = layer.opacity;
+            layer.canvas.style.display = layer.visible ? 'block' : 'none';
+
+            if (!saved.image || saved.image === 'null') {
+                layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
                 return;
             }
 
-            const data = JSON.parse(json);
-            if (!data.layers || !Array.isArray(data.layers)) {
-                resolve(false);
-                return;
-            }
-
-            console.log('[Storage] Loading state from', new Date(data.timestamp));
-
-            // Adjust layer count
-            // 1. Ensure enough layers
-            while (layers.length < data.layers.length) {
-                createLayer();
-            }
-            // 2. Remove excess layers (if safe)
-            // Note: deleteLayer logic prevents deleting the last one, loop carefully
-            while (layers.length > data.layers.length) {
-                // Delete the last layer
-                deleteLayer(layers[layers.length - 1].id);
-            }
-
-            // Restore content
-            let loadedCount = 0;
-            data.layers.forEach((saved, index) => {
-                if (index >= layers.length) return;
-                const layer = layers[index];
-
-                // Restore properties
-                layer.opacity = saved.opacity ?? 1.0;
-                layer.visible = saved.visible ?? true;
-
-                // Update DOM style
-                // (state.js doesn't auto-update style on property change, usually handled by UI)
-                layer.canvas.style.opacity = layer.opacity;
-                layer.canvas.style.display = layer.visible ? 'block' : 'none';
-
-                // Note: Sliders in UI won't update automatically unless we trigger UI update
-                // But that's acceptable for now.
-
-                // Load image
+            return new Promise((res) => {
                 const img = new Image();
                 img.onload = () => {
                     layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
                     layer.ctx.drawImage(img, 0, 0);
-                    loadedCount++;
-                    if (loadedCount === data.layers.length) {
-                        resolve(true);
-                    }
+                    res();
+                };
+                img.onerror = () => {
+                    console.warn(`[Storage] Failed to load image for layer ${index}`);
+                    res();
                 };
                 img.src = saved.image;
             });
+        });
 
-
-
-        } catch (e) {
-            console.error('[Storage] Load failed:', e);
-            resolve(false);
-        }
-    });
+        await Promise.all(loadPromises);
+        return true;
+    } catch (e) {
+        console.error('[Storage] Load failed:', e);
+        return false;
+    }
 }
 
 // Export Project to File (.desu)
@@ -156,57 +143,60 @@ export async function exportProject() {
 }
 
 // Import Project from File
-export function importProject(file) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const json = e.target.result;
-                const data = JSON.parse(json);
+export async function importProject(file) {
+    try {
+        const json = await file.text();
+        const data = JSON.parse(json);
 
-                if (!data.layers || !Array.isArray(data.layers)) {
-                    throw new Error('Invalid project file');
-                }
+        if (!data.layers || !Array.isArray(data.layers)) {
+            throw new Error('Invalid project file');
+        }
 
-                // Restore layers
-                // 1. Clear existing layers (leaving one)
-                while (layers.length > 1) {
-                    deleteLayer(layers[layers.length - 1].id);
-                }
+        // Restore layers
+        // 1. Clear existing layers (leaving one)
+        while (layers.length > 1) {
+            deleteLayer(layers[layers.length - 1].id);
+        }
 
-                // 2. Add needed layers
-                while (layers.length < data.layers.length) {
-                    createLayer();
-                }
+        // 2. Add needed layers
+        while (layers.length < data.layers.length) {
+            createLayer();
+        }
 
-                // 3. Restore content
-                let loadedCount = 0;
-                data.layers.forEach((saved, index) => {
-                    if (index >= layers.length) return;
-                    const layer = layers[index];
+        // 3. Restore content
+        const loadPromises = data.layers.map(async (saved, index) => {
+            if (index >= layers.length) return;
+            const layer = layers[index];
 
-                    layer.opacity = saved.opacity ?? 1.0;
-                    layer.visible = saved.visible ?? true;
-                    layer.canvas.style.opacity = layer.opacity;
-                    layer.canvas.style.display = layer.visible ? 'block' : 'none';
+            layer.opacity = saved.opacity ?? 1.0;
+            layer.visible = saved.visible ?? true;
+            layer.canvas.style.opacity = layer.opacity;
+            layer.canvas.style.display = layer.visible ? 'block' : 'none';
 
-                    const img = new Image();
-                    img.onload = () => {
-                        layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
-                        layer.ctx.drawImage(img, 0, 0);
-                        loadedCount++;
-                        if (loadedCount === data.layers.length) {
-                            resolve(true);
-                        }
-                    };
-                    img.src = saved.image;
-                });
-
-            } catch (err) {
-                console.error('Import failed:', err);
-                resolve(false);
+            if (!saved.image || saved.image === 'null') {
+                layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+                return;
             }
-        };
-        reader.readAsText(file);
-    });
+
+            return new Promise((res) => {
+                const img = new Image();
+                img.onload = () => {
+                    layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+                    layer.ctx.drawImage(img, 0, 0);
+                    res();
+                };
+                img.onerror = () => {
+                    console.warn(`[Storage] Failed to load image during import for layer ${index}`);
+                    res();
+                };
+                img.src = saved.image;
+            });
+        });
+
+        await Promise.all(loadPromises);
+        return true;
+    } catch (err) {
+        console.error('Import failed:', err);
+        return false;
+    }
 }
