@@ -2829,8 +2829,7 @@ function setupModifierBar() {
     shiftBtn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        // ポインターキャプチャで、指が離れてもpointerupを確実に受け取る
-        try { shiftBtn.setPointerCapture(e.pointerId); } catch (_) {}
+        // setPointerCapture を削除 (マルチタッチ時のイベント干渉・座標バグの原因になるため)
 
         const now = Date.now();
 

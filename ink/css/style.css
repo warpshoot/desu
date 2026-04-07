@@ -136,22 +136,17 @@ canvas {
 #modifier-bar {
     position: fixed;
     left: 8px;
-    bottom: max(16px, env(safe-area-inset-bottom, 16px));
+    bottom: max(24px, env(safe-area-inset-bottom, 24px));
     display: flex;
-    flex-direction: row;
-    gap: 6px;
+    flex-direction: column; /* Vertical alignment is often better for one-handed thumb use */
+    gap: 8px;
     z-index: 300;
-    padding: 5px;
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.05);
+    pointer-events: none;
 }
 
 .mod-btn {
-    width: 32px;
-    height: 32px;
+    width: 44px; /* Touch target size */
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -162,22 +157,23 @@ canvas {
     position: relative;
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
-    transition: opacity 0.15s;
+    transition: transform 0.1s, opacity 0.15s;
+    pointer-events: auto;
 }
 
-/* 見た目は薄い円のみ、アイコンなし */
+/* 枠なしの円のみ */
 .mod-btn::before {
     content: '';
-    width: 22px;
-    height: 22px;
+    width: 32px;
+    height: 32px;
     border-radius: 50% !important;
-    border: 1.5px solid rgba(0, 0, 0, 0.25);
-    background: transparent;
-    transition: background 0.12s, border-color 0.12s;
+    background: rgba(0, 0, 0, 0.07);
+    transition: background 0.12s, transform 0.12s;
 }
 
 .mod-btn:active::before {
-    background: rgba(0, 0, 0, 0.08);
+    transform: scale(0.9);
+    background: rgba(0, 0, 0, 0.15);
 }
 
 /* held: 押している間 → 塗りつぶし円 */
