@@ -56,13 +56,20 @@ export async function saveState({ keepRedo = false } = {}) {
 
         if (currentFp !== lastSavedFp) {
             layersToCaptureIds.add(layer.id);
-            // 予約した指紋を即座に記録 (連続 saveState 呼び出しで重複キャプチャを防ぐ)
-            _lastDispatchedFingerprints.set(layer.id, currentFp);
         }
     }
 
+    if (layersToCaptureIds.size === 0 && state.undoStack.length > 0) {
+        if (!keepRedo) _clearRedoStack();
+        return Promise.resolve();
+    }
+
+    // 予約した指紋を即座に記録
+    for (const id of layersToCaptureIds) {
+        _lastDispatchedFingerprints.set(id, snapshotFingerprints.get(id));
+    }
+
     // 2. RAF で GPU アイドル後に createImageBitmap を呼び出す
-    //    RAF に入った時点では layer.canvas への書き込みは完了している
     const capturePromise = new Promise(resolve => {
         requestAnimationFrame(() => {
             const promises = new Map();
@@ -120,98 +127,10 @@ export async function saveState({ keepRedo = false } = {}) {
 }
 
 /**
- * Undo スタックの最新エントリを Dirty Rect パッチに縮小する
- *
- * ストローク完了後、変化した領域 (dirtyRect) のみを保存することで
- * メモリを大幅に削減する。フルキャンバスの ImageBitmap を解放し、
- * 矩形切り抜きのパッチ ImageBitmap に差し替える。
- *
- * @param {number} layerId
- * @param {{ x: number, y: number, w: number, h: number }} dirtyRect  CSS px 単位
- */
-export async function shrinkLastUndoEntry(layerId, dirtyRect) {
-    return _enqueue(async () => {
-        if (state.undoStack.length === 0) return;
-        const entry = state.undoStack[state.undoStack.length - 1];
-        const fullBitmap = entry.bitmaps && entry.bitmaps.get(layerId);
-        if (!fullBitmap) return;
-
-        // 【安全性】もしこの Bitmap が一つ前のエントリと共有されている場合、
-        // オリジナルを close してはいけない (共有先も消えるため)。
-        const prevEntry = state.undoStack.length > 1 ? state.undoStack[state.undoStack.length - 2] : null;
-        const isShared = prevEntry && prevEntry.bitmaps.get(layerId) === fullBitmap;
-
-        const dpr = CANVAS_DPR;
-        const sx = Math.max(0, Math.floor(dirtyRect.x * dpr));
-        const sy = Math.max(0, Math.floor(dirtyRect.y * dpr));
-        const sw = Math.min(fullBitmap.width  - sx, Math.ceil(dirtyRect.w * dpr));
-        const sh = Math.min(fullBitmap.height - sy, Math.ceil(dirtyRect.h * dpr));
-
-        if (sw <= 0 || sh <= 0) return;
-        if (sw * sh > fullBitmap.width * fullBitmap.height * 0.75) return;
-
-        const patchBitmap = await createImageBitmap(fullBitmap, sx, sy, sw, sh);
-        
-        // 共有されていない場合のみ元のフルサイズを close
-        if (!isShared) {
-            fullBitmap.close();
-        }
-        
-        entry.bitmaps.delete(layerId);
-        if (!entry.patches) entry.patches = new Map();
-        entry.patches.set(layerId, { bitmap: patchBitmap, x: sx / dpr, y: sy / dpr });
-    });
-}
-
-/**
  * Redo スタックを明示的にクリア (描画完了確定時に呼ぶ)
  */
 export function commitRedoClear() {
     _clearRedoStack();
-}
-
-/**
- * ストローク前の "before" dirty rect パッチを履歴エントリとして保存する
- *
- * pen mode 専用: strokeCanvas に描いていたため layer.canvas は未変更。
- * pointerup で endPenDrawing() を呼ぶ前に layer.canvas の dirty 領域だけを
- * createImageBitmap でキャプチャし、フルキャンバスキャプチャを完全に省略する。
- *
- * @param {number} layerId
- * @param {{ x: number, y: number }} patchOrigin  パッチ左上座標 (CSS px)
- * @param {Promise<ImageBitmap>}     patchPromise  dirty rect の ImageBitmap Promise
- * @param {boolean}                  keepRedo
- */
-export function savePatchState({ layerId, patchOrigin, patchPromise, keepRedo = false }) {
-    return _enqueue(async () => {
-        if (!keepRedo) _clearRedoStack();
-
-        const prevEntry = state.undoStack.length > 0 ? state.undoStack[state.undoStack.length - 1] : null;
-
-        const snapshot = {
-            bitmaps: new Map(),
-            patches: new Map(),
-            layerMeta: layers.map(l => ({ id: l.id, opacity: l.opacity, visible: l.visible }))
-        };
-
-        // 変更のない他レイヤーは前回スナップショットの参照を再利用 (差分保存)
-        for (const layer of layers) {
-            if (layer.id !== layerId && prevEntry && prevEntry.bitmaps.has(layer.id)) {
-                snapshot.bitmaps.set(layer.id, prevEntry.bitmaps.get(layer.id));
-            }
-        }
-
-        const patchBitmap = await patchPromise;
-        snapshot.patches.set(layerId, { bitmap: patchBitmap, x: patchOrigin.x, y: patchOrigin.y });
-
-        state.undoStack.push(snapshot);
-        saveLocalState();
-
-        if (state.undoStack.length > state.MAX_HISTORY) {
-            const old = state.undoStack.shift();
-            _closeSnapshotBitmaps(old, state.undoStack[0]);
-        }
-    });
 }
 
 /**
@@ -254,21 +173,17 @@ async function createSnapshot() {
  */
 export async function undo() {
     return _enqueue(async () => {
-        // 現在の状態を含めて2つ以上の履歴が必要 (戻り先があること)
-        if (state.undoStack.length <= 1) return;
+        if (state.undoStack.length === 0) return;
 
-        // 現在の状態を Pop して Redo スタックへ移動
-        const current = state.undoStack.pop();
-        state.redoStack.push(current);
-        
-        // Redo スタックの上限管理
+        // 【改善】現在の状態を Redo スタックへ撮っておく (1手目の空振りを防ぐ)
+        const currentFn = await createSnapshot();
+        state.redoStack.push(currentFn);
         if (state.redoStack.length > state.MAX_HISTORY) {
             const old = state.redoStack.shift();
             _closeSnapshotBitmaps(old, state.redoStack[0]);
         }
 
-        // 新しいトップ (戻り先) を復元
-        const prev = state.undoStack[state.undoStack.length - 1];
+        const prev = state.undoStack.pop();
         restoreSnapshot(prev);
         
         if (prev.fingerprints) {
@@ -288,16 +203,15 @@ export async function redo() {
     return _enqueue(async () => {
         if (state.redoStack.length === 0) return;
 
-        // Redo スタックから戻し、Undo スタックへ
-        const next = state.redoStack.pop();
-        state.undoStack.push(next);
-        
-        // Undo スタックの上限管理
+        // 【改善】復元前に今の状態を Undo へ (整合性維持)
+        const currentFn = await createSnapshot();
+        state.undoStack.push(currentFn);
         if (state.undoStack.length > state.MAX_HISTORY) {
             const old = state.undoStack.shift();
             _closeSnapshotBitmaps(old, state.undoStack[0]);
         }
 
+        const next = state.redoStack.pop();
         restoreSnapshot(next);
 
         if (next.fingerprints) {
@@ -315,28 +229,16 @@ export async function redo() {
  */
 function restoreSnapshot(snapshot) {
     const dpr = CANVAS_DPR;
-    const bitmaps = snapshot.bitmaps || snapshot; // 後方互換: 旧形式は Map 直接
-    const patches = snapshot.patches || new Map();
+    const bitmaps = snapshot.bitmaps || snapshot; // 後方互換
 
     for (const layer of layers) {
-        // 消しゴム等で汚染された合成モードをリセット
         layer.ctx.globalCompositeOperation = 'source-over';
 
         const bitmap = bitmaps instanceof Map ? bitmaps.get(layer.id) : undefined;
         if (bitmap) {
-            // フルスナップショット: キャンバス全体を置き換え
             layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
             layer.ctx.imageSmoothingEnabled = false;
             layer.ctx.drawImage(bitmap, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
-            layer.ctx.imageSmoothingEnabled = true;
-        } else if (patches.has(layer.id)) {
-            // パッチ: dirty rect 領域のみを復元
-            const patch = patches.get(layer.id);
-            const pw = patch.bitmap.width  / dpr;
-            const ph = patch.bitmap.height / dpr;
-            layer.ctx.clearRect(patch.x, patch.y, pw, ph);
-            layer.ctx.imageSmoothingEnabled = false;
-            layer.ctx.drawImage(patch.bitmap, patch.x, patch.y, pw, ph);
             layer.ctx.imageSmoothingEnabled = true;
         }
     }
@@ -413,33 +315,15 @@ function _closeAllBitmaps(snapshot) {
             }
         }
     }
-    if (snapshot.patches instanceof Map) {
-        for (const patch of snapshot.patches.values()) {
-            if (patch.bitmap && typeof patch.bitmap.close === 'function') {
-                patch.bitmap.close();
-            }
-        }
-    }
 }
 
 function _closeSnapshotBitmaps(oldSnapshot, nextSnapshot) {
-    // 古いスナップショットのBitmapを閉じる
-    // ただし次のスナップショットと同じ参照のものは閉じない
     const oldBitmaps = oldSnapshot.bitmaps || oldSnapshot;
     const nextBitmaps = nextSnapshot ? (nextSnapshot.bitmaps || nextSnapshot) : new Map();
 
     for (const [id, bitmap] of oldBitmaps) {
         if (bitmap && typeof bitmap.close === 'function' && bitmap !== nextBitmaps.get(id)) {
             bitmap.close();
-        }
-    }
-
-    // パッチは参照共有しないので無条件で解放
-    if (oldSnapshot.patches instanceof Map) {
-        for (const patch of oldSnapshot.patches.values()) {
-            if (patch.bitmap && typeof patch.bitmap.close === 'function') {
-                patch.bitmap.close();
-            }
         }
     }
 }

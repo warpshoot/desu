@@ -1485,10 +1485,7 @@ async function handlePointerDown(e) {
                 state._pendingSave = null;
                 startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             } else {
-                // 【最適化】描き始めの saveState を廃止。
-                // 代わりに pointerup で「描画前のレイヤー状態」を patch として保存する。
-                // これにより巨大キャンバス(4k x 4k)の全キャプチャを回避し、もたつきを解消する。
-                state._pendingSave = true; // セーブが必要であることをマーク
+                state._pendingSave = saveState({ keepRedo: true });
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
             _strokeStartPoint = { x: canvasPoint.x, y: canvasPoint.y };
@@ -1501,7 +1498,7 @@ async function handlePointerDown(e) {
             } else if (state.subTool === 'lasso') {
                 startLasso(e.clientX, e.clientY);
             } else {
-                state._pendingSave = true;
+                state._pendingSave = saveState({ keepRedo: true });
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
                 _strokeStartPoint = { x: canvasPoint.x, y: canvasPoint.y };
                 _lastStraightEnd = null;
@@ -1819,6 +1816,8 @@ async function handlePointerUp(e) {
                     }
                 } else if (points && points.length >= 3 && !state.wasPanning && !state.wasPinching) {
                     // Drag detected → polygon fill (投げ縄)
+                    await saveState();
+
                     if (state.mode === 'eraser' && state.subTool === 'lasso') {
                         const eraserSlot = state.eraserSlots[state.activeEraserSlotIndex];
                         
@@ -1881,37 +1880,15 @@ async function handlePointerUp(e) {
                     endStippleDrawing();
                     state._pendingSave = null;
                     const stippleLayer = getActiveLayer();
-                    if (stippleLayer && stippleDirtyRect) shrinkLastUndoEntry(stippleLayer.id, stippleDirtyRect);
+                    if (stippleLayer && stippleDirtyRect) {
+                        // shrinkLastUndoEntry was removed for history stability
+                    }
                 } else {
                     if (straightEnd) {
                         if (state.mode === 'pen') {
                             previewStraightLine(straightEnd.x, straightEnd.y);
                         } else {
                             drawPenLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
-                        }
-                    }
-
-                    // 【最適化】ここで Dirty Rect 部分だけをキャプチャして履歴に保存する。
-                    // endPenDrawing() でレイヤーに書き込まれる前なので、
-                    // layer.canvas には「ストローク前の状態」が残っている。
-                    const dirtyRect = getPenDirtyRect();
-                    const layer = getActiveLayer();
-                    if (layer && dirtyRect && state._pendingSave) {
-                        const dpr = CANVAS_DPR;
-                        const sx = Math.max(0, Math.floor(dirtyRect.x * dpr));
-                        const sy = Math.max(0, Math.floor(dirtyRect.y * dpr));
-                        const sw = Math.min(layer.canvas.width - sx, Math.ceil(dirtyRect.w * dpr));
-                        const sh = Math.min(layer.canvas.height - sy, Math.ceil(dirtyRect.h * dpr));
-                        
-                        // patchPromise を作成して savePatchState に投げる
-                        if (sw > 0 && sh > 0) {
-                            const patchPromise = createImageBitmap(layer.canvas, sx, sy, sw, sh);
-                            savePatchState({
-                                layerId: layer.id,
-                                patchOrigin: { x: sx / dpr, y: sy / dpr },
-                                patchPromise: patchPromise,
-                                keepRedo: false
-                            });
                         }
                     }
 
