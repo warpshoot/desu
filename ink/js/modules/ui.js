@@ -1859,7 +1859,6 @@ async function handlePointerUp(e) {
         state.isPenDrawing = false;
         state.isLassoing = false;
         state.strokeMade = false;
-        updateDebugDisplay();
     }
 }
 
@@ -3335,7 +3334,6 @@ function setupKeyboardShortcuts() {
         // Undo: Ctrl/Cmd + Z
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
             e.preventDefault();
-            undoCallCount++;
             await undo();
             updateAllThumbnails();
         }
