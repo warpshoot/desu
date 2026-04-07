@@ -392,9 +392,8 @@ export function fillPolygonWithAA(points, r, g, b, alpha) {
     const dpr = CANVAS_DPR;
     
     ctx.save();
-    ctx.scale(1 / dpr, 1 / dpr); // scale down because ctx draws in canvas pixel coordinates, whereas points are in unscaled canvas coordinates wait no, points are in canvas space (unscaled css pixels).
-    ctx.scale(dpr, dpr); 
-    // Wait, the active layer context already has scale(dpr, dpr) applied in createLayer().
+    // The active layer context already has scale(dpr, dpr) applied in createLayer().
+    // So unscaled CSS pixel 'points' can be drawn directly.
     // So unscaled CSS pixel 'points' are perfectly fine to draw directly to ctx!
 
     ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;

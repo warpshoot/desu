@@ -69,8 +69,10 @@ import {
     updateLassoSelect,
     finishLassoSelect,
     clearSelection,
-    capturePreDraw,
-    applySelectionClip,
+    startLassoSelect,
+    updateLassoSelect,
+    finishLassoSelect,
+    clearSelection,
     liftSelection,
     dragFloating,
     commitFloating,
@@ -79,12 +81,7 @@ import {
     deleteSelectionContent
 } from './tools/selection.js';
 
-// ============================================
-// Debug Display
-// ============================================
-
-// Set to true to show debug overlay (top-left corner)
-const DEBUG_MODE = false;
+// = :P =
 
 // RAF-based draw batching — prevents pointermove backlog on iPad
 let _pendingDrawPoints = [];
@@ -255,8 +252,6 @@ function _clearStraightLineGuide() {
     lassoCanvas.style.display = 'none';
 }
 
-let lastUndoCheck = null;
-let undoCallCount = 0;
 const suppressedWarnings = {
     layerAdd: false,
     layerDelete: false
@@ -313,33 +308,6 @@ function showConfirmModal(message, warningKey, onConfirm) {
     modal.classList.remove('hidden');
 }
 
-function updateDebugDisplay() {
-    if (!DEBUG_MODE) return;
-
-    const debugDiv = document.getElementById('debug-display');
-    if (!debugDiv) return;
-
-    debugDiv.style.display = 'block';
-
-    let html = `
-undoStack: ${state.undoStack.length}<br>
-redoStack: ${state.redoStack.length}<br>
-strokeMade: ${state.strokeMade}<br>
-didInteract: ${state.didInteract}<br>
-maxFingers: ${state.maxFingers}<br>
-isPenDrawing: ${state.isPenDrawing}<br>
-isLassoing: ${state.isLassoing}<br>
-wasPinch: ${state.wasPinching}<br>
-wasPan: ${state.wasPanning}<br>
-undoCalls: ${undoCallCount}
-    `.trim();
-
-    if (lastUndoCheck) {
-        html += `<br><br>Last tap:<br>dur:${lastUndoCheck.duration}<br>maxF:${lastUndoCheck.maxFingers}<br>stroke:${lastUndoCheck.strokeMade}<br>inter:${lastUndoCheck.didInteract}<br>wasPinch:${lastUndoCheck.wasPinching}<br>wasPan:${lastUndoCheck.wasPanning}<br>undo:${lastUndoCheck.undoCalled ? 'YES' : 'NO'}`;
-    }
-
-    debugDiv.innerHTML = html;
-}
 
 // ============================================
 // UI Initializer
@@ -366,7 +334,6 @@ export function initUI() {
     setupSelectToolbar();
     initSelectionOverlay();
     updateModifierBar();
-    updateDebugDisplay();
 }
 
 // ============================================
@@ -1506,7 +1473,6 @@ async function handlePointerDown(e) {
         }
         state.strokeMade = true;
     }
-    updateDebugDisplay();
 }
 
 function handleZoomClick(e) {
@@ -1723,31 +1689,16 @@ async function handlePointerUp(e) {
         // Check for gestures (Undo/Redo)
         // Trigger if: short tap, no significant movement/interaction
 
-        let undoCalled = false;
         if (duration < 400 && !state.didInteract && !state.strokeMade && !state.wasPanning && !state.wasPinching) {
             // Note: maxFingers tracks maximum fingers seen during this touch session
             if (state.maxFingers === 2) {
-                undoCallCount++;
                 await undo();
                 updateAllThumbnails();
-                undoCalled = true;
             } else if (state.maxFingers === 3) {
                 await redo();
                 updateAllThumbnails();
             }
         }
-
-        // Record last undo check for debugging
-        lastUndoCheck = {
-            duration: duration,
-            maxFingers: state.maxFingers,
-            strokeMade: state.strokeMade,
-            didInteract: state.didInteract,
-            wasPinching: state.wasPinching,
-            wasPanning: state.wasPanning,
-            undoCalled: undoCalled
-        };
-        updateDebugDisplay();
 
         // Finish Drawing Actions
         if (e.pointerId === state.drawingPointerId) {

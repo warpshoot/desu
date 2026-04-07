@@ -27,6 +27,22 @@ import { getCanvasPoint, isPointInPolygon } from '../utils.js';
 let _overlayCanvas = null;
 let _overlayCtx    = null;
 
+// Cached temp canvas for floating selections
+let _fsTempCanvas = null;
+let _fsTempCtx    = null;
+
+function _getFsTempCanvas(w, h) {
+    if (!_fsTempCanvas) {
+        _fsTempCanvas = document.createElement('canvas');
+        _fsTempCtx = _fsTempCanvas.getContext('2d');
+    }
+    if (_fsTempCanvas.width !== w || _fsTempCanvas.height !== h) {
+        _fsTempCanvas.width = w;
+        _fsTempCanvas.height = h;
+    }
+    return { canvas: _fsTempCanvas, ctx: _fsTempCtx };
+}
+
 export function initSelectionOverlay() {
     _overlayCanvas = document.getElementById('select-overlay');
     if (_overlayCanvas) {
@@ -98,13 +114,11 @@ function _drawOverlay() {
         const sh = br.y - tl.y;
         if (sw > 0 && sh > 0) {
             // Draw the floating imageData scaled to screen
-            const tmp = document.createElement('canvas');
-            tmp.width  = fs.imageData.width;
-            tmp.height = fs.imageData.height;
-            tmp.getContext('2d').putImageData(fs.imageData, 0, 0);
+            const tmp = _getFsTempCanvas(fs.imageData.width, fs.imageData.height);
+            tmp.ctx.putImageData(fs.imageData, 0, 0);
             ctx.save();
             ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(tmp, tl.x, tl.y, sw, sh);
+            ctx.drawImage(tmp.canvas, tl.x, tl.y, sw, sh);
             ctx.restore();
 
             // Update mask to float position for ants
@@ -250,7 +264,6 @@ export function finishRectSelect() {
         return;
     }
     _rectStart = null;
-    _invalidateMaskCache();
     _startMarch();
 }
 
@@ -308,7 +321,6 @@ export function finishLassoSelect() {
         points: canvasPoints
     };
 
-    _invalidateMaskCache();
     _startMarch();
 }
 
@@ -320,7 +332,6 @@ export function clearSelection() {
     _stopMarch();
     state.selectionMask = null;
     state.floatingSelection = null;
-    _maskBitmap = null;
     _rectStart = null;
     _lassoPoints = [];
     if (_overlayCtx && _overlayCanvas) {
@@ -334,53 +345,6 @@ export function clearSelection() {
 // 描画完了後に選択範囲外のピクセルを元に戻す方式。
 // drawingツール側を変更せずにクリッピングを実現。
 
-let _maskBitmap = null;  // 選択マスク (GPU側、再利用)
-let _preDrawBitmap = null; // 描画前スナップショット
-
-function _invalidateMaskCache() {
-    _maskBitmap = null;
-}
-
-async function _buildMaskBitmap(physW, physH) {
-    const mc  = document.createElement('canvas');
-    mc.width  = physW;
-    mc.height = physH;
-    const mctx = mc.getContext('2d');
-    const dpr  = CANVAS_DPR;
-
-    mctx.fillStyle = '#fff';
-
-    const mask = state.selectionMask;
-    if (mask.type === 'rect') {
-        const { x, y, w, h } = mask.rect;
-        mctx.fillRect(x * dpr, y * dpr, w * dpr, h * dpr);
-    } else if (mask.type === 'lasso' && mask.points) {
-        const pts = mask.points;
-        mctx.beginPath();
-        mctx.moveTo(pts[0].x * dpr, pts[0].y * dpr);
-        for (let i = 1; i < pts.length; i++) {
-            mctx.lineTo(pts[i].x * dpr, pts[i].y * dpr);
-        }
-        mctx.closePath();
-        mctx.fill();
-    }
-
-    _maskBitmap = await createImageBitmap(mc);
-}
-
-/**
- * 描画開始前に呼ぶ (旧方式) — 廃止予定
- */
-export async function capturePreDraw() {
-    // No-op in new clipping mode
-}
-
-/**
- * 描画完了後に呼ぶ (旧方式) — 廃止予定
- */
-export async function applySelectionClip() {
-    // No-op in new clipping mode
-}
 
 /**
  * アクティブレイヤーのコンテキストに現在の選択範囲でクリッピングを適用
@@ -577,7 +541,6 @@ export function commitFloating() {
                 y: p.y + fs.offsetY
             }));
         }
-        _invalidateMaskCache();
     }
 
     _drawOverlay();
@@ -680,7 +643,6 @@ export function pasteFromClipboard() {
         type: 'rect',
         rect: { x: pasteX, y: pasteY, w: cb.w, h: cb.h }
     };
-    _invalidateMaskCache();
 
     // Clone ImageData
     const dpr  = CANVAS_DPR;

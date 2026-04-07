@@ -74,7 +74,6 @@ export function loadLocalState() {
                 return;
             }
 
-            console.log('[Storage] Loading state from', new Date(data.timestamp));
 
             // Restore settings if present
             if (data.settings) {
