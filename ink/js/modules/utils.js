@@ -3,8 +3,8 @@ import { state } from './state.js';
 // Get coordinates relative to the canvas, accounting for zoom and pan
 export function getCanvasPoint(clientX, clientY) {
     return {
-        x: Math.round((clientX - state.translateX) / state.scale),
-        y: Math.round((clientY - state.translateY) / state.scale)
+        x: (clientX - state.translateX) / state.scale,
+        y: (clientY - state.translateY) / state.scale
     };
 }
 

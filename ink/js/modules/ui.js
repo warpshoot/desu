@@ -40,7 +40,7 @@ import {
     fillPolygonTransparentWithAA,
     dilateBox
 } from './tools/fill.js';
-import { saveState, commitRedoClear, undo, redo, restoreLayer, resetHistory, saveLayerChangeState, shrinkLastUndoEntry } from './history.js';
+import { saveState, savePatchState, commitRedoClear, undo, redo, restoreLayer, resetHistory, saveLayerChangeState, shrinkLastUndoEntry } from './history.js';
 import {
     showSelectionUI, hideSelectionUI, confirmSelection, redoSelection,
     saveSelectedRegion, saveAllCanvas, copyToClipboard, saveRegion
@@ -89,6 +89,7 @@ const DEBUG_MODE = false;
 // RAF-based draw batching — prevents pointermove backlog on iPad
 let _pendingDrawPoints = [];
 let _drawRafId = null;
+let _thumbRafId = null; // Throttled thumbnail update
 let _straightLineEnd = null;   // Shift+直線: RAF pending 更新用 (flushで null にリセット)
 let _lastStraightEnd = null;   // Shift+直線: ストローク中の最新終点 (pointerup まで保持)
 let _strokeStartPoint = null;  // Shift+直線: ストローク開始点 (ガイド描画に使用)
@@ -1337,10 +1338,14 @@ async function handlePointerDown(e) {
     // Prevent default to avoid native touch actions
     e.preventDefault();
 
-    try {
-        eventCanvas.setPointerCapture(e.pointerId);
-    } catch (err) {
-        // Ignore if capture fails
+    // iOS Safari で setPointerCapture を使うと、描き始めに前回の座標がリプレイされたり
+    // 座標が 0,0 に飛んだりする不具合（往復の原因）があるため、デスクトップのみに限定する。
+    // eventCanvas は全画面なので、キャプチャなしでも実用上の問題はない。
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (!isIOS) {
+        try {
+            eventCanvas.setPointerCapture(e.pointerId);
+        } catch (err) { }
     }
 
     // Track active pointers with detailed state
@@ -1480,10 +1485,10 @@ async function handlePointerDown(e) {
                 state._pendingSave = null;
                 startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             } else {
-                // strokeCanvas に描くため layer は pointerup まで変化しない。
-                // saveState は RAF まで createImageBitmap を遅延するため、
-                // ストローク中に RAF が発火しても layer.canvas は "before" 状態を保っている。
-                state._pendingSave = saveState({ keepRedo: true });
+                // 【最適化】描き始めの saveState を廃止。
+                // 代わりに pointerup で「描画前のレイヤー状態」を patch として保存する。
+                // これにより巨大キャンバス(4k x 4k)の全キャプチャを回避し、もたつきを解消する。
+                state._pendingSave = true; // セーブが必要であることをマーク
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
             _strokeStartPoint = { x: canvasPoint.x, y: canvasPoint.y };
@@ -1496,7 +1501,7 @@ async function handlePointerDown(e) {
             } else if (state.subTool === 'lasso') {
                 startLasso(e.clientX, e.clientY);
             } else {
-                state._pendingSave = saveState({ keepRedo: true });
+                state._pendingSave = true;
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
                 _strokeStartPoint = { x: canvasPoint.x, y: canvasPoint.y };
                 _lastStraightEnd = null;
@@ -1620,8 +1625,12 @@ function handlePointerMove(e) {
 
     // Drawing
     if (e.pointerId === state.drawingPointerId) {
-        // Skip drawing if we just finished a pinch/pan or moved too little
+        // Skip drawing if we just finished a pinch/pan
         if (state.wasPinching || state.wasPanning) return;
+
+        // 往復（ジッター）対策: 最初の数ピクセルの移動はノイズとして扱う。
+        // iOS の高精細なセンサーによる微小な「戻り」イベントを無視する。
+        if (pointer.totalMove < 3 && !state.isLassoing) return;
 
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
@@ -1870,33 +1879,54 @@ async function handlePointerUp(e) {
                     const stippleDirtyRect = getStippleDirtyRect();
                     clearStippleDirtyRect();
                     endStippleDrawing();
-                    state._pendingSave = null; // _historyQueue が順序を保証
+                    state._pendingSave = null;
                     const stippleLayer = getActiveLayer();
                     if (stippleLayer && stippleDirtyRect) shrinkLastUndoEntry(stippleLayer.id, stippleDirtyRect);
                 } else {
                     if (straightEnd) {
                         if (state.mode === 'pen') {
-                            // ペン直線: strokeCanvas に最終ラインを確定描画
                             previewStraightLine(straightEnd.x, straightEnd.y);
                         } else {
-                            // 消しゴムペン直線: 始点→終点をレイヤーに直接描画
                             drawPenLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
                         }
                     }
-                    endPenDrawing();
+
+                    // 【最適化】ここで Dirty Rect 部分だけをキャプチャして履歴に保存する。
+                    // endPenDrawing() でレイヤーに書き込まれる前なので、
+                    // layer.canvas には「ストローク前の状態」が残っている。
                     const dirtyRect = getPenDirtyRect();
+                    const layer = getActiveLayer();
+                    if (layer && dirtyRect && state._pendingSave) {
+                        const dpr = CANVAS_DPR;
+                        const sx = Math.max(0, Math.floor(dirtyRect.x * dpr));
+                        const sy = Math.max(0, Math.floor(dirtyRect.y * dpr));
+                        const sw = Math.min(layer.canvas.width - sx, Math.ceil(dirtyRect.w * dpr));
+                        const sh = Math.min(layer.canvas.height - sy, Math.ceil(dirtyRect.h * dpr));
+                        
+                        // patchPromise を作成して savePatchState に投げる
+                        if (sw > 0 && sh > 0) {
+                            const patchPromise = createImageBitmap(layer.canvas, sx, sy, sw, sh);
+                            savePatchState({
+                                layerId: layer.id,
+                                patchOrigin: { x: sx / dpr, y: sy / dpr },
+                                patchPromise: patchPromise,
+                                keepRedo: false
+                            });
+                        }
+                    }
+
+                    endPenDrawing();
                     clearPenDirtyRect();
                     state._pendingSave = null;
-                    const layer = getActiveLayer();
-                    if (layer && dirtyRect) shrinkLastUndoEntry(layer.id, dirtyRect);
                 }
-                // サムネイル更新を次の RAF に遅延:
-                // endPenDrawing() が layer.canvas へ GPU 書き込みした直後に
-                // drawImage(layer.canvas → thumb) すると iOS GPU パイプライン同期が発生し
-                // メインスレッドがブロックされる（＝末端遅延の主因）。
-                // RAF 後はフレーム描画済みで GPU 書き込み完了が保証されるため sync なし。
-                const _thumbLayer = getActiveLayer();
-                requestAnimationFrame(() => updateLayerThumbnail(_thumbLayer));
+                
+                // サムネイル更新をさらに遅延させ、高頻度なストロークでも重ならないようにする。
+                if (_thumbRafId) cancelAnimationFrame(_thumbRafId);
+                const _tl = getActiveLayer();
+                _thumbRafId = requestAnimationFrame(() => {
+                    updateLayerThumbnail(_tl);
+                    _thumbRafId = null;
+                });
                 _clearStraightLineGuide();
             }
             state.drawingPointerId = null;
