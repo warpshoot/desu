@@ -1009,6 +1009,11 @@ async function handlePointerDown(e) {
     // Detect pencil
     if (e.pointerType === 'pen') {
         state.pencilDetected = true;
+        if (state._pencilResetTimer) clearTimeout(state._pencilResetTimer);
+        state._pencilResetTimer = setTimeout(() => {
+            state.pencilDetected = false;
+            state._pencilResetTimer = null;
+        }, 1000); // 1 second buffer after last pen move
     }
 
     // Reset interaction flags if this is the first pointer
@@ -1083,28 +1088,33 @@ async function handlePointerDown(e) {
             if (state.currentEraser === 'lasso' && state.activePointers.size === 1) {
                 startLasso(e.clientX, e.clientY);
             } else if (state.currentEraser === 'pen') {
+                state.isErasing = true; // Set flag IMMEDIATELY
                 state.drawingPending = true;
-                await saveState();
+                startPenDrawing(canvasPoint.x, canvasPoint.y); // Start immediately
+                
+                await saveState(); // Await snapshot in background
+                
                 if (!state.drawingPending) {
-                    state.undoStack.pop(); // Revert save if aborted
+                    state.undoStack.pop();
                     return;
                 }
                 state.drawingPending = false;
-                state.isErasing = true;
-                startPenDrawing(canvasPoint.x, canvasPoint.y);
             }
         } else {
             if ((state.currentTool === 'fill' || state.currentTool === 'sketch' || state.currentTool === 'tone') && state.activePointers.size === 1) {
                 startLasso(e.clientX, e.clientY);
             } else if (state.currentTool === 'pen') {
+                state.isPenDrawing = true; // Set flag IMMEDIATELY
                 state.drawingPending = true;
-                await saveState();
+                startPenDrawing(canvasPoint.x, canvasPoint.y); // Start immediately
+                
+                await saveState(); // Await snapshot in background
+                
                 if (!state.drawingPending) {
-                    state.undoStack.pop(); // Revert save if aborted
+                    state.undoStack.pop();
                     return;
                 }
                 state.drawingPending = false;
-                startPenDrawing(canvasPoint.x, canvasPoint.y);
             }
         }
         state.strokeMade = true;

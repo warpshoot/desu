@@ -17,10 +17,22 @@ import { saveLocalState } from './storage.js';
  */
 export async function saveState() {
     const snapshot = new Map();
+    const clones = [];
 
+    // 1. Synchronously clone everything so drawing can start immediately after this function returns (or even during)
     for (const layer of layers) {
-        const bitmap = await createImageBitmap(layer.canvas);
-        snapshot.set(layer.id, bitmap);
+        const clone = document.createElement('canvas');
+        clone.width = layer.canvas.width;
+        clone.height = layer.canvas.height;
+        const ctx = clone.getContext('2d');
+        ctx.drawImage(layer.canvas, 0, 0);
+        clones.push({ id: layer.id, canvas: clone });
+    }
+
+    // 2. Asynchronously convert clones to bitmaps to populate the history stack
+    for (const item of clones) {
+        const bitmap = await createImageBitmap(item.canvas);
+        snapshot.set(item.id, bitmap);
     }
 
     state.undoStack.push(snapshot);
@@ -29,13 +41,12 @@ export async function saveState() {
     // Limit history size
     if (state.undoStack.length > state.MAX_HISTORY) {
         const old = state.undoStack.shift();
-        // Clean up old bitmaps
         for (const bitmap of old.values()) {
             bitmap.close();
         }
     }
 
-    // Clear redo stack on new action
+    // Clear redo stack
     for (const entry of state.redoStack) {
         for (const bitmap of entry.values()) {
             bitmap.close();
