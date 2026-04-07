@@ -254,18 +254,27 @@ async function createSnapshot() {
  */
 export async function undo() {
     return _enqueue(async () => {
-        if (state.undoStack.length === 0) return;
+        // 現在の状態を含めて2つ以上の履歴が必要 (戻り先があること)
+        if (state.undoStack.length <= 1) return;
 
-        const currentFn = await createSnapshot();
-        state.redoStack.push(currentFn);
+        // 現在の状態を Pop して Redo スタックへ移動
+        const current = state.undoStack.pop();
+        state.redoStack.push(current);
+        
+        // Redo スタックの上限管理
+        if (state.redoStack.length > state.MAX_HISTORY) {
+            const old = state.redoStack.shift();
+            _closeSnapshotBitmaps(old, state.redoStack[0]);
+        }
 
-        const prev = state.undoStack.pop();
+        // 新しいトップ (戻り先) を復元
+        const prev = state.undoStack[state.undoStack.length - 1];
         restoreSnapshot(prev);
         
         if (prev.fingerprints) {
             for (const [id, fp] of prev.fingerprints) {
                 _layerFingerprints.set(id, fp);
-                _lastDispatchedFingerprints.set(id, fp); // キュー同期用
+                _lastDispatchedFingerprints.set(id, fp);
             }
         }
         saveLocalState();
@@ -279,10 +288,16 @@ export async function redo() {
     return _enqueue(async () => {
         if (state.redoStack.length === 0) return;
 
-        const currentFn = await createSnapshot();
-        state.undoStack.push(currentFn);
-
+        // Redo スタックから戻し、Undo スタックへ
         const next = state.redoStack.pop();
+        state.undoStack.push(next);
+        
+        // Undo スタックの上限管理
+        if (state.undoStack.length > state.MAX_HISTORY) {
+            const old = state.undoStack.shift();
+            _closeSnapshotBitmaps(old, state.undoStack[0]);
+        }
+
         restoreSnapshot(next);
 
         if (next.fingerprints) {

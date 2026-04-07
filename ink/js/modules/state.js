@@ -259,7 +259,7 @@ export const state = {
     translateY: 0,
 
     // Global History (unified, no per-layer stacks)
-    MAX_HISTORY: 50,
+    MAX_HISTORY: 20,
     undoStack: [],   // Each entry: Map<layerId, ImageBitmap>
     redoStack: [],
 
