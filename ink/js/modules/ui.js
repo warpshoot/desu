@@ -1358,7 +1358,8 @@ async function handlePointerDown(e) {
         state.initialPinchCenter = { ...state.lastPinchCenter };
 
         // Interrupt drawing if 2nd finger touches
-        if (state.isPenDrawing || state.isLassoing) {
+        // ただし、ペンで描画中の場合は 2本目の指（ボタン押下など）による中断を無視する
+        if ((state.isPenDrawing || state.isLassoing) && e.pointerType !== 'pen') {
             // Check if 2nd finger came very quickly after 1st (likely a 2-finger tap intent)
             const timeSinceFirstFinger = Date.now() - state.touchStartTime;
             const isTwoFingerTapIntent = timeSinceFirstFinger < 150;
@@ -1366,7 +1367,6 @@ async function handlePointerDown(e) {
             cancelCurrentOperation();
 
             // Only mark as interaction if NOT a quick 2-finger tap
-            // Quick 2-finger tap = user likely wants undo, not drawing interruption
             if (!isTwoFingerTapIntent) {
                 state.didInteract = true;
             }
@@ -1397,9 +1397,12 @@ async function handlePointerDown(e) {
     }
 
     // 1 Finger = Drawing (if not space pressed)
-    const canDraw = e.pointerType === 'pen' || e.pointerType === 'mouse' || (e.pointerType === 'touch' && !state.pencilDetected);
+    // Apple Pencil (pen) の場合は、他に指が触れていても描画を開始できるように緩和
+    const isPen = e.pointerType === 'pen';
+    const canDraw = isPen || e.pointerType === 'mouse' || (e.pointerType === 'touch' && !state.pencilDetected);
 
-    if (state.activePointers.size === 1 && canDraw) {
+    if (canDraw && (state.activePointers.size === 1 || isPen)) {
+        // ペンの場合は強制的に描画ポインターに設定
         state.drawingPointerId = e.pointerId;
         state.strokeMade = false;
 
