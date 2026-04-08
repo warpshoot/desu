@@ -204,6 +204,31 @@ canvas {
     pointer-events: none;
 }
 
+/* フィードバックリング: 押下時に大きく広がる円 */
+.mod-btn-ring {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    border: 1.5px solid #111;
+    border-radius: 50% !important;
+    pointer-events: none;
+    
+    /* 初期状態 */
+    transform: scale(1);
+    opacity: 0;
+    
+    /* 離した時の戻りアニメーション */
+    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+}
+
+.mod-btn.active .mod-btn-ring {
+    /* 押した時の広がりアニメーション (CSS Transitionで制御) */
+    transform: scale(2.8);
+    opacity: 0.4;
+    border-width: 1px;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease-out;
+}
+
 /* ============================================
    Left Toolbar (Layer Panel + Tool Panel)
    ============================================ */

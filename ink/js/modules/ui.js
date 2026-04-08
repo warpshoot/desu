@@ -103,8 +103,12 @@ function _isShiftActive() {
 function _updateModShiftBtn() {
     const btn = document.getElementById('mod-shift');
     if (!btn) return;
-    btn.classList.toggle('active',  _modShiftState === 'held');
-    btn.classList.toggle('locked',  _modShiftState === 'locked');
+    // 'active' クラスを held/locked 両方で付与することで、フィードバックリングが表示されるようにする。
+    // もし押下時のみ（リングが1回広がる）を意図するなら held の時のみに限定する。
+    const isActive = _modShiftState === 'held';
+    const isLocked = _modShiftState === 'locked';
+    btn.classList.toggle('active', isActive);
+    btn.classList.toggle('locked', isLocked);
 }
 
 /**
@@ -1612,9 +1616,9 @@ function handlePointerMove(e) {
         } else if (state.isLassoing) {
             updateLasso(e.clientX, e.clientY);
         } else if (state.isPenDrawing) {
+            // 直線モードの判定を強化: mouse/pen の Shift キー、または仮想ボタンの状態
             if (_isShiftActive()) {
                 // Shift+直線: 最新点を保持。フリーハンドキューは捨てる。
-                // ペンモード(strokeCanvas)のみライブプレビューをRAFでリクエスト
                 const pt = getCanvasPoint(e.clientX, e.clientY);
                 _straightLineEnd = { x: pt.x, y: pt.y, pressure: e.pressure };
                 _lastStraightEnd = _straightLineEnd; // pointerup まで保持
