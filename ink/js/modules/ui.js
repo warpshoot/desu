@@ -1822,10 +1822,9 @@ async function handlePointerUp(e) {
                 // ストローク確定 → redo スタックをクリア
                 commitRedoClear();
 
-                // saveState が未実行の場合はここで実行 (stipple は pointerdown で _pendingSave=null のため)
-                if (!state._pendingSave) {
-                    state._pendingSave = saveState({ keepRedo: true });
-                }
+                // ストローク/操作終了後の状態を保存 (After state)
+                await saveState({ keepRedo: true });
+                state._pendingSave = null;
 
                 if (state.mode === 'pen' && state.subTool === 'stipple') {
                     // 点描直線: 始点→終点間にstippleドットを一括描画
@@ -1833,7 +1832,6 @@ async function handlePointerUp(e) {
                     const stippleDirtyRect = getStippleDirtyRect();
                     clearStippleDirtyRect();
                     endStippleDrawing();
-                    state._pendingSave = null;
                     const stippleLayer = getActiveLayer();
                     if (stippleLayer && stippleDirtyRect) {
                         // shrinkLastUndoEntry was removed for history stability
@@ -1849,7 +1847,6 @@ async function handlePointerUp(e) {
 
                     endPenDrawing();
                     clearPenDirtyRect();
-                    state._pendingSave = null;
                 }
                 
                 // サムネイル更新をさらに遅延させ、高頻度なストロークでも重ならないようにする。

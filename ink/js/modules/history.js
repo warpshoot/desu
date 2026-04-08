@@ -38,6 +38,34 @@ function _enqueue(task) {
     return p;
 }
 
+// ============================================
+// Bitmap Reference Counting (Crash Prevention)
+// ============================================
+// 差分保存により ImageBitmap が複数の履歴エントリで共有されるため、
+// 単純に close() すると別エントリで参照した際にクラッシュする。
+// 参照カウントを導入し、どこからも使われなくなった時のみ close() する。
+
+const _bitmapRegistry = new Map(); // ImageBitmap -> count
+
+/** 参照カウントをインクリメント */
+function _incRef(bitmap) {
+    if (!bitmap) return;
+    const count = _bitmapRegistry.get(bitmap) || 0;
+    _bitmapRegistry.set(bitmap, count + 1);
+}
+
+/** 参照カウントをデクリメント、0になったら close */
+function _decRef(bitmap) {
+    if (!bitmap || typeof bitmap.close !== 'function') return;
+    const count = (_bitmapRegistry.get(bitmap) || 0) - 1;
+    if (count <= 0) {
+        _bitmapRegistry.delete(bitmap);
+        bitmap.close();
+    } else {
+        _bitmapRegistry.set(bitmap, count);
+    }
+}
+
 /**
  * レイヤーに変更があったことをマーク (描画操作の完了時に呼ぶ)
  */
@@ -127,12 +155,17 @@ export async function saveState({ keepRedo = false } = {}) {
 
         await Promise.all(captureTasks);
 
+        // 各 Bitmap の参照カウントを増やす
+        for (const bmp of snapshot.bitmaps.values()) {
+            _incRef(bmp);
+        }
+
         state.undoStack.push(snapshot);
         saveLocalState();
 
         if (state.undoStack.length > state.MAX_HISTORY) {
             const old = state.undoStack.shift();
-            _closeSnapshotBitmaps(old, state.undoStack[0]);
+            _closeAllBitmaps(old);
         }
     });
 }
@@ -156,7 +189,9 @@ export async function saveInitialState() {
         layers.map(layer => createImageBitmap(layer.canvas))
     );
     for (let i = 0; i < layers.length; i++) {
-        snapshot.bitmaps.set(layers[i].id, bitmaps[i]);
+        const bmp = bitmaps[i];
+        snapshot.bitmaps.set(layers[i].id, bmp);
+        _incRef(bmp);
     }
     state.undoStack.push(snapshot);
 }
@@ -174,7 +209,9 @@ async function createSnapshot() {
         layers.map(layer => createImageBitmap(layer.canvas))
     );
     for (let i = 0; i < layers.length; i++) {
-        snapshot.bitmaps.set(layers[i].id, bitmaps[i]);
+        const bmp = bitmaps[i];
+        snapshot.bitmaps.set(layers[i].id, bmp);
+        _incRef(bmp);
     }
     return snapshot;
 }
@@ -184,17 +221,19 @@ async function createSnapshot() {
  */
 export async function undo() {
     return _enqueue(async () => {
-        if (state.undoStack.length === 0) return;
+        if (state.undoStack.length <= 1) return; // 最初の状態（白紙等）は残す
 
-        // 【改善】現在の状態を Redo スタックへ撮っておく (1手目の空振りを防ぐ)
-        const currentFn = await createSnapshot();
-        state.redoStack.push(currentFn);
+        // 現在の最新状態を undoStack から redoStack へ
+        const current = state.undoStack.pop();
+        state.redoStack.push(current);
+
         if (state.redoStack.length > state.MAX_HISTORY) {
             const old = state.redoStack.shift();
-            _closeSnapshotBitmaps(old, state.redoStack[0]);
+            _closeAllBitmaps(old);
         }
 
-        const prev = state.undoStack.pop();
+        // 1つ前の状態を復元
+        const prev = state.undoStack[state.undoStack.length - 1];
         restoreSnapshot(prev);
         
         if (prev.fingerprints) {
@@ -214,15 +253,15 @@ export async function redo() {
     return _enqueue(async () => {
         if (state.redoStack.length === 0) return;
 
-        // 【改善】復元前に今の状態を Undo へ (整合性維持)
-        const currentFn = await createSnapshot();
-        state.undoStack.push(currentFn);
+        // redoStack から undoStack へ戻す
+        const next = state.redoStack.pop();
+        state.undoStack.push(next);
+        
         if (state.undoStack.length > state.MAX_HISTORY) {
             const old = state.undoStack.shift();
-            _closeSnapshotBitmaps(old, state.undoStack[0]);
+            _closeAllBitmaps(old);
         }
 
-        const next = state.redoStack.pop();
         restoreSnapshot(next);
 
         if (next.fingerprints) {
@@ -357,23 +396,12 @@ function _closeAllBitmaps(snapshot) {
     const bitmaps = snapshot.bitmaps || snapshot;
     if (bitmaps instanceof Map) {
         for (const bitmap of bitmaps.values()) {
-            if (bitmap && typeof bitmap.close === 'function') {
-                bitmap.close();
-            }
+            _decRef(bitmap);
         }
     }
 }
 
-function _closeSnapshotBitmaps(oldSnapshot, nextSnapshot) {
-    const oldBitmaps = oldSnapshot.bitmaps || oldSnapshot;
-    const nextBitmaps = nextSnapshot ? (nextSnapshot.bitmaps || nextSnapshot) : new Map();
-
-    for (const [id, bitmap] of oldBitmaps) {
-        if (bitmap && typeof bitmap.close === 'function' && bitmap !== nextBitmaps.get(id)) {
-            bitmap.close();
-        }
-    }
-}
+// _closeSnapshotBitmaps は不要になったので削除 (参照カウント方式に一本化)
 
 function _clearRedoStack() {
     for (const entry of state.redoStack) {
