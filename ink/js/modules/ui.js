@@ -92,6 +92,7 @@ let _strokeStartPoint = null;  // Shift+直線: ストローク開始点 (ガイ
 // locked = ダブルタップでロック、タップで解除
 let _modShiftState = 'idle';
 let _modShiftLastTapTime = 0;
+let _modShiftPendingCancel = false;
 const _MOD_DOUBLE_TAP_MS = 300;
 
 /** キーボード Shift または仮想 Shift (held/locked) のどちらかが ON かを返す */
@@ -1862,6 +1863,14 @@ async function handlePointerUp(e) {
             }
             state.drawingPointerId = null;
         }
+
+        // iPad + Apple Pencil パームリジェクション対策のクリーンアップ
+        if (_modShiftPendingCancel) {
+            _modShiftState = 'idle';
+            _updateModShiftBtn();
+            _modShiftPendingCancel = false;
+        }
+
         // Clean up
         state.isPenDrawing = false;
         state.isLassoing = false;
@@ -1870,12 +1879,17 @@ async function handlePointerUp(e) {
 }
 
 function handlePointerCancel(e) {
-    state.activePointers.delete(e.pointerId);
+    if (state.activePointers.has(e.pointerId)) {
+        state.activePointers.delete(e.pointerId);
+    }
+    
     try {
         eventCanvas.releasePointerCapture(e.pointerId);
     } catch (err) { }
 
-    cancelCurrentOperation();
+    if (e.pointerId === state.drawingPointerId) {
+        cancelCurrentOperation();
+    }
 
     if (state.activePointers.size === 0) {
         state.isPanning = false;
@@ -2869,8 +2883,14 @@ function setupModifierBar() {
 
     shiftBtn.addEventListener('pointercancel', (e) => {
         if (_modShiftState === 'held') {
-            _modShiftState = 'idle';
-            _updateModShiftBtn();
+            // iPad + Apple Pencil で描画中に、ボタンを押している指がパームリジェクションで
+            // キャンセルされることがある。描画中なら状態を維持し、描画終了時に解除する。
+            if (state.isPenDrawing) {
+                _modShiftPendingCancel = true;
+            } else {
+                _modShiftState = 'idle';
+                _updateModShiftBtn();
+            }
         }
     });
 }
