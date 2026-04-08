@@ -1768,6 +1768,7 @@ async function handlePointerUp(e) {
                             if (clipped) popSelectionClip(ctx);
                         }
                         updateLayerThumbnail(getActiveLayer());
+                        await saveState({ keepRedo: true });
                     }
                 } else if (points && points.length >= 3 && !state.wasPanning && !state.wasPinching) {
                     // Drag detected → polygon fill (投げ縄)
@@ -1810,6 +1811,7 @@ async function handlePointerUp(e) {
                         if (clipped) popSelectionClip(ctx);
                     }
                     updateLayerThumbnail(getActiveLayer());
+                    await saveState({ keepRedo: true });
                 }
             } else if (state.isPenDrawing) {
                 // 直線確定: RAF が _straightLineEnd を null 化済みでも _lastStraightEnd は保持されている

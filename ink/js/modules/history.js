@@ -220,10 +220,14 @@ async function createSnapshot() {
  * Undo last action
  */
 export async function undo() {
-    return _enqueue(async () => {
-        if (state.undoStack.length <= 1) return; // 最初の状態（白紙等）は残す
+    // 1. もし未保存の変更（現在のキャンバス状態）があれば、まずそれを履歴として確定させる。
+    //    これにより「最新の状態を Redo に回し、その1つ前を復元する」動作が確実になる。
+    await saveState({ keepRedo: true });
 
-        // 現在の最新状態を undoStack から redoStack へ
+    return _enqueue(async () => {
+        if (state.undoStack.length <= 1) return; // 最初の状態は残す
+
+        // 2. スタックのトップ（今のキャンバスの状態。さっき saveState した最新分）を Redo へ移動
         const current = state.undoStack.pop();
         state.redoStack.push(current);
 
@@ -232,7 +236,7 @@ export async function undo() {
             _closeAllBitmaps(old);
         }
 
-        // 1つ前の状態を復元
+        // 3. その一個下にある「前の状態」を復元
         const prev = state.undoStack[state.undoStack.length - 1];
         restoreSnapshot(prev);
         
