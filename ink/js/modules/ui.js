@@ -93,7 +93,9 @@ let _strokeStartPoint = null;  // Shift+直線: ストローク開始点 (ガイ
 let _modShiftState = 'idle';
 let _modShiftLastTapTime = 0;
 let _modShiftPendingCancel = false;
+let _lastGestureTime = 0; // アンドゥ/リドゥの連続発生防止用
 const _MOD_DOUBLE_TAP_MS = 300;
+const _GESTURE_COOLDOWN_MS = 500; // ジェスチャー間の最小間隔
 
 /** キーボード Shift または仮想 Shift (held/locked) のどちらかが ON かを返す */
 function _isShiftActive() {
@@ -1336,6 +1338,9 @@ async function handlePointerDown(e) {
         state.wasPinching = false;
         state.didInteract = false;
         state.totalDragDistance = 0;
+        state.isPenSession = (e.pointerType === 'pen'); // ペンが一度でも関与したか
+    } else if (e.pointerType === 'pen') {
+        state.isPenSession = true;
     }
     state.maxFingers = Math.max(state.maxFingers, state.activePointers.size);
 
@@ -1586,8 +1591,8 @@ function handlePointerMove(e) {
         return;
     }
 
-    // Interaction threshold
-    if (pointer.totalMove > 20) {
+    // Interaction threshold - タップ判定の移動許容値を少し広げる (20 -> 35)
+    if (pointer.totalMove > 35) {
         state.didInteract = true;
     }
 
@@ -1689,18 +1694,23 @@ async function handlePointerUp(e) {
 
     // If all fingers up
     if (state.activePointers.size === 0) {
-        const duration = Date.now() - state.touchStartTime;
-
-        // Check for gestures (Undo/Redo)
-        // Trigger if: short tap, no significant movement/interaction
-
-        if (duration < 400 && !state.didInteract && !state.strokeMade && !state.wasPanning && !state.wasPinching) {
+        const now = Date.now();
+        const duration = now - state.touchStartTime;
+        
+        // Gesture end: detect quick taps
+        // ペンが関与しているセッションではジェスチャー（2本指アンドゥ等）を無効化する
+        // また、連続発生を抑制するためにクールダウンを設ける
+        const isTap = duration < 400 && !state.didInteract && !state.strokeMade && !state.wasPanning && !state.wasPinching;
+        
+        if (isTap && !state.isPenSession && (now - _lastGestureTime > _GESTURE_COOLDOWN_MS)) {
             // Note: maxFingers tracks maximum fingers seen during this touch session
             if (state.maxFingers === 2) {
+                _lastGestureTime = now;
                 await undo();
                 if (window.renderLayerButtons) window.renderLayerButtons();
                 updateAllThumbnails();
             } else if (state.maxFingers === 3) {
+                _lastGestureTime = now;
                 await redo();
                 if (window.renderLayerButtons) window.renderLayerButtons();
                 updateAllThumbnails();

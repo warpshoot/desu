@@ -293,7 +293,12 @@ export function previewStraightLine(x, y) {
     _dirtyMaxY = Math.max(start.y, y);
 
     strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
-    const pts = [start, { x, y, pressure: start.pressure }];
+    // 筆圧が 0 に近い場合でも見えるようにガードをかける (iPad/Apple Pencil 開始時対策)
+    const previewPressure = Math.max(0.3, start.pressure);
+    const pts = [
+        { ...start, pressure: previewPressure }, 
+        { x, y, pressure: previewPressure }
+    ];
     drawBrushSegment(strokeCtx, pts, 0, true, brush, false);
     drawBrushSegment(strokeCtx, pts, 1, false, brush, false);
 }

@@ -158,6 +158,9 @@ canvas {
     position: relative;
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     pointer-events: auto;
     color: #333;
