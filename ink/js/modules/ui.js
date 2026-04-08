@@ -1320,7 +1320,9 @@ async function handlePointerDown(e) {
     }
 
     // Track active pointers with detailed state
-    if (e.target !== eventCanvas) return;
+    // Pen の場合、ボタン等の上から描き始めても無視せず eventCanvas への描画として扱う
+    const isPenDown = e.pointerType === 'pen';
+    if (e.target !== eventCanvas && !isPenDown) return;
 
     state.activePointers.set(e.pointerId, {
         x: e.clientX,
@@ -1602,8 +1604,14 @@ function handlePointerMove(e) {
         if (state.wasPinching || state.wasPanning) return;
 
         // 往復（ジッター）対策: 最初の数ピクセルの移動はノイズとして扱う。
-        // iOS の高精細なセンサーによる微小な「戻り」イベントを無視する。
+        // また、開始直後の不自然な長距離ジャンプ（iOS Safari の座標 0,0 への飛びなど）を除外する。
         if (pointer.totalMove < 3 && !state.isLassoing) return;
+        
+        // 追加のフィルタ: ストローク開始直後（例えば累計移動が50px未満）に、
+        // 前回の点から突然 100px 以上飛んだ場合は、システム的な座標飛び（往復の原因）とみなして無視する。
+        if (pointer.totalMove < 50 && moveDist > 100) {
+            return;
+        }
 
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
