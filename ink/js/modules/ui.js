@@ -94,6 +94,7 @@ let _modShiftState = 'idle';
 let _modShiftLastTapTime = 0;
 let _modShiftPendingCancel = false;
 let _lastGestureTime = 0; // アンドゥ/リドゥの連続発生防止用
+let _isProcessingGesture = false; // アンドゥ/リドゥ実行中ロック
 const _MOD_DOUBLE_TAP_MS = 300;
 const _GESTURE_COOLDOWN_MS = 500; // ジェスチャー間の最小間隔
 
@@ -1320,9 +1321,7 @@ async function handlePointerDown(e) {
     }
 
     // Track active pointers with detailed state
-    // Pen の場合、ボタン等の上から描き始めても無視せず eventCanvas への描画として扱う
-    const isPenDown = e.pointerType === 'pen';
-    if (e.target !== eventCanvas && !isPenDown) return;
+    if (e.target !== eventCanvas) return;
 
     state.activePointers.set(e.pointerId, {
         x: e.clientX,
@@ -1401,6 +1400,10 @@ async function handlePointerDown(e) {
             clearTimeout(state._pencilResetTimer);
             state._pencilResetTimer = null;
         }
+        // iOS でもペン入力は pointer capture で安定させる
+        try {
+            eventCanvas.setPointerCapture(e.pointerId);
+        } catch (err) { }
     }
 
     // 1 Finger = Drawing (if not space pressed)
@@ -1603,15 +1606,22 @@ function handlePointerMove(e) {
         // Skip drawing if we just finished a pinch/pan
         if (state.wasPinching || state.wasPanning) return;
 
-        // 往復（ジッター）対策: 最初の数ピクセルの移動はノイズとして扱う。
-        // また、開始直後の不自然な長距離ジャンプ（iOS Safari の座標 0,0 への飛びなど）を除外する。
-        if (pointer.totalMove < 3 && !state.isLassoing) return;
-        
-        // 追加のフィルタ: ストローク開始直後（例えば累計移動が50px未満）に、
-        // 前回の点から突然 100px 以上飛んだ場合は、システム的な座標飛び（往復の原因）とみなして無視する。
-        if (pointer.totalMove < 50 && moveDist > 100) {
-            return;
+        // ペン入力の座標ジャンプフィルタ（高速描画時の往復防止）
+        if (e.pointerType === 'pen') {
+            const last = state._lastPenPoint;
+            if (last) {
+                const dx = e.clientX - last.x;
+                const dy = e.clientY - last.y;
+                const dist = Math.hypot(dx, dy);
+                // 画面幅の10% 以上の急激なジャンプはノイズとみなす
+                if (dist > (window.innerWidth * 0.1)) return;
+            }
+            state._lastPenPoint = { x: e.clientX, y: e.clientY };
         }
+
+        // 往復（ジッター）対策: 最初の数ピクセルの移動はノイズとして扱う。
+        // iOS の高精細なセンサーによる微小な「戻り」イベントを無視する。
+        if (pointer.totalMove < 3 && !state.isLassoing) return;
 
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
