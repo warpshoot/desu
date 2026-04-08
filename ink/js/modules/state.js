@@ -211,37 +211,32 @@ export function mergeLayerDown(id) {
     const ot = topLayer.opacity;
     const ob = bottomLayer.opacity;
 
-    // 1. Calculate combined opacity: ResultAlpha = AlphaT + AlphaB * (1 - AlphaT)
-    const finalOpacity = ot + ob * (1 - ot);
+    // 1. Create offscreen composite
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = bottomLayer.canvas.width;
+    tempCanvas.height = bottomLayer.canvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
 
-    if (finalOpacity > 0.001) {
-        // 2. Create offscreen composite
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = bottomLayer.canvas.width;
-        tempCanvas.height = bottomLayer.canvas.height;
-        const tempCtx = tempCanvas.getContext('2d');
+    // Draw bottom with its current opacity
+    tempCtx.globalAlpha = ob;
+    tempCtx.drawImage(bottomLayer.canvas, 0, 0);
 
-        // Draw bottom with its contribution normalized to finalOpacity
-        tempCtx.globalAlpha = (ob * (1 - ot)) / finalOpacity;
-        tempCtx.drawImage(bottomLayer.canvas, 0, 0);
+    // Draw top with its current opacity
+    tempCtx.globalAlpha = ot;
+    tempCtx.drawImage(topLayer.canvas, 0, 0);
 
-        // Draw top with its contribution normalized to finalOpacity
-        tempCtx.globalAlpha = ot / finalOpacity;
-        tempCtx.drawImage(topLayer.canvas, 0, 0);
+    // 2. Update bottom layer canvas
+    bottomLayer.ctx.save();
+    bottomLayer.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    bottomLayer.ctx.globalCompositeOperation = 'source-over';
+    bottomLayer.ctx.globalAlpha = 1.0;
+    bottomLayer.ctx.clearRect(0, 0, bottomLayer.canvas.width, bottomLayer.canvas.height);
+    bottomLayer.ctx.drawImage(tempCanvas, 0, 0);
+    bottomLayer.ctx.restore();
 
-        // 3. Update bottom layer canvas
-        bottomLayer.ctx.save();
-        bottomLayer.ctx.setTransform(1, 0, 0, 1, 0, 0);
-        bottomLayer.ctx.globalCompositeOperation = 'source-over';
-        bottomLayer.ctx.globalAlpha = 1.0;
-        bottomLayer.ctx.clearRect(0, 0, bottomLayer.canvas.width, bottomLayer.canvas.height);
-        bottomLayer.ctx.drawImage(tempCanvas, 0, 0);
-        bottomLayer.ctx.restore();
-
-        // 4. Update bottom layer opacity setting to match visual result
-        bottomLayer.opacity = finalOpacity;
-        bottomLayer.canvas.style.opacity = finalOpacity;
-    }
+    // 3. Since opacities are baked into the pixels, set resulting layer to 1.0
+    bottomLayer.opacity = 1.0;
+    bottomLayer.canvas.style.opacity = '1.0';
 
     // 手動で履歴システムの指紋を更新
     if (window.markLayerDirty) {
