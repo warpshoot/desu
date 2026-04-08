@@ -517,6 +517,7 @@ function setupFileUI() {
 }
 
 document.addEventListener('desu:state-loaded', () => {
+    applyTransform();
     updateModeButtonIcon(state.mode, state.subTool);
     updateToolButtonStates();
     updateBrushSizeVisibility();

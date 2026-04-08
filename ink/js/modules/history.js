@@ -9,6 +9,7 @@ import {
     syncLayerIdCounter
 } from './state.js';
 import { saveLocalState } from './storage.js';
+import { applyTransform } from './canvas.js';
 
 // ============================================
 // Global History System (Unified, Differential)
@@ -298,6 +299,9 @@ function restoreSnapshot(snapshot) {
     if (!layers.find(l => l.id === state.activeLayer)) {
         state.activeLayer = layers[layers.length - 1]?.id || 0;
     }
+
+    // Sync transformation to all layers (especially new ones created via createLayerDirect)
+    applyTransform();
 }
 
 /**

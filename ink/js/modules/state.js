@@ -61,6 +61,10 @@ export function createLayer() {
 
     // Insert canvas into DOM (before lasso-canvas to keep proper z-order)
     layerContainer.appendChild(canvas);
+    
+    // Apply current transformation immediately so the new layer isn't shifted
+    canvas.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
+    
     updateLayerZIndices();
 
     const layer = {
@@ -277,6 +281,9 @@ export function createLayerDirect(id) {
     ctx.clearRect(0, 0, w, h);
 
     layerContainer.appendChild(canvas);
+    
+    // Apply current transformation immediately so the new layer isn't shifted
+    canvas.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
 
     return {
         id,
