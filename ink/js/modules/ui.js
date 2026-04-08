@@ -968,6 +968,10 @@ function setupLayerMenuActions(menu, layerId) {
         }
     });
 
+    newSlider.addEventListener('change', () => {
+        saveLayerChangeState();
+    });
+
     // Visibility toggle
     newVisToggle.addEventListener('click', () => {
         const layer = getLayer(layerId);
@@ -978,6 +982,8 @@ function setupLayerMenuActions(menu, layerId) {
 
             const btn = document.querySelector(`.layer-btn[data-layer-id="${layerId}"]`);
             if (btn) btn.classList.toggle('hidden-layer', !layer.visible);
+            
+            saveLayerChangeState();
         }
     });
 

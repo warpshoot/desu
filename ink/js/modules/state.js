@@ -129,12 +129,33 @@ export function getActiveLayerCanvas() {
 }
 
 /**
- * Update z-indices so layer order is: layer1 (bottom) → layer2 → ... → layerN (top)
+ * Update z-indices and DOM order so layer order is: layer1 (bottom) → layer2 → ... → layerN (top)
  */
 export function updateLayerZIndices() {
     layers.forEach((layer, index) => {
         layer.canvas.style.zIndex = 10 + index;
+        // Ensure DOM order matches layers array order for cleanliness
+        if (layer.canvas.parentNode === layerContainer) {
+            layerContainer.appendChild(layer.canvas);
+        }
     });
+
+    // Lasso and Stroke canvases must always be top-most
+    if (lassoCanvas && lassoCanvas.parentNode === layerContainer.parentNode) {
+        lassoCanvas.parentNode.appendChild(lassoCanvas);
+    }
+    if (strokeCanvas && strokeCanvas.parentNode === layerContainer.parentNode) {
+        strokeCanvas.parentNode.appendChild(strokeCanvas);
+    }
+}
+
+/**
+ * IDカウンターの同期 (履歴復元時に使用)
+ */
+export function syncLayerIdCounter(id) {
+    if (id >= nextLayerId) {
+        nextLayerId = id + 1;
+    }
 }
 
 /**

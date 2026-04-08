@@ -5,7 +5,8 @@ import {
     getActiveLayer,
     CANVAS_DPR,
     createLayerDirect,
-    updateLayerZIndices
+    updateLayerZIndices,
+    syncLayerIdCounter
 } from './state.js';
 import { saveLocalState } from './storage.js';
 
@@ -271,6 +272,9 @@ function restoreSnapshot(snapshot) {
     for (const layer of layers) {
         const meta = snapshot.layerMeta.find(m => m.id === layer.id);
         if (!meta) continue;
+
+        // IDカウンターを同期 (復元された ID より未来の ID を生成するように)
+        syncLayerIdCounter(layer.id);
 
         layer.ctx.globalCompositeOperation = 'source-over';
 
