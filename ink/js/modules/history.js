@@ -3,7 +3,9 @@ import {
     layers,
     getLayer,
     getActiveLayer,
-    CANVAS_DPR
+    CANVAS_DPR,
+    createLayerDirect,
+    updateLayerZIndices
 } from './state.js';
 import { saveLocalState } from './storage.js';
 
@@ -13,11 +15,12 @@ import { saveLocalState } from './storage.js';
 // 差分ベース: 変更のあったレイヤーのみ新規 ImageBitmap を作成
 // 未変更レイヤーは前回のスナップショットの参照を再利用
 //
-// Entry format: { bitmaps: Map<layerId, ImageBitmap>, layerMeta: [{id, opacity, visible}] }
+// Entry format: { bitmaps: Map<layerId, ImageBitmap>, layerMeta: [{id, opacity, visible}], layerIds: number[] }
 // layerMeta はレイヤー構成変更の undo/redo をサポート
 
 const _layerFingerprints = new Map();
 let _fingerprintCounter = 0;
+let _lastSavedLayerIds = ""; // 構造変化検知用
 
 // 直近でキューに投げられた（保存予定の）指紋
 const _lastDispatchedFingerprints = new Map();
@@ -39,6 +42,7 @@ function _enqueue(task) {
 export function markLayerDirty(layerId) {
     _layerFingerprints.set(layerId, ++_fingerprintCounter);
 }
+window.markLayerDirty = markLayerDirty;
 
 export async function saveState({ keepRedo = false } = {}) {
     // 1. 変更があるレイヤーを同期的に特定 (指紋チェック)
@@ -49,6 +53,8 @@ export async function saveState({ keepRedo = false } = {}) {
     //      GPU パイプライン同期のブロッキングが発生しない
     const snapshotFingerprints = new Map(_layerFingerprints);
     const layersToCaptureIds = new Set();
+    const currentLayerIdString = layers.map(l => l.id).join(',');
+    const structureChanged = currentLayerIdString !== _lastSavedLayerIds;
 
     for (const layer of layers) {
         const currentFp = snapshotFingerprints.get(layer.id) || 0;
@@ -59,10 +65,13 @@ export async function saveState({ keepRedo = false } = {}) {
         }
     }
 
-    if (layersToCaptureIds.size === 0 && state.undoStack.length > 0) {
+    // 変更も構造変化もない場合はスキップ (ただし初回保存や強制保存時は除く)
+    if (layersToCaptureIds.size === 0 && !structureChanged && state.undoStack.length > 0) {
         if (!keepRedo) _clearRedoStack();
         return Promise.resolve();
     }
+
+    _lastSavedLayerIds = currentLayerIdString;
 
     // 予約した指紋を即座に記録
     for (const id of layersToCaptureIds) {
@@ -229,12 +238,50 @@ export async function redo() {
  */
 function restoreSnapshot(snapshot) {
     const dpr = CANVAS_DPR;
-    const bitmaps = snapshot.bitmaps || snapshot; // 後方互換
+    const bitmaps = snapshot.bitmaps || snapshot;
 
+    // 1. レイヤー構成の同期 (snapshot.layerMeta に合わせる)
+    const snapshotIds = snapshot.layerMeta.map(m => m.id);
+    
+    // 不要なレイヤーを削除 (スナップショットに存在しない ID)
+    for (let i = layers.length - 1; i >= 0; i--) {
+        if (!snapshotIds.includes(layers[i].id)) {
+            layers[i].canvas.remove();
+            layers.splice(i, 1);
+        }
+    }
+
+    // 不足しているレイヤーを作成 ＆ 順序の整合性をとる
+    const newLayers = [];
+    snapshot.layerMeta.forEach((meta, index) => {
+        let layer = layers.find(l => l.id === meta.id);
+        if (!layer) {
+            // 新規作成 (DOM にも追加)
+            layer = createLayerDirect(meta.id);
+        }
+        newLayers[index] = layer;
+    });
+
+    // 参照を入れ替え
+    layers.length = 0;
+    layers.push(...newLayers);
+    updateLayerZIndices();
+
+    // 2. 各レイヤーの状態とピクセルを復元
     for (const layer of layers) {
+        const meta = snapshot.layerMeta.find(m => m.id === layer.id);
+        if (!meta) continue;
+
         layer.ctx.globalCompositeOperation = 'source-over';
 
-        const bitmap = bitmaps instanceof Map ? bitmaps.get(layer.id) : undefined;
+        // 状態復元
+        layer.opacity = meta.opacity;
+        layer.visible = meta.visible;
+        layer.canvas.style.opacity = meta.opacity;
+        layer.canvas.style.display = meta.visible ? 'block' : 'none';
+
+        // ピクセル復元
+        const bitmap = bitmaps.get(layer.id);
         if (bitmap) {
             layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
             layer.ctx.imageSmoothingEnabled = false;
@@ -243,17 +290,9 @@ function restoreSnapshot(snapshot) {
         }
     }
 
-    // レイヤーメタ情報の復元 (opacity, visible)
-    if (snapshot.layerMeta) {
-        for (const meta of snapshot.layerMeta) {
-            const layer = getLayer(meta.id);
-            if (layer) {
-                layer.opacity = meta.opacity;
-                layer.visible = meta.visible;
-                layer.canvas.style.opacity = meta.opacity;
-                layer.canvas.style.display = meta.visible ? 'block' : 'none';
-            }
-        }
+    // アクティブレイヤーの安全策
+    if (!layers.find(l => l.id === state.activeLayer)) {
+        state.activeLayer = layers[layers.length - 1]?.id || 0;
     }
 }
 

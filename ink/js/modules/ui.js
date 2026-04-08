@@ -986,18 +986,12 @@ function setupLayerMenuActions(menu, layerId) {
         const index = layers.findIndex(l => l.id === layerId);
         if (index <= 0) return;
 
-        showConfirmModal(
-            "下のレイヤーに統合しますか？",
-            'layerMerge',
-            async () => {
-                if (mergeLayerDown(layerId)) {
-                    await saveLayerChangeState();
-                    window.renderLayerButtons();
-                    updateActiveLayerIndicator();
-                    hideAllMenus();
-                }
-            }
-        );
+        if (mergeLayerDown(layerId)) {
+            await saveLayerChangeState();
+            window.renderLayerButtons();
+            updateActiveLayerIndicator();
+            hideAllMenus();
+        }
     });
 
     // Disable merge if bottom layer
@@ -1693,9 +1687,11 @@ async function handlePointerUp(e) {
             // Note: maxFingers tracks maximum fingers seen during this touch session
             if (state.maxFingers === 2) {
                 await undo();
+                if (window.renderLayerButtons) window.renderLayerButtons();
                 updateAllThumbnails();
             } else if (state.maxFingers === 3) {
                 await redo();
+                if (window.renderLayerButtons) window.renderLayerButtons();
                 updateAllThumbnails();
             }
         }
@@ -3338,6 +3334,7 @@ function setupKeyboardShortcuts() {
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
             e.preventDefault();
             await undo();
+            if (window.renderLayerButtons) window.renderLayerButtons();
             updateAllThumbnails();
         }
 
@@ -3348,6 +3345,7 @@ function setupKeyboardShortcuts() {
         )) {
             e.preventDefault();
             await redo();
+            if (window.renderLayerButtons) window.renderLayerButtons();
             updateAllThumbnails();
         }
 

@@ -131,7 +131,7 @@ export function getActiveLayerCanvas() {
 /**
  * Update z-indices so layer order is: layer1 (bottom) → layer2 → ... → layerN (top)
  */
-function updateLayerZIndices() {
+export function updateLayerZIndices() {
     layers.forEach((layer, index) => {
         layer.canvas.style.zIndex = 10 + index;
     });
@@ -173,21 +173,55 @@ export function moveLayer(id, direction) {
 /**
  * Merge a layer into the one below it
  * id: ID of the layer to merge down
+ * Photoshop-like "Smart Merge" that preserves visual appearance by using alpha composition.
  */
 export function mergeLayerDown(id) {
     const index = layers.findIndex(l => l.id === id);
     if (index === -1) return false;
-    if (index === 0) return false; // Bottom-most layer cannot merge down
+    if (index === 0) return false;
 
     const topLayer = layers[index];
     const bottomLayer = layers[index - 1];
 
-    // Draw top layer onto bottom layer
-    // Use globalAlpha to preserve top layer's opacity
-    bottomLayer.ctx.save();
-    bottomLayer.ctx.globalAlpha = topLayer.opacity;
-    bottomLayer.ctx.drawImage(topLayer.canvas, 0, 0, topLayer.canvas.width / CANVAS_DPR, topLayer.canvas.height / CANVAS_DPR);
-    bottomLayer.ctx.restore();
+    const ot = topLayer.opacity;
+    const ob = bottomLayer.opacity;
+
+    // 1. Calculate combined opacity: ResultAlpha = AlphaT + AlphaB * (1 - AlphaT)
+    const finalOpacity = ot + ob * (1 - ot);
+
+    if (finalOpacity > 0.001) {
+        // 2. Create offscreen composite
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = bottomLayer.canvas.width;
+        tempCanvas.height = bottomLayer.canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        // Draw bottom with its contribution normalized to finalOpacity
+        tempCtx.globalAlpha = (ob * (1 - ot)) / finalOpacity;
+        tempCtx.drawImage(bottomLayer.canvas, 0, 0);
+
+        // Draw top with its contribution normalized to finalOpacity
+        tempCtx.globalAlpha = ot / finalOpacity;
+        tempCtx.drawImage(topLayer.canvas, 0, 0);
+
+        // 3. Update bottom layer canvas
+        bottomLayer.ctx.save();
+        bottomLayer.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        bottomLayer.ctx.globalCompositeOperation = 'source-over';
+        bottomLayer.ctx.globalAlpha = 1.0;
+        bottomLayer.ctx.clearRect(0, 0, bottomLayer.canvas.width, bottomLayer.canvas.height);
+        bottomLayer.ctx.drawImage(tempCanvas, 0, 0);
+        bottomLayer.ctx.restore();
+
+        // 4. Update bottom layer opacity setting to match visual result
+        bottomLayer.opacity = finalOpacity;
+        bottomLayer.canvas.style.opacity = finalOpacity;
+    }
+
+    // 手動で履歴システムの指紋を更新
+    if (window.markLayerDirty) {
+        window.markLayerDirty(bottomLayer.id);
+    }
 
     // Remove the top layer
     topLayer.canvas.remove();
@@ -195,12 +229,41 @@ export function mergeLayerDown(id) {
 
     updateLayerZIndices();
 
-    // If the merged layer was active, set active layer to the bottom one (now merged)
     if (state.activeLayer === id) {
         state.activeLayer = bottomLayer.id;
     }
 
     return true;
+}
+
+/**
+ * 低レベルレイヤー作成 (履歴復元用: 重複チェックやID採番をスキップ)
+ */
+export function createLayerDirect(id) {
+    const canvas = document.createElement('canvas');
+    canvas.id = `layer-${id}`;
+    canvas.className = 'drawing-layer';
+    
+    const w = state.paperW || 2000;
+    const h = state.paperH || 2000;
+    canvas.width = w * CANVAS_DPR;
+    canvas.height = h * CANVAS_DPR;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.scale(CANVAS_DPR, CANVAS_DPR);
+    ctx.clearRect(0, 0, w, h);
+
+    layerContainer.appendChild(canvas);
+
+    return {
+        id,
+        canvas,
+        ctx,
+        visible: true,
+        opacity: 1.0
+    };
 }
 
 // ============================================
