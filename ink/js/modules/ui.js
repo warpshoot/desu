@@ -1312,9 +1312,11 @@ async function handlePointerDown(e) {
 
     // iOS Safari で setPointerCapture を使うと、描き始めに前回の座標がリプレイされたり
     // 座標が 0,0 に飛んだりする不具合（往復の原因）があるため、デスクトップのみに限定する。
-    // eventCanvas は全画面なので、キャプチャなしでも実用上の問題はない。
+    // Apple Pencil (pen) の場合は iOS でも往復の原因になることが多いため、!isIOS かつ non-pen に限定する。
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (!isIOS) {
+    const isPen = e.pointerType === 'pen';
+
+    if (!isIOS && !isPen) {
         try {
             eventCanvas.setPointerCapture(e.pointerId);
         } catch (err) { }
@@ -1377,7 +1379,9 @@ async function handlePointerDown(e) {
                 state.didInteract = true;
             }
         }
-        return;
+        
+        // ペンの場合は 2本目のポインターであっても描画ロジックへ続行させる (ブロックしない)
+        if (!isPen) return;
     }
 
     // Pan with space
@@ -1391,30 +1395,21 @@ async function handlePointerDown(e) {
         return;
     }
 
-    // パームリジェクション改善:
-    // ペンが検出されている間は指での描画をブロックするが、
-    // ペンが離れて500ms経過後はリセットする (指でのジェスチャー操作を阻害しない)
-    if (e.pointerType === 'pen') {
+    if (isPen) {
         state.pencilDetected = true;
+        state.isPenSession = true;
         if (state._pencilResetTimer) {
             clearTimeout(state._pencilResetTimer);
             state._pencilResetTimer = null;
         }
-        // iOS でもペン入力は pointer capture で安定させる
-        try {
-            eventCanvas.setPointerCapture(e.pointerId);
-        } catch (err) { }
     }
-
-    // 1 Finger = Drawing (if not space pressed)
-    // Apple Pencil (pen) の場合は、他に指が触れていても描画を開始できるように緩和
-    const isPen = e.pointerType === 'pen';
     const canDraw = isPen || e.pointerType === 'mouse' || (e.pointerType === 'touch' && !state.pencilDetected);
 
     if (canDraw && (state.activePointers.size === 1 || isPen)) {
         // ペンの場合は強制的に描画ポインターに設定
         state.drawingPointerId = e.pointerId;
         state.strokeMade = false;
+
 
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
@@ -1486,6 +1481,10 @@ async function handlePointerDown(e) {
                 _lastStraightEnd = null;
             }
         }
+        // ジャンプフィルタの状態をリセット
+        state._jumpFilterCount = 0;
+        state._lastStablePoint = { x: e.clientX, y: e.clientY };
+
         state.strokeMade = true;
     }
 }
@@ -1606,22 +1605,37 @@ function handlePointerMove(e) {
         // Skip drawing if we just finished a pinch/pan
         if (state.wasPinching || state.wasPanning) return;
 
-        // ペン入力の座標ジャンプフィルタ（高速描画時の往復防止）
-        if (e.pointerType === 'pen') {
-            const last = state._lastPenPoint;
-            if (last) {
+        // 入力の座標ジャンプフィルタ（高速描画時やタッチ開始時の往復防止）
+        if (e.pointerType === 'pen' || e.pointerType === 'touch') {
+            // 初期数フレームだけ大きなジャンプを除外
+            if (state._jumpFilterCount === undefined) state._jumpFilterCount = 0;
+            const last = state._lastStablePoint;
+            if (last && state._jumpFilterCount < 3) {
                 const dx = e.clientX - last.x;
                 const dy = e.clientY - last.y;
                 const dist = Math.hypot(dx, dy);
-                // 画面幅の10% 以上の急激なジャンプはノイズとみなす
-                if (dist > (window.innerWidth * 0.1)) return;
+                
+                // 画面幅の 5% 以上の急激なジャンプはノイズとみなす (以前は 10% だったがより厳しく)
+                // ただしペンより指（touch）の方が接触面積が大きいため、揺らぎやすい
+                const threshold = e.pointerType === 'pen' ? (window.innerWidth * 0.05) : (window.innerWidth * 0.03);
+
+                if (dist > threshold) {
+                    state._jumpFilterCount++;
+                    return;
+                }
             }
-            state._lastPenPoint = { x: e.clientX, y: e.clientY };
+            state._lastStablePoint = { x: e.clientX, y: e.clientY };
+            if (state._jumpFilterCount >= 3) {
+                // 十分安定したらフィルタ停止
+            } else {
+                state._jumpFilterCount = (state._jumpFilterCount || 0) + 1;
+            }
         }
 
-        // 往復（ジッター）対策: 最初の数ピクセルの移動はノイズとして扱う。
-        // iOS の高精細なセンサーによる微小な「戻り」イベントを無視する。
-        if (pointer.totalMove < 3 && !state.isLassoing) return;
+        // 往復（ジッター）対策: 最初の累積移動距離が小さい間は無視する。
+        // タッチパネルは「指が触れた瞬間」に座標が少し暴れる傾向がある。
+        const moveThreshold = e.pointerType === 'touch' ? 5 : 2;
+        if (pointer.totalMove < moveThreshold && !state.isLassoing) return;
 
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
@@ -1735,108 +1749,70 @@ async function handlePointerUp(e) {
             }
         }
 
-        // Finish Drawing Actions
-        if (e.pointerId === state.drawingPointerId) {
-            if (state.mode === 'select') {
-                // --- Select mode: finalize selection or floating move ---
-                if (state.isMovingSelection) {
-                    // Floating selection drag complete: just update overlay (no commit yet)
-                    state.isMovingSelection = false;
-                    updateSelectToolbar();
+        // Reset pen session flags when all pointers are up
+        // clear pen‑related temporary state
+        delete state._lastPenPoint;
+        delete state.isPenSession;
+    }
+
+    if (e.pointerId === state.drawingPointerId) {
+        if (state.mode === 'select') {
+            // --- Select mode: finalize selection or floating move ---
+            if (state.isMovingSelection) {
+                // Floating selection drag complete: just update overlay (no commit yet)
+                state.isMovingSelection = false;
+                updateSelectToolbar();
+            } else {
+                // Finish drawing the selection shape
+                if (state.subTool === 'rect') {
+                    finishRectSelect();
                 } else {
-                    // Finish drawing the selection shape
-                    if (state.subTool === 'rect') {
-                        finishRectSelect();
-                    } else {
-                        finishLassoSelect();
-                    }
-                    // Tap outside selection (no drag) → clear
-                    const pointer2 = state.activePointers.size === 0 ? pointer : null;
-                    const wasClick = pointer && pointer.totalMove < 15;
-                    if (wasClick && !hasSelection()) {
-                        clearSelection();
-                    }
-                    updateSelectToolbar();
+                    finishLassoSelect();
                 }
-            } else if (state.isLassoing) {
-                const points = finishLasso();
+                // Tap outside selection (no drag) → clear
                 const wasClick = pointer && pointer.totalMove < 15;
+                if (wasClick && !hasSelection()) {
+                    clearSelection();
+                }
+                updateSelectToolbar();
+            }
+        } else if (state.isLassoing) {
+            const points = finishLasso();
+            const wasClick = pointer && pointer.totalMove < 15;
+            const duration = Date.now() - state.touchStartTime;
 
-                if (wasClick && duration < 500 && !state.wasPanning && !state.wasPinching) {
-                    // Tap detected → bucket fill (バケツ)
-                    const fillSlot = state.mode === 'fill' ? state.fillSlots[state.activeFillSlotIndex] : null;
-                    const eraserSlot = state.mode === 'eraser' ? state.eraserSlots[state.activeEraserSlotIndex] : null;
-                    const bucketEnabled = fillSlot ? (fillSlot.bucketEnabled !== false)
-                        : eraserSlot ? (eraserSlot.bucketEnabled !== false) : true;
+            if (wasClick && duration < 500 && !state.wasPanning && !state.wasPinching) {
+                // Tap detected → bucket fill (バケツ)
+                const fillSlot = state.mode === 'fill' ? state.fillSlots[state.activeFillSlotIndex] : null;
+                const eraserSlot = state.mode === 'eraser' ? state.eraserSlots[state.activeEraserSlotIndex] : null;
+                const bucketEnabled = fillSlot ? (fillSlot.bucketEnabled !== false)
+                    : eraserSlot ? (eraserSlot.bucketEnabled !== false) : true;
 
-                    if (bucketEnabled) {
-                        const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
-                        const fx = Math.floor(canvasPoint.x);
-                        const fy = Math.floor(canvasPoint.y);
+                if (bucketEnabled) {
+                    const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
+                    const fx = Math.floor(canvasPoint.x);
+                    const fy = Math.floor(canvasPoint.y);
 
-                        await saveState();
-                        
-                        const ctx = getActiveLayerCtx();
-                        if (ctx) {
-                            const { pushSelectionClip, popSelectionClip } = await import('./tools/selection.js');
-                            const clipped = pushSelectionClip(ctx);
-
-                            if (state.mode === 'fill') {
-                                const tolerance = fillSlot.bucketTolerance || 'normal';
-                                const gapClose = fillSlot.bucketGapClose ?? 0;
-                                if (state.subTool === 'tone') {
-                                    floodFillTone(fx, fy, tolerance);
-                                } else {
-                                    const slotOpacity = fillSlot.opacity ?? 1.0;
-                                    floodFill(fx, fy, [0, 0, 0, Math.round(slotOpacity * 255)], tolerance, gapClose);
-                                }
-                            } else if (state.mode === 'eraser' && state.subTool === 'lasso') {
-                                const tolerance = eraserSlot.bucketTolerance || 'normal';
-                                const gapClose = eraserSlot.bucketGapClose ?? 0;
-                                floodFillTransparent(fx, fy, tolerance, gapClose);
-                            }
-
-                            if (clipped) popSelectionClip(ctx);
-                        }
-                        updateLayerThumbnail(getActiveLayer());
-                        await saveState({ keepRedo: true });
-                    }
-                } else if (points && points.length >= 3 && !state.wasPanning && !state.wasPinching) {
-                    // Drag detected → polygon fill (投げ縄)
                     await saveState();
-
-                    if (state.mode === 'eraser' && state.subTool === 'lasso') {
-                        const eraserSlot = state.eraserSlots[state.activeEraserSlotIndex];
-                        
-                        const ctx = getActiveLayerCtx();
+                    
+                    const ctx = getActiveLayerCtx();
+                    if (ctx) {
                         const { pushSelectionClip, popSelectionClip } = await import('./tools/selection.js');
                         const clipped = pushSelectionClip(ctx);
 
-                        if (eraserSlot.antiAlias) {
-                            fillPolygonTransparentWithAA(points);
-                        } else {
-                            fillPolygonTransparent(points);
-                        }
-
-                        if (clipped) popSelectionClip(ctx);
-                    } else if (state.subTool === 'tone') {
-                        const ctx = getActiveLayerCtx();
-                        const { pushSelectionClip, popSelectionClip } = await import('./tools/selection.js');
-                        const clipped = pushSelectionClip(ctx);
-                        fillTone(points);
-                        if (clipped) popSelectionClip(ctx);
-                    } else {
-                        const fillSlot = state.fillSlots[state.activeFillSlotIndex];
-                        const slotOpacity = fillSlot.opacity ?? 1.0;
-                        
-                        const ctx = getActiveLayerCtx();
-                        const { pushSelectionClip, popSelectionClip } = await import('./tools/selection.js');
-                        const clipped = pushSelectionClip(ctx);
-
-                        if (fillSlot.antiAlias) {
-                            fillPolygonWithAA(points, 0, 0, 0, slotOpacity);
-                        } else {
-                            fillPolygonNoAA(points, 0, 0, 0, slotOpacity);
+                        if (state.mode === 'fill') {
+                            const tolerance = fillSlot.bucketTolerance || 'normal';
+                            const gapClose = fillSlot.bucketGapClose ?? 0;
+                            if (state.subTool === 'tone') {
+                                floodFillTone(fx, fy, tolerance);
+                            } else {
+                                const slotOpacity = fillSlot.opacity ?? 1.0;
+                                floodFill(fx, fy, [0, 0, 0, Math.round(slotOpacity * 255)], tolerance, gapClose);
+                            }
+                        } else if (state.mode === 'eraser' && state.subTool === 'lasso') {
+                            const tolerance = eraserSlot.bucketTolerance || 'normal';
+                            const gapClose = eraserSlot.bucketGapClose ?? 0;
+                            floodFillTransparent(fx, fy, tolerance, gapClose);
                         }
 
                         if (clipped) popSelectionClip(ctx);
@@ -1844,68 +1820,110 @@ async function handlePointerUp(e) {
                     updateLayerThumbnail(getActiveLayer());
                     await saveState({ keepRedo: true });
                 }
-            } else if (state.isPenDrawing) {
-                // 直線確定: RAF が _straightLineEnd を null 化済みでも _lastStraightEnd は保持されている
-                const straightEnd = _lastStraightEnd;
-                _lastStraightEnd = null;
+            } else if (points && points.length >= 3 && !state.wasPanning && !state.wasPinching) {
+                // Drag detected → polygon fill (投げ縄)
+                await saveState();
 
-                // RAFキューに残っている点を即時フラッシュ (直線モード時は何もしない)
-                _cancelAndFlushDrawPoints();
+                if (state.mode === 'eraser' && state.subTool === 'lasso') {
+                    const eraserSlot = state.eraserSlots[state.activeEraserSlotIndex];
+                    
+                    const ctx = getActiveLayerCtx();
+                    const { pushSelectionClip, popSelectionClip } = await import('./tools/selection.js');
+                    const clipped = pushSelectionClip(ctx);
 
-                // ストローク確定 → redo スタックをクリア
-                commitRedoClear();
-
-                // ストローク/操作終了後の状態を保存 (After state)
-                await saveState({ keepRedo: true });
-                state._pendingSave = null;
-
-                if (state.mode === 'pen' && state.subTool === 'stipple') {
-                    // 点描直線: 始点→終点間にstippleドットを一括描画
-                    if (straightEnd) drawStippleLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
-                    const stippleDirtyRect = getStippleDirtyRect();
-                    clearStippleDirtyRect();
-                    endStippleDrawing();
-                    const stippleLayer = getActiveLayer();
-                    if (stippleLayer && stippleDirtyRect) {
-                        // shrinkLastUndoEntry was removed for history stability
+                    if (eraserSlot.antiAlias) {
+                        fillPolygonTransparentWithAA(points);
+                    } else {
+                        fillPolygonTransparent(points);
                     }
+
+                    if (clipped) popSelectionClip(ctx);
+                } else if (state.subTool === 'tone') {
+                    const ctx = getActiveLayerCtx();
+                    const { pushSelectionClip, popSelectionClip } = await import('./tools/selection.js');
+                    const clipped = pushSelectionClip(ctx);
+                    fillTone(points);
+                    if (clipped) popSelectionClip(ctx);
                 } else {
-                    if (straightEnd) {
-                        if (state.mode === 'pen') {
-                            previewStraightLine(straightEnd.x, straightEnd.y);
-                        } else {
-                            drawPenLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
-                        }
+                    const fillSlot = state.fillSlots[state.activeFillSlotIndex];
+                    const slotOpacity = fillSlot.opacity ?? 1.0;
+                    
+                    const ctx = getActiveLayerCtx();
+                    const { pushSelectionClip, popSelectionClip } = await import('./tools/selection.js');
+                    const clipped = pushSelectionClip(ctx);
+
+                    if (fillSlot.antiAlias) {
+                        fillPolygonWithAA(points, 0, 0, 0, slotOpacity);
+                    } else {
+                        fillPolygonNoAA(points, 0, 0, 0, slotOpacity);
                     }
 
-                    endPenDrawing();
-                    clearPenDirtyRect();
+                    if (clipped) popSelectionClip(ctx);
                 }
-                
-                // サムネイル更新をさらに遅延させ、高頻度なストロークでも重ならないようにする。
-                if (_thumbRafId) cancelAnimationFrame(_thumbRafId);
-                const _tl = getActiveLayer();
-                _thumbRafId = requestAnimationFrame(() => {
-                    updateLayerThumbnail(_tl);
-                    _thumbRafId = null;
-                });
-                _clearStraightLineGuide();
+                updateLayerThumbnail(getActiveLayer());
+                await saveState({ keepRedo: true });
             }
-            state.drawingPointerId = null;
-        }
+        } else if (state.isPenDrawing) {
+            // 直線確定: RAF が _straightLineEnd を null 化済みでも _lastStraightEnd は保持されている
+            const straightEnd = _lastStraightEnd;
+            _lastStraightEnd = null;
 
-        // iPad + Apple Pencil パームリジェクション対策のクリーンアップ
-        if (_modShiftPendingCancel) {
-            _modShiftState = 'idle';
-            _updateModShiftBtn();
-            _modShiftPendingCancel = false;
-        }
+            // RAFキューに残っている点を即時フラッシュ (直線モード時は何もしない)
+            _cancelAndFlushDrawPoints();
 
-        // Clean up
-        state.isPenDrawing = false;
-        state.isLassoing = false;
-        state.strokeMade = false;
+            // ストローク確定 → redo スタックをクリア
+            commitRedoClear();
+
+            // ストローク/操作終了後の状態を保存 (After state)
+            await saveState({ keepRedo: true });
+            state._pendingSave = null;
+
+            if (state.mode === 'pen' && state.subTool === 'stipple') {
+                // 点描直線: 始点→終点間にstippleドットを一括描画
+                if (straightEnd) drawStippleLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
+                const stippleDirtyRect = getStippleDirtyRect();
+                clearStippleDirtyRect();
+                endStippleDrawing();
+                const stippleLayer = getActiveLayer();
+                if (stippleLayer && stippleDirtyRect) {
+                    // shrinkLastUndoEntry was removed for history stability
+                }
+            } else {
+                if (straightEnd) {
+                    if (state.mode === 'pen') {
+                        previewStraightLine(straightEnd.x, straightEnd.y);
+                    } else {
+                        drawPenLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
+                    }
+                }
+
+                endPenDrawing();
+                clearPenDirtyRect();
+            }
+            
+            // サムネイル更新をさらに遅延させ、高頻度なストロークでも重ならないようにする。
+            if (_thumbRafId) cancelAnimationFrame(_thumbRafId);
+            const _tl = getActiveLayer();
+            _thumbRafId = requestAnimationFrame(() => {
+                updateLayerThumbnail(_tl);
+                _thumbRafId = null;
+            });
+            _clearStraightLineGuide();
+        }
+        state.drawingPointerId = null;
     }
+
+    // iPad + Apple Pencil パームリジェクション対策のクリーンアップ
+    if (_modShiftPendingCancel) {
+        _modShiftState = 'idle';
+        _updateModShiftBtn();
+        _modShiftPendingCancel = false;
+    }
+
+    // Clean up
+    state.isPenDrawing = false;
+    state.isLassoing = false;
+    state.strokeMade = false;
 }
 
 function handlePointerCancel(e) {
