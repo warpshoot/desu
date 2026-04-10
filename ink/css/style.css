@@ -1229,7 +1229,8 @@ a.credit-val {
     /* 8px horizontal padding creates 218px internal width for 4 items */
 }
 
-.tone-menu-pin {
+.tone-menu-pin,
+.settings-pin-btn {
     width: 14px;
     height: 14px;
     background: #fff;
@@ -1240,12 +1241,14 @@ a.credit-val {
     transition: all 0.2s;
 }
 
-.tone-menu-pin.active {
+.tone-menu-pin.active,
+.settings-pin-btn.active {
     background: #333;
     /* Dark circle when active */
 }
 
-.tone-menu-pin:hover {
+.tone-menu-pin:hover,
+.settings-pin-btn:hover {
     transform: scale(1.2);
 }
 

@@ -50,6 +50,7 @@ export function setupSelectionUI() {
 
     // Special: Move button is mostly a hint, but we can make it toggle a state if needed.
     // In this app, drag is always possible if selection exists and mouse is over it.
+    window.updateSelectToolbar = updateSelectionToolbar;
 }
 
 /**
@@ -60,6 +61,8 @@ export function updateSelectionToolbar() {
 
     if (!hasSelection()) {
         _toolbar.classList.add('hidden');
+        _toolbar.style.opacity = '';
+        _toolbar.style.pointerEvents = '';
         return;
     }
 
@@ -78,6 +81,12 @@ export function updateSelectionToolbar() {
         y0 = Math.min(...ys);
         w0 = Math.max(...xs) - x0;
         h0 = Math.max(...ys) - y0;
+    }
+
+    // Add floating offset if moving
+    if (state.floatingSelection) {
+        x0 += state.floatingSelection.offsetX;
+        y0 += state.floatingSelection.offsetY;
     }
 
     // Convert canvas coords (x0, y0) to screen logical pixels
@@ -101,7 +110,23 @@ export function updateSelectionToolbar() {
     const tw = _toolbar.offsetWidth || 200; // fallback if not in DOM yet
     left = Math.max(tw / 2 + 10, Math.min(vw - tw / 2 - 10, left));
 
-    _toolbar.style.transform = `translate(-50%, 0)`;
-    _toolbar.style.left = left + 'px';
     _toolbar.style.top = top + 'px';
+    _toolbar.style.left = (left - tw / 2) + 'px';
+}
+
+/**
+ * Toggle interactivity of the toolbar (to prevent interference during drag)
+ */
+export function setSelectionToolbarInteractive(interactive) {
+    if (!_toolbar) return;
+    if (interactive) {
+        _toolbar.style.pointerEvents = 'auto';
+        // Only set opacity: 1 if we're not hidden
+        if (!_toolbar.classList.contains('hidden')) {
+            _toolbar.style.opacity = '1';
+        }
+    } else {
+        _toolbar.style.pointerEvents = 'none';
+        _toolbar.style.opacity = '0.4'; // Dim a bit to show it's non-interactive
+    }
 }

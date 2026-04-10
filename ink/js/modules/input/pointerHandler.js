@@ -62,6 +62,8 @@ import {
     updateLassoSelect,
     finishLassoSelect
 } from '../tools/selection.js';
+import { setSelectionToolbarInteractive } from '../ui/selectionUI.js';
+import { hideUnpinnedMenus } from '../ui/menuManager.js';
 
 let _thumbRafId = null;
 
@@ -88,6 +90,8 @@ async function handlePointerDown(e) {
     }
 
     if (e.target !== eventCanvas && e.pointerType !== 'pen') return;
+
+    hideUnpinnedMenus();
 
     state.activePointers.set(e.pointerId, {
         x: e.clientX,
@@ -162,6 +166,7 @@ async function handlePointerDown(e) {
                     state.isMovingSelection = true;
                     state._selMoveStartX = e.clientX;
                     state._selMoveStartY = e.clientY;
+                    setSelectionToolbarInteractive(false);
                 } else {
                     await saveState();
                     commitFloating();
@@ -175,6 +180,7 @@ async function handlePointerDown(e) {
                 state.isMovingSelection = true;
                 state._selMoveStartX = e.clientX;
                 state._selMoveStartY = e.clientY;
+                setSelectionToolbarInteractive(false);
                 await saveState();
                 liftSelection(true);
             } else {
@@ -324,6 +330,7 @@ async function handlePointerUp(e) {
         if (state.mode === 'select') {
             if (state.isMovingSelection) {
                 state.isMovingSelection = false;
+                setSelectionToolbarInteractive(true);
                 if (window.updateSelectToolbar) window.updateSelectToolbar();
             } else {
                 if (state.subTool === 'rect') finishRectSelect();

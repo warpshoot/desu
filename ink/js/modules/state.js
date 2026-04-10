@@ -414,5 +414,10 @@ export const state = {
     stippleSize: 31,
 
     // Tone Menu State
-    isToneMenuPinned: false
+    isToneMenuPinned: false,
+
+    // Tool Settings Pin States
+    isBrushSettingsPinned: false,
+    isFillSettingsPinned: false,
+    isEraserSettingsPinned: false
 };

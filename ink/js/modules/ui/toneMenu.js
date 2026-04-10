@@ -74,7 +74,14 @@ export function updateToneMenuVisibility() {
         const fillBtn = document.getElementById('mode-fill');
         if (fillBtn) {
             const rect = fillBtn.getBoundingClientRect();
-            menu.style.left = `64px`;
+
+            // Overlap check: Shift right if any tool settings panel is visible
+            const isAnySettingsVisible = 
+                !document.getElementById('brush-settings-panel')?.classList.contains('hidden') ||
+                !document.getElementById('fill-settings-panel')?.classList.contains('hidden') ||
+                !document.getElementById('eraser-settings-panel')?.classList.contains('hidden');
+
+            menu.style.left = isAnySettingsVisible ? `312px` : `64px`;
             menu.style.top = `${rect.top}px`;
             menu.style.bottom = 'auto';
         }

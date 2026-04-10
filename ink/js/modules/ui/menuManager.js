@@ -1,15 +1,9 @@
 import { state } from '../state.js';
 
 export function hideAllMenus() {
-    // 汎用メニュー閉じ
-    document.querySelectorAll('.tool-menu').forEach(menu => {
+    const selectors = '.tool-menu, .flyout-menu, #settings-panel, #brush-settings-panel, #fill-settings-panel, #eraser-settings-panel, #select-toolbar';
+    document.querySelectorAll(selectors).forEach(menu => {
         menu.classList.add('hidden');
-    });
-
-    // 設定パネルも閉じる
-    ['brush-settings-panel', 'fill-settings-panel', 'eraser-settings-panel'].forEach(id => {
-        const panel = document.getElementById(id);
-        if (panel) panel.classList.add('hidden');
     });
 
     // トーンメニュー（固定されていない場合）も閉じる
@@ -25,6 +19,35 @@ export function hideAllMenus() {
     if (settingsPanel) settingsPanel.classList.add('hidden');
 
     document.removeEventListener('pointerdown', handleOutsideClick);
+}
+
+/**
+ * Closes any settings panels or menus that are not currently pinned.
+ */
+export function hideUnpinnedMenus() {
+    // Brush settings
+    const brushPanel = document.getElementById('brush-settings-panel');
+    if (brushPanel && !state.isBrushSettingsPinned) {
+        brushPanel.classList.add('hidden');
+    }
+
+    // Fill settings
+    const fillPanel = document.getElementById('fill-settings-panel');
+    if (fillPanel && !state.isFillSettingsPinned) {
+        fillPanel.classList.add('hidden');
+    }
+
+    // Eraser settings
+    const eraserPanel = document.getElementById('eraser-settings-panel');
+    if (eraserPanel && !state.isEraserSettingsPinned) {
+        eraserPanel.classList.add('hidden');
+    }
+
+    // Tone menu
+    const toneMenu = document.getElementById('tone-menu');
+    if (toneMenu && !state.isToneMenuPinned) {
+        toneMenu.classList.add('hidden');
+    }
 }
 
 export function handleOutsideClick(e) {

@@ -18,6 +18,7 @@ import { drawStippleLine } from '../tools/stipple.js';
 import { hideAllMenus, handleOutsideClick } from './menuManager.js';
 import { updateLayerThumbnail } from './layerPanel.js';
 import { hasFloatingSelection, commitFloating } from '../tools/selection.js';
+import { updateToneMenuVisibility } from './toneMenu.js';
 
 // Slot icons (moved from ui.js)
 const SUB_TOOL_ICONS = {
@@ -467,8 +468,17 @@ export function setupBrushSettingsPanel() {
     };
 
     controls.forEach(el => el && el.addEventListener('input', sync));
-    panel.addEventListener('pointerdown', (e) => e.stopPropagation());
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
+    
+    const pinBtn = document.getElementById('brush-settings-pin');
+    if (pinBtn) {
+        pinBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            state.isBrushSettingsPinned = !state.isBrushSettingsPinned;
+            pinBtn.classList.toggle('active', state.isBrushSettingsPinned);
+        });
+    }
+
     closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
 }
 
@@ -507,6 +517,11 @@ export function openBrushSettings(idx) {
     toggle('bs-stabilizer-row', !isStipple);
     toggle('bs-stabilizer-dist-row', !isStipple && brush.stabilizerEnabled);
     toggle('bs-stab-viz-row', !isStipple && brush.stabilizerEnabled);
+
+    const pinBtn = document.getElementById('brush-settings-pin');
+    if (pinBtn) {
+        pinBtn.classList.toggle('active', state.isBrushSettingsPinned);
+    }
 
     panel.classList.remove('hidden');
     const activeSlot = document.querySelector(`.brush-slot[data-idx="${idx}"]`);
@@ -591,6 +606,16 @@ export function setupFillSettingsPanel() {
 
     panel.addEventListener('pointerdown', (e) => e.stopPropagation());
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
+
+    const pinBtn = document.getElementById('fill-settings-pin');
+    if (pinBtn) {
+        pinBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            state.isFillSettingsPinned = !state.isFillSettingsPinned;
+            pinBtn.classList.toggle('active', state.isFillSettingsPinned);
+        });
+    }
+
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
             panel.classList.add('hidden');
@@ -630,6 +655,11 @@ export function openFillSettings(idx) {
     const stabOn = !isTone && (slot.stabilizerEnabled ?? false);
     document.getElementById('fs-stabilizer-row').style.display = !isTone ? '' : 'none';
     document.getElementById('fs-stabilizer-dist-row').style.display = stabOn ? '' : 'none';
+
+    const pinBtn = document.getElementById('fill-settings-pin');
+    if (pinBtn) {
+        pinBtn.classList.toggle('active', state.isFillSettingsPinned);
+    }
 
     panel.classList.remove('hidden');
     const activeSlot = document.querySelector(`.brush-slot[data-idx="${idx}"][data-category="fill"]`);
@@ -730,6 +760,16 @@ export function setupEraserSettingsPanel() {
 
     panel.addEventListener('pointerdown', (e) => e.stopPropagation());
     panel.addEventListener('pointermove', (e) => e.stopPropagation());
+
+    const pinBtn = document.getElementById('eraser-settings-pin');
+    if (pinBtn) {
+        pinBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            state.isEraserSettingsPinned = !state.isEraserSettingsPinned;
+            pinBtn.classList.toggle('active', state.isEraserSettingsPinned);
+        });
+    }
+
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
             panel.classList.add('hidden');
@@ -783,6 +823,11 @@ export function openEraserSettings(idx) {
             pcurveRow.style.opacity = (slot.pressureSize ?? true) ? '1' : '0.5';
             pcurveRow.style.pointerEvents = (slot.pressureSize ?? true) ? 'auto' : 'none';
         }
+    }
+
+    const pinBtn = document.getElementById('eraser-settings-pin');
+    if (pinBtn) {
+        pinBtn.classList.toggle('active', state.isEraserSettingsPinned);
     }
 
     panel.classList.remove('hidden');
@@ -866,18 +911,21 @@ function _showGapClosePreview(gapClose) {
     }
     tctx.putImageData(haloData, 0, 0);
 
-    const { lassoCanvas, lassoCtx } = require('../state.js'); // Assuming shared
+    // Using state instead of require for ESM compatibility
+    const { lassoCanvas, lassoCtx } = state; 
     const pw = w / dpr;
     const ph = h / dpr;
-    lassoCtx.clearRect(0, 0, lassoCanvas.width / dpr, lassoCanvas.height / dpr);
-    lassoCtx.drawImage(tempCanvas, state.translateX, state.translateY, pw * state.scale, ph * state.scale);
-    lassoCanvas.style.display = 'block';
+    if (lassoCtx) {
+        lassoCtx.clearRect(0, 0, lassoCanvas.width / dpr, lassoCanvas.height / dpr);
+        lassoCtx.drawImage(tempCanvas, state.translateX, state.translateY, pw * state.scale, ph * state.scale);
+        lassoCanvas.style.display = 'block';
+    }
 }
 
 function _hideGapClosePreview() {
     clearTimeout(_gapPreviewTimer);
     _gapPreviewTimer = null;
-    const { lassoCanvas, lassoCtx } = require('../state.js');
+    const { lassoCanvas, lassoCtx } = state;
     const dpr = CANVAS_DPR;
     if (lassoCtx) lassoCtx.clearRect(0, 0, lassoCanvas.width / dpr, lassoCanvas.height / dpr);
 }
@@ -889,12 +937,4 @@ function _triggerGapClosePreview(gapClose) {
         return;
     }
     _gapPreviewTimer = setTimeout(() => _showGapClosePreview(gapClose), 80);
-}
-
-export function updateToneMenuVisibility() {
-    const toneMenu = document.getElementById('tone-menu');
-    if (!toneMenu) return;
-    const isTone = state.mode === 'fill' && state.subTool === 'tone';
-    if (isTone) toneMenu.classList.remove('hidden');
-    else if (!state.isToneMenuPinned) toneMenu.classList.add('hidden');
 }

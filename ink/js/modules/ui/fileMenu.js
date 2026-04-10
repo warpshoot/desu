@@ -18,11 +18,11 @@ import { updateLayerThumbnail, renderLayerButtons } from './layerPanel.js';
 import {
     updateModeButtonIcon,
     updateToolButtonStates,
-    updateToneMenuVisibility,
     updateBrushSizeVisibility,
     updateBrushSizeSlider,
     renderBrushPalette
 } from './toolPanel.js';
+import { updateToneMenuVisibility } from './toneMenu.js';
 
 export function setupFileUI() {
     const fileBtn = document.getElementById('fileBtn');
