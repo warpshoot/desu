@@ -23,6 +23,7 @@ import {
     getLastStraightEnd
 } from '../core/renderLoop.js';
 import { handlePinchPan, handleGestureTaps } from './gestureHandler.js';
+import { executeClearLayer } from '../ui/toolPanel.js';
 import { updateLayerThumbnail } from '../ui/layerPanel.js';
 import { 
     startPenDrawing, 
@@ -215,7 +216,8 @@ async function handlePointerDown(e) {
             startLasso(e.clientX, e.clientY);
         } else if (state.mode === 'eraser') {
             if (state.subTool === 'clear') {
-                // Done via UI button mostly
+                executeClearLayer();
+                return;
             } else if (state.subTool === 'lasso') {
                 startLasso(e.clientX, e.clientY);
             } else {
