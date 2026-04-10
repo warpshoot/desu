@@ -1214,10 +1214,29 @@ a.credit-val {
 
 .tone-menu-header {
     display: flex;
-    justify-content: flex-end;
-    padding: 8px 8px 4px 8px;
-    /* Match horizontal padding of items */
-    margin-bottom: 4px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+    background: #f5f5f5;
+    font-weight: bold;
+    font-size: 12px;
+    color: #333;
+    border-radius: 8px 8px 0 0;
+}
+
+#tone-menu-close {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #666;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+#tone-menu-close:hover {
+    color: #333;
 }
 
 .tone-items {
@@ -1247,7 +1266,6 @@ a.credit-val {
     /* Dark circle when active */
 }
 
-.tone-menu-pin:hover,
 .settings-pin-btn:hover {
     transform: scale(1.2);
 }

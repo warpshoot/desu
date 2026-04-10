@@ -52,6 +52,14 @@ export function setupToneMenu() {
         });
         pinBtn.classList.toggle('active', state.isToneMenuPinned);
     }
+
+    const closeBtn = document.getElementById('tone-menu-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            menu.classList.add('hidden');
+        });
+    }
 }
 
 export function updateToneMenuVisibility() {
