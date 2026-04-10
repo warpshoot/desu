@@ -19,6 +19,7 @@ import {
     CANVAS_DPR
 } from '../state.js';
 import { getCanvasPoint, isPointInPolygon } from '../utils.js';
+import { updateSelectionToolbar } from '../ui/selectionUI.js';
 
 // ============================================
 // DOM refs — select-overlay canvas
@@ -47,6 +48,7 @@ export function initSelectionOverlay() {
     _overlayCanvas = document.getElementById('select-overlay');
     if (_overlayCanvas) {
         _overlayCtx = _overlayCanvas.getContext('2d');
+        resizeSelectionOverlay();
     }
 }
 
@@ -64,6 +66,7 @@ export function resizeSelectionOverlay() {
         _overlayCtx.scale(dpr, dpr);
     }
     // If selection is active, redraw overlay immediately
+    _marchOffset = 0;
     if (state.selectionMask) _drawOverlay();
 }
 
@@ -254,6 +257,7 @@ export function updateRectSelect(screenX, screenY) {
         h: Math.abs(p2.y - p1.y)
     };
     _drawOverlay();
+    updateSelectionToolbar();
 }
 
 export function finishRectSelect() {
@@ -265,6 +269,7 @@ export function finishRectSelect() {
     }
     _rectStart = null;
     _startMarch();
+    updateSelectionToolbar();
 }
 
 // ============================================
@@ -322,6 +327,7 @@ export function finishLassoSelect() {
     };
 
     _startMarch();
+    updateSelectionToolbar();
 }
 
 // ============================================
@@ -329,6 +335,9 @@ export function finishLassoSelect() {
 // ============================================
 
 export function clearSelection() {
+    if (state.floatingSelection) {
+        commitFloating();
+    }
     _stopMarch();
     state.selectionMask = null;
     state.floatingSelection = null;
@@ -337,6 +346,7 @@ export function clearSelection() {
     if (_overlayCtx && _overlayCanvas) {
         _overlayCtx.clearRect(0, 0, _overlayCanvas.width, _overlayCanvas.height);
     }
+    updateSelectionToolbar();
 }
 
 // ============================================
@@ -467,6 +477,7 @@ export function liftSelection(cut = true) {
     if (cut) {
         _eraseSelection(layer);
     }
+    updateSelectionToolbar();
 }
 
 function _eraseSelection(layer) {
@@ -499,6 +510,7 @@ export function dragFloating(dx, dy) {
     state.floatingSelection.offsetX += dx;
     state.floatingSelection.offsetY += dy;
     _drawOverlay();
+    updateSelectionToolbar();
 }
 
 /**

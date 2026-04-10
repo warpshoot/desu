@@ -377,6 +377,7 @@ export const state = {
     isCtrlPressed: false,
     isAltPressed: false,
     isShiftPressed: false,
+    _modShiftState: 'idle', // 'idle' | 'held' | 'locked'
     isPanning: false,
     panStartX: 0,
     panStartY: 0,

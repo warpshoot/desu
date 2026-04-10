@@ -160,7 +160,13 @@ function _smoothPressure(rawPressure) {
         sum += pressureBuffer[idx] * w;
         weightSum += w;
     }
-    return sum / weightSum;
+    const avg = sum / weightSum;
+    const brush = state.brushes[state.activeBrushIndex];
+    if (!brush) return avg;
+    
+    // Apply pressure curve (default 1.0 = linear)
+    const curve = brush.pressureCurve || 1.0;
+    return Math.pow(avg, curve);
 }
 
 /**

@@ -12,6 +12,7 @@ import {
     getActiveLayer,
     CANVAS_DPR
 } from './state.js';
+import { resizeSelectionOverlay } from './tools/selection.js';
 
 // ============================================
 // Canvas Initialization
@@ -138,24 +139,9 @@ export async function initCanvas() {
     eventCanvas.style.width  = vw + 'px';
     eventCanvas.style.height = vh + 'px';
 
-    // すべての初期化が終わったら、現在の座標(0,0)を反映させる
     applyTransform();
-
-    if (isFirstInit) {
-        centerCanvas();
-    }
-
-    // Select overlay: screen-space, resize on every call
-    const selOverlay = document.getElementById('select-overlay');
-    if (selOverlay) {
-        selOverlay.width  = vw * dpr;
-        selOverlay.height = vh * dpr;
-        selOverlay.style.width  = vw + 'px';
-        selOverlay.style.height = vh + 'px';
-        const soCtx = selOverlay.getContext('2d');
-        soCtx.setTransform(1, 0, 0, 1, 0, 0);
-        soCtx.scale(dpr, dpr);
-    }
+    if (isFirstInit) centerCanvas();
+    resizeSelectionOverlay();
 
     return true;
 }
@@ -186,17 +172,7 @@ export function resizeViewport() {
     eventCanvas.width  = vw;
     eventCanvas.height = vh;
 
-    // Select overlay: screen-space, resize with viewport
-    const selOverlay = document.getElementById('select-overlay');
-    if (selOverlay) {
-        selOverlay.width  = vw * dpr;
-        selOverlay.height = vh * dpr;
-        selOverlay.style.width  = vw + 'px';
-        selOverlay.style.height = vh + 'px';
-        const soCtx = selOverlay.getContext('2d');
-        soCtx.setTransform(1, 0, 0, 1, 0, 0);
-        soCtx.scale(dpr, dpr);
-    }
+    resizeSelectionOverlay();
 }
 
 // ============================================

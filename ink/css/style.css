@@ -118,6 +118,17 @@ canvas {
     z-index: 450;
 }
 
+/* 選択ツール オーバーレイ (マーチングアリ + 浮島プレビュー) */
+#select-overlay {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 180; /* Above lasso (175) but below event-canvas (200) */
+    transform-origin: 0 0;
+}
+
 /* イベントキャプチャ用の透明キャンバス (常に最上位) */
 #event-canvas {
     display: block;
