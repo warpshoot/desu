@@ -43,8 +43,10 @@ export function setupModifierBar() {
     };
 
     const handleDown = (e) => {
-        // We use touch events for the button to avoid locking the Pointer session in Safari
-        if (e.type === 'touchstart') e.preventDefault();
+        // Reduced preventDefault to avoid blocking the global pointer stream
+        if (e.type === 'touchstart') {
+            // e.preventDefault(); // Removed to allow underlying pointerdown to fire if needed
+        }
         e.stopPropagation();
         
         const now = Date.now();
@@ -68,7 +70,6 @@ export function setupModifierBar() {
 
     const handleCancel = (e) => {
         if (state._modShiftState === 'held') {
-            // Keep shift active if a pen session is ongoing, to survive palm rejection
             if (state.isPenDrawing || state.isPenSession) {
                 state._modShiftPendingCancel = true;
             } else {
@@ -78,13 +79,14 @@ export function setupModifierBar() {
         }
     };
 
-    shiftBtn.addEventListener('touchstart', handleDown, { passive: false });
+    // Use touch events as secondary to avoid session lock
+    shiftBtn.addEventListener('touchstart', handleDown, { passive: true });
     shiftBtn.addEventListener('touchend', handleUp);
     shiftBtn.addEventListener('touchcancel', handleCancel);
 
-    // Also keep pointer listeners as fallback for mouse/desktop, but skip preventDefault
+    // Primary interaction via pointer events for precision
     shiftBtn.addEventListener('pointerdown', (e) => {
-        if (e.pointerType === 'touch') return; // Handled by touchstart
+        if (e.pointerType === 'touch') return; 
         handleDown(e);
     });
     shiftBtn.addEventListener('pointerup', (e) => {

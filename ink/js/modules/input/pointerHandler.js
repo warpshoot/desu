@@ -68,7 +68,19 @@ import { hideUnpinnedMenus } from '../ui/menuManager.js';
 let _thumbRafId = null;
 
 export function setupPointerEvents(canvas) {
-    canvas.addEventListener('pointerdown', handlePointerDown);
+    // Attach pointerdown to window to catch events that Safari might drop/misdirect 
+    // when a finger is holding a fixed UI element.
+    window.addEventListener('pointerdown', (e) => {
+        const isPen = e.pointerType === 'pen' || (e.pointerType === 'touch' && e.pressure > 0 && e.pressure < 1);
+        
+        // If it's a pen, we allow it even if the target is something else (like body) 
+        // as long as it's not a UI button.
+        const isTargetUI = e.target.closest('.mod-btn, .mode-btn, .brush-slot, #settings-panel');
+        
+        if (e.target === canvas || (isPen && !isTargetUI)) {
+            handlePointerDown(e);
+        }
+    }, { capture: true, passive: false });
     canvas.addEventListener('pointermove', handlePointerMove);
     canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('pointercancel', handlePointerCancel);
@@ -77,19 +89,24 @@ export function setupPointerEvents(canvas) {
 }
 
 async function handlePointerDown(e) {
-    if (state.isSaveMode) return;
-    e.preventDefault();
-
+    const isPen = e.pointerType === 'pen' || (e.pointerType === 'touch' && e.pressure > 0 && e.pressure < 1);
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isPen = e.pointerType === 'pen';
+
+    // Prevent default to stop scrolling/zooming on the canvas area
+    if (e.cancelable) e.preventDefault();
 
     if (!isIOS && !isPen) {
+        const eventCanvas = document.getElementById('event-canvas');
         try {
-            eventCanvas.setPointerCapture(e.pointerId);
+            if (eventCanvas) eventCanvas.setPointerCapture(e.pointerId);
         } catch (err) { }
     }
-
-    if (e.target !== eventCanvas && e.pointerType !== 'pen') return;
+    
+    // If we already handled this pointer elsewhere, or if it's a non-pen touch on UI, return.
+    if (state.activePointers.has(e.pointerId)) return;
+    
+    const eventCanvas = document.getElementById('event-canvas');
+    if (!eventCanvas) return;
 
     hideUnpinnedMenus();
 
