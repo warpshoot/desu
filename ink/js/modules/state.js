@@ -364,6 +364,7 @@ export const state = {
     didInteract: false,
     wasPinching: false,
     wasPanning: false,
+    _gestureActionFired: false,
 
     // Pinch Zoom
     isPinching: false,

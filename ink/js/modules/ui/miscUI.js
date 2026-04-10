@@ -35,74 +35,22 @@ export function setupModifierBar() {
     const shiftBtn = document.getElementById('mod-shift');
     if (!shiftBtn) return;
 
-    let _lastTapTime = 0;
-
     const updateUI = () => {
         shiftBtn.classList.toggle('active', state._modShiftState !== 'idle');
         shiftBtn.classList.toggle('locked', state._modShiftState === 'locked');
     };
 
-    const handleDown = (e) => {
-        // Reduced preventDefault to avoid blocking the global pointer stream
-        if (e.type === 'touchstart') {
-            // e.preventDefault(); // Removed to allow underlying pointerdown to fire if needed
-        }
+    const handleToggle = (e) => {
+        e.preventDefault();
         e.stopPropagation();
         
-        const now = Date.now();
-        if (state._modShiftState === 'locked') {
-            state._modShiftState = 'idle';
-        } else if (now - _lastTapTime < _MOD_DOUBLE_TAP_MS) {
-            state._modShiftState = 'locked';
-        } else {
-            state._modShiftState = 'held';
-        }
-        _lastTapTime = now;
+        // Simple toggle: idle <-> locked
+        state._modShiftState = (state._modShiftState === 'idle') ? 'locked' : 'idle';
         updateUI();
     };
 
-    const handleUp = (e) => {
-        if (state._modShiftState === 'held') {
-            state._modShiftState = 'idle';
-            updateUI();
-        }
-    };
-
-    const handleCancel = (e) => {
-        if (state._modShiftState === 'held') {
-            if (state.isPenDrawing || state.isPenSession) {
-                state._modShiftPendingCancel = true;
-            } else {
-                state._modShiftState = 'idle';
-                updateUI();
-            }
-        }
-    };
-
-    // Use touch events as secondary to avoid session lock
-    // Use touch events as secondary to avoid session lock
-    shiftBtn.addEventListener('touchstart', handleDown, { passive: true });
-    shiftBtn.addEventListener('touchmove', (e) => {
-        // The "Mikepk" Hack: preventDefault on touchmove on the UI button
-        // is known to stop Safari from swallowing sibling pointerevents.
-        if (e.cancelable) e.preventDefault();
-    }, { passive: false });
-    shiftBtn.addEventListener('touchend', handleUp);
-    shiftBtn.addEventListener('touchcancel', handleCancel);
-
-    // Primary interaction via pointer events for precision
-    shiftBtn.addEventListener('pointerdown', (e) => {
-        if (e.pointerType === 'touch') return; 
-        handleDown(e);
-    });
-    shiftBtn.addEventListener('pointerup', (e) => {
-        if (e.pointerType === 'touch') return;
-        handleUp(e);
-    });
-    shiftBtn.addEventListener('pointercancel', (e) => {
-        if (e.pointerType === 'touch') return;
-        handleCancel(e);
-    });
+    // Use pointerdown for universal support without hold-hacks
+    shiftBtn.addEventListener('pointerdown', handleToggle);
 
     // Initial sync
     window.updateModifierBar = updateUI;

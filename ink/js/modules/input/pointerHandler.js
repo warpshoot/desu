@@ -68,28 +68,7 @@ import { hideUnpinnedMenus } from '../ui/menuManager.js';
 let _thumbRafId = null;
 
 export function setupPointerEvents(canvas) {
-    // Attach pointerdown to window to catch events that Safari might drop/misdirect 
-    window.addEventListener('pointerdown', (e) => {
-        const isPen = e.pointerType === 'pen' || (e.pressure > 0 && e.pressure < 1) || (e.tiltX && e.tiltX !== 0) || (e.tiltY && e.tiltY !== 0);
-        const isTargetUI = e.target.closest('.mod-btn, .mode-btn, .brush-slot, #settings-panel');
-        
-        if (e.target === canvas || (isPen && !isTargetUI)) {
-            handlePointerDown(e);
-        }
-    }, { capture: true, passive: false });
-
-    // Backup 'touchstart' listener: sometimes iOS drops pointerdown but sends touchstart
-    window.addEventListener('touchstart', (e) => {
-        const pencilTouch = Array.from(e.touches).find(t => t.touchType === 'stylus' || (t.force && t.force > 0 && t.force < 1));
-        if (pencilTouch && !state.isPenDrawing) {
-            const isTargetUI = pencilTouch.target.closest('.mod-btn, .mode-btn, .brush-slot, #settings-panel');
-            if (pencilTouch.target === canvas || !isTargetUI) {
-                // Synthesize a pointerdown check if needed, or just let it trigger drawing logic
-                // For now, we just ensure it doesn't get blocked by touchmove preventions elsewhere
-            }
-        }
-        // Use touch events as secondary to avoid session lock
-    }, { passive: true });
+    canvas.addEventListener('pointerdown', handlePointerDown);
     canvas.addEventListener('pointermove', handlePointerMove);
     canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('pointercancel', handlePointerCancel);
@@ -98,21 +77,21 @@ export function setupPointerEvents(canvas) {
 }
 
 async function handlePointerDown(e) {
-    // Robust pen detection including force and tilt
-    const isPen = e.pointerType === 'pen' || (e.pressure > 0 && e.pressure < 1) || (e.tiltX && e.tiltX !== 0) || (e.tiltY && e.tiltY !== 0);
+    const isPen = e.pointerType === 'pen';
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-    // Prevent default to stop scrolling/zooming on the canvas area
     if (e.cancelable) e.preventDefault();
 
     if (!isIOS && !isPen) {
-        const eventCanvas = document.getElementById('event-canvas');
         try {
+            const eventCanvas = document.getElementById('event-canvas');
             if (eventCanvas) eventCanvas.setPointerCapture(e.pointerId);
         } catch (err) { }
     }
+
+    if (e.target !== document.getElementById('event-canvas') && !isPen) return;
     
-    // If we already handled this pointer elsewhere, or if it's a non-pen touch on UI, return.
+    // If we already handled this pointer elsewhere, return.
     if (state.activePointers.has(e.pointerId)) return;
     
     const eventCanvas = document.getElementById('event-canvas');
@@ -129,6 +108,7 @@ async function handlePointerDown(e) {
 
     if (state.activePointers.size === 1) {
         state.touchStartTime = Date.now();
+        state._gestureActionFired = false;
         state.touchStartPos = { x: e.clientX, y: e.clientY };
         state.maxFingers = 1;
         state.isPinching = false;
@@ -153,23 +133,14 @@ async function handlePointerDown(e) {
         state.initialPinchDist = state.lastPinchDist;
         state.initialPinchCenter = { ...state.lastPinchCenter };
 
-        const isPenInvolved = isPen || state.isPenSession || state.isPenDrawing;
-        if ((state.isPenDrawing || state.isLassoing) && e.pointerType !== 'pen') {
-            const timeSinceFirstFinger = Date.now() - state.touchStartTime;
-            const isTwoFingerTapIntent = timeSinceFirstFinger < 150;
-
-            // If a pen is involved, we prioritize it and don't cancel drawing for secondary touches
-            // BUT we still allow cancellation if it's a clear 2-finger tap intent for undo.
-            if (!isPenInvolved || isTwoFingerTapIntent) {
-                cancelCurrentOperation();
-                if (!isTwoFingerTapIntent) state.didInteract = true;
-            }
+        // If we are starting a multi-touch session, cancel any active drawing
+        if (state.isPenDrawing || state.isLassoing) {
+            cancelCurrentOperation();
+            state.didInteract = true;
         }
         
-        // If it's a finger touch on UI, we don't return early to avoid blocking the pen
-        // but we ensure it doesn't trigger drawing logic.
-        if (!isPen && e.target !== eventCanvas) return;
-        if (!isPen && state.activePointers.size > 1 && !isPenInvolved) return;
+        // Prevent drawing with the second pointer
+        if (!isPen) return;
     }
 
     if (state.activePointers.size === 1 && state.isSpacePressed) {
@@ -360,13 +331,6 @@ async function handlePointerUp(e) {
     if (state.activePointers.size === 0) {
         await handleGestureTaps();
         
-        // Handle pending shift cancel from miscUI.js (palm rejection protection)
-        if (state._modShiftPendingCancel) {
-            state._modShiftPendingCancel = false;
-            state._modShiftState = 'idle';
-            if (window.updateModifierBar) window.updateModifierBar();
-        }
-
         delete state._lastPenPoint;
         delete state.isPenSession;
     }

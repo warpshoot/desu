@@ -84,16 +84,23 @@ export function handlePinchPan(e) {
 export async function handleGestureTaps() {
     const now = Date.now();
     const duration = now - state.touchStartTime;
+    
+    // Tap detection: short duration, no significant movement/interaction
     const isTap = duration < 400 && !state.didInteract && !state.strokeMade && !state.wasPanning && !state.wasPinching;
     
     if (isTap && !state.isPenSession && (now - _lastGestureTime > _GESTURE_COOLDOWN_MS)) {
+        // Prevent multiple actions in a single multi-touch session
+        if (state._gestureActionFired) return false;
+
         if (state.maxFingers === 2) {
+            state._gestureActionFired = true;
             _lastGestureTime = now;
             await undo();
             renderLayerButtons();
             updateAllThumbnails();
             return true;
         } else if (state.maxFingers === 3) {
+            state._gestureActionFired = true;
             _lastGestureTime = now;
             await redo();
             renderLayerButtons();
