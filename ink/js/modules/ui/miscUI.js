@@ -80,7 +80,13 @@ export function setupModifierBar() {
     };
 
     // Use touch events as secondary to avoid session lock
+    // Use touch events as secondary to avoid session lock
     shiftBtn.addEventListener('touchstart', handleDown, { passive: true });
+    shiftBtn.addEventListener('touchmove', (e) => {
+        // The "Mikepk" Hack: preventDefault on touchmove on the UI button
+        // is known to stop Safari from swallowing sibling pointerevents.
+        if (e.cancelable) e.preventDefault();
+    }, { passive: false });
     shiftBtn.addEventListener('touchend', handleUp);
     shiftBtn.addEventListener('touchcancel', handleCancel);
 

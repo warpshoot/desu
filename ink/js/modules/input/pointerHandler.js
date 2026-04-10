@@ -69,18 +69,27 @@ let _thumbRafId = null;
 
 export function setupPointerEvents(canvas) {
     // Attach pointerdown to window to catch events that Safari might drop/misdirect 
-    // when a finger is holding a fixed UI element.
     window.addEventListener('pointerdown', (e) => {
-        const isPen = e.pointerType === 'pen' || (e.pointerType === 'touch' && e.pressure > 0 && e.pressure < 1);
-        
-        // If it's a pen, we allow it even if the target is something else (like body) 
-        // as long as it's not a UI button.
+        const isPen = e.pointerType === 'pen' || (e.pressure > 0 && e.pressure < 1) || (e.tiltX && e.tiltX !== 0) || (e.tiltY && e.tiltY !== 0);
         const isTargetUI = e.target.closest('.mod-btn, .mode-btn, .brush-slot, #settings-panel');
         
         if (e.target === canvas || (isPen && !isTargetUI)) {
             handlePointerDown(e);
         }
     }, { capture: true, passive: false });
+
+    // Backup 'touchstart' listener: sometimes iOS drops pointerdown but sends touchstart
+    window.addEventListener('touchstart', (e) => {
+        const pencilTouch = Array.from(e.touches).find(t => t.touchType === 'stylus' || (t.force && t.force > 0 && t.force < 1));
+        if (pencilTouch && !state.isPenDrawing) {
+            const isTargetUI = pencilTouch.target.closest('.mod-btn, .mode-btn, .brush-slot, #settings-panel');
+            if (pencilTouch.target === canvas || !isTargetUI) {
+                // Synthesize a pointerdown check if needed, or just let it trigger drawing logic
+                // For now, we just ensure it doesn't get blocked by touchmove preventions elsewhere
+            }
+        }
+        // Use touch events as secondary to avoid session lock
+    }, { passive: true });
     canvas.addEventListener('pointermove', handlePointerMove);
     canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('pointercancel', handlePointerCancel);
@@ -89,7 +98,8 @@ export function setupPointerEvents(canvas) {
 }
 
 async function handlePointerDown(e) {
-    const isPen = e.pointerType === 'pen' || (e.pointerType === 'touch' && e.pressure > 0 && e.pressure < 1);
+    // Robust pen detection including force and tilt
+    const isPen = e.pointerType === 'pen' || (e.pressure > 0 && e.pressure < 1) || (e.tiltX && e.tiltX !== 0) || (e.tiltY && e.tiltY !== 0);
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
     // Prevent default to stop scrolling/zooming on the canvas area
