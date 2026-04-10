@@ -68,7 +68,7 @@ import {
     popSelectionClip
 } from '../tools/selection.js';
 import { setSelectionToolbarInteractive } from '../ui/selectionUI.js';
-import { hideUnpinnedMenus } from '../ui/menuManager.js';
+import { hideAllMenus, isAnyMenuOpen, hideUnpinnedMenus } from '../ui/menuManager.js';
 
 let _thumbRafId = null;
 
@@ -92,6 +92,11 @@ async function handlePointerDown(e) {
             const eventCanvas = document.getElementById('event-canvas');
             if (eventCanvas) eventCanvas.setPointerCapture(e.pointerId);
         } catch (err) { }
+    }
+
+    if (isAnyMenuOpen()) {
+        hideAllMenus();
+        return;
     }
 
     if (e.target !== document.getElementById('event-canvas') && !isPen) return;

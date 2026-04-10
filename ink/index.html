@@ -16,6 +16,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <script src="../favicon.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ag-psd/dist/bundle.js"></script>
 </head>
 
 <body class="light">
@@ -115,26 +116,11 @@
         <div id="layer-buttons"></div>
     </div>
 
-    <!-- 右上ツールバー -->
+    <!-- 右上ツールバー (Text-based minimal labels) -->
     <div id="toolbar-right">
-
-        <div class="tool-btn" id="settingsBtn" title="設定">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
-            </svg>
-        </div>
-
-        <div class="tool-btn" id="fileBtn">
-            <img src="icons/file.svg" alt="File" style="width: 24px; height: 24px;">
-        </div>
-
-        <div class="tool-btn" id="saveBtn">
-            <svg viewBox="0 0 24 24">
-                <path d="M12 4 L12 16 M6 12 L12 18 L18 12" />
-                <path d="M4 20 L20 20" />
-            </svg>
-        </div>
+        <div class="header-btn" id="fileBtn">PROJECT</div>
+        <div class="header-btn" id="settingsBtn">SETTINGS</div>
+        <div class="header-btn" id="saveBtn">SNAPSHOT</div>
     </div>
 
     <!-- ズームリセットボタン -->
@@ -145,49 +131,86 @@
         </svg>
     </div>
 
-    <!-- 設定パネル -->
-    <div id="settings-panel" class="hidden">
-        <div id="settings-header">
-            <span>設定</span>
-            <button id="settings-close">×</button>
+    <!-- 設定パネル (App Settings) -->
+    <div id="settings-panel" class="tool-menu hidden">
+        <div class="panel-header">
+            <span>SETTINGS</span>
+            <button id="settings-close" class="panel-close">×</button>
         </div>
         <div id="settings-body">
-            <div class="settings-section-label">背景色</div>
+            <div class="settings-section-label">PAPER COLOR</div>
             <div id="bg-color-swatches">
                 <!-- JSで動的生成 -->
+            </div>
+
+            <div class="menu-divider"></div>
+            <div class="settings-section-label">TOOL CONFIG</div>
+            <div class="menu-item" id="exportConfigBtn">
+                <span>Export Configuration (.json)</span>
+            </div>
+            <div class="menu-item" id="importConfigBtn">
+                <span>Import Configuration</span>
+            </div>
+            <div class="menu-item" id="resetConfigBtn" style="color: #d33;">
+                <span>Reset All Settings</span>
+            </div>
+
+            <div class="menu-divider"></div>
+            <div class="settings-section-label">INFO / ABOUT</div>
+            <div class="menu-item" id="aboutBtn">
+                <span>About DESU™ ink</span>
+            </div>
+        </div>
+        <!-- Hidden input for config import -->
+        <input type="file" id="configInput" accept=".json,.desuconfig" style="display:none;">
+    </div>
+
+    <!-- クレジットモーダル (Rich Specification) -->
+    <div id="credit-modal" class="hidden">
+        <div id="credit-content">
+            <div class="credit-row">
+                <span class="credit-key">名称</span>
+                <span class="credit-val">DESU™ ink</span>
+            </div>
+            <div class="credit-row">
+                <span class="credit-key">支給元</span>
+                <a href="https://warpshoot.github.io/desu/" target="_blank" class="credit-val">warpshoot.github.io/desu</a>
+            </div>
+            <div class="credit-row">
+                <span class="credit-key">製造</span>
+                <a href="https://warpshoot.github.io/" target="_blank" class="credit-val">wpy</a>
+            </div>
+            <hr class="credit-divider">
+            <div class="credit-row">
+                <span class="credit-key">説明書</span>
+                <a href="ink_MANUAL.md" target="_blank" class="credit-manual-link">人間向け</a>
             </div>
         </div>
     </div>
 
-    <!-- ファイル管理メニュー -->
+    <!-- プロジェクト管理メニュー (Project Management) -->
     <div id="file-menu" class="tool-menu hidden">
-
+        <div class="panel-header">
+            <span>PROJECT MANAGEMENT</span>
+            <button id="file-close" class="panel-close">×</button>
+        </div>
         <div class="menu-item" id="newProjectBtn">
-            <span>新規作成</span>
+            <span>New Project</span>
         </div>
         <div class="menu-divider"></div>
         <div class="menu-item" id="exportProjectBtn">
-            <span>プロジェクト保存 (.json)</span>
+            <span>Export Project (.json)</span>
         </div>
         <div class="menu-item" id="importProjectBtn">
-            <span>プロジェクト読込</span>
+            <span>Import Project</span>
         </div>
         <div class="menu-divider"></div>
-        <div class="menu-item" id="exportConfigBtn">
-            <span>設定の書き出し</span>
-        </div>
-        <div class="menu-item" id="importConfigBtn">
-            <span>設定の読み込み</span>
-        </div>
-        <div class="menu-divider"></div>
-        <div class="menu-item" id="resetConfigBtn" style="color: #d33;">
-            <span>設定のリセット</span>
+        <div class="menu-item" id="exportPSDBtn">
+            <span>Export PSD (Layers)</span>
         </div>
         
         <!-- Project Save Input -->
         <input type="file" id="fileInput" accept=".json,.desu" style="display:none;">
-        <!-- Config Save Input -->
-        <input type="file" id="configInput" accept=".json,.desuconfig" style="display:none;">
     </div>
 
     <!-- 保存・コピー時フラッシュ -->
@@ -234,72 +257,47 @@
         </button>
     </div>
 
-    <!-- 保存UI -->
-    <div id="save-overlay"></div>
-    <div id="save-ui">
-        <h3>範囲をドラッグして選択</h3>
-        <div id="selection-size" style="display:none; font-size: 13px; color: #666; margin-bottom: 8px;"></div>
-
-        <div class="option-group aspect-ratio-group">
-            <div class="option-group-label">縦横比</div>
-            <div class="option-buttons">
-                <button class="option-btn active" data-aspect="free">自由</button>
-                <button class="option-btn" data-aspect="1:1">1:1</button>
-                <button class="option-btn" data-aspect="4:5">4:5</button>
-                <button class="option-btn" data-aspect="16:9">16:9</button>
-                <button class="option-btn" data-aspect="9:16">9:16</button>
-            </div>
+    <!-- スナップショット選択メニュー (Snapshot Mode Choice) -->
+    <div id="save-menu" class="tool-menu hidden">
+        <div class="menu-item" id="snapshotFullBtn">
+            <span>Canvas (Full)</span>
         </div>
+        <div class="menu-item" id="snapshotCropBtn">
+            <span>Crop (Range)...</span>
+        </div>
+    </div>
+
+    <!-- 保存UI / Export Overlay -->
+    <div id="save-overlay" class="hidden"></div>
+    <div id="save-ui" class="hidden">
+        <div class="panel-header">
+            <span>SNAPSHOT SETTINGS</span>
+            <button id="save-close" class="panel-close">×</button>
+        </div>
+        <div id="selection-size" style="display:none; font-size: 11px; color: #888; margin-bottom: 12px; font-weight: bold; letter-spacing: 0.05em;"></div>
 
         <div class="option-group">
-            <div class="option-group-label">倍率</div>
+            <div class="option-group-label">SCALE</div>
             <div class="option-buttons">
-                <button class="option-btn active" data-scale="1">1x</button>
-                <button class="option-btn" data-scale="2">2x</button>
-                <button class="option-btn" data-scale="3">3x</button>
+                <button class="option-btn active" data-scale="1">1X</button>
+                <button class="option-btn" data-scale="2">2X</button>
+                <button class="option-btn" data-scale="3">3X</button>
             </div>
         </div>
 
-
-        <label>
+        <label class="transparent-label">
             <input type="checkbox" id="transparentBg">
-            背景透過
+            TRANSPARENT BACKGROUND
         </label>
 
-        <div>
-            <button class="save-btn" id="saveAllBtn">全体を保存</button>
-            <button class="save-btn primary" id="confirmSelectionBtn" style="display:none;">確定</button>
-            <button class="save-btn" id="copyClipboardBtn" style="display:none;">コピー</button>
-            <button class="save-btn" id="redoSelectionBtn" style="display:none;">やり直し</button>
-            <button class="save-btn" id="cancelSaveBtn">閉じる</button>
+        <div class="save-actions">
+            <button class="save-btn primary" id="confirmSelectionBtn">DOWNLOAD</button>
+            <button class="save-btn" id="copyClipboardBtn">COPY</button>
         </div>
     </div>
 
     <!-- デバッグログ (削除済み) -->
 
-    <!-- クレジットボタンとモーダル -->
-    <div id="credit-btn">?</div>
-    <div id="credit-modal">
-        <div id="credit-content">
-            <div class="credit-row">
-                <span class="credit-key">名称</span>
-                <span class="credit-val">DESU™ ink</span>
-            </div>
-            <div class="credit-row">
-                <span class="credit-key">支給元</span>
-                <a href="https://warpshoot.github.io/desu/" target="_blank" class="credit-val">warpshoot.github.io/desu</a>
-            </div>
-            <div class="credit-row">
-                <span class="credit-key">製造</span>
-                <a href="https://warpshoot.github.io/" target="_blank" class="credit-val">wpy</a>
-            </div>
-            <hr class="credit-divider">
-            <div class="credit-row">
-                <span class="credit-key">説明書</span>
-                <a href="ink_MANUAL.md" target="_blank" class="credit-manual-link">人間向け</a>
-            </div>
-        </div>
-    </div>
 
     <!-- 汎用確認モーダル -->
     <div id="confirm-modal" class="hidden">

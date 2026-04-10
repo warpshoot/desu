@@ -19,7 +19,7 @@ import {
     renderBrushPalette
 } from './ui/toolPanel.js';
 import { setupFileUI } from './ui/fileMenu.js';
-import { setupZoomControls, setupModifierBar, setupSettingsPanel, setupCreditModal, setupKeyboardShortcuts } from './ui/miscUI.js';
+import { setupZoomControls, setupModifierBar, setupSettingsPanel, setupKeyboardShortcuts } from './ui/miscUI.js';
 import { setupToneMenu, updateToneMenuVisibility } from './ui/toneMenu.js';
 import { setupSaveUI } from './ui/saveExport.js';
 import { initSelectionOverlay } from './tools/selection.js';
@@ -47,7 +47,6 @@ export function initUI() {
     setupModifierBar();
     setupSettingsPanel();
     setupToneMenu();
-    setupCreditModal();
     setupSaveUI();
     initSelectionOverlay();
     setupSelectionUI();

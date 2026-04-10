@@ -32,6 +32,7 @@ let _editingFillSlotIdx = 0;
 let _editingEraserSlotIdx = 0;
 let _brushPreviewEl = null;
 let _brushPreviewTimeout;
+let _lastModeChangeTime = 0;
 
 // Binary slider math
 const SLIDER_MAX = 1000;
@@ -43,7 +44,7 @@ export function setupToolPanel() {
     const modeButtons = document.querySelectorAll('.mode-btn');
 
     modeButtons.forEach(btn => {
-        btn.addEventListener('pointerup', (e) => {
+        btn.addEventListener('pointerdown', (e) => {
             e.preventDefault();
             e.stopPropagation();
             handleModeTap(btn.dataset.mode);
@@ -95,6 +96,9 @@ export async function handleModeTap(mode) {
     }
 
     if (state.mode === mode) {
+        // Cooldown check: Prevent unintentional rapid-fire toggling after a switch
+        if (Date.now() - _lastModeChangeTime < 300) return;
+
         if (mode === 'pen') {
             state.activeBrushIndex = (state.activeBrushIndex + 1) % state.brushes.length;
             state.subTool = state.brushes[state.activeBrushIndex].subTool;
@@ -109,6 +113,7 @@ export async function handleModeTap(mode) {
         }
     } else {
         state.mode = mode;
+        _lastModeChangeTime = Date.now();
         if (mode === 'pen') {
             state.subTool = state.brushes[state.activeBrushIndex].subTool;
         } else if (mode === 'fill') {
@@ -141,8 +146,18 @@ export function updateModeButtonIcon(mode, sub) {
 
 export function updateToolButtonStates() {
     document.querySelectorAll('.mode-btn').forEach(btn => {
-        const isActive = state.mode === btn.dataset.mode;
+        const mode = btn.dataset.mode;
+        const isActive = state.mode === mode;
         btn.classList.toggle('active', isActive);
+
+        // 重要: 起動時や切替時に、全ツールのアイコンを現在のサブツール状態に合わせる
+        let currentSub;
+        if (mode === 'pen') currentSub = state.activeBrush.subTool;
+        else if (mode === 'fill') currentSub = state.activeFillSlot.subTool;
+        else if (mode === 'eraser') currentSub = state.activeEraserSlot.subTool;
+        else if (mode === 'select') currentSub = state.subTool; // Selectは共通
+
+        if (currentSub) updateModeButtonIcon(mode, currentSub);
     });
 
     const fillBtn = document.getElementById('mode-fill');

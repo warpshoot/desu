@@ -1,7 +1,12 @@
 import { state, eventCanvas } from '../state.js';
 import { centerCanvas, applyTransform, updateBackgroundColor } from '../canvas.js';
-import { saveLocalState } from '../storage.js';
-import { hideAllMenus } from './menuManager.js';
+import { 
+    exportConfig, 
+    importConfig, 
+    resetSettings, 
+    saveLocalState 
+} from '../storage.js';
+import { hideAllMenus, handleOutsideClick } from './menuManager.js';
 import { undo, redo, saveState } from '../history.js';
 import { renderLayerButtons, updateAllThumbnails } from './layerPanel.js';
 import { 
@@ -70,9 +75,17 @@ export function setupSettingsPanel() {
     const panel = document.getElementById('settings-panel');
     const closeBtn = document.getElementById('settings-close');
     const swatchContainer = document.getElementById('bg-color-swatches');
-    if (!btn || !panel || !swatchContainer) return;
+    
+    const exportConfigBtn = document.getElementById('exportConfigBtn');
+    const importConfigBtn = document.getElementById('importConfigBtn');
+    const configInput = document.getElementById('configInput');
+    const resetConfigBtn = document.getElementById('resetConfigBtn');
+    const aboutBtn = document.getElementById('aboutBtn');
+
+    if (!btn || !panel) return;
 
     const renderSwatches = () => {
+        if (!swatchContainer) return;
         swatchContainer.innerHTML = '';
         BG_COLORS.forEach(({ label, value }) => {
             const sw = document.createElement('div');
@@ -98,25 +111,109 @@ export function setupSettingsPanel() {
             panel.style.right = (window.innerWidth - rect.right) + 'px';
             panel.style.top = rect.bottom + 10 + 'px';
             panel.classList.remove('hidden');
+
+            // Wire up outside-click
+            setTimeout(() => {
+                document.addEventListener('pointerdown', handleOutsideClick);
+            }, 10);
         }
     });
 
-    closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+    if (closeBtn) closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+    
+    // Snapshot (Save)
+    const saveBtn = document.getElementById('saveBtn');
+    const saveMenu = document.getElementById('save-menu');
+    if (saveBtn && saveMenu) {
+        saveBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = saveMenu.classList.contains('hidden');
+            hideAllMenus();
+            if (isHidden) {
+                const rect = saveBtn.getBoundingClientRect();
+                saveMenu.style.right = (window.innerWidth - rect.right) + 'px';
+                saveMenu.style.top = rect.bottom + 10 + 'px';
+                saveMenu.classList.remove('hidden');
+
+                setTimeout(() => {
+                    document.addEventListener('pointerdown', handleOutsideClick);
+                }, 10);
+            }
+        });
+    }
+
+    // Config Export
+    if (exportConfigBtn) {
+        exportConfigBtn.addEventListener('click', async () => {
+            await exportConfig();
+        });
+    }
+
+    // Config Import
+    if (importConfigBtn && configInput) {
+        importConfigBtn.addEventListener('click', () => configInput.click());
+        configInput.addEventListener('change', async (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                const success = await importConfig(file);
+                if (success) {
+                    // Sync UI
+                    updateModeButtonIcon(state.mode, state.subTool);
+                    updateToolButtonStates();
+                    updateToneMenuVisibility();
+                    updateBrushSizeVisibility();
+                    updateBrushSizeSlider();
+                    renderBrushPalette();
+                } else {
+                    alert('Failed to import configuration');
+                }
+                configInput.value = '';
+            }
+        });
+    }
+
+    // Reset Config
+    if (resetConfigBtn) {
+        resetConfigBtn.addEventListener('click', () => {
+            if (confirm('Reset all tool settings to default?')) {
+                resetSettings();
+                updateModeButtonIcon(state.mode, state.subTool);
+                updateToolButtonStates();
+                updateToneMenuVisibility();
+                updateBrushSizeVisibility();
+                updateBrushSizeSlider();
+                renderBrushPalette();
+                renderSwatches();
+            }
+        });
+    }
+
+    // About
+    if (aboutBtn) {
+        aboutBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const modal = document.getElementById('credit-modal');
+            if (modal) {
+                hideAllMenus();
+                modal.classList.remove('hidden');
+            }
+        });
+    }
+
+    // Modal Close logic
+    const modal = document.getElementById('credit-modal');
+    if (modal) {
+        modal.addEventListener('click', () => {
+            modal.classList.add('hidden');
+        });
+        const content = document.getElementById('credit-content');
+        if (content) {
+            content.addEventListener('click', (e) => e.stopPropagation());
+        }
+    }
+
     panel.addEventListener('pointerdown', e => e.stopPropagation());
     panel.addEventListener('pointermove', e => e.stopPropagation());
-}
-
-export function setupCreditModal() {
-    const creditBtn = document.getElementById('credit-btn');
-    const creditModal = document.getElementById('credit-modal');
-    if (!creditBtn || !creditModal) return;
-
-    creditBtn.addEventListener('click', () => creditModal.classList.toggle('visible'));
-    document.addEventListener('click', (e) => {
-        if (!creditModal.classList.contains('visible')) return;
-        if (creditModal.contains(e.target) && (e.target.tagName === 'A' || e.target.closest('a'))) return;
-        if (e.target !== creditBtn && !creditBtn.contains(e.target)) creditModal.classList.remove('visible');
-    });
 }
 
 export function setupKeyboardShortcuts() {

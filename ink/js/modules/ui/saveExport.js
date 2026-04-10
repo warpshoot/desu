@@ -1,45 +1,75 @@
 import {
-    state,
-    eventCanvas
+    state
 } from '../state.js';
 import { getCanvasPoint } from '../utils.js';
 import {
     showSelectionUI,
     hideSelectionUI,
-    saveAllCanvas,
     copyToClipboard,
     saveRegion,
     redoSelection
 } from '../save.js';
+import { hideAllMenus } from './menuManager.js';
 
 export function setupSaveUI() {
-    const saveBtn = document.getElementById('saveBtn');
+    // Menus & Entry Buttons
+    const fullCanvasBtn = document.getElementById('snapshotFullBtn');
+    const cropRangeBtn = document.getElementById('snapshotCropBtn');
+    
+    // Main UI
     const saveOverlay = document.getElementById('save-overlay');
     const saveUI = document.getElementById('save-ui');
-    const cancelBtn = document.getElementById('cancelSaveBtn');
-    const saveAllBtn = document.getElementById('saveAllBtn');
+    
+    // UI Elements
+    const closeBtn = document.getElementById('save-close');
     const confirmBtn = document.getElementById('confirmSelectionBtn');
     const copyBtn = document.getElementById('copyClipboardBtn');
-    const redoBtn = document.getElementById('redoSelectionBtn');
     const transparentBgCheckbox = document.getElementById('transparentBg');
     const selCanvas = document.getElementById('selection-canvas');
     const selCtx = selCanvas?.getContext('2d');
 
-    if (!saveBtn || !saveUI) return;
+    if (!saveUI) return;
 
-    saveBtn.addEventListener('click', () => {
-        state.isSaveMode = true;
-        state.selectionStart = null;
-        state.selectionEnd = null;
-        state.confirmedSelection = null;
-        saveOverlay.style.display = 'block';
-        saveUI.style.display = 'block';
-        if (confirmBtn) confirmBtn.style.display = 'none';
-        if (copyBtn) copyBtn.style.display = 'none';
-        if (redoBtn) redoBtn.style.display = 'none';
-        document.getElementById('selection-size').style.display = 'none';
-        showSelectionUI();
-    });
+    // --- Entry Points ---
+
+    // Full Canvas path
+    if (fullCanvasBtn) {
+        fullCanvasBtn.addEventListener('click', () => {
+            hideAllMenus();
+            state.isSaveMode = true;
+            state.selectionStart = null;
+            state.selectionEnd = null;
+            
+            // Set selection to full canvas
+            state.confirmedSelection = {
+                x: 0, y: 0,
+                w: state.paperW, h: state.paperH
+            };
+
+            saveOverlay.style.display = 'block';
+            saveUI.style.display = 'block';
+            if (copyBtn) copyBtn.style.display = 'none'; // Copy not needed for full? (or could be enabled)
+            
+            updateSelectionSizeDisplay();
+            showSelectionUI();
+        });
+    }
+
+    // Crop Range path
+    if (cropRangeBtn) {
+        cropRangeBtn.addEventListener('click', () => {
+            hideAllMenus();
+            state.isSaveMode = true;
+            state.selectionStart = null;
+            state.selectionEnd = null;
+            state.confirmedSelection = null;
+
+            saveOverlay.style.display = 'block';
+            saveUI.style.display = 'none'; // Hide settings until selection is made
+            
+            showSelectionUI();
+        });
+    }
 
     const closeSaveMode = () => {
         state.isSaveMode = false;
@@ -48,20 +78,16 @@ export function setupSaveUI() {
         hideSelectionUI();
     };
 
-    if (cancelBtn) cancelBtn.addEventListener('click', closeSaveMode);
+    if (closeBtn) closeBtn.addEventListener('click', closeSaveMode);
     if (saveOverlay) saveOverlay.addEventListener('click', closeSaveMode);
 
-    if (saveAllBtn) {
-        saveAllBtn.addEventListener('click', () => {
-            saveAllCanvas(transparentBgCheckbox.checked);
-        });
-    }
+    // --- Action Buttons ---
 
     if (confirmBtn) {
         confirmBtn.addEventListener('click', async () => {
             if (state.confirmedSelection) {
                 const { x, y, w, h } = state.confirmedSelection;
-                await saveRegion(x, y, w, h);
+                await saveRegion(x, y, w, h, transparentBgCheckbox.checked);
             }
         });
     }
@@ -70,20 +96,12 @@ export function setupSaveUI() {
         copyBtn.addEventListener('click', async () => {
             if (state.confirmedSelection) {
                 const { x, y, w, h } = state.confirmedSelection;
-                await copyToClipboard(x, y, w, h);
+                await copyToClipboard(x, y, w, h, transparentBgCheckbox.checked);
             }
         });
     }
 
-    if (redoBtn) {
-        redoBtn.addEventListener('click', () => {
-            redoSelection();
-            confirmBtn.style.display = 'none';
-            copyBtn.style.display = 'none';
-            redoBtn.style.display = 'none';
-            document.getElementById('selection-size').style.display = 'none';
-        });
-    }
+    // --- Selection Logic ---
 
     if (selCanvas && selCtx) {
         let isSelecting = false;
@@ -91,46 +109,20 @@ export function setupSaveUI() {
         selCanvas.addEventListener('pointerdown', (e) => {
             if (!state.isSaveMode) return;
             isSelecting = true;
+            
+            // Completely hide UI while dragging
             saveUI.classList.add('hidden-during-selection');
+            
             state.selectionStart = { x: e.clientX, y: e.clientY };
             state.selectionEnd = null;
             state.confirmedSelection = null;
             selCtx.clearRect(0, 0, selCanvas.width, selCanvas.height);
-            confirmBtn.style.display = 'none';
-            copyBtn.style.display = 'none';
-            redoBtn.style.display = 'none';
         });
 
         selCanvas.addEventListener('pointermove', (e) => {
             if (!isSelecting || !state.isSaveMode) return;
-
-            let endX = e.clientX;
-            let endY = e.clientY;
-
-            if (state.selectedAspect && state.selectedAspect !== 'free') {
-                const startX = state.selectionStart.x;
-                const startY = state.selectionStart.y;
-                const dx = endX - startX;
-                const dy = endY - startY;
-
-                let targetRatio;
-                if (state.selectedAspect === '1:1') targetRatio = 1;
-                else if (state.selectedAspect === '4:5') targetRatio = 4 / 5;
-                else if (state.selectedAspect === '16:9') targetRatio = 16 / 9;
-                else if (state.selectedAspect === '9:16') targetRatio = 9 / 16;
-
-                if (targetRatio) {
-                    const absDx = Math.abs(dx);
-                    const absDy = Math.abs(dy);
-                    if (absDx / targetRatio > absDy) {
-                        endX = startX + Math.sign(dx) * absDy * targetRatio;
-                    } else {
-                        endY = startY + Math.sign(dy) * absDx / targetRatio;
-                    }
-                }
-            }
-
-            state.selectionEnd = { x: endX, y: endY };
+            
+            state.selectionEnd = { x: e.clientX, y: e.clientY };
             drawSelectionRect(selCtx, state.selectionStart, state.selectionEnd, selCanvas);
             updateSelectionSizeDisplay();
         });
@@ -138,6 +130,7 @@ export function setupSaveUI() {
         selCanvas.addEventListener('pointerup', (e) => {
             if (!isSelecting || !state.isSaveMode) return;
             isSelecting = false;
+            
             saveUI.classList.remove('hidden-during-selection');
 
             if (state.selectionStart && state.selectionEnd) {
@@ -155,23 +148,17 @@ export function setupSaveUI() {
                 };
 
                 if (sw > 5 && sh > 5) {
-                    confirmBtn.style.display = 'inline-block';
-                    copyBtn.style.display = 'inline-block';
-                    redoBtn.style.display = 'inline-block';
+                    // Selection made, show the settings panel
+                    saveUI.style.display = 'block';
+                    if (confirmBtn) confirmBtn.style.display = 'inline-block';
+                    if (copyBtn) copyBtn.style.display = 'inline-block';
                     updateSelectionSizeDisplay();
                 }
             }
         });
     }
 
-    document.querySelectorAll('[data-aspect]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('[data-aspect]').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            state.selectedAspect = btn.dataset.aspect;
-        });
-    });
-
+    // --- Scale Selection ---
     document.querySelectorAll('[data-scale]').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('[data-scale]').forEach(b => b.classList.remove('active'));
@@ -197,7 +184,7 @@ function updateSelectionSizeDisplay() {
     }
 
     if (w > 0 && h > 0) {
-        sizeDiv.textContent = `サイズ: ${Math.round(w * scale)} x ${Math.round(h * scale)} px`;
+        sizeDiv.textContent = `SIZE: ${Math.round(w * scale)} x ${Math.round(h * scale)} px`;
         sizeDiv.style.display = 'block';
     } else {
         sizeDiv.style.display = 'none';
@@ -210,12 +197,12 @@ function drawSelectionRect(ctx, start, end, canvas) {
     const y = Math.min(start.y, end.y);
     const w = Math.abs(end.x - start.x);
     const h = Math.abs(end.y - start.y);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'; // Mask
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.clearRect(x, y, w, h);
     ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 5]);
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
     ctx.strokeRect(x, y, w, h);
     ctx.setLineDash([]);
 }

@@ -65,6 +65,11 @@ canvas {
     -webkit-tap-highlight-color: transparent;
 }
 
+/* Utility Classes */
+.hidden {
+    display: none !important;
+}
+
 /* ============================================
    Global Reset for Solid Design
    ============================================ */
@@ -576,7 +581,9 @@ canvas {
 .tool-btn.active {
     border: 1px solid #000;
     /* Keep border, remove thick left */
-    background: #fff;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     border-radius: 4px;
     transform: translateX(-5px);
     /* Move left */
@@ -627,16 +634,16 @@ canvas {
    ============================================ */
 .tool-menu {
     position: fixed;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-    border: 1px solid rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(0, 0, 0, 0.12);
     padding: 8px;
     display: flex;
     flex-direction: column;
     gap: 2px;
     min-width: 140px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     z-index: 500;
 }
 
@@ -759,7 +766,7 @@ canvas {
 }
 
 /* ============================================
-   Right Toolbar
+   Right Toolbar (Text-based Minimal Header)
    ============================================ */
 #toolbar-right {
     position: fixed;
@@ -767,14 +774,51 @@ canvas {
     top: max(12px, env(safe-area-inset-top));
     display: flex;
     flex-direction: row;
-    gap: 8px;
+    align-items: center;
+    gap: 16px; /* Spaced out labels */
     z-index: 300;
-    padding: 6px;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.header-btn {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #1a1a1a;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 4px 6px;
+    position: relative;
+    opacity: 0.8;
+}
+
+.header-btn:hover {
+    opacity: 1;
+    transform: translateY(-1px);
+}
+
+.header-btn:active {
+    transform: translateY(0) scale(0.96);
+}
+
+.header-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 6px;
+    right: 6px;
+    height: 1px;
+    background: #000;
+    transform: scaleX(0);
+    transition: transform 0.2s;
+}
+
+.header-btn:hover::after {
+    transform: scaleX(1);
 }
 
 /* Color Picker */
@@ -973,15 +1017,18 @@ canvas {
 #save-ui {
     display: none;
     position: fixed;
-    top: max(20px, env(safe-area-inset-top));
-    left: 20px;
-    background: rgba(255, 255, 255, 0.95);
-    padding: 16px 24px;
-    border-radius: 12px;
+    top: 72px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    padding: 24px 32px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
     z-index: 401;
     text-align: center;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
     transition: opacity 0.2s;
+    min-width: 280px;
 }
 
 #save-ui.hidden-during-selection {
@@ -991,85 +1038,120 @@ canvas {
 
 
 
-#save-ui h3 {
-    font-size: 14px;
-    margin-bottom: 12px;
-    font-weight: normal;
-    color: #666;
-}
-
-
-
-#save-ui label {
+.transparent-label {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    font-size: 14px;
-    margin-bottom: 8px;
+    gap: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin: 20px 0 32px 0;
+    color: #444;
+    cursor: pointer;
 }
 
 #save-ui input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
+    border: 1px solid #000;
+    appearance: none;
+    cursor: pointer;
+    position: relative;
+    outline: none;
+}
+
+#save-ui input[type="checkbox"]:checked {
+    background: #000;
+}
+
+#save-ui input[type="checkbox"]:checked::after {
+    content: '✓';
+    color: #fff;
+    font-size: 10px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 .option-group {
-    margin-bottom: 8px;
-    font-size: 13px;
+    margin-bottom: 20px;
+    text-align: left;
 }
 
 .option-group-label {
-    font-size: 11px;
+    font-size: 9px;
+    font-weight: 800;
     color: #999;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
+    letter-spacing: 0.1em;
 }
 
 .option-buttons {
     display: flex;
-    gap: 4px;
-    justify-content: center;
+    gap: 6px;
+    justify-content: flex-start;
 }
 
 .option-btn {
-    padding: 4px 10px;
-    border: 1px solid #999;
-    background: rgba(255, 255, 255, 0.5);
-    border-radius: 4px;
-    font-size: 11px;
+    padding: 6px 14px;
+    border: 1px solid #ddd;
+    background: #fff;
+    font-size: 10px;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.1s;
+    letter-spacing: 0.05em;
 }
 
-
+.option-btn:hover {
+    border-color: #000;
+}
 
 .option-btn.active {
-    background: #333;
+    background: #000;
     color: #fff;
-    border-color: #333;
+    border-color: #000;
 }
 
-
+.save-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+}
 
 .save-btn {
-    padding: 10px 20px;
-    margin: 0 4px;
-    border: 1px solid #333;
+    padding: 12px 16px;
+    border: 1px solid #000;
     background: #fff;
-    border-radius: 8px;
-    font-size: 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
     cursor: pointer;
-}
-
-
-
-.save-btn:active {
-    transform: scale(0.96);
+    transition: all 0.2s;
 }
 
 .save-btn.primary {
-    background: #333;
+    background: #000;
     color: #fff;
+    grid-column: span 2;
+}
+
+.save-btn.secondary {
+    border-color: #ccc;
+    color: #999;
+    grid-column: span 2;
+    margin-top: 10px;
+}
+
+.save-btn:active {
+    background: #eee;
+}
+
+.save-btn.primary:active {
+    background: #333;
 }
 
 
@@ -1096,97 +1178,75 @@ canvas {
 /* ============================================
    Credit Button & Modal
    ============================================ */
-#credit-btn {
-    position: fixed;
-    top: max(12px, env(safe-area-inset-top, 12px));
-    left: 12px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50% !important;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    background: rgba(255, 255, 255, 0.8);
-    color: rgba(0, 0, 0, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 15px;
-    font-weight: bold;
-    cursor: pointer;
-    z-index: 300;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-#credit-btn:active {
-    transform: scale(0.92);
-    background: rgba(0, 0, 0, 0.05);
-}
-
-
-
 #credit-modal {
-    display: none;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: #fff;
-    z-index: 700;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    z-index: 1000;
 }
 
-#credit-modal.visible {
-    display: flex;
+#credit-modal.hidden {
+    display: none;
 }
 
 #credit-content {
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.6);
-    padding: 20px 24px;
-    font-family: monospace;
-    width: 300px;
-    max-width: calc(100vw - 40px);
+    background: rgba(255, 255, 255, 0.95);
+    padding: 24px 32px;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    min-width: 280px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .credit-row {
     display: flex;
-    gap: 12px;
-    line-height: 1.9;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 13px;
+    gap: 24px;
 }
 
 .credit-key {
-    color: #888;
-    font-size: 11px;
-    min-width: 4em;
-    flex-shrink: 0;
+    color: #666;
+    font-weight: 500;
+    white-space: nowrap;
 }
 
 .credit-val {
-    font-size: 11px;
-    color: #111;
+    color: #000;
     text-decoration: none;
+    font-weight: 700;
+    text-align: right;
 }
 
-a.credit-val {
+a.credit-val:hover {
     text-decoration: underline;
 }
 
 .credit-divider {
     border: none;
-    border-top: 1px solid #ddd;
-    margin: 12px 0;
+    border-top: 1px solid #eee;
+    margin: 16px 0;
 }
 
 .credit-manual-link {
-    font-size: 11px;
-    color: #111;
+    color: #000;
     text-decoration: underline;
-    margin-right: 16px;
+    font-weight: 700;
 }
 
-/* Tooltip logic removed as per user request */
+.credit-manual-link:hover {
+    opacity: 0.7;
+}
 
 /* ============================================
    Tone Menu
@@ -1397,8 +1457,10 @@ a.credit-val {
     height: 320px;
     min-width: 150px;
     min-height: 150px;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid #000;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 0 !important;
     display: flex;
     flex-direction: column;
@@ -1406,7 +1468,7 @@ a.credit-val {
     overflow: hidden;
     pointer-events: auto;
     transition: border-color 0.5s;
-    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.1);
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.08);
 }
 
 /* removed pulse-border from here */
@@ -1992,30 +2054,31 @@ a.credit-val {
    ============================================ */
 #settings-panel {
     position: fixed;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.75);
     border: 1px solid rgba(0, 0, 0, 0.12);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
     z-index: 400;
-    width: 220px;
+    width: 260px;
     font-size: 13px;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
 #settings-panel.hidden { display: none; }
 
-#settings-header {
+.panel-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 8px 12px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     color: #333;
+    margin-bottom: 10px;
 }
 
-#settings-header button {
+.panel-close {
     background: none;
     border: none;
     cursor: pointer;
@@ -2023,6 +2086,10 @@ a.credit-val {
     color: #888;
     padding: 0 2px;
     line-height: 1;
+}
+
+.panel-close:hover {
+    color: #000;
 }
 
 #settings-body {
@@ -2076,11 +2143,11 @@ a.credit-val {
     left: 72px;
     bottom: max(12px, env(safe-area-inset-bottom));
     width: 240px;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
     border: 1px solid rgba(0, 0, 0, 0.15);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     z-index: 500;
     font-size: 13px;
 }

@@ -15,6 +15,7 @@ import { resetHistory } from '../history.js';
 import { applyTransform, resizePaper } from '../canvas.js';
 import { hideAllMenus, handleOutsideClick } from './menuManager.js';
 import { updateLayerThumbnail, renderLayerButtons } from './layerPanel.js';
+import { exportPSD } from '../save.js';
 import {
     updateModeButtonIcon,
     updateToolButtonStates,
@@ -30,11 +31,8 @@ export function setupFileUI() {
     const newBtn = document.getElementById('newProjectBtn');
     const exportBtn = document.getElementById('exportProjectBtn');
     const importBtn = document.getElementById('importProjectBtn');
+    const exportPSDBtn = document.getElementById('exportPSDBtn');
     const fileInput = document.getElementById('fileInput');
-    const exportConfigBtn = document.getElementById('exportConfigBtn');
-    const importConfigBtn = document.getElementById('importConfigBtn');
-    const configInput = document.getElementById('configInput');
-    const resetConfigBtn = document.getElementById('resetConfigBtn');
 
     if (!fileBtn || !menu) return;
 
@@ -60,7 +58,7 @@ export function setupFileUI() {
     if (newBtn) {
         newBtn.addEventListener('click', async () => {
             hideAllMenus();
-            if (confirm('新規プロジェクトを作成しますか？\n（現在の作業内容は破棄されます）')) {
+            if (confirm('Create a new project?\n(Current work will be lost)')) {
                 resizePaper(2000, 2000);
                 state.scale = 1.0;
                 state.translateX = 0;
@@ -95,7 +93,7 @@ export function setupFileUI() {
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 const file = e.target.files[0];
-                if (confirm('プロジェクトを読み込みますか？\n（現在の作業内容は上書きされます）')) {
+                if (confirm('Import project?\n(Current work will be overwritten)')) {
                     importProject(file).then(async (success) => {
                         if (success) {
                             renderLayerButtons();
@@ -104,7 +102,7 @@ export function setupFileUI() {
                             }
                             await resetHistory();
                         } else {
-                            alert('読み込みに失敗しました');
+                            alert('Failed to import project');
                         }
                         fileInput.value = '';
                     });
@@ -127,43 +125,18 @@ export function setupFileUI() {
         });
     }
 
-    // Config Import/Export
-    if (exportConfigBtn) {
-        exportConfigBtn.addEventListener('click', async () => {
+    const fileCloseBtn = document.getElementById('file-close');
+
+    if (exportPSDBtn) {
+        exportPSDBtn.addEventListener('click', () => {
             hideAllMenus();
-            await exportConfig();
+            exportPSD();
         });
     }
 
-    if (importConfigBtn && configInput) {
-        importConfigBtn.addEventListener('click', () => {
-            hideAllMenus();
-            configInput.click();
-        });
-
-        configInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                const file = e.target.files[0];
-                importConfig(file).then((success) => {
-                    if (!success) alert('設定の読み込みに失敗しました');
-                    configInput.value = '';
-                });
-            }
-        });
-    }
-
-    if (resetConfigBtn) {
-        resetConfigBtn.addEventListener('click', () => {
-            hideAllMenus();
-            if (confirm('すべてのツール設定を初期状態にリセットしますか？')) {
-                resetSettings();
-                updateModeButtonIcon(state.mode, state.subTool);
-                updateToolButtonStates();
-                updateToneMenuVisibility();
-                updateBrushSizeVisibility();
-                updateBrushSizeSlider();
-                renderBrushPalette();
-            }
+    if (fileCloseBtn) {
+        fileCloseBtn.addEventListener('click', () => {
+            menu.classList.add('hidden');
         });
     }
 }

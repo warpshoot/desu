@@ -54,7 +54,15 @@ export function handleOutsideClick(e) {
     if (!e.target.closest('.tool-menu') && 
         !e.target.closest('.layer-btn') && 
         !e.target.closest('.tool-btn') && 
-        !e.target.closest('.mode-btn')) {
+        !e.target.closest('.mode-btn') &&
+        !e.target.closest('#settings-panel') && // 追加: click on panel itself
+        !e.target.closest('.panel-header')) {
         hideAllMenus();
     }
+}
+
+export function isAnyMenuOpen() {
+    // Only block drawing for top-level flyout/modal panels
+    const selectors = '#file-menu:not(.hidden), #settings-panel:not(.hidden), #save-ui:not(.hidden), #save-menu:not(.hidden)';
+    return document.querySelector(selectors) !== null;
 }

@@ -6,7 +6,11 @@ import {
 
 // Share or download a blob file (iOS Safari compatible)
 async function shareOrDownload(blob, fileName) {
-    if (navigator.canShare) {
+    // iPad/iPhone or Android mobile check
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    // PCの場合は navigator.share が使えても無視して直接保存する (ユーザー要望)
+    if (isMobile && navigator.canShare) {
         const file = new File([blob], fileName, { type: blob.type });
         try {
             if (navigator.canShare({ files: [file] })) {
@@ -322,4 +326,81 @@ export async function saveAllCanvas(transparent) {
     const h = layers[0].canvas.height;
 
     await saveRegion(0, 0, w, h);
+}
+
+/**
+ * Export layered PSD using ag-psd
+ */
+export async function exportPSD() {
+    if (layers.length === 0) return;
+    if (typeof agPsd === 'undefined') {
+        alert('PSD ライブラリが読み込まれていません。');
+        return;
+    }
+
+    const flash = document.getElementById('flash');
+    if (flash) {
+        flash.style.opacity = '0.7';
+        setTimeout(() => { flash.style.opacity = '0'; }, 100);
+    }
+
+    try {
+        const w = layers[0].canvas.width;
+        const h = layers[0].canvas.height;
+
+        // PSD オブジェクト作成
+        // 1. 各レイヤーを ag-psd 形式に変換
+        // layers 配列は [一番下, ..., 一番上] なので そのまま children へ。
+        // ただし、一番下に背景色レイヤーを差し込む
+        const children = [];
+        
+        // 背景オプション取得 (save-uiにcheckboxがあれば反映する)
+        const transparent = document.getElementById('transparentBg')?.checked || false;
+        if (!transparent) {
+            const bgCanvas = document.createElement('canvas');
+            bgCanvas.width = w;
+            bgCanvas.height = h;
+            const bgCtx = bgCanvas.getContext('2d');
+            bgCtx.fillStyle = state.canvasColor;
+            bgCtx.fillRect(0, 0, w, h);
+            children.push({
+                name: 'Background',
+                canvas: bgCanvas,
+                opacity: 1,
+                visible: true
+            });
+        }
+
+        for (const layer of layers) {
+            children.push({
+                name: `Layer ${layer.id}`,
+                canvas: layer.canvas,
+                opacity: layer.opacity,
+                visible: layer.visible
+            });
+        }
+
+        // 2. コンポジット（統合画像）の作成 (これがないとサムネイルやプレビューが出ない)
+        const compositeCanvas = mergeLayersToCanvas(0, 0, w, h, transparent);
+
+        const psd = {
+            width: w,
+            height: h,
+            children: children,
+            canvas: compositeCanvas
+        };
+
+        // 3. エンコード & 保存
+        const options = { generateThumbnail: true };
+        const buffer = agPsd.writePsd(psd, options);
+        const blob = new Blob([buffer], { type: 'application/x-photoshop' });
+        const fileName = 'desu_ink_project_' + Date.now() + '.psd';
+
+        await shareOrDownload(blob, fileName);
+        exitSaveMode();
+    } catch (err) {
+        console.error('PSD出力エラー:', err);
+        alert('PSDの出力に失敗しました: ' + err.message);
+        exitSaveMode();
+    }
 }

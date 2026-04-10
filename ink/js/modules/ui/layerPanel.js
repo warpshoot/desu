@@ -38,25 +38,61 @@ export function setupLayerPanel() {
         }
     });
 
-    layerButtons.addEventListener('pointerup', (e) => {
+    let pressTimer = null;
+    let longPressed = false;
+
+    layerButtons.addEventListener('pointerdown', (e) => {
         const btn = e.target.closest('.layer-btn');
         if (!btn) return;
 
+        longPressed = false;
+        clearTimeout(pressTimer);
+        pressTimer = setTimeout(() => {
+            longPressed = true;
+            showLayerMenu(btn);
+        }, 500); // 500ms for long press
+    });
+
+    layerButtons.addEventListener('pointermove', (e) => {
+        // If moved significantly, cancel long press
+        if (pressTimer) {
+            clearTimeout(pressTimer);
+            pressTimer = null;
+        }
+    });
+
+    layerButtons.addEventListener('pointerup', (e) => {
+        const btn = e.target.closest('.layer-btn');
+        if (!btn) {
+            clearTimeout(pressTimer);
+            return;
+        }
+
+        if (longPressed) {
+            // Already handled by long press
+            longPressed = false;
+            clearTimeout(pressTimer);
+            return;
+        }
+
+        clearTimeout(pressTimer);
         hideAllMenus();
 
         const layerId = parseInt(btn.dataset.layerId);
         flashLayer(layerId);
 
         if (layerId !== state.activeLayer) {
-            // 別レイヤーをタップ → 切り替えのみ
+            // Switch layer
             state.activeLayer = layerId;
             renderLayerButtons();
             updateActiveLayerIndicator();
         } else {
-            // アクティブなレイヤーを再タップ → メニュー展開
+            // Tap on active layer -> show menu
             showLayerMenu(btn);
         }
     });
+
+    layerButtons.addEventListener('pointercancel', () => clearTimeout(pressTimer));
 
     // Expose render function for external updates (legacy support)
     window.renderLayerButtons = renderLayerButtons;
