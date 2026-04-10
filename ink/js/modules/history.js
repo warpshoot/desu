@@ -155,7 +155,23 @@ export async function saveState({ keepRedo = false } = {}) {
 
         await Promise.all(captureTasks);
 
-        // 各 Bitmap の参照カウントを増やす
+        // 4. 履歴スタックに採用されなかった（層が消えた等）孤立ビットマップを確実に破棄
+        for (const [id, bmpPromise] of snapshotPromises) {
+            const bmp = await bmpPromise;
+            let isUsed = false;
+            for (const usedBmp of snapshot.bitmaps.values()) {
+                if (usedBmp === bmp) {
+                    isUsed = true;
+                    break;
+                }
+            }
+            if (!isUsed) {
+                bmp.close();
+            }
+        }
+
+        // 5. 各 Bitmap の参照カウントを増やす
+        // (注: ここで _incRef されるため、スタックに残る限り破棄されない)
         for (const bmp of snapshot.bitmaps.values()) {
             _incRef(bmp);
         }
