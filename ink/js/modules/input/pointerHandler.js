@@ -129,8 +129,13 @@ async function handlePointerDown(e) {
         if ((state.isPenDrawing || state.isLassoing) && e.pointerType !== 'pen') {
             const timeSinceFirstFinger = Date.now() - state.touchStartTime;
             const isTwoFingerTapIntent = timeSinceFirstFinger < 150;
-            cancelCurrentOperation();
-            if (!isTwoFingerTapIntent) state.didInteract = true;
+
+            // If a pen is involved, we prioritize it and don't cancel drawing for secondary touches
+            // (This allows the virtual shift button and palm rejection to work correctly)
+            if (!(state.isPenDrawing || state.isPenSession)) {
+                cancelCurrentOperation();
+                if (!isTwoFingerTapIntent) state.didInteract = true;
+            }
         }
         if (!isPen) return;
     }
