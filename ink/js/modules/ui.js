@@ -1328,7 +1328,8 @@ async function handlePointerDown(e) {
     state.activePointers.set(e.pointerId, {
         x: e.clientX,
         y: e.clientY,
-        totalMove: 0
+        totalMove: 0,
+        type: e.pointerType  // ← ここを追加
     });
 
     // Reset interaction flags if this is the first pointer
@@ -1546,7 +1547,12 @@ function handlePointerMove(e) {
     state.activePointers.set(e.pointerId, pointer);
 
     // 2 Fingers = Pinch / Pan
-    if (state.activePointers.size === 2) {
+    // ただし、一方がペン（Apple Pencil等）であるか、あるいはペンが介在するセッションの場合は、
+    // ジェスチャー（ピンチ・パン）ではなく描画として扱い、ここでは return しない。
+    const hasPenInPointers = Array.from(state.activePointers.values()).some(p => p.type === 'pen');
+    const isPenInvolved = hasPenInPointers || state.isPenDrawing || state.isPenSession;
+
+    if (state.activePointers.size === 2 && !isPenInvolved) {
         const pts = Array.from(state.activePointers.values());
         const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         const center = {
@@ -1602,8 +1608,8 @@ function handlePointerMove(e) {
 
     // Drawing
     if (e.pointerId === state.drawingPointerId) {
-        // Skip drawing if we just finished a pinch/pan
-        if (state.wasPinching || state.wasPanning) return;
+        // Skip drawing ONLY if we are legitimately pinching or panning (not in a pen session)
+        if (!isPenInvolved && (state.wasPinching || state.wasPanning)) return;
 
         // 入力の座標ジャンプフィルタ（高速描画時やタッチ開始時の往復防止）
         if (e.pointerType === 'pen' || e.pointerType === 'touch') {
