@@ -1323,7 +1323,8 @@ async function handlePointerDown(e) {
     }
 
     // Track active pointers with detailed state
-    if (e.target !== eventCanvas) return;
+    // ペン入力の場合は、ボタン押下などのマルチタッチ干渉を考慮してターゲットチェックを緩和する。
+    if (e.target !== eventCanvas && e.pointerType !== 'pen') return;
 
     state.activePointers.set(e.pointerId, {
         x: e.clientX,

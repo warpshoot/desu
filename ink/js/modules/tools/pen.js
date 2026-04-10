@@ -282,7 +282,7 @@ function _rebuildSmoothedPoints(fromRawIdx) {
  * pointermove で Shift が押されている間、RAF ごとに呼ばれる
  */
 export function previewStraightLine(x, y) {
-    if (!state.isPenDrawing || !_usingStrokeCanvas || strokePoints.length === 0) return;
+    if (!state.isPenDrawing || strokePoints.length === 0) return;
     const brush = _getDrawBrush();
     const start = strokePoints[0];
 
