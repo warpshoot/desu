@@ -42,9 +42,11 @@ export function setupModifierBar() {
         shiftBtn.classList.toggle('locked', state._modShiftState === 'locked');
     };
 
-    shiftBtn.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
+    const handleDown = (e) => {
+        // We use touch events for the button to avoid locking the Pointer session in Safari
+        if (e.type === 'touchstart') e.preventDefault();
         e.stopPropagation();
+        
         const now = Date.now();
         if (state._modShiftState === 'locked') {
             state._modShiftState = 'idle';
@@ -55,23 +57,43 @@ export function setupModifierBar() {
         }
         _lastTapTime = now;
         updateUI();
-    });
+    };
 
-    shiftBtn.addEventListener('pointerup', (e) => {
+    const handleUp = (e) => {
         if (state._modShiftState === 'held') {
             state._modShiftState = 'idle';
             updateUI();
         }
-    });
+    };
 
-    shiftBtn.addEventListener('pointercancel', (e) => {
+    const handleCancel = (e) => {
         if (state._modShiftState === 'held') {
-            if (state.isPenDrawing) state._modShiftPendingCancel = true;
-            else {
+            // Keep shift active if a pen session is ongoing, to survive palm rejection
+            if (state.isPenDrawing || state.isPenSession) {
+                state._modShiftPendingCancel = true;
+            } else {
                 state._modShiftState = 'idle';
                 updateUI();
             }
         }
+    };
+
+    shiftBtn.addEventListener('touchstart', handleDown, { passive: false });
+    shiftBtn.addEventListener('touchend', handleUp);
+    shiftBtn.addEventListener('touchcancel', handleCancel);
+
+    // Also keep pointer listeners as fallback for mouse/desktop, but skip preventDefault
+    shiftBtn.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'touch') return; // Handled by touchstart
+        handleDown(e);
+    });
+    shiftBtn.addEventListener('pointerup', (e) => {
+        if (e.pointerType === 'touch') return;
+        handleUp(e);
+    });
+    shiftBtn.addEventListener('pointercancel', (e) => {
+        if (e.pointerType === 'touch') return;
+        handleCancel(e);
     });
 
     // Initial sync

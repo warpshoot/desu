@@ -126,18 +126,23 @@ async function handlePointerDown(e) {
         state.initialPinchDist = state.lastPinchDist;
         state.initialPinchCenter = { ...state.lastPinchCenter };
 
+        const isPenInvolved = isPen || state.isPenSession || state.isPenDrawing;
         if ((state.isPenDrawing || state.isLassoing) && e.pointerType !== 'pen') {
             const timeSinceFirstFinger = Date.now() - state.touchStartTime;
             const isTwoFingerTapIntent = timeSinceFirstFinger < 150;
 
             // If a pen is involved, we prioritize it and don't cancel drawing for secondary touches
-            // (This allows the virtual shift button and palm rejection to work correctly)
-            if (!(state.isPenDrawing || state.isPenSession)) {
+            // BUT we still allow cancellation if it's a clear 2-finger tap intent for undo.
+            if (!isPenInvolved || isTwoFingerTapIntent) {
                 cancelCurrentOperation();
                 if (!isTwoFingerTapIntent) state.didInteract = true;
             }
         }
-        if (!isPen) return;
+        
+        // If it's a finger touch on UI, we don't return early to avoid blocking the pen
+        // but we ensure it doesn't trigger drawing logic.
+        if (!isPen && e.target !== eventCanvas) return;
+        if (!isPen && state.activePointers.size > 1 && !isPenInvolved) return;
     }
 
     if (state.activePointers.size === 1 && state.isSpacePressed) {
@@ -327,6 +332,14 @@ async function handlePointerUp(e) {
 
     if (state.activePointers.size === 0) {
         await handleGestureTaps();
+        
+        // Handle pending shift cancel from miscUI.js (palm rejection protection)
+        if (state._modShiftPendingCancel) {
+            state._modShiftPendingCancel = false;
+            state._modShiftState = 'idle';
+            if (window.updateModifierBar) window.updateModifierBar();
+        }
+
         delete state._lastPenPoint;
         delete state.isPenSession;
     }
