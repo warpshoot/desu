@@ -3,19 +3,75 @@ import { resizePaper } from './canvas.js';
 import { makeDefaultBrushes, makeDefaultFillSlots, makeDefaultEraserSlots } from './brushes.js';
 
 const STORAGE_KEY = 'desu-draw-state';
+const DB_NAME = 'DesuInkDB';
+const STORE_NAME = 'canvasData';
 let saveTimeout = null;
+
+// --- IndexedDB Helpers ---
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+function storeBlob(id, blob) {
+    return openDB().then(db => {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            tx.objectStore(STORE_NAME).put(blob, id);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    });
+}
+
+function getBlob(id) {
+    return openDB().then(db => {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const request = tx.objectStore(STORE_NAME).get(id);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    });
+}
+
+function clearOldBlobs(keepIds) {
+    return openDB().then(db => {
+        return new Promise((resolve) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            const request = store.getAllKeys();
+            request.onsuccess = () => {
+                const keys = request.result;
+                keys.forEach(key => {
+                    if (!keepIds.includes(key)) store.delete(key);
+                });
+                resolve();
+            };
+            request.onerror = () => resolve();
+        });
+    });
+}
 
 // Debounced save
 export function saveLocalState() {
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(async () => {
         try {
-            const data = {
+            const metadata = {
                 timestamp: Date.now(),
                 paperW: state.paperW,
                 paperH: state.paperH,
                 layers: [],
-                // Also save current tools for persistence
                 settings: {
                     brushes: state.brushes,
                     fillSlots: state.fillSlots,
@@ -33,29 +89,35 @@ export function saveLocalState() {
                 }
             };
 
+            const layerIds = [];
+            const blobPromises = [];
+
             for (const layer of layers) {
-                // canvas.toDataURL() は大サイズキャンバスでメインスレッドを数秒ブロックする。
-                // iOS 3x (6000×6000) では localStorage の 5MB 制限を超えるため常に失敗する。
-                // キャンバスデータのローカル保存はスキップし、設定のみを保存する。
-                // (ブロックが "連続で描画できなくなる" 現象の原因)
-                data.layers.push({
+                metadata.layers.push({
                     id: layer.id,
                     opacity: layer.opacity,
-                    visible: layer.visible,
-                    image: null
+                    visible: layer.visible
                 });
+                const storeId = `layer-${layer.id}`;
+                layerIds.push(storeId);
+                
+                const p = new Promise(resolve => {
+                    layer.canvas.toBlob(blob => {
+                        if (blob) storeBlob(storeId, blob).then(resolve);
+                        else resolve();
+                    }, 'image/png');
+                });
+                blobPromises.push(p);
             }
 
-            const json = JSON.stringify(data);
-            localStorage.setItem(STORAGE_KEY, json);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(metadata));
+            await Promise.all(blobPromises);
+            await clearOldBlobs(layerIds);
+
         } catch (e) {
-            if (e.name === 'QuotaExceededError') {
-                console.warn('[Storage] Quota exceeded, cannot save state.');
-            } else {
-                console.error('[Storage] Save failed:', e);
-            }
+            console.error('[Storage] Save failed:', e);
         }
-    }, 2000); // 2 second debounce
+    }, 2000);
 }
 
 // Load state
@@ -63,97 +125,67 @@ export function loadLocalState() {
     return new Promise(async (resolve) => {
         try {
             const json = localStorage.getItem(STORAGE_KEY);
-            if (!json) {
-                resolve(false);
-                return;
-            }
+            if (!json) return resolve(false);
 
             const data = JSON.parse(json);
-            if (!data.layers || !Array.isArray(data.layers)) {
-                resolve(false);
-                return;
-            }
+            if (!data.layers || !Array.isArray(data.layers)) return resolve(false);
 
+            if (data.settings) _restoreSettings(data.settings);
 
-            // Restore settings if present
-            if (data.settings) {
-                _restoreSettings(data.settings);
-            }
+            state.paperW = data.paperW || 2000;
+            state.paperH = data.paperH || 2000;
+            resizePaper(state.paperW, state.paperH);
 
-            // Adjust layer count
-            while (layers.length < data.layers.length) {
-                createLayer();
-            }
-            while (layers.length > data.layers.length) {
-                deleteLayer(layers[layers.length - 1].id);
-            }
+            while (layers.length < data.layers.length) createLayer();
+            while (layers.length > data.layers.length) deleteLayer(layers[layers.length - 1].id);
 
             const dpr = CANVAS_DPR;
-
-            // Determine paper size to prevent aspect ratio distortion
-            let pw = data.paperW;
-            let ph = data.paperH;
-
-            if ((!pw || !ph) && data.layers.length > 0) {
-                const tempImg = new Image();
-                await new Promise(res => {
-                    tempImg.onload = res;
-                    tempImg.src = data.layers[0].image;
-                });
-                pw = tempImg.naturalWidth / dpr;
-                ph = tempImg.naturalHeight / dpr;
-            } else if (!pw || !ph) {
-                pw = 2000;
-                ph = 2000;
-            }
-
-            // Resize paper to match the saved project aspect/size
-            resizePaper(pw, ph);
-
-            // Restore content
             let loadedCount = 0;
-            const totalLayers = data.layers.length;
 
-            function onLayerLoaded() {
+            const checkFinish = () => {
                 loadedCount++;
-                if (loadedCount === totalLayers) {
+                if (loadedCount === data.layers.length) {
                     document.dispatchEvent(new CustomEvent('desu:state-loaded'));
                     resolve(true);
                 }
-            }
+            };
 
-            data.layers.forEach((saved, index) => {
-                if (index >= layers.length) {
-                    onLayerLoaded();
-                    return;
+            for (let i = 0; i < data.layers.length; i++) {
+                const saved = data.layers[i];
+                const layer = layers[i];
+                if (!layer) {
+                    checkFinish();
+                    continue;
                 }
-                const layer = layers[index];
 
                 layer.opacity = saved.opacity ?? 1.0;
                 layer.visible = saved.visible ?? true;
                 layer.canvas.style.opacity = layer.opacity;
                 layer.canvas.style.display = layer.visible ? 'block' : 'none';
 
-                // image が null の場合はキャンバスデータなし (空レイヤー) → スキップ
-                if (!saved.image) {
-                    onLayerLoaded();
-                    return;
+                try {
+                    const blob = await getBlob(`layer-${saved.id}`);
+                    if (blob) {
+                        const url = URL.createObjectURL(blob);
+                        const img = new Image();
+                        img.onload = () => {
+                            layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+                            layer.ctx.imageSmoothingEnabled = false;
+                            layer.ctx.drawImage(img, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
+                            layer.ctx.imageSmoothingEnabled = true;
+                            URL.revokeObjectURL(url);
+                            checkFinish();
+                        };
+                        img.onerror = checkFinish;
+                        img.src = url;
+                    } else {
+                        checkFinish();
+                    }
+                } catch (err) {
+                    console.warn(`[Storage] Skip pixels for layer ${saved.id}`, err);
+                    checkFinish();
                 }
-
-                const img = new Image();
-                img.onload = () => {
-                    layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
-                    layer.ctx.imageSmoothingEnabled = false;
-                    layer.ctx.drawImage(img, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
-                    layer.ctx.imageSmoothingEnabled = true;
-                    onLayerLoaded();
-                };
-                img.onerror = () => {
-                    console.warn('[Storage] Failed to load layer image, leaving layer empty');
-                    onLayerLoaded();
-                };
-                img.src = saved.image;
-            });
+            }
 
         } catch (e) {
             console.error('[Storage] Load failed:', e);
@@ -343,6 +375,11 @@ export function resetSettings() {
     };
     _restoreSettings(config);
     saveLocalState();
+    // Clear all pixels
+    openDB().then(db => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).clear();
+    });
     document.dispatchEvent(new CustomEvent('desu:state-loaded'));
 }
 

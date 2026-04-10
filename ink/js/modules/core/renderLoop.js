@@ -21,6 +21,23 @@ let _straightLineEnd = null;   // Shift+直線: RAF pending 更新用 (flushで 
 let _lastStraightEnd = null;   // Shift+直線: ストローク中の最新終点 (pointerup まで保持)
 let _strokeStartPoint = null;  // Shift+直線: ストローク開始点 (ガイド描画に使用)
 
+// Bounding box of the current stroke (canvas coords)
+let _strokeBounds = null;
+
+/**
+ * 矩形を現在のストローク範囲に統合
+ */
+function _updateStrokeBounds(x, y, padding = 0) {
+    if (!_strokeBounds) {
+        _strokeBounds = { minX: x - padding, minY: y - padding, maxX: x + padding, maxY: y + padding };
+        return;
+    }
+    _strokeBounds.minX = Math.min(_strokeBounds.minX, x - padding);
+    _strokeBounds.minY = Math.min(_strokeBounds.minY, y - padding);
+    _strokeBounds.maxX = Math.max(_strokeBounds.maxX, x + padding);
+    _strokeBounds.maxY = Math.max(_strokeBounds.maxY, y + padding);
+}
+
 /**
  * 消しゴムペン / 点描の直線プレビューをlassoCanvasに描画
  * ブラシ幅を反映したコリドー（半透明帯 + 中心ダッシュ線）を表示する
@@ -142,10 +159,16 @@ export function clearStraightLineGuide() {
 }
 
 export function addPendingPoints(pts) {
+    const isEraser = state.mode === 'eraser';
+    const brushSize = isEraser ? state.eraserSize : (state.activeBrush?.size ?? 4);
+    const padding = brushSize / 2 + 2;
+
     if (Array.isArray(pts)) {
         _pendingDrawPoints.push(...pts);
+        pts.forEach(p => _updateStrokeBounds(p.x, p.y, padding));
     } else {
         _pendingDrawPoints.push(pts);
+        _updateStrokeBounds(pts.x, pts.y, padding);
     }
     if (!_drawRafId) {
         _drawRafId = requestAnimationFrame(flushDrawPoints);
@@ -154,6 +177,12 @@ export function addPendingPoints(pts) {
 
 export function setStraightLineEnd(pt) {
     _straightLineEnd = pt;
+    if (pt) {
+        const isEraser = state.mode === 'eraser';
+        const brushSize = isEraser ? state.eraserSize : (state.activeBrush?.size ?? 4);
+        const padding = brushSize / 2 + 2;
+        _updateStrokeBounds(pt.x, pt.y, padding);
+    }
     if (_straightLineEnd && !_drawRafId) {
         _drawRafId = requestAnimationFrame(flushDrawPoints);
     }
@@ -161,6 +190,12 @@ export function setStraightLineEnd(pt) {
 
 export function setStrokeStartPoint(pt) {
     _strokeStartPoint = pt;
+    if (pt) {
+        const isEraser = state.mode === 'eraser';
+        const brushSize = isEraser ? state.eraserSize : (state.activeBrush?.size ?? 4);
+        const padding = brushSize / 2 + 2;
+        _updateStrokeBounds(pt.x, pt.y, padding);
+    }
 }
 
 export function getStrokeStartPoint() {
@@ -177,4 +212,12 @@ export function getLastStraightEnd() {
 
 export function clearPendingPoints() {
     _pendingDrawPoints = [];
+}
+
+export function getStrokeBounds() {
+    return _strokeBounds;
+}
+
+export function resetStrokeBounds() {
+    _strokeBounds = null;
 }

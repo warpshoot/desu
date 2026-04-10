@@ -74,7 +74,7 @@ export function markLayerDirty(layerId) {
 }
 window.markLayerDirty = markLayerDirty;
 
-export async function saveState({ keepRedo = false } = {}) {
+export async function saveState({ keepRedo = false, rect = null } = {}) {
     // 1. 変更があるレイヤーを同期的に特定 (指紋チェック)
     //    createImageBitmap の呼び出し自体は RAF まで遅延する:
     //    - pen mode では RAF 発火時も layer.canvas が "ストローク前" 状態を保っている
@@ -179,7 +179,8 @@ export async function saveState({ keepRedo = false } = {}) {
         state.undoStack.push(snapshot);
         saveLocalState();
 
-        if (state.undoStack.length > state.MAX_HISTORY) {
+        const max = state.MAX_HISTORY || 30; // 30ステップまで拡張
+        if (state.undoStack.length > max) {
             const old = state.undoStack.shift();
             _closeAllBitmaps(old);
         }
@@ -247,7 +248,8 @@ export async function undo() {
         const current = state.undoStack.pop();
         state.redoStack.push(current);
 
-        if (state.redoStack.length > state.MAX_HISTORY) {
+        const max = state.MAX_HISTORY || 30;
+        if (state.redoStack.length > max) {
             const old = state.redoStack.shift();
             _closeAllBitmaps(old);
         }
@@ -277,7 +279,8 @@ export async function redo() {
         const next = state.redoStack.pop();
         state.undoStack.push(next);
         
-        if (state.undoStack.length > state.MAX_HISTORY) {
+        const max = state.MAX_HISTORY || 30;
+        if (state.undoStack.length > max) {
             const old = state.undoStack.shift();
             _closeAllBitmaps(old);
         }

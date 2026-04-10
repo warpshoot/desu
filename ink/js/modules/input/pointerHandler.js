@@ -20,7 +20,9 @@ import {
     setLastStraightEnd,
     cancelAndFlushDrawPoints,
     clearStraightLineGuide,
-    getLastStraightEnd
+    getLastStraightEnd,
+    getStrokeBounds,
+    resetStrokeBounds
 } from '../core/renderLoop.js';
 import { handlePinchPan, handleGestureTaps } from './gestureHandler.js';
 import { executeClearLayer } from '../ui/toolPanel.js';
@@ -61,7 +63,9 @@ import {
     finishRectSelect,
     startLassoSelect,
     updateLassoSelect,
-    finishLassoSelect
+    finishLassoSelect,
+    pushSelectionClip,
+    popSelectionClip
 } from '../tools/selection.js';
 import { setSelectionToolbarInteractive } from '../ui/selectionUI.js';
 import { hideUnpinnedMenus } from '../ui/menuManager.js';
@@ -203,6 +207,7 @@ async function handlePointerDown(e) {
                 else startLassoSelect(e.clientX, e.clientY);
             }
         } else if (state.mode === 'pen') {
+            resetStrokeBounds();
             if (state.subTool === 'stipple') {
                 state._pendingSave = null;
                 startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
@@ -213,14 +218,17 @@ async function handlePointerDown(e) {
             setStrokeStartPoint({ x: canvasPoint.x, y: canvasPoint.y });
             setLastStraightEnd(null);
         } else if (state.mode === 'fill') {
+            resetStrokeBounds();
             startLasso(e.clientX, e.clientY);
         } else if (state.mode === 'eraser') {
             if (state.subTool === 'clear') {
                 executeClearLayer();
                 return;
             } else if (state.subTool === 'lasso') {
+                resetStrokeBounds();
                 startLasso(e.clientX, e.clientY);
             } else {
+                resetStrokeBounds();
                 state._pendingSave = saveState({ keepRedo: true });
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
                 setStrokeStartPoint({ x: canvasPoint.x, y: canvasPoint.y });
@@ -365,7 +373,6 @@ async function handlePointerUp(e) {
                     await saveState();
                     const ctx = getActiveLayerCtx();
                     if (ctx) {
-                        const { pushSelectionClip, popSelectionClip } = await import('../tools/selection.js');
                         const clipped = pushSelectionClip(ctx);
                         await executeBucketFill(cp.x, cp.y, slot);
                         if (clipped) popSelectionClip(ctx);
@@ -377,7 +384,6 @@ async function handlePointerUp(e) {
                 await saveState();
                 const ctx = getActiveLayerCtx();
                 if (ctx) {
-                    const { pushSelectionClip, popSelectionClip } = await import('../tools/selection.js');
                     const clipped = pushSelectionClip(ctx);
                     await executeLassoFill(points, slot);
                     if (clipped) popSelectionClip(ctx);
@@ -389,8 +395,11 @@ async function handlePointerUp(e) {
             const straightEnd = getLastStraightEnd();
             cancelAndFlushDrawPoints();
             commitRedoClear();
-            await saveState({ keepRedo: true });
+
+            const bounds = getStrokeBounds();
+            await saveState({ keepRedo: true, rect: bounds });
             state._pendingSave = null;
+            resetStrokeBounds();
 
             if (state.mode === 'pen' && state.subTool === 'stipple') {
                 if (straightEnd) drawStippleLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
