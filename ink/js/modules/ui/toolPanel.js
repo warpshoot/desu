@@ -479,7 +479,10 @@ export function setupBrushSettingsPanel() {
         });
     }
 
-    closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+    closeBtn.addEventListener('click', () => {
+        panel.classList.add('hidden');
+        updateToneMenuVisibility();
+    });
 }
 
 export function openBrushSettings(idx) {
@@ -530,6 +533,7 @@ export function openBrushSettings(idx) {
         panel.style.left = `64px`;
         panel.style.top = `${Math.max(12, Math.min(window.innerHeight - 412, rect.top - 60))}px`;
     }
+    updateToneMenuVisibility();
 }
 
 // Stubs for other panels - to be implemented fully if needed
@@ -590,6 +594,7 @@ export function setupFillSettingsPanel() {
             updateToneMenuVisibility();
         }
         renderBrushPalette();
+        updateToneMenuVisibility();
     };
 
     [subToolSel, opSlider, bucketCheck, toleranceSel, aaCheck, stabCheck, stabDistSlider].forEach(el => {
@@ -620,6 +625,7 @@ export function setupFillSettingsPanel() {
         closeBtn.addEventListener('click', () => {
             panel.classList.add('hidden');
             _hideGapClosePreview();
+            updateToneMenuVisibility();
         });
     }
 }
@@ -668,6 +674,7 @@ export function openFillSettings(idx) {
         panel.style.left = `64px`;
         panel.style.top = `${Math.max(12, Math.min(window.innerHeight - 312, rect.top - 60))}px`;
     }
+    updateToneMenuVisibility();
 }
 
 export function setupEraserSettingsPanel() {
@@ -745,6 +752,7 @@ export function setupEraserSettingsPanel() {
             updateBrushSizeVisibility();
         }
         renderBrushPalette();
+        updateToneMenuVisibility();
     };
 
     [subToolSel, bucketCheck, toleranceSel, aaCheck, stabCheck, stabDistSlider, stabStringCheck, stabGuideCheck, psizeCheck, curveSlider]
@@ -774,6 +782,7 @@ export function setupEraserSettingsPanel() {
         closeBtn.addEventListener('click', () => {
             panel.classList.add('hidden');
             _hideGapClosePreview();
+            updateToneMenuVisibility();
         });
     }
 }
@@ -837,6 +846,7 @@ export function openEraserSettings(idx) {
         panel.style.left = `64px`;
         panel.style.top = `${Math.max(12, Math.min(window.innerHeight - 350, rect.top - 60))}px`;
     }
+    updateToneMenuVisibility();
 }
 
 export async function executeClearLayer() {

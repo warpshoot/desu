@@ -58,7 +58,16 @@ export function updateToneMenuVisibility() {
     const menu = document.getElementById('tone-menu');
     if (!menu) return;
 
-    if (state.mode === 'fill' && state.subTool === 'tone') {
+    // Check if we are currently editing Tone sub-tool settings in the Fill Settings panel
+    const fillSettings = document.getElementById('fill-settings-panel');
+    const isEditingTone = fillSettings && !fillSettings.classList.contains('hidden') && 
+                          document.getElementById('fs-subtool')?.value === 'tone';
+
+    const shouldShow = (state.mode === 'fill' && state.subTool === 'tone') || 
+                       isEditingTone || 
+                       state.isToneMenuPinned;
+
+    if (shouldShow) {
         const fillSlot = state.fillSlots[state.activeFillSlotIndex];
         if (fillSlot && fillSlot.tonePresetId) {
             setTonePreset(fillSlot.tonePresetId);
@@ -71,11 +80,12 @@ export function updateToneMenuVisibility() {
 
         menu.classList.remove('hidden');
 
+        // Position alignment
         const fillBtn = document.getElementById('mode-fill');
         if (fillBtn) {
             const rect = fillBtn.getBoundingClientRect();
 
-            // Overlap check: Shift right if any tool settings panel is visible
+            // Shift right if ANY tool settings panel is visible (to avoid overlap)
             const isAnySettingsVisible = 
                 !document.getElementById('brush-settings-panel')?.classList.contains('hidden') ||
                 !document.getElementById('fill-settings-panel')?.classList.contains('hidden') ||
@@ -86,8 +96,6 @@ export function updateToneMenuVisibility() {
             menu.style.bottom = 'auto';
         }
     } else {
-        if (!state.isToneMenuPinned) {
-            menu.classList.add('hidden');
-        }
+        menu.classList.add('hidden');
     }
 }
