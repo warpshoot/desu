@@ -91,7 +91,7 @@ export function updateToneMenuVisibility() {
                 !document.getElementById('fill-settings-panel')?.classList.contains('hidden') ||
                 !document.getElementById('eraser-settings-panel')?.classList.contains('hidden');
 
-            menu.style.left = isAnySettingsVisible ? `312px` : `64px`;
+            menu.style.left = `64px`;
             menu.style.top = `${rect.top}px`;
             menu.style.bottom = 'auto';
         }
