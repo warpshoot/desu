@@ -1,4 +1,22 @@
 import { state, layers, createLayer, deleteLayer, CANVAS_DPR } from './state.js';
+
+// 1× 解像度のダウンスケールキャンバスを作成して toBlob する
+// 4000×4000 → 2000×2000 で blob サイズを 1/4 に削減
+function _layerToBlob(layer, callback) {
+    const dpr = CANVAS_DPR;
+    if (dpr <= 1) {
+        layer.canvas.toBlob(callback, 'image/png');
+        return;
+    }
+    const w = layer.canvas.width / dpr;
+    const h = layer.canvas.height / dpr;
+    const tmp = document.createElement('canvas');
+    tmp.width = w;
+    tmp.height = h;
+    tmp.getContext('2d').drawImage(layer.canvas, 0, 0, w, h);
+    tmp.toBlob(callback, 'image/png');
+}
+
 import { resizePaper } from './canvas.js';
 import { makeDefaultBrushes, makeDefaultFillSlots, makeDefaultEraserSlots } from './brushes.js';
 
@@ -65,7 +83,7 @@ function clearOldBlobs(keepIds) {
 // Debounced save
 export function saveLocalState() {
     clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(async () => {
+    saveTimeout = setTimeout(async () => {  // 5000ms: 頻繁な描画中の重複起動を抑制
         try {
             const metadata = {
                 timestamp: Date.now(),
@@ -102,10 +120,10 @@ export function saveLocalState() {
                 layerIds.push(storeId);
                 
                 const p = new Promise(resolve => {
-                    layer.canvas.toBlob(blob => {
+                    _layerToBlob(layer, blob => {
                         if (blob) storeBlob(storeId, blob).then(resolve);
                         else resolve();
-                    }, 'image/png');
+                    });
                 });
                 blobPromises.push(p);
             }
@@ -117,7 +135,7 @@ export function saveLocalState() {
         } catch (e) {
             console.error('[Storage] Save failed:', e);
         }
-    }, 2000);
+    }, 5000);
 }
 
 // Load state
