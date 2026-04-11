@@ -223,6 +223,11 @@ export async function saveInitialState() {
         _incRef(bmp);
     }
     state.undoStack.push(snapshot);
+    // saveState の structureChanged 判定に使う文字列を同期させる。
+    // これをしないと最初のストロークの saveState で _lastSavedLayerIds が ""
+    // のままになり、structureChanged=true と判定されて空の重複スナップショットが
+    // 積まれ、初回アンドゥが 2 ステップ消費される原因になる。
+    _lastSavedLayerIds = layers.map(l => l.id).join(',');
 }
 
 /**
