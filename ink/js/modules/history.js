@@ -74,6 +74,18 @@ export function markLayerDirty(layerId) {
 }
 window.markLayerDirty = markLayerDirty;
 
+/**
+ * レイヤーを最後の保存済み状態と「差分なし」に同期する
+ * cancelCurrentOperation でピクセルを restoreLayer した後に呼び、
+ * 次の saveState で不要なスナップショットが積まれないようにする
+ */
+export function syncLayerFingerprint(layerId) {
+    const fp = _lastDispatchedFingerprints.get(layerId);
+    if (fp !== undefined) {
+        _layerFingerprints.set(layerId, fp);
+    }
+}
+
 export async function saveState({ keepRedo = false, rect = null } = {}) {
     // 1. 変更があるレイヤーを同期的に特定 (指紋チェック)
     //    createImageBitmap の呼び出し自体は RAF まで遅延する:

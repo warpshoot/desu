@@ -10,7 +10,8 @@ import { getCanvasPoint } from '../utils.js';
 import {
     saveState,
     commitRedoClear,
-    restoreLayer
+    restoreLayer,
+    syncLayerFingerprint
 } from '../history.js';
 import { applyTransform } from '../canvas.js';
 import {
@@ -218,10 +219,8 @@ async function handlePointerDown(e) {
         } else if (state.mode === 'pen') {
             resetStrokeBounds();
             if (state.subTool === 'stipple') {
-                state._pendingSave = null;
                 startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             } else {
-                state._pendingSave = saveState({ keepRedo: true });
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
             setStrokeStartPoint({ x: canvasPoint.x, y: canvasPoint.y });
@@ -238,7 +237,6 @@ async function handlePointerDown(e) {
                 startLasso(e.clientX, e.clientY);
             } else {
                 resetStrokeBounds();
-                state._pendingSave = saveState({ keepRedo: true });
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
                 setStrokeStartPoint({ x: canvasPoint.x, y: canvasPoint.y });
                 setLastStraightEnd(null);
@@ -407,7 +405,6 @@ async function handlePointerUp(e) {
 
             const bounds = getStrokeBounds();
             await saveState({ keepRedo: true, rect: bounds });
-            state._pendingSave = null;
             resetStrokeBounds();
 
             if (state.mode === 'pen' && state.subTool === 'stipple') {
@@ -454,11 +451,18 @@ function cancelCurrentOperation() {
     if (state.isLassoing) finishLasso();
     if (state.isPenDrawing) {
         const layer = getActiveLayer();
-        if (layer) restoreLayer(layer.id);
+        if (layer) {
+            restoreLayer(layer.id);
+            // ピクセルを復元した後、dirty フラグも同期させる。
+            // これをしないと次の saveState が「差分あり」と誤判定し
+            // 直前と同一内容のスナップショットを余分に積んでしまう。
+            syncLayerFingerprint(layer.id);
+        }
         if (strokeCanvas && strokeCtx) {
             strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
         }
-        state.undoStack.pop();
+        // undoStack.pop() は削除: ストローク開始時に saveState を呼ばなくなったため
+        // pop するエントリが存在せず、正規エントリを誤削除していた
         state.isPenDrawing = false;
     }
     state.drawingPointerId = null;
