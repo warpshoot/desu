@@ -143,10 +143,14 @@ async function handlePointerDown(e) {
         state.initialPinchDist = state.lastPinchDist;
         state.initialPinchCenter = { ...state.lastPinchCenter };
 
-        // If we are starting a multi-touch session, cancel any active drawing
+        // If we are starting a multi-touch session, cancel any active drawing.
+        // didInteract は意図的にセットしない:
+        // 1本目の着地で startPenDrawing が走っていても、それは 2本指ジェスチャーの
+        // 前置きに過ぎない。ここで didInteract=true にすると handleGestureTaps の
+        // タップ判定が潰れ、2本指アンドゥ/3本指リドゥが効かなくなる。
+        // 実際に移動・ピンチ・パンがあれば後続の handlePointerMove で didInteract が立つ。
         if (state.isPenDrawing || state.isLassoing) {
             cancelCurrentOperation();
-            state.didInteract = true;
         }
         
         // Prevent drawing with the second pointer
