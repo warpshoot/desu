@@ -439,6 +439,12 @@ function handlePointerCancel(e) {
     if (state.activePointers.has(e.pointerId)) state.activePointers.delete(e.pointerId);
     try { eventCanvas.releasePointerCapture(e.pointerId); } catch (err) { }
     if (e.pointerId === state.drawingPointerId) cancelCurrentOperation();
+    // iOS はマルチタッチ開始時に1本目の pointercancel を発火させる。
+    // 他のポインタがまだ残っていれば、これはパン/ジェスチャーの開始なので
+    // アンドゥが誤発火しないように didInteract をセット。
+    if (state.activePointers.size > 0 && state.maxFingers >= 2) {
+        state.didInteract = true;
+    }
     if (state.activePointers.size === 0) {
         state.isPanning = false;
         state.isPinching = false;
