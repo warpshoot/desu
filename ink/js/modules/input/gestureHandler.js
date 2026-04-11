@@ -48,9 +48,10 @@ export function handlePinchPan(e) {
         const distDelta = Math.abs(dist - state.initialPinchDist);
         const centerDelta = Math.hypot(center.x - state.initialPinchCenter.x, center.y - state.initialPinchCenter.y);
 
-        // 8px 以上の移動でアンドゥジェスチャーをブロック。
-        // 従来は 20px 超えないと didInteract が立たず、小さなパンがアンドゥに化けていた。
-        if (centerDelta > 8) {
+        // 1px 以上の移動でアンドゥジェスチャーをブロック。
+        // タップは移動ゼロ（タッチジッターは通常 1px 未満）なので、
+        // パン操作のわずかな移動でも確実に didInteract をセットする。
+        if (centerDelta > 1) {
             state.didInteract = true;
         }
 

@@ -331,7 +331,11 @@ async function handlePointerUp(e) {
     }
 
     const pointer = state.activePointers.get(e.pointerId);
-    if (pointer && pointer.totalMove > 20) state.didInteract = true;
+    if (pointer) {
+        // マルチタッチ時は低い閾値でもパン/ズームと判定してアンドゥ誤発火を防ぐ
+        const moveThreshold = state.maxFingers >= 2 ? 4 : 20;
+        if (pointer.totalMove > moveThreshold) state.didInteract = true;
+    }
     state.activePointers.delete(e.pointerId);
 
     try { eventCanvas.releasePointerCapture(e.pointerId); } catch (err) { }
@@ -403,10 +407,12 @@ async function handlePointerUp(e) {
             cancelAndFlushDrawPoints();
             commitRedoClear();
 
-            const bounds = getStrokeBounds();
-            await saveState({ keepRedo: true, rect: bounds });
-            resetStrokeBounds();
-
+            // endPenDrawing/endStippleDrawing を先に呼ぶ。
+            // これにより strokeCanvas → layer への合成と markLayerDirty が完了し、
+            // 直後の saveState が「ストロークあり＝dirty」として正しく後ストローク
+            // スナップショットを保存できる。
+            // 旧順序（saveState→endPen）では saveState 時点で layer がまだ空だったため
+            // early return → undo 時に saveState が再度走り「2ステップ消費」になっていた。
             if (state.mode === 'pen' && state.subTool === 'stipple') {
                 if (straightEnd) drawStippleLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
                 endStippleDrawing();
@@ -419,6 +425,10 @@ async function handlePointerUp(e) {
                 endPenDrawing();
                 clearPenDirtyRect();
             }
+
+            const bounds = getStrokeBounds();
+            await saveState({ keepRedo: true, rect: bounds });
+            resetStrokeBounds();
 
             if (_thumbRafId) cancelAnimationFrame(_thumbRafId);
             const _tl = getActiveLayer();
