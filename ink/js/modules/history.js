@@ -74,6 +74,18 @@ export function markLayerDirty(layerId) {
 }
 window.markLayerDirty = markLayerDirty;
 
+/**
+ * レイヤーを最後の保存済み状態と「差分なし」に同期する
+ * cancelCurrentOperation でピクセルを restoreLayer した後に呼び、
+ * 次の saveState で不要なスナップショットが積まれないようにする
+ */
+export function syncLayerFingerprint(layerId) {
+    const fp = _lastDispatchedFingerprints.get(layerId);
+    if (fp !== undefined) {
+        _layerFingerprints.set(layerId, fp);
+    }
+}
+
 export async function saveState({ keepRedo = false, rect = null } = {}) {
     // 1. 変更があるレイヤーを同期的に特定 (指紋チェック)
     //    createImageBitmap の呼び出し自体は RAF まで遅延する:
@@ -179,7 +191,7 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
         state.undoStack.push(snapshot);
         saveLocalState();
 
-        const max = state.MAX_HISTORY || 30; // 30ステップまで拡張
+        const max = state.MAX_HISTORY || 10;
         if (state.undoStack.length > max) {
             const old = state.undoStack.shift();
             _closeAllBitmaps(old);
@@ -211,6 +223,11 @@ export async function saveInitialState() {
         _incRef(bmp);
     }
     state.undoStack.push(snapshot);
+    // saveState の structureChanged 判定に使う文字列を同期させる。
+    // これをしないと最初のストロークの saveState で _lastSavedLayerIds が ""
+    // のままになり、structureChanged=true と判定されて空の重複スナップショットが
+    // 積まれ、初回アンドゥが 2 ステップ消費される原因になる。
+    _lastSavedLayerIds = layers.map(l => l.id).join(',');
 }
 
 /**
@@ -248,7 +265,7 @@ export async function undo() {
         const current = state.undoStack.pop();
         state.redoStack.push(current);
 
-        const max = state.MAX_HISTORY || 30;
+        const max = state.MAX_HISTORY || 10;
         if (state.redoStack.length > max) {
             const old = state.redoStack.shift();
             _closeAllBitmaps(old);
@@ -279,7 +296,7 @@ export async function redo() {
         const next = state.redoStack.pop();
         state.undoStack.push(next);
         
-        const max = state.MAX_HISTORY || 30;
+        const max = state.MAX_HISTORY || 10;
         if (state.undoStack.length > max) {
             const old = state.undoStack.shift();
             _closeAllBitmaps(old);

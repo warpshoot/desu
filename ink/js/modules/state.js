@@ -306,6 +306,7 @@ export const state = {
     //   select: 'rect' | 'lasso'
     mode: 'pen',
     subTool: 'pen',
+    selectSubTool: 'rect',  // select モード専用サブツール (mode切替後も保持)
 
     // Backward-compatible getters (used by pen.js, fill.js, ui.js internals)
     get currentTool() {
@@ -345,7 +346,7 @@ export const state = {
     translateY: 0,
 
     // Global History (unified, no per-layer stacks)
-    MAX_HISTORY: 30,
+    MAX_HISTORY: 10,
     undoStack: [],   // Each entry: Map<layerId, ImageBitmap>
     redoStack: [],
 

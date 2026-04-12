@@ -32,6 +32,12 @@ export function handlePinchPan(e) {
     const isPenInvolved = hasPenInPointers || state.isPenDrawing || state.isPenSession;
 
     if (state.activePointers.size === 2 && !isPenInvolved) {
+        // maxFingers > 2 の場合はピンチ判定を完全スキップ。
+        // 3本指タップで1本目が先に離れると残り2本が handlePinchPan に入り、
+        // initialPinchDist（1本目-2本目間）と現在距離（2本目-3本目間）の差が
+        // 大きくなってズームが誤発火する。
+        if (state.maxFingers > 2) return false;
+
         const pts = Array.from(state.activePointers.values());
         const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         const center = {
@@ -41,6 +47,13 @@ export function handlePinchPan(e) {
 
         const distDelta = Math.abs(dist - state.initialPinchDist);
         const centerDelta = Math.hypot(center.x - state.initialPinchCenter.x, center.y - state.initialPinchCenter.y);
+
+        // 1px 以上の移動でアンドゥジェスチャーをブロック。
+        // タップは移動ゼロ（タッチジッターは通常 1px 未満）なので、
+        // パン操作のわずかな移動でも確実に didInteract をセットする。
+        if (centerDelta > 1) {
+            state.didInteract = true;
+        }
 
         if (distDelta > 20 || centerDelta > 20) {
             state.isPinching = true;

@@ -10,7 +10,8 @@ import { getCanvasPoint } from '../utils.js';
 import {
     saveState,
     commitRedoClear,
-    restoreLayer
+    restoreLayer,
+    syncLayerFingerprint
 } from '../history.js';
 import { applyTransform } from '../canvas.js';
 import {
@@ -143,10 +144,14 @@ async function handlePointerDown(e) {
         state.initialPinchDist = state.lastPinchDist;
         state.initialPinchCenter = { ...state.lastPinchCenter };
 
-        // If we are starting a multi-touch session, cancel any active drawing
+        // If we are starting a multi-touch session, cancel any active drawing.
+        // didInteract は意図的にセットしない:
+        // 1本目の着地で startPenDrawing が走っていても、それは 2本指ジェスチャーの
+        // 前置きに過ぎない。ここで didInteract=true にすると handleGestureTaps の
+        // タップ判定が潰れ、2本指アンドゥ/3本指リドゥが効かなくなる。
+        // 実際に移動・ピンチ・パンがあれば後続の handlePointerMove で didInteract が立つ。
         if (state.isPenDrawing || state.isLassoing) {
             cancelCurrentOperation();
-            state.didInteract = true;
         }
         
         // Prevent drawing with the second pointer
@@ -214,10 +219,8 @@ async function handlePointerDown(e) {
         } else if (state.mode === 'pen') {
             resetStrokeBounds();
             if (state.subTool === 'stipple') {
-                state._pendingSave = null;
                 startStippleDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             } else {
-                state._pendingSave = saveState({ keepRedo: true });
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
             }
             setStrokeStartPoint({ x: canvasPoint.x, y: canvasPoint.y });
@@ -234,7 +237,6 @@ async function handlePointerDown(e) {
                 startLasso(e.clientX, e.clientY);
             } else {
                 resetStrokeBounds();
-                state._pendingSave = saveState({ keepRedo: true });
                 startPenDrawing(canvasPoint.x, canvasPoint.y, e.pressure);
                 setStrokeStartPoint({ x: canvasPoint.x, y: canvasPoint.y });
                 setLastStraightEnd(null);
@@ -329,7 +331,11 @@ async function handlePointerUp(e) {
     }
 
     const pointer = state.activePointers.get(e.pointerId);
-    if (pointer && pointer.totalMove > 20) state.didInteract = true;
+    if (pointer) {
+        // マルチタッチ時は低い閾値でもパン/ズームと判定してアンドゥ誤発火を防ぐ
+        const moveThreshold = state.maxFingers >= 2 ? 4 : 20;
+        if (pointer.totalMove > moveThreshold) state.didInteract = true;
+    }
     state.activePointers.delete(e.pointerId);
 
     try { eventCanvas.releasePointerCapture(e.pointerId); } catch (err) { }
@@ -401,11 +407,12 @@ async function handlePointerUp(e) {
             cancelAndFlushDrawPoints();
             commitRedoClear();
 
-            const bounds = getStrokeBounds();
-            await saveState({ keepRedo: true, rect: bounds });
-            state._pendingSave = null;
-            resetStrokeBounds();
-
+            // endPenDrawing/endStippleDrawing を先に呼ぶ。
+            // これにより strokeCanvas → layer への合成と markLayerDirty が完了し、
+            // 直後の saveState が「ストロークあり＝dirty」として正しく後ストローク
+            // スナップショットを保存できる。
+            // 旧順序（saveState→endPen）では saveState 時点で layer がまだ空だったため
+            // early return → undo 時に saveState が再度走り「2ステップ消費」になっていた。
             if (state.mode === 'pen' && state.subTool === 'stipple') {
                 if (straightEnd) drawStippleLine(straightEnd.x, straightEnd.y, straightEnd.pressure);
                 endStippleDrawing();
@@ -418,6 +425,10 @@ async function handlePointerUp(e) {
                 endPenDrawing();
                 clearPenDirtyRect();
             }
+
+            const bounds = getStrokeBounds();
+            await saveState({ keepRedo: true, rect: bounds });
+            resetStrokeBounds();
 
             if (_thumbRafId) cancelAnimationFrame(_thumbRafId);
             const _tl = getActiveLayer();
@@ -438,6 +449,12 @@ function handlePointerCancel(e) {
     if (state.activePointers.has(e.pointerId)) state.activePointers.delete(e.pointerId);
     try { eventCanvas.releasePointerCapture(e.pointerId); } catch (err) { }
     if (e.pointerId === state.drawingPointerId) cancelCurrentOperation();
+    // iOS はマルチタッチ開始時に1本目の pointercancel を発火させる。
+    // 他のポインタがまだ残っていれば、これはパン/ジェスチャーの開始なので
+    // アンドゥが誤発火しないように didInteract をセット。
+    if (state.activePointers.size > 0 && state.maxFingers >= 2) {
+        state.didInteract = true;
+    }
     if (state.activePointers.size === 0) {
         state.isPanning = false;
         state.isPinching = false;
@@ -450,11 +467,18 @@ function cancelCurrentOperation() {
     if (state.isLassoing) finishLasso();
     if (state.isPenDrawing) {
         const layer = getActiveLayer();
-        if (layer) restoreLayer(layer.id);
+        if (layer) {
+            restoreLayer(layer.id);
+            // ピクセルを復元した後、dirty フラグも同期させる。
+            // これをしないと次の saveState が「差分あり」と誤判定し
+            // 直前と同一内容のスナップショットを余分に積んでしまう。
+            syncLayerFingerprint(layer.id);
+        }
         if (strokeCanvas && strokeCtx) {
             strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
         }
-        state.undoStack.pop();
+        // undoStack.pop() は削除: ストローク開始時に saveState を呼ばなくなったため
+        // pop するエントリが存在せず、正規エントリを誤削除していた
         state.isPenDrawing = false;
     }
     state.drawingPointerId = null;
