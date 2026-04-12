@@ -182,6 +182,8 @@ async function handlePointerDown(e) {
         state.drawingPointerId = e.pointerId;
         state.strokeMade = false;
         document.body.classList.add('is-drawing-active');
+        state._uiCollisionRects = Array.from(document.querySelectorAll('#toolbar-left, #toolbar-right, #modifier-bar, #layer-panel, #select-toolbar, #resetZoomBtn, .tool-menu:not(.hidden), .flyout-menu:not(.hidden), #fill-settings-panel:not(.hidden), #eraser-settings-panel:not(.hidden), #brush-settings-panel:not(.hidden)'))
+            .map(el => { return { el, rect: el.getBoundingClientRect(), isFaded: false }; });
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
         if (state.mode === 'select') {
@@ -266,6 +268,23 @@ function handlePointerMove(e) {
     if (pointer.totalMove > 35) state.didInteract = true;
 
     if (e.pointerId === state.drawingPointerId) {
+        if (state._uiCollisionRects) {
+            const prox = 40;
+            for (let item of state._uiCollisionRects) {
+                const r = item.rect;
+                if (e.clientX >= r.left - prox && e.clientX <= r.right + prox &&
+                    e.clientY >= r.top - prox && e.clientY <= r.bottom + prox) {
+                    if (!item.isFaded) {
+                        item.el.classList.add('ui-faded');
+                        item.isFaded = true;
+                    }
+                } else if (item.isFaded) {
+                    item.el.classList.remove('ui-faded');
+                    item.isFaded = false;
+                }
+            }
+        }
+
         const hasPenInPointers = Array.from(state.activePointers.values()).some(p => p.type === 'pen');
         const isPenInvolved = hasPenInPointers || state.isPenDrawing || state.isPenSession;
         if (!isPenInvolved && (state.wasPinching || state.wasPanning)) return;
@@ -441,6 +460,10 @@ async function handlePointerUp(e) {
         }
         state.drawingPointerId = null;
     }
+    if (state._uiCollisionRects) {
+        for (let item of state._uiCollisionRects) item.el.classList.remove('ui-faded');
+        state._uiCollisionRects = null;
+    }
     document.body.classList.remove('is-drawing-active');
     state.isPenDrawing = false;
     state.isLassoing = false;
@@ -465,6 +488,10 @@ function handlePointerCancel(e) {
 }
 
 function cancelCurrentOperation() {
+    if (state._uiCollisionRects) {
+        for (let item of state._uiCollisionRects) item.el.classList.remove('ui-faded');
+        state._uiCollisionRects = null;
+    }
     document.body.classList.remove('is-drawing-active');
     cancelAndFlushDrawPoints();
     if (state.isLassoing) finishLasso();

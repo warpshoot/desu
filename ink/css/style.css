@@ -2393,6 +2393,10 @@ a.credit-val:hover {
 }
 
 /* UI transparency during canvas interactions */
+.ui-faded {
+    opacity: 0.25 !important;
+}
+
 body.is-drawing-active #toolbar-left,
 body.is-drawing-active #toolbar-right,
 body.is-drawing-active #modifier-bar,
@@ -2404,7 +2408,6 @@ body.is-drawing-active .flyout-menu,
 body.is-drawing-active #fill-settings-panel,
 body.is-drawing-active #eraser-settings-panel,
 body.is-drawing-active #brush-settings-panel {
-    opacity: 0.25 !important;
     pointer-events: none !important;
     transition: opacity 0.2s ease-out;
 }
