@@ -181,6 +181,7 @@ async function handlePointerDown(e) {
     if (canDraw && (state.activePointers.size === 1 || isPen)) {
         state.drawingPointerId = e.pointerId;
         state.strokeMade = false;
+        document.body.classList.add('is-drawing-active');
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
         if (state.mode === 'select') {
@@ -440,6 +441,7 @@ async function handlePointerUp(e) {
         }
         state.drawingPointerId = null;
     }
+    document.body.classList.remove('is-drawing-active');
     state.isPenDrawing = false;
     state.isLassoing = false;
     state.strokeMade = false;
@@ -463,6 +465,7 @@ function handlePointerCancel(e) {
 }
 
 function cancelCurrentOperation() {
+    document.body.classList.remove('is-drawing-active');
     cancelAndFlushDrawPoints();
     if (state.isLassoing) finishLasso();
     if (state.isPenDrawing) {

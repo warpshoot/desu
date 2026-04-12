@@ -2390,4 +2390,21 @@ a.credit-val:hover {
 
 .sel-btn-danger:hover {
     background: rgba(255, 71, 87, 0.1);
+}
+
+/* UI transparency during canvas interactions */
+body.is-drawing-active #toolbar-left,
+body.is-drawing-active #toolbar-right,
+body.is-drawing-active #modifier-bar,
+body.is-drawing-active #layer-panel,
+body.is-drawing-active #select-toolbar,
+body.is-drawing-active #resetZoomBtn,
+body.is-drawing-active .tool-menu,
+body.is-drawing-active .flyout-menu,
+body.is-drawing-active #fill-settings-panel,
+body.is-drawing-active #eraser-settings-panel,
+body.is-drawing-active #brush-settings-panel {
+    opacity: 0.25 !important;
+    pointer-events: none !important;
+    transition: opacity 0.2s ease-out;
 }
