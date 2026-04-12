@@ -276,30 +276,32 @@
 
     <!-- 保存UI / Export Overlay -->
     <div id="save-overlay" class="hidden"></div>
-    <div id="save-ui" class="hidden">
+    <div id="save-ui" class="tool-menu hidden">
         <div class="panel-header">
             <span data-i18n="save.title">SNAPSHOT SETTINGS</span>
             <button id="save-close" class="panel-close">×</button>
         </div>
-        <div id="selection-size" style="display:none; font-size: 11px; color: #888; margin-bottom: 12px; font-weight: bold; letter-spacing: 0.05em;"></div>
+        <div id="save-body">
+            <div id="selection-size" style="display:none; font-size: 11px; color: #888; margin-bottom: 12px; font-weight: bold; letter-spacing: 0.05em;"></div>
 
-        <div class="option-group">
-            <div class="option-group-label" data-i18n="save.scale">SCALE</div>
-            <div class="option-buttons">
-                <button class="option-btn active" data-scale="1">1X</button>
-                <button class="option-btn" data-scale="2">2X</button>
-                <button class="option-btn" data-scale="3">3X</button>
+            <div class="option-group">
+                <div class="option-group-label" data-i18n="save.scale">SCALE</div>
+                <div class="option-buttons">
+                    <button class="option-btn active" data-scale="1">1X</button>
+                    <button class="option-btn" data-scale="2">2X</button>
+                    <button class="option-btn" data-scale="3">3X</button>
+                </div>
             </div>
-        </div>
 
-        <label class="transparent-label">
-            <input type="checkbox" id="transparentBg">
-            <span data-i18n="save.transparent">TRANSPARENT BACKGROUND</span>
-        </label>
+            <label class="transparent-label">
+                <input type="checkbox" id="transparentBg">
+                <span data-i18n="save.transparent">TRANSPARENT BACKGROUND</span>
+            </label>
 
-        <div class="save-actions">
-            <button class="save-btn primary" id="confirmSelectionBtn" data-i18n="save.download">DOWNLOAD</button>
-            <button class="save-btn" id="copyClipboardBtn" data-i18n="save.copy">COPY</button>
+            <div class="save-actions">
+                <button class="save-btn primary" id="confirmSelectionBtn" data-i18n="save.download">DOWNLOAD</button>
+                <button class="save-btn" id="copyClipboardBtn" data-i18n="save.copy">COPY</button>
+            </div>
         </div>
     </div>
 

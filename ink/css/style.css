@@ -1019,16 +1019,20 @@ canvas {
     position: fixed;
     top: 72px;
     right: 20px;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    padding: 24px 32px;
-    border: 1px solid rgba(0, 0, 0, 0.15);
+    width: 260px;
     z-index: 401;
-    text-align: center;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
     transition: opacity 0.2s;
-    min-width: 280px;
+}
+
+#save-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#selection-size {
+    text-align: center;
 }
 
 #save-ui.hidden-during-selection {
