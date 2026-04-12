@@ -223,13 +223,15 @@ function updateSelectionSizeDisplay() {
 }
 
 function drawSelectionRect(ctx, start, end, canvas) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    ctx.clearRect(0, 0, vw, vh);
     const x = Math.min(start.x, end.x);
     const y = Math.min(start.y, end.y);
     const w = Math.abs(end.x - start.x);
     const h = Math.abs(end.y - start.y);
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'; // Mask
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, vw, vh);
     ctx.clearRect(x, y, w, h);
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 1;

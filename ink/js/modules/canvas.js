@@ -133,6 +133,9 @@ export async function initCanvas() {
     selectionCanvas.height = vh * dpr;
     selectionCanvas.style.width  = vw + 'px';
     selectionCanvas.style.height = vh + 'px';
+    const sCtx = selectionCanvas.getContext('2d');
+    sCtx.setTransform(1, 0, 0, 1, 0, 0);
+    sCtx.scale(dpr, dpr);
 
     eventCanvas.width  = vw;
     eventCanvas.height = vh;
@@ -168,6 +171,9 @@ export function resizeViewport() {
     selectionCanvas.height = vh * dpr;
     selectionCanvas.style.width  = vw + 'px';
     selectionCanvas.style.height = vh + 'px';
+    const sCtx = selectionCanvas.getContext('2d');
+    sCtx.setTransform(1, 0, 0, 1, 0, 0);
+    sCtx.scale(dpr, dpr);
 
     eventCanvas.width  = vw;
     eventCanvas.height = vh;
