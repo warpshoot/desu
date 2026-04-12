@@ -109,7 +109,8 @@ export async function handleModeTap(mode) {
             state.activeEraserSlotIndex = (state.activeEraserSlotIndex + 1) % state.eraserSlots.length;
             state.subTool = state.eraserSlots[state.activeEraserSlotIndex].subTool;
         } else if (mode === 'select') {
-            state.subTool = state.subTool === 'rect' ? 'lasso' : 'rect';
+            state.selectSubTool = state.selectSubTool === 'rect' ? 'lasso' : 'rect';
+            state.subTool = state.selectSubTool;
         }
     } else {
         state.mode = mode;
@@ -121,7 +122,7 @@ export async function handleModeTap(mode) {
         } else if (mode === 'eraser') {
             state.subTool = state.eraserSlots[state.activeEraserSlotIndex].subTool;
         } else if (mode === 'select') {
-            state.subTool = 'rect';
+            state.subTool = state.selectSubTool;
         }
     }
 
@@ -155,7 +156,7 @@ export function updateToolButtonStates() {
         if (mode === 'pen') currentSub = state.activeBrush.subTool;
         else if (mode === 'fill') currentSub = state.activeFillSlot.subTool;
         else if (mode === 'eraser') currentSub = state.activeEraserSlot.subTool;
-        else if (mode === 'select') currentSub = state.subTool; // Selectは共通
+        else if (mode === 'select') currentSub = state.selectSubTool; // select専用サブツール状態を参照
 
         if (currentSub) updateModeButtonIcon(mode, currentSub);
     });
