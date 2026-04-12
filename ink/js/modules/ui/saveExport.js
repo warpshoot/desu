@@ -46,12 +46,20 @@ export function setupSaveUI() {
                 w: state.paperW, h: state.paperH
             };
 
+            // UI Display logic
             saveOverlay.style.display = 'block';
             saveUI.style.display = 'block';
-            if (copyBtn) copyBtn.style.display = 'none'; // Copy not needed for full? (or could be enabled)
+            saveUI.classList.remove('hidden'); // Ensure not hidden by class
+            
+            // Ensure actions are visible for full mode
+            if (confirmBtn) confirmBtn.style.display = 'inline-block';
+            if (copyBtn) copyBtn.style.display = 'inline-block';
             
             updateSelectionSizeDisplay();
             showSelectionUI();
+            
+            // For full mode, reset selection canvas to clear
+            if (selCtx) selCtx.clearRect(0, 0, selCanvas.width, selCanvas.height);
         });
     }
 
@@ -65,9 +73,16 @@ export function setupSaveUI() {
             state.confirmedSelection = null;
 
             saveOverlay.style.display = 'block';
-            saveUI.style.display = 'none'; // Hide settings until selection is made
+            saveUI.style.display = 'none'; 
             
             showSelectionUI();
+            
+            // Initial feedback: fill with semi-transparent black
+            if (selCtx) {
+                selCtx.clearRect(0, 0, selCanvas.width, selCanvas.height);
+                selCtx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                selCtx.fillRect(0, 0, selCanvas.width, selCanvas.height);
+            }
         });
     }
 
@@ -113,8 +128,10 @@ export function setupSaveUI() {
             // Completely hide UI while dragging
             saveUI.classList.add('hidden-during-selection');
             
+            // Selection overlay is screen-size, so use directly for drawing
+            // but store canvas points for the actual crop logic
             state.selectionStart = { x: e.clientX, y: e.clientY };
-            state.selectionEnd = null;
+            state.selectionEnd = { x: e.clientX, y: e.clientY };
             state.confirmedSelection = null;
             selCtx.clearRect(0, 0, selCanvas.width, selCanvas.height);
         });
@@ -136,16 +153,21 @@ export function setupSaveUI() {
             if (state.selectionStart && state.selectionEnd) {
                 const sx = Math.min(state.selectionStart.x, state.selectionEnd.x);
                 const sy = Math.min(state.selectionStart.y, state.selectionEnd.y);
-                const sw = Math.abs(state.selectionEnd.x - state.selectionStart.x);
-                const sh = Math.abs(state.selectionEnd.y - state.selectionStart.y);
+                const ex = Math.max(state.selectionStart.x, state.selectionEnd.x);
+                const ey = Math.max(state.selectionStart.y, state.selectionEnd.y);
 
                 const p1 = getCanvasPoint(sx, sy);
-                const p2 = getCanvasPoint(sx + sw, sy + sh);
+                const p2 = getCanvasPoint(ex, ey);
 
                 state.confirmedSelection = {
-                    x: p1.x, y: p1.y,
-                    w: Math.abs(p2.x - p1.x), h: Math.abs(p2.y - p1.y)
+                    x: p1.x,
+                    y: p1.y,
+                    w: p2.x - p1.x,
+                    h: p2.y - p1.y
                 };
+
+                const sw = Math.abs(state.selectionEnd.x - state.selectionStart.x);
+                const sh = Math.abs(state.selectionEnd.y - state.selectionStart.y);
 
                 if (sw > 5 && sh > 5) {
                     // Selection made, show the settings panel
@@ -176,8 +198,10 @@ function updateSelectionSizeDisplay() {
     const scale = state.selectedScale || 1;
 
     if (state.selectionStart && state.selectionEnd) {
-        w = Math.round(Math.abs(state.selectionEnd.x - state.selectionStart.x) / state.scale);
-        h = Math.round(Math.abs(state.selectionEnd.y - state.selectionStart.y) / state.scale);
+        const p1 = getCanvasPoint(state.selectionStart.x, state.selectionStart.y);
+        const p2 = getCanvasPoint(state.selectionEnd.x, state.selectionEnd.y);
+        w = Math.round(Math.abs(p2.x - p1.x));
+        h = Math.round(Math.abs(p2.y - p1.y));
     } else if (state.confirmedSelection) {
         w = state.confirmedSelection.w;
         h = state.confirmedSelection.h;
@@ -185,6 +209,11 @@ function updateSelectionSizeDisplay() {
 
     if (w > 0 && h > 0) {
         sizeDiv.textContent = `SIZE: ${Math.round(w * scale)} x ${Math.round(h * scale)} px`;
+        sizeDiv.style.display = 'block';
+    } else if (state.confirmedSelection) {
+        const cw = state.confirmedSelection.w * scale;
+        const ch = state.confirmedSelection.h * scale;
+        sizeDiv.textContent = `SIZE: ${Math.round(cw)} x ${Math.round(ch)} px`;
         sizeDiv.style.display = 'block';
     } else {
         sizeDiv.style.display = 'none';

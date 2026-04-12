@@ -1,7 +1,8 @@
 import {
     state,
     layers,
-    canvasBg
+    canvasBg,
+    CANVAS_DPR
 } from './state.js';
 
 // Share or download a blob file (iOS Safari compatible)
@@ -103,17 +104,26 @@ function mergeLayersToCanvas(x, y, w, h, transparent) {
     // Draw all visible layers in order (layer 1 at bottom, higher layers on top)
     for (const layer of layers) {
         if (layer.visible) {
+            mergedCtx.save();
             mergedCtx.globalAlpha = layer.opacity;
-            mergedCtx.drawImage(layer.canvas, x, y, w, h, 0, 0, w, h);
+            // Draw image from original layer.canvas using canvas-space coordinates (x, y, w, h)
+            // Note: layer.canvas is already CANVAS_DPR sized, so we need to account for that.
+            const dpr = CANVAS_DPR;
+            // Actually, mergeLayersToCanvas usually receives canvas-space coords.
+            // layer.canvas is dpr-scaled.
+            const sX = x * dpr;
+            const sY = y * dpr;
+            const sW = w * dpr;
+            const sH = h * dpr;
+            mergedCtx.drawImage(layer.canvas, sX, sY, sW, sH, 0, 0, w, h);
+            mergedCtx.restore();
         }
     }
-    mergedCtx.globalAlpha = 1;
 
     return mergedCanvas;
 }
 
-export async function saveRegion(x, y, w, h) {
-    const transparent = document.getElementById('transparentBg').checked;
+export async function saveRegion(x, y, w, h, transparent) {
     const outputScale = state.selectedScale;
 
     const flash = document.getElementById('flash');
@@ -166,8 +176,7 @@ export async function saveRegion(x, y, w, h) {
     }
 }
 
-export async function copyToClipboard(x, y, w, h) {
-    const transparent = document.getElementById('transparentBg').checked;
+export async function copyToClipboard(x, y, w, h, transparent) {
     const outputScale = state.selectedScale;
 
     const flash = document.getElementById('flash');
