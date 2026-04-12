@@ -13,7 +13,7 @@ import {
     restoreLayer,
     syncLayerFingerprint
 } from '../history.js';
-import { applyTransform } from '../canvas.js';
+import { applyTransform, zoomAtPoint } from '../canvas.js';
 import {
     addPendingPoints,
     setStraightLineEnd,
@@ -156,6 +156,12 @@ async function handlePointerDown(e) {
         
         // Prevent drawing with the second pointer
         if (!isPen) return;
+    }
+
+    if (state.activePointers.size === 1 && state.isSpacePressed && (e.ctrlKey || e.metaKey)) {
+        const factor = (e.altKey || state.isAltPressed) ? 0.9 : 1.1;
+        zoomAtPoint(factor, e.clientX, e.clientY);
+        return;
     }
 
     if (state.activePointers.size === 1 && state.isSpacePressed) {

@@ -263,3 +263,18 @@ export function centerCanvas() {
     
     applyTransform();
 }
+
+/**
+ * Zoom in/out at a specific screen point
+ */
+export function zoomAtPoint(factor, screenX, screenY) {
+    const newScale = Math.min(Math.max(state.scale * factor, 0.1), 10);
+    const actualFactor = newScale / state.scale;
+
+    state.translateX = screenX - (screenX - state.translateX) * actualFactor;
+    state.translateY = screenY - (screenY - state.translateY) * actualFactor;
+    state.scale = newScale;
+
+    applyTransform();
+    resizeSelectionOverlay();
+}

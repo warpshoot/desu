@@ -27,7 +27,8 @@ import {
     clearSelection, 
     commitFloating, 
     pasteFromClipboard,
-    liftSelection 
+    liftSelection,
+    resizeSelectionOverlay
 } from '../tools/selection.js';
 
 const _MOD_DOUBLE_TAP_MS = 300;
@@ -298,6 +299,8 @@ export function setupKeyboardShortcuts() {
             }
         }
 
+        if (e.key === 'Alt') state.isAltPressed = true;
+
         if (e.key === 'Escape') {
             if (hasSelection()) {
                 e.preventDefault();
@@ -316,5 +319,6 @@ export function setupKeyboardShortcuts() {
             eventCanvas.style.cursor = '';
         }
         if (e.key === 'Shift') state.isShiftPressed = false;
+        if (e.key === 'Alt') state.isAltPressed = false;
     });
 }
