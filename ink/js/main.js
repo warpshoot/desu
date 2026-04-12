@@ -3,6 +3,8 @@ import { initCanvas, resizeViewport } from './modules/canvas.js';
 import { initUI, updateLayerThumbnail } from './modules/ui.js';
 import { saveInitialState } from './modules/history.js';
 import { loadLocalState, exportProject, importProject } from './modules/storage.js';
+import { getLang, setLang, t, applyTextToDOM } from './modules/i18n.js';
+
 window.onerror = function (msg, url, line, col, error) {
     alert(`Error: ${msg}\nLine: ${line}:${col}\nURL: ${url}`);
     return false;
@@ -11,11 +13,21 @@ window.onerror = function (msg, url, line, col, error) {
 // Entry Point
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        applyTextToDOM(); // Initialize Language from localStorage
         initDOM();
         await initCanvas();
         await loadLocalState(); // Validated: if fails, just continues
         await saveInitialState();
         initUI();
+
+        // Setup lang select listener
+        const langSelect = document.getElementById('lang-select');
+        if (langSelect) {
+            langSelect.value = getLang();
+            langSelect.addEventListener('change', (e) => {
+                setLang(e.target.value);
+            });
+        }
 
 
 
@@ -31,12 +43,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (e.dataTransfer.files.length > 0) {
                 const file = e.dataTransfer.files[0];
                 if (file.name.endsWith('.desu') || file.name.endsWith('.json')) {
-                    if (confirm('プロジェクトを読み込みますか？\n（現在の作業内容は上書きされます）')) {
+                    if (confirm(t('confirm.import'))) {
                         importProject(file).then(success => {
                             if (success) {
-                                alert('プロジェクトを読み込みました');
+                                alert(t('alert.importSuccess'));
                             } else {
-                                alert('読み込みに失敗しました');
+                                alert(t('alert.importFail'));
                             }
                         });
                     }

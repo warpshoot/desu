@@ -2231,6 +2231,7 @@ a.credit-val:hover {
 
 .bs-row input[type="range"] {
     flex: 1;
+    min-width: 0;
     /* タッチ領域を広げるため高さを確保（見た目のトラックは accent-color で制御） */
     height: 28px;
     accent-color: #333;

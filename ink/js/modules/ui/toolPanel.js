@@ -532,6 +532,7 @@ export function openBrushSettings(idx) {
     toggle('bs-pressure-density-row', isStipple);
     toggle('bs-opacity-row', !isStipple);
     toggle('bs-pen-pressure-row', !isStipple);
+    toggle('bs-pressure-curve-row', !isStipple && brush.pressureSize);
     toggle('bs-binary-row', !isStipple);
     toggle('bs-stabilizer-row', !isStipple);
     toggle('bs-stabilizer-dist-row', !isStipple && brush.stabilizerEnabled);
@@ -756,8 +757,9 @@ export function setupEraserSettingsPanel() {
             penPressureSettings.style.display = isPen ? '' : 'none';
             const pcurveRow = document.getElementById('es-pressure-curve-row');
             if (pcurveRow) {
-                pcurveRow.style.opacity = slot.pressureSize ? '1' : '0.5';
-                pcurveRow.style.pointerEvents = slot.pressureSize ? 'auto' : 'none';
+                pcurveRow.style.opacity = '1';
+                pcurveRow.style.pointerEvents = 'auto';
+                pcurveRow.style.display = slot.pressureSize ? '' : 'none';
             }
         }
 
@@ -845,8 +847,9 @@ export function openEraserSettings(idx) {
         penPressureSettings.style.display = isPen ? '' : 'none';
         const pcurveRow = document.getElementById('es-pressure-curve-row');
         if (pcurveRow) {
-            pcurveRow.style.opacity = (slot.pressureSize ?? true) ? '1' : '0.5';
-            pcurveRow.style.pointerEvents = (slot.pressureSize ?? true) ? 'auto' : 'none';
+            pcurveRow.style.opacity = '1';
+            pcurveRow.style.pointerEvents = 'auto';
+            pcurveRow.style.display = (slot.pressureSize ?? true) ? '' : 'none';
         }
     }
 

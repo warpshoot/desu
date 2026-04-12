@@ -4,6 +4,7 @@ import {
     canvasBg,
     CANVAS_DPR
 } from './state.js';
+import { t } from './i18n.js';
 
 // Share or download a blob file (iOS Safari compatible)
 async function shareOrDownload(blob, fileName) {
@@ -171,7 +172,7 @@ export async function saveRegion(x, y, w, h, transparent) {
         exitSaveMode();
     } catch (err) {
         console.error('保存エラー:', err);
-        alert('保存に失敗しました: ' + err.message);
+        alert(t('alert.saveFail') + '\n' + err.message);
         exitSaveMode();
     }
 }
@@ -232,14 +233,14 @@ export async function copyToClipboard(x, y, w, h, transparent) {
 
         const copyBtn = document.getElementById('copyClipboardBtn');
         const originalText = copyBtn.textContent;
-        copyBtn.textContent = 'コピーしました！';
+        copyBtn.textContent = t('save.copied');
         setTimeout(() => {
             copyBtn.textContent = originalText;
         }, 1500);
 
     } catch (err) {
         console.error('クリップボードコピーエラー:', err);
-        alert('クリップボードへのアクセスに失敗しました。画像をダウンロードします。');
+        alert(t('alert.clipFail'));
 
         if (tempCanvas) {
             try {
@@ -248,10 +249,10 @@ export async function copyToClipboard(x, y, w, h, transparent) {
                 await shareOrDownload(blob, fileName);
             } catch (downloadErr) {
                 console.error('ダウンロードエラー:', downloadErr);
-                alert('画像のダウンロードにも失敗しました: ' + downloadErr.message);
+                alert(t('alert.downloadFail') + '\n' + downloadErr.message);
             }
         } else {
-            alert('エラーが発生し、画像を生成できませんでした。');
+            alert(t('alert.genFail'));
         }
     }
 }
@@ -343,7 +344,7 @@ export async function saveAllCanvas(transparent) {
 export async function exportPSD() {
     if (layers.length === 0) return;
     if (typeof agPsd === 'undefined') {
-        alert('PSD ライブラリが読み込まれていません。');
+        alert(t('alert.psdLibFail'));
         return;
     }
 
@@ -409,7 +410,7 @@ export async function exportPSD() {
         exitSaveMode();
     } catch (err) {
         console.error('PSD出力エラー:', err);
-        alert('PSDの出力に失敗しました: ' + err.message);
+        alert(t('alert.psdFail') + '\n' + err.message);
         exitSaveMode();
     }
 }

@@ -73,6 +73,7 @@ export function setupSaveUI() {
             state.confirmedSelection = null;
 
             saveOverlay.style.display = 'block';
+            saveUI.classList.add('hidden'); // Initially hidden while selecting
             saveUI.style.display = 'none'; 
             
             showSelectionUI();
@@ -171,6 +172,7 @@ export function setupSaveUI() {
 
                 if (sw > 5 && sh > 5) {
                     // Selection made, show the settings panel
+                    saveUI.classList.remove('hidden'); // Ensure hidden class is removed
                     saveUI.style.display = 'block';
                     if (confirmBtn) confirmBtn.style.display = 'inline-block';
                     if (copyBtn) copyBtn.style.display = 'inline-block';

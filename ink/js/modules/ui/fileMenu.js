@@ -11,6 +11,7 @@ import {
     importConfig,
     resetSettings
 } from '../storage.js';
+import { t } from '../i18n.js';
 import { resetHistory } from '../history.js';
 import { applyTransform, resizePaper } from '../canvas.js';
 import { hideAllMenus, handleOutsideClick } from './menuManager.js';
@@ -58,7 +59,7 @@ export function setupFileUI() {
     if (newBtn) {
         newBtn.addEventListener('click', async () => {
             hideAllMenus();
-            if (confirm('Create a new project?\n(Current work will be lost)')) {
+            if (confirm(t('confirm.new'))) {
                 resizePaper(2000, 2000);
                 state.scale = 1.0;
                 state.translateX = 0;
@@ -93,7 +94,7 @@ export function setupFileUI() {
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 const file = e.target.files[0];
-                if (confirm('Import project?\n(Current work will be overwritten)')) {
+                if (confirm(t('confirm.import'))) {
                     importProject(file).then(async (success) => {
                         if (success) {
                             renderLayerButtons();
@@ -102,7 +103,7 @@ export function setupFileUI() {
                             }
                             await resetHistory();
                         } else {
-                            alert('Failed to import project');
+                            alert(t('alert.importFail'));
                         }
                         fileInput.value = '';
                     });

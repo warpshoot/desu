@@ -6,6 +6,7 @@ import {
     resetSettings, 
     saveLocalState 
 } from '../storage.js';
+import { t } from '../i18n.js';
 import { hideAllMenus, handleOutsideClick } from './menuManager.js';
 import { undo, redo, saveState } from '../history.js';
 import { renderLayerButtons, updateAllThumbnails } from './layerPanel.js';
@@ -165,7 +166,7 @@ export function setupSettingsPanel() {
                     updateBrushSizeSlider();
                     renderBrushPalette();
                 } else {
-                    alert('Failed to import configuration');
+                    alert(t('alert.importFail'));
                 }
                 configInput.value = '';
             }
@@ -175,7 +176,7 @@ export function setupSettingsPanel() {
     // Reset Config
     if (resetConfigBtn) {
         resetConfigBtn.addEventListener('click', () => {
-            if (confirm('Reset all tool settings to default?')) {
+            if (confirm(t('confirm.reset'))) {
                 resetSettings();
                 updateModeButtonIcon(state.mode, state.subTool);
                 updateToolButtonStates();
