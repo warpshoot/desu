@@ -64,12 +64,16 @@ Operate from the "PROJECT" menu at the top right.
 
 ### **Keyboard Shortcuts**
 - **X**: Toggle between Pen and Eraser
+- **S**: Toggle Stabilizer for the active tool
 - **Space + Drag**: Pan the canvas
 - **Ctrl + Z**: Undo / **Ctrl + Y (or Shift+Ctrl+Z)**: Redo
 - **Ctrl + C / X / V**: Copy / Cut / Paste selection
 - **Delete / Backspace**: Delete selection (No action if no selection is active)
 - **Esc**: Close setting menus / Deselect
 - **Ctrl + S**: Open the Snapshot menu
+
+> [!TIP]
+> When a shortcut is activated, a notification (HUD) will appear in the center of the screen.
 
 ---
 

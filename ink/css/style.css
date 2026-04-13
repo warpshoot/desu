@@ -2424,7 +2424,9 @@ body.is-drawing-active #brush-settings-panel {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: #000;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     color: #fff;
     padding: 16px 32px;
     font-size: 20px;
