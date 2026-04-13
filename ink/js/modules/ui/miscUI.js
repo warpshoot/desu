@@ -7,6 +7,7 @@ import {
     saveLocalState 
 } from '../storage.js';
 import { t } from '../i18n.js';
+import { showHUD } from './hud.js';
 import { hideAllMenus, handleOutsideClick } from './menuManager.js';
 import { undo, redo, saveState } from '../history.js';
 import { renderLayerButtons, updateAllThumbnails } from './layerPanel.js';
@@ -219,6 +220,36 @@ export function setupSettingsPanel() {
     panel.addEventListener('pointermove', e => e.stopPropagation());
 }
 
+function toggleActiveStabilizer() {
+    let slot = null;
+    let checkboxId = '';
+
+    if (state.mode === 'pen') {
+        slot = state.activeBrush;
+        checkboxId = 'bs-stabilizer';
+    } else if (state.mode === 'fill') {
+        slot = state.activeFillSlot;
+        checkboxId = 'fs-stabilizer';
+    } else if (state.mode === 'eraser') {
+        slot = state.activeEraserSlot;
+        checkboxId = 'es-stabilizer';
+    }
+
+    if (slot && typeof slot.stabilizerEnabled !== 'undefined') {
+        slot.stabilizerEnabled = !slot.stabilizerEnabled;
+        
+        // Sync UI checkbox if it exists
+        const checkbox = document.getElementById(checkboxId);
+        if (checkbox) {
+            checkbox.checked = slot.stabilizerEnabled;
+            // Dispatch input event to trigger local sync logic (show/hide distance slider etc.)
+            checkbox.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        showHUD(slot.stabilizerEnabled ? t('hud.stab.on') : t('hud.stab.off'));
+    }
+}
+
 export function setupKeyboardShortcuts() {
     document.addEventListener('keydown', async (e) => {
         if (e.code === 'Space') {
@@ -231,6 +262,7 @@ export function setupKeyboardShortcuts() {
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
             e.preventDefault();
             await undo();
+            showHUD(t('hud.undo'));
             cancelSelection();
             renderLayerButtons();
             updateAllThumbnails();
@@ -239,6 +271,7 @@ export function setupKeyboardShortcuts() {
         if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && (e.key === 'z' || e.key === 'Z')) || (e.key === 'y' || e.key === 'Y'))) {
             e.preventDefault();
             await redo();
+            showHUD(t('hud.redo'));
             cancelSelection();
             renderLayerButtons();
             updateAllThumbnails();
@@ -248,6 +281,7 @@ export function setupKeyboardShortcuts() {
             if (!e.target.matches('input, textarea') && state.mode === 'select' && hasSelection()) {
                 e.preventDefault();
                 copySelection();
+                showHUD(t('hud.copy'));
             }
         }
 
@@ -259,6 +293,7 @@ export function setupKeyboardShortcuts() {
                 if (hasFloatingSelection()) state.floatingSelection = null;
                 else deleteSelectionContent();
                 clearSelection();
+                showHUD(t('hud.cut'));
                 updateAllThumbnails();
             }
         }
@@ -273,6 +308,7 @@ export function setupKeyboardShortcuts() {
                 }
                 await saveState();
                 pasteFromClipboard();
+                showHUD(t('hud.paste'));
             }
         }
 
@@ -288,6 +324,7 @@ export function setupKeyboardShortcuts() {
                 updateBrushSizeVisibility();
                 updateBrushSizeSlider();
                 renderBrushPalette();
+                showHUD(state.mode === 'pen' ? t('hud.mode.pen') : t('hud.mode.eraser'));
             }
         }
 
@@ -299,6 +336,7 @@ export function setupKeyboardShortcuts() {
                 if (hasFloatingSelection()) state.floatingSelection = null;
                 else deleteSelectionContent();
                 updateAllThumbnails();
+                showHUD(t('hud.delete'));
             }
         }
 
@@ -312,6 +350,14 @@ export function setupKeyboardShortcuts() {
                     commitFloating();
                 }
                 clearSelection();
+                showHUD(t('hud.deselect'));
+            }
+        }
+
+        if (e.key === 's' || e.key === 'S') {
+            if (!e.target.matches('input, textarea')) {
+                e.preventDefault();
+                toggleActiveStabilizer();
             }
         }
     });

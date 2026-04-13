@@ -26,6 +26,7 @@ import { initSelectionOverlay } from './tools/selection.js';
 import { setupSelectionUI } from './ui/selectionUI.js';
 import { setupPointerEvents } from './input/pointerHandler.js';
 import { handleWheel } from './input/gestureHandler.js';
+import { initHUD } from './ui/hud.js';
 
 // Re-exports for main.js and other modules
 export { updateLayerThumbnail, updateActiveLayerIndicator, renderLayerButtons };
@@ -50,6 +51,7 @@ export function initUI() {
     setupSaveUI();
     initSelectionOverlay();
     setupSelectionUI();
+    initHUD();
     
     // 2. Setup Input Handlers
     setupPointerEvents(eventCanvas);

@@ -100,7 +100,20 @@ export const dict = {
         'credit.name': 'Name',
         'credit.provider': 'Provider',
         'credit.author': 'Author',
-        'credit.manual': 'User Guide'
+        'credit.manual': 'User Guide',
+        
+        'hud.undo': 'Undo',
+        'hud.redo': 'Redo',
+        'hud.copy': 'Copy',
+        'hud.cut': 'Cut',
+        'hud.paste': 'Paste',
+        'hud.delete': 'Delete',
+        'hud.deselect': 'Deselect',
+        'hud.mode.pen': 'Pen Mode',
+        'hud.mode.eraser': 'Eraser Mode',
+        'hud.mode.select': 'Select Mode',
+        'hud.stab.on': 'Stabilizer ON',
+        'hud.stab.off': 'Stabilizer OFF'
     },
     ja: {
         'tool.pen': 'ペン',
@@ -202,7 +215,20 @@ export const dict = {
         'credit.name': '名称',
         'credit.provider': '支給元',
         'credit.author': '製造',
-        'credit.manual': '説明書'
+        'credit.manual': '説明書',
+
+        'hud.undo': '元に戻す',
+        'hud.redo': 'やり直し',
+        'hud.copy': 'コピー',
+        'hud.cut': '切り取り',
+        'hud.paste': '貼り付け',
+        'hud.delete': '削除',
+        'hud.deselect': '選択解除',
+        'hud.mode.pen': 'ペンモード',
+        'hud.mode.eraser': '消しゴムモード',
+        'hud.mode.select': '選択モード',
+        'hud.stab.on': '手振れ補正 ON',
+        'hud.stab.off': '手振れ補正 OFF'
     }
 };
 
