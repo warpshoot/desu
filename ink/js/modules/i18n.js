@@ -95,7 +95,12 @@ export const dict = {
         'alert.downloadFail': 'Failed to download image:',
         'alert.genFail': 'An error occurred and the image could not be generated.',
         'alert.psdLibFail': 'PSD library is not loaded.',
-        'alert.psdFail': 'Failed to export PSD:'
+        'alert.psdFail': 'Failed to export PSD:',
+
+        'credit.name': 'Name',
+        'credit.provider': 'Provider',
+        'credit.author': 'Author',
+        'credit.manual': 'User Guide'
     },
     ja: {
         'tool.pen': 'ペン',
@@ -192,7 +197,12 @@ export const dict = {
         'alert.downloadFail': '画像のダウンロードにも失敗しました:',
         'alert.genFail': 'エラーが発生し、画像を生成できませんでした。',
         'alert.psdLibFail': 'PSD ライブラリが読み込まれていません。',
-        'alert.psdFail': 'PSDの出力に失敗しました:'
+        'alert.psdFail': 'PSDの出力に失敗しました:',
+
+        'credit.name': '名称',
+        'credit.provider': '支給元',
+        'credit.author': '製造',
+        'credit.manual': '説明書'
     }
 };
 
