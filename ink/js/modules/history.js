@@ -192,7 +192,7 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
         saveLocalState();
 
         const max = state.MAX_HISTORY || 10;
-        if (state.undoStack.length > max) {
+        if (state.undoStack.length > max + 1) {
             const old = state.undoStack.shift();
             _closeAllBitmaps(old);
         }
@@ -212,7 +212,8 @@ export function commitRedoClear() {
 export async function saveInitialState() {
     const snapshot = {
         bitmaps: new Map(),
-        layerMeta: layers.map(l => ({ id: l.id, opacity: l.opacity, visible: l.visible }))
+        layerMeta: layers.map(l => ({ id: l.id, opacity: l.opacity, visible: l.visible })),
+        fingerprints: new Map(_layerFingerprints)
     };
     const bitmaps = await Promise.all(
         layers.map(layer => createImageBitmap(layer.canvas))
@@ -297,7 +298,7 @@ export async function redo() {
         state.undoStack.push(next);
         
         const max = state.MAX_HISTORY || 10;
-        if (state.undoStack.length > max) {
+        if (state.undoStack.length > max + 1) {
             const old = state.undoStack.shift();
             _closeAllBitmaps(old);
         }

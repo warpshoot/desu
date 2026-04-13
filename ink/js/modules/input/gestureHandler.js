@@ -2,7 +2,7 @@ import { state } from '../state.js';
 import { applyTransform } from '../canvas.js';
 import { undo, redo } from '../history.js';
 import { renderLayerButtons, updateAllThumbnails } from '../ui/layerPanel.js';
-import { resizeSelectionOverlay } from '../tools/selection.js';
+import { resizeSelectionOverlay, cancelSelection } from '../tools/selection.js';
 
 let _lastGestureTime = 0;
 const _GESTURE_COOLDOWN_MS = 500;
@@ -109,6 +109,7 @@ export async function handleGestureTaps() {
             state._gestureActionFired = true;
             _lastGestureTime = now;
             await undo();
+            cancelSelection();
             renderLayerButtons();
             updateAllThumbnails();
             return true;
@@ -116,6 +117,7 @@ export async function handleGestureTaps() {
             state._gestureActionFired = true;
             _lastGestureTime = now;
             await redo();
+            cancelSelection();
             renderLayerButtons();
             updateAllThumbnails();
             return true;

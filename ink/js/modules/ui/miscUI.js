@@ -28,7 +28,8 @@ import {
     commitFloating, 
     pasteFromClipboard,
     liftSelection,
-    resizeSelectionOverlay
+    resizeSelectionOverlay,
+    cancelSelection
 } from '../tools/selection.js';
 
 const _MOD_DOUBLE_TAP_MS = 300;
@@ -230,6 +231,7 @@ export function setupKeyboardShortcuts() {
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
             e.preventDefault();
             await undo();
+            cancelSelection();
             renderLayerButtons();
             updateAllThumbnails();
         }
@@ -237,6 +239,7 @@ export function setupKeyboardShortcuts() {
         if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && (e.key === 'z' || e.key === 'Z')) || (e.key === 'y' || e.key === 'Y'))) {
             e.preventDefault();
             await redo();
+            cancelSelection();
             renderLayerButtons();
             updateAllThumbnails();
         }

@@ -20,6 +20,7 @@ import {
 } from '../state.js';
 import { getCanvasPoint, isPointInPolygon } from '../utils.js';
 import { updateSelectionToolbar } from '../ui/selectionUI.js';
+import { markLayerDirty } from '../history.js';
 
 // ============================================
 // DOM refs — select-overlay canvas
@@ -349,6 +350,21 @@ export function clearSelection() {
     updateSelectionToolbar();
 }
 
+/**
+ * 選択範囲を「コミットせず」に破棄する (Undo/Redo用)
+ */
+export function cancelSelection() {
+    _stopMarch();
+    state.selectionMask = null;
+    state.floatingSelection = null;
+    _rectStart = null;
+    _lassoPoints = [];
+    if (_overlayCtx && _overlayCanvas) {
+        _overlayCtx.clearRect(0, 0, _overlayCanvas.width, _overlayCanvas.height);
+    }
+    updateSelectionToolbar();
+}
+
 // ============================================
 // Selection Clip — Post-process
 // ============================================
@@ -476,6 +492,7 @@ export function liftSelection(cut = true) {
     // Erase source pixels if cutting
     if (cut) {
         _eraseSelection(layer);
+        markLayerDirty(layer.id);
     }
     updateSelectionToolbar();
 }
@@ -540,6 +557,7 @@ export function commitFloating() {
     ctx.drawImage(tmp, destX, destY, tmp.width / dpr, tmp.height / dpr);
     ctx.restore();
 
+    markLayerDirty(layer.id);
     state.floatingSelection = null;
 
     // 選択マスクを移動先に追従
@@ -688,4 +706,5 @@ export function deleteSelectionContent() {
     const layer = getActiveLayer();
     if (!layer) return;
     _eraseSelection(layer);
+    markLayerDirty(layer.id);
 }

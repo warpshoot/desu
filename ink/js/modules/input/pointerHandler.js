@@ -200,8 +200,8 @@ async function handlePointerDown(e) {
                     state._selMoveStartY = e.clientY;
                     setSelectionToolbarInteractive(false);
                 } else {
-                    await saveState();
                     commitFloating();
+                    await saveState();
                     clearSelection();
                     if (window.updateAllThumbnails) window.updateAllThumbnails();
                     state.isMovingSelection = false;
@@ -216,11 +216,11 @@ async function handlePointerDown(e) {
                 await saveState();
                 liftSelection(true);
             } else {
-                if (hasFloatingSelection()) {
-                    await saveState();
-                    commitFloating();
-                    if (window.updateAllThumbnails) window.updateAllThumbnails();
-                }
+            if (hasFloatingSelection()) {
+                commitFloating();
+                await saveState();
+                if (window.updateAllThumbnails) window.updateAllThumbnails();
+            }
                 state.isMovingSelection = false;
                 if (state.subTool === 'rect') startRectSelect(e.clientX, e.clientY);
                 else startLassoSelect(e.clientX, e.clientY);
