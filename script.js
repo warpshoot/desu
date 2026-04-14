@@ -45,27 +45,27 @@ const characterDescriptions = {
     'desu': {
         name: 'デス',
         image: './characters/desu.png',
-        desc: 'デスだ。うちで仕事を手伝ってもらってる。詳しいことは俺もよく知らない'
+        desc: '"デス" だ。うちで仕事を手伝ってもらってる。素性は俺もよく知らない'
     },
     'sakana': {
         name: 'サカナ',
         image: './characters/sakana.png',
-        desc: 'サカナ。デスが連れてる魚だ。しゃべるぞ'
+        desc: '"サカナ"。デスが連れてる魚だ。しゃべるぞ'
     },
     'shi': {
         name: 'しーちゃん',
         image: './characters/shi.png',
-        desc: 'しーちゃんは、うちのマスコットキャラクターだ。意外と人気がある'
+        desc: '"しーちゃん" は、うちのマスコットキャラクターだ。物騒なデザインだが、意外と人気があるらしい'
     },
     'holem': {
         name: 'ホーレム',
         image: './characters/holem.png',
-        desc: 'ガラか。ホーレムと呼ぶやつもいる。これについて詳しいことは話せない'
+        desc: '"ガラ" か。ホーレムと呼ぶやつもいる。これについて詳しいことは話せない決まりになってる'
     },
     'wpy': {
         name: 'wpy',
         image: './characters/wpy.png',
-        desc: 'wpy。支給品はすべてこいつが作ってる'
+        desc: '"wpy"。支給品はすべてこいつが作ってるらしい。'
     }
 };
 
