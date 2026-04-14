@@ -60,12 +60,12 @@ const characterDescriptions = {
     'holem': {
         name: 'ホーレム',
         image: './characters/holem.png',
-        desc: '"ガラ" か。ホーレムと呼ぶやつもいる。これについて詳しいことは話せない決まりになってる'
+        desc: '"ガラ" か。ホーレムと呼ぶやつもいる。これについて詳しいことは話せない'
     },
     'wpy': {
         name: 'wpy',
         image: './characters/wpy.png',
-        desc: '"wpy"。支給品はすべてこいつが作ってるらしい。'
+        desc: '"wpy" とか、"ワーピー" と呼ばれている奴だな。支給品はすべてこいつが作ってると聞いたことがある'
     }
 };
 
