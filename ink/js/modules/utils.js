@@ -25,12 +25,18 @@ export function isPointInPolygon(x, y, points) {
 // Calculate bounding box of a set of points
 // Returns { minX, minY, width, height }
 export function getBounds(points, canvasWidth, canvasHeight) {
-    const xs = points.map(p => p.x);
-    const ys = points.map(p => p.y);
-    const minX = Math.max(0, Math.floor(Math.min(...xs)) - 1);
-    const minY = Math.max(0, Math.floor(Math.min(...ys)) - 1);
-    const maxX = Math.min(canvasWidth, Math.ceil(Math.max(...xs)) + 1);
-    const maxY = Math.min(canvasHeight, Math.ceil(Math.max(...ys)) + 1);
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let i = 0; i < points.length; i++) {
+        const { x, y } = points[i];
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+    }
+    minX = Math.max(0, Math.floor(minX) - 1);
+    minY = Math.max(0, Math.floor(minY) - 1);
+    maxX = Math.min(canvasWidth, Math.ceil(maxX) + 1);
+    maxY = Math.min(canvasHeight, Math.ceil(maxY) + 1);
 
     return {
         minX,

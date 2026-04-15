@@ -180,11 +180,17 @@ function _drawStroke(ctx, pts, fromIdx, isStart, b) {
 
     const startI = Math.max(1, fromIdx);
 
+    // 各点の幅を事前計算 (Pass 1 / Pass 2 で Math.pow を重複実行しない)
+    const widths = new Array(pts.length);
+    for (let i = Math.max(0, startI - 1); i < pts.length; i++) {
+        widths[i] = getW(pts[i].pressure);
+    }
+
     // Pass 1: ストローク骨格 — セグメントごとに lineWidth を変えるため個別発行
     // (iOS では arc fill に比べ stroke は安価なため問題なし)
     for (let i = startI; i < pts.length; i++) {
         const p1 = pts[i-1], p2 = pts[i];
-        const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
+        const w1 = widths[i-1], w2 = widths[i];
         ctx.lineWidth = (w1 + w2) / 2;
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
@@ -198,7 +204,7 @@ function _drawStroke(ctx, pts, fromIdx, isStart, b) {
     let hasArcs = false;
     for (let i = startI; i < pts.length; i++) {
         const p1 = pts[i-1], p2 = pts[i];
-        const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
+        const w1 = widths[i-1], w2 = widths[i];
         const dx = p2.x - p1.x, dy = p2.y - p1.y;
         const dist = Math.hypot(dx, dy);
         if (Math.abs(w1 - w2) > 1 || dist > 5) {
@@ -251,13 +257,14 @@ function _drawBinary(ctx, pts, fromIdx, isStart, b) {
         let err = dx - dy;
         const totalDist = dx + dy || 1;
         let traveled = 0;
+        let lastStampW = -1, lastStamp = null;
 
         while (true) {
             const t = traveled / totalDist;
             const cp = p1.pressure + (p2.pressure - p1.pressure) * t;
             const stampW = Math.max(1, Math.round(getW(cp)));
-            const stamp = getPixelBrush(stampW);
-            ctx.drawImage(stamp, x0 - Math.floor(stampW / 2), y0 - Math.floor(stampW / 2));
+            if (stampW !== lastStampW) { lastStamp = getPixelBrush(stampW); lastStampW = stampW; }
+            ctx.drawImage(lastStamp, x0 - Math.floor(stampW / 2), y0 - Math.floor(stampW / 2));
 
             if (x0 === x1 && y0 === y1) break;
             const e2 = 2 * err;
