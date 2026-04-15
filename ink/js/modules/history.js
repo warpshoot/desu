@@ -192,8 +192,7 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
         state.undoStack.push(snapshot);
         saveLocalState();
 
-        const isMobile = /iPad|iPhone|iPod|Android/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        const max = state.MAX_HISTORY || (isMobile ? 8 : 10);
+        const max = state.MAX_HISTORY;
         if (state.undoStack.length > max + 1) {
             const old = state.undoStack.shift();
             _closeAllBitmaps(old);
@@ -268,7 +267,7 @@ export async function undo() {
         const current = state.undoStack.pop();
         state.redoStack.push(current);
 
-        const max = state.MAX_HISTORY || 10;
+        const max = state.MAX_HISTORY;
         if (state.redoStack.length > max) {
             const old = state.redoStack.shift();
             _closeAllBitmaps(old);
@@ -299,7 +298,7 @@ export async function redo() {
         const next = state.redoStack.pop();
         state.undoStack.push(next);
         
-        const max = state.MAX_HISTORY || 10;
+        const max = state.MAX_HISTORY;
         if (state.undoStack.length > max + 1) {
             const old = state.undoStack.shift();
             _closeAllBitmaps(old);
