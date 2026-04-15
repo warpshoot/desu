@@ -459,38 +459,6 @@ function _restoreSettings(s) {
     if (s.canvasColor) state.canvasColor = s.canvasColor;
 }
 
-export async function exportToolConfig(type, configData) {
-    try {
-        const json = JSON.stringify({ type, data: configData });
-        const filename = `desu_ink_${type}_config_${Date.now()}.json`;
-        await _shareOrDownload(json, filename, 'application/json');
-        return true;
-    } catch (e) {
-        console.error('Failed to export tool config:', e);
-        return false;
-    }
-}
-
-export function importToolConfig(file, expectedType) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const config = JSON.parse(e.target.result);
-                if (config.type !== expectedType) {
-                    alert(`互換性のない設定ファイルです。(期待: ${expectedType}, 実際: ${config.type||'不明'})`);
-                    resolve(null);
-                    return;
-                }
-                resolve(config.data);
-            } catch (err) {
-                console.error('Tool config import failed:', err);
-                resolve(null);
-            }
-        };
-        reader.readAsText(file);
-    });
-}
 
 async function _shareOrDownload(content, filename, type) {
     if (navigator.canShare) {

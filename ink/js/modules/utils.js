@@ -45,17 +45,3 @@ export function getBounds(points, canvasWidth, canvasHeight) {
         height: maxY - minY
     };
 }
-
-// Debug logging helper
-export function addToDebugLog(message, isError = false) {
-    const debugLog = document.getElementById('debug-log');
-    if (!debugLog) return;
-
-    const div = document.createElement('div');
-    if (isError) {
-        div.style.color = '#f00';
-    }
-    div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-    debugLog.appendChild(div);
-    debugLog.scrollTop = debugLog.scrollHeight;
-}

@@ -324,7 +324,6 @@ export const state = {
     set isErasing(_v) { /* no-op: derived from mode */ },
 
     activeLayer: 1,          // ID of the currently active layer
-    pressureEnabled: true,   // toggle for smooth brush vs binary brush
 
     // Brush Palette — ペンカテゴリスロット
     brushes: makeDefaultBrushes(),  // ペンカテゴリスロット (各スロットに subTool 属性あり)
@@ -396,7 +395,6 @@ export const state = {
     lassoPoints: [],
 
     isPenDrawing: false,
-    lastPenPoint: null,
     // isErasing is defined as a getter above (line ~222) — do NOT redeclare here
 
     // Save Mode
@@ -404,7 +402,6 @@ export const state = {
     selectionStart: null,
     selectionEnd: null,
     confirmedSelection: null,
-    selectedAspect: 'free',
     selectedScale: 1,
 
     // Selection Tool
