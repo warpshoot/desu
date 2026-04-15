@@ -321,22 +321,6 @@ export function redoSelection() {
     }
 }
 
-export async function saveSelectedRegion(transparent) {
-    if (!state.confirmedSelection) return;
-
-    const { x, y, w, h } = state.confirmedSelection;
-    await saveRegion(x, y, w, h);
-}
-
-export async function saveAllCanvas(transparent) {
-    // Get the full canvas dimensions from the first layer
-    if (layers.length === 0) return;
-
-    const w = layers[0].canvas.width;
-    const h = layers[0].canvas.height;
-
-    await saveRegion(0, 0, w, h);
-}
 
 /**
  * Export layered PSD using ag-psd

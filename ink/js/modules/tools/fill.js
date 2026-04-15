@@ -26,7 +26,7 @@ function getActiveContextAndCanvas() {
 /**
  * トレランス判定関数の作成
  */
-export function _makeMatchFn(data, targetA, tolerance) {
+function _makeMatchFn(data, targetA, tolerance) {
     if (tolerance === 'strict') return (i) => data[i + 3] === targetA;
     if (tolerance === 'normal') {
         return targetA < 128 ? (i) => data[i + 3] < 128 : (i) => data[i + 3] >= 128;

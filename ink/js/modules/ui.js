@@ -62,11 +62,4 @@ export function initUI() {
 
     // 4. Expose some functions to window for legacy support or cross-module access without circularity
     window.renderLayerButtons = renderLayerButtons;
-    window.updateLayerThumbnail = updateLayerThumbnail;
-    window.updateModeButtonIcon = updateModeButtonIcon;
-    window.updateToolButtonStates = updateToolButtonStates;
-    window.updateToneMenuVisibility = updateToneMenuVisibility;
-    window.updateBrushSizeVisibility = updateBrushSizeVisibility;
-    window.updateBrushSizeSlider = updateBrushSizeSlider;
-    window.renderBrushPalette = renderBrushPalette;
 }
