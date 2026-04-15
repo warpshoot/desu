@@ -296,6 +296,7 @@ export function createLayerDirect(id) {
 // ============================================
 // State Object to manage application state
 // ============================================
+const _isMobile = /iPad|iPhone|iPod|Android/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 export const state = {
     // Color State
     inkColor: '#000000',
@@ -350,7 +351,7 @@ export const state = {
     translateY: 0,
 
     // Global History (unified, no per-layer stacks)
-    MAX_HISTORY: 10,
+    MAX_HISTORY: _isMobile ? 8 : 10,
     undoStack: [],   // Each entry: Map<layerId, ImageBitmap>
     redoStack: [],
 
