@@ -217,12 +217,6 @@ canvas {
     pointer-events: none;
 }
 
-/* 使用不可 (モード非対応時) */
-.mod-btn.unavailable {
-    opacity: 0.2;
-    pointer-events: none;
-}
-
 /* フィードバックリング: 押下時に大きく広がる円 */
 .mod-btn-ring {
     position: absolute;
@@ -456,10 +450,6 @@ canvas {
 }
 
 
-/* ホールド中のプログレスフィードバック */
-.mode-btn.holding {
-    transform: scale(0.92);
-}
 
 .mode-btn .hold-progress {
     position: absolute;
@@ -470,10 +460,6 @@ canvas {
     background: #000;
     pointer-events: none;
     z-index: 12;
-}
-
-.mode-btn.holding .hold-progress {
-    animation: hold-fill 300ms linear forwards;
 }
 
 @keyframes hold-fill {
@@ -502,34 +488,6 @@ canvas {
 .flyout-menu.hidden {
     display: none;
 }
-
-.flyout-item {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border: 1px solid transparent;
-    background: transparent;
-    transition: background 0.08s, border-color 0.08s;
-}
-
-.flyout-item.hover {
-    background: rgba(0, 0, 0, 0.08);
-    border-color: rgba(0, 0, 0, 0.2);
-}
-
-.flyout-item.current {
-    border: 1px solid #333;
-}
-
-.flyout-item img {
-    width: 24px;
-    height: 24px;
-    object-fit: contain;
-    pointer-events: none;
-}
-
 /* ============================================
    Tool Buttons
    ============================================ */
@@ -575,10 +533,6 @@ canvas {
     pointer-events: none;
 }
 
-#eraserToolBtn .tool-icon {
-    filter: brightness(0);
-}
-
 .tool-btn.active {
     border: 1px solid #000;
     /* Keep border, remove thick left */
@@ -613,23 +567,6 @@ canvas {
     line-height: 1;
     pointer-events: none;
 }
-
-
-
-/* Eraser button blue accent */
-#eraserToolBtn {
-    border-color: #999;
-    /* Gray inactive border */
-}
-
-#eraserToolBtn.active {
-    border-color: #000;
-}
-
-#eraserToolBtn.active::before {
-    background: #000;
-}
-
 /* ============================================
    Tool Menus (Long Press Popovers)
    ============================================ */
@@ -699,12 +636,6 @@ canvas {
 
 
 
-/* Layer clear icon - blue stroke like eraser */
-.layer-clear-icon {
-    stroke: #4a90e2 !important;
-    fill: none !important;
-}
-
 /* Horizontal Layer Menu */
 .layer-menu-horizontal {
     flex-direction: row;
@@ -759,11 +690,6 @@ canvas {
 .layer-delete.disabled {
     opacity: 0.3;
     pointer-events: none;
-}
-
-/* Eraser clear button in menu - no separator since horizontal layout */
-.eraser-clear {
-    margin-left: 4px;
 }
 
 /* ============================================
@@ -821,48 +747,6 @@ canvas {
 .header-btn:hover::after {
     transform: scaleX(1);
 }
-
-/* Color Picker */
-#inkColorBtnWrapper,
-#bgColorBtnWrapper {
-    width: 48px !important;
-    height: 32px !important;
-    padding: 0;
-    /* Remove padding for full bleed */
-    border-radius: 0 !important;
-    /* Solid rectangle */
-    border: 1px solid #000 !important;
-    background: rgba(255, 255, 255, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 12px;
-    /* Add margin to separate from slider */
-}
-
-#inkColorBtn,
-#bgColorBtn {
-    width: 100%;
-    height: 100%;
-    padding: 0;
-    border: none;
-    background: none;
-    cursor: pointer;
-    appearance: none;
-    border-radius: 0 !important;
-    /* Solid rectangle */
-}
-
-#bgColorBtn::-webkit-color-swatch-wrapper {
-    padding: 0;
-}
-
-#bgColorBtn::-webkit-color-swatch {
-    border: none;
-    border-radius: 0;
-    /* Square corners */
-}
-
 /* ============================================
    Brush Size Slider
    ============================================ */
@@ -1143,14 +1027,6 @@ canvas {
     color: #fff;
     grid-column: span 2;
 }
-
-.save-btn.secondary {
-    border-color: #ccc;
-    color: #999;
-    grid-column: span 2;
-    margin-top: 10px;
-}
-
 .save-btn:active {
     background: #eee;
 }
@@ -1173,11 +1049,6 @@ canvas {
 
 
 
-
-
-/* ============================================
-   Debug Log (Removed)
-   ============================================ */
 
 
 /* ============================================
@@ -1452,501 +1323,6 @@ a.credit-val:hover {
 }
 
 /* ============================================
-   AI Chat Panel
-   ============================================ */
-#ai-chat-panel {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 240px;
-    height: 320px;
-    min-width: 150px;
-    min-height: 150px;
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    border-radius: 0 !important;
-    display: flex;
-    flex-direction: column;
-    z-index: 350;
-    overflow: hidden;
-    pointer-events: auto;
-    transition: border-color 0.5s;
-    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.08);
-}
-
-/* removed pulse-border from here */
-
-@keyframes pulse-live {
-    0% {
-        opacity: 1;
-        color: #4cd137;
-    }
-
-    50% {
-        opacity: 0.5;
-        color: #1fb100;
-    }
-
-    100% {
-        opacity: 1;
-        color: #4cd137;
-    }
-}
-
-#ai-pause-btn.active {
-    animation: pulse-live 2s infinite ease-in-out;
-}
-
-@keyframes pulse-border {
-    0% {
-        border-color: #000;
-        box-shadow: 0 0 0 rgba(76, 209, 55, 0);
-    }
-
-    50% {
-        border-color: #4cd137;
-        box-shadow: 0 0 8px rgba(76, 209, 55, 0.3);
-    }
-
-    100% {
-        border-color: #000;
-        box-shadow: 0 0 0 rgba(76, 209, 55, 0);
-    }
-}
-
-#ai-chat-panel.hidden {
-    display: none;
-}
-
-#ai-chat-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 10px;
-    flex-shrink: 0;
-    background: #f0f0f0;
-}
-
-#ai-chat-header-btns {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-#ai-pause-btn {
-    background: #fff;
-    border: 1px solid #000;
-    cursor: pointer;
-    font-size: 10px;
-    line-height: 1;
-    padding: 2px 6px;
-    color: #4cd137;
-    font-weight: bold;
-    transition: all 0.1s;
-    border-radius: 0;
-}
-
-#ai-pause-btn:hover {
-    background: #f0f0f0;
-}
-
-#ai-pause-btn:active {
-    transform: scale(0.95);
-}
-
-#ai-chat-title {
-    font-size: 12px;
-    font-weight: bold;
-    color: #333;
-    letter-spacing: 0.5px;
-    flex: 1;
-}
-
-#ai-chat-status {
-    font-size: 11px;
-    margin-right: 8px;
-    color: #999;
-}
-
-#ai-chat-status.status-sending {
-    color: #7ecfff;
-    animation: pulse-status 1s infinite;
-}
-
-#ai-chat-status.status-error {
-    color: #ff6b6b;
-}
-
-#ai-chat-status.status-nokey {
-    color: #ffa94d;
-}
-
-@keyframes pulse-status {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.3;
-    }
-}
-
-#ai-chat-toggle,
-#ai-power-toggle {
-    background: none;
-    border: none;
-    color: #999;
-    font-size: 16px;
-    cursor: pointer;
-    padding: 0 4px;
-    line-height: 1;
-}
-
-#ai-chat-toggle:hover,
-#ai-power-toggle:hover {
-    color: #333;
-}
-
-#ai-chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-/* Scrollbar */
-#ai-chat-messages::-webkit-scrollbar {
-    width: 4px;
-}
-
-#ai-chat-messages::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-#ai-chat-messages::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
-    border-radius: 2px;
-}
-
-/* Message Bubbles */
-.ai-bubble {
-    background: #f0f0f0;
-    color: #333;
-    padding: 6px 10px;
-    border-radius: 0 !important;
-    border: 1px solid #ddd;
-    font-size: 13px;
-    line-height: 1.5;
-    max-width: 90%;
-    align-self: flex-start;
-    word-wrap: break-word;
-    animation: bubble-in 0.2s ease-out;
-}
-
-.user-bubble {
-    background: #333;
-    color: #fff;
-    padding: 6px 10px;
-    border-radius: 0 !important;
-    font-size: 13px;
-    line-height: 1.5;
-    max-width: 90%;
-    align-self: flex-end;
-    word-wrap: break-word;
-    animation: bubble-in 0.2s ease-out;
-}
-
-@keyframes bubble-in {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* AI Footer & Input */
-#ai-chat-footer {
-    display: flex;
-    border: 1px solid #000;
-    padding: 2px 4px;
-    margin: 4px 12px 12px 12px;
-    background: #fff;
-    flex-shrink: 0;
-}
-
-#ai-chat-mic {
-    background: none;
-    border: none;
-    padding: 4px 8px;
-    cursor: pointer;
-    color: #666;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.1s;
-    flex-shrink: 0;
-}
-
-#ai-chat-mic:hover {
-    color: #000;
-}
-
-#ai-chat-mic.recording {
-    color: #ff4757;
-    animation: mic-pulse 1.5s infinite;
-}
-
-@keyframes mic-pulse {
-    0% {
-        transform: scale(1);
-        opacity: 1;
-    }
-
-    50% {
-        transform: scale(1.1);
-        opacity: 0.7;
-    }
-
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-#ai-chat-input {
-    flex: 1;
-    border: none;
-    padding: 6px 8px;
-    font-size: 13px;
-    outline: none;
-    background: transparent;
-    min-width: 0;
-}
-
-#ai-chat-send {
-    background: none;
-    border: none;
-    padding: 4px 8px;
-    cursor: pointer;
-    color: #666;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-#ai-chat-send:hover {
-    color: #000;
-}
-
-#ai-chat-footer.disabled {
-    opacity: 0.3;
-    pointer-events: none;
-    filter: grayscale(1);
-}
-
-#ai-chat-resizer {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 24px;
-    height: 24px;
-    cursor: nwse-resize;
-    pointer-events: auto;
-    z-index: 10;
-}
-
-#ai-chat-resizer::after {
-    content: '';
-    position: absolute;
-    bottom: 6px;
-    right: 6px;
-    width: 8px;
-    height: 8px;
-    border-right: 2px solid #666;
-    border-bottom: 2px solid #666;
-}
-
-/* Resizable handle fix for border radius */
-#ai-chat-panel::-webkit-resizer {
-    background-color: transparent;
-}
-
-/* ============================================
-   Settings Modal
-   ============================================ */
-#settings-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#settings-modal.hidden {
-    display: none;
-}
-
-#settings-content {
-    background: #fff;
-    padding: 24px 28px;
-    width: 340px;
-    max-width: calc(100vw - 40px);
-    max-height: calc(100vh - 80px);
-    overflow-y: auto;
-}
-
-#settings-content h3 {
-    font-size: 16px;
-    margin-bottom: 20px;
-    font-weight: 700;
-    color: #222;
-    letter-spacing: 0.5px;
-}
-
-.settings-group {
-    margin-bottom: 16px;
-}
-
-.settings-group label {
-    display: block;
-    font-size: 12px;
-    color: #666;
-    margin-bottom: 6px;
-    font-weight: 500;
-}
-
-.settings-group select,
-.settings-group input[type="text"],
-.settings-group input[type="password"],
-.settings-group input[type="number"] {
-    width: 100%;
-    padding: 8px 10px;
-    border: 1px solid #ccc;
-    font-size: 14px;
-    background: #fafafa;
-    color: #333;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
-.settings-group select:focus,
-.settings-group input[type="text"]:focus,
-.settings-group input[type="password"]:focus,
-.settings-group input[type="number"]:focus {
-    border-color: #333;
-}
-
-.settings-toggle-group {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.settings-toggle-group label {
-    margin-bottom: 0;
-}
-
-.settings-toggle-group input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-}
-
-.settings-prompt-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 6px;
-}
-
-.settings-prompt-header label {
-    margin-bottom: 0 !important;
-}
-
-.settings-reset-btn {
-    padding: 2px 10px;
-    border: 1px solid #aaa;
-    background: #f5f5f5;
-    font-size: 11px;
-    color: #666;
-    cursor: pointer;
-    transition: all 0.15s;
-}
-
-.settings-reset-btn:hover {
-    border-color: #666;
-    color: #333;
-}
-
-.settings-reset-btn:active {
-    transform: scale(0.95);
-}
-
-#settings-prompt {
-    width: 100%;
-    padding: 8px 10px;
-    border: 1px solid #ccc;
-    font-size: 12px;
-    font-family: inherit;
-    line-height: 1.6;
-    background: #fafafa;
-    color: #333;
-    resize: vertical;
-    min-height: 120px;
-    max-height: 300px;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
-#settings-prompt:focus {
-    border-color: #333;
-}
-
-#settings-close-btn {
-    width: 100%;
-    margin-top: 20px;
-    padding: 10px;
-    border: 1px solid #333;
-    background: #333;
-    color: #fff;
-    font-size: 14px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: transform 0.1s;
-}
-
-#settings-close-btn:active {
-    transform: scale(0.96);
-}
-
-/* System hidden class */
-.hidden-system {
-    display: none !important;
-}
-
-/* Gray out AI settings */
-#ai-settings-fields.disabled {
-    opacity: 0.4;
-    pointer-events: none;
-    filter: grayscale(1);
-}
-
-/* ============================================
    Brush Palette
    ============================================ */
 #brush-palette {
@@ -2023,18 +1399,6 @@ a.credit-val:hover {
     flex-shrink: 0;
     transition: width 0.1s, height 0.1s;
 }
-
-.brush-label {
-    font-size: 9px;
-    color: #555;
-    text-align: center;
-    line-height: 1;
-    max-width: 36px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
 /* 塗り・消しゴムスロットのサブツールアイコン */
 .slot-subtool-icon {
     width: 20px;
@@ -2309,25 +1673,6 @@ a.credit-val:hover {
     cursor: pointer;
 }
 
-/* 筆圧カーブコンテナ */
-.bs-pressure-curve-container {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex: 1;
-    min-width: 0;
-}
-
-.bs-pressure-curve-container input[type="range"] {
-    flex: 1;
-}
-
-.bs-curve-label {
-    font-size: 10px;
-    color: #888;
-    white-space: nowrap;
-}
-
 /* ============================================
    Selection Tool
    ============================================ */
@@ -2451,4 +1796,4 @@ body.is-drawing-active #brush-settings-panel {
 #hud-container:not(.visible) {
     transform: translate(-50%, -50%) scale(0.95);
 }
-
+
