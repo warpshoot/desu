@@ -63,6 +63,7 @@ canvas {
     transform-origin: 0 0;
     pointer-events: none;
     -webkit-tap-highlight-color: transparent;
+    will-change: transform;
 }
 
 /* Utility Classes */
