@@ -21,6 +21,7 @@ import { applyTransform } from './canvas.js';
 // layerMeta はレイヤー構成変更の undo/redo をサポート
 
 const _layerFingerprints = new Map();
+window._layerFingerprints = _layerFingerprints; // storage.js で変更検知に利用
 let _fingerprintCounter = 0;
 let _lastSavedLayerIds = ""; // 構造変化検知用
 
@@ -191,7 +192,8 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
         state.undoStack.push(snapshot);
         saveLocalState();
 
-        const max = state.MAX_HISTORY || 10;
+        const isMobile = /iPad|iPhone|iPod|Android/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const max = state.MAX_HISTORY || (isMobile ? 8 : 10);
         if (state.undoStack.length > max + 1) {
             const old = state.undoStack.shift();
             _closeAllBitmaps(old);

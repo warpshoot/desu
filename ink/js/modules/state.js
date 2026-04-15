@@ -55,7 +55,9 @@ export function createLayer() {
     canvas.style.width = w + 'px';
     canvas.style.height = h + 'px';
 
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = canvas.getContext('2d');
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.scale(CANVAS_DPR, CANVAS_DPR);
     ctx.clearRect(0, 0, w, h);
 
@@ -271,7 +273,9 @@ export function createLayerDirect(id) {
     canvas.style.width = w + 'px';
     canvas.style.height = h + 'px';
 
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = canvas.getContext('2d');
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.scale(CANVAS_DPR, CANVAS_DPR);
     ctx.clearRect(0, 0, w, h);
 

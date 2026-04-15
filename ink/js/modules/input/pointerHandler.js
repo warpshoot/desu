@@ -299,7 +299,13 @@ function handlePointerMove(e) {
             const last = state._lastStablePoint;
             if (last && state._jumpFilterCount < 3) {
                 const dist = Math.hypot(e.clientX - last.x, e.clientY - last.y);
-                const threshold = e.pointerType === 'pen' ? (window.innerWidth * 0.05) : (window.innerWidth * 0.03);
+                const timeElapsed = Date.now() - (state.touchStartTime || 0);
+                
+                // システムの遅延（ラグ）がある場合、最初の移動距離が大きくなるのは自然。
+                // 経過時間が長い場合は閾値を大幅に引き上げる。
+                const lagFactor = timeElapsed > 50 ? 3 : 1;
+                const threshold = (e.pointerType === 'pen' ? (window.innerWidth * 0.05) : (window.innerWidth * 0.03)) * lagFactor;
+                
                 if (dist > threshold) {
                     state._jumpFilterCount++;
                     return;

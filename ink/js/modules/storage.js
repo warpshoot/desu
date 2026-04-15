@@ -1,19 +1,32 @@
 import { state, layers, createLayer, deleteLayer, CANVAS_DPR } from './state.js';
 
-// 1× 解像度のダウンスケールキャンバスを作成して toBlob する
-// 4000×4000 → 2000×2000 で blob サイズを 1/4 に削減
+// 1× 解像度のダウンスケールキャンバスを使い回す (メモリ確保抑制)
+let _offscreenResizeCanvas = null;
+
+function _getResizeCanvas(w, h) {
+    if (!_offscreenResizeCanvas) {
+        _offscreenResizeCanvas = document.createElement('canvas');
+    }
+    if (_offscreenResizeCanvas.width !== w || _offscreenResizeCanvas.height !== h) {
+        _offscreenResizeCanvas.width = w;
+        _offscreenResizeCanvas.height = h;
+    }
+    return _offscreenResizeCanvas;
+}
+
 function _layerToBlob(layer, callback) {
     const dpr = CANVAS_DPR;
     if (dpr <= 1) {
         layer.canvas.toBlob(callback, 'image/png');
         return;
     }
-    const w = layer.canvas.width / dpr;
-    const h = layer.canvas.height / dpr;
-    const tmp = document.createElement('canvas');
-    tmp.width = w;
-    tmp.height = h;
-    tmp.getContext('2d').drawImage(layer.canvas, 0, 0, w, h);
+    const w = Math.floor(layer.canvas.width / dpr);
+    const h = Math.floor(layer.canvas.height / dpr);
+    const tmp = _getResizeCanvas(w, h);
+    const tmpCtx = tmp.getContext('2d');
+    tmpCtx.clearRect(0, 0, w, h);
+    tmpCtx.imageSmoothingEnabled = true;
+    tmpCtx.drawImage(layer.canvas, 0, 0, w, h);
     tmp.toBlob(callback, 'image/png');
 }
 
@@ -24,6 +37,9 @@ const STORAGE_KEY = 'desu-draw-state';
 const DB_NAME = 'DesuInkDB';
 const STORE_NAME = 'canvasData';
 let saveTimeout = null;
+
+// ストレージ上の指紋 (IndexedDB に最後に保存された状態)
+const _lastStoredFingerprints = new Map();
 
 // --- IndexedDB Helpers ---
 function openDB() {
@@ -110,19 +126,37 @@ export function saveLocalState() {
             const layerIds = [];
             const blobPromises = [];
 
+            // window.getLayerFingerprint が history.js 等から露出している前提
+            const getFp = (id) => (window._layerFingerprints ? window._layerFingerprints.get(id) : 0);
+
             for (const layer of layers) {
+                const currentFp = getFp(layer.id);
+                const lastFp = _lastStoredFingerprints.get(layer.id);
+                const storeId = `layer-${layer.id}`;
+                layerIds.push(storeId);
+
                 metadata.layers.push({
                     id: layer.id,
                     opacity: layer.opacity,
-                    visible: layer.visible
+                    visible: layer.visible,
+                    fp: currentFp // 指紋をメタデータにも載せて不整合を防ぐ
                 });
-                const storeId = `layer-${layer.id}`;
-                layerIds.push(storeId);
+
+                if (currentFp === lastFp && lastFp !== undefined) {
+                    // 変更がないので IndexedDB への書き込みをスキップ
+                    continue;
+                }
                 
                 const p = new Promise(resolve => {
                     _layerToBlob(layer, blob => {
-                        if (blob) storeBlob(storeId, blob).then(resolve);
-                        else resolve();
+                        if (blob) {
+                            storeBlob(storeId, blob).then(() => {
+                                _lastStoredFingerprints.set(layer.id, currentFp);
+                                resolve();
+                            });
+                        } else {
+                            resolve();
+                        }
                     });
                 });
                 blobPromises.push(p);
@@ -130,6 +164,7 @@ export function saveLocalState() {
 
             localStorage.setItem(STORAGE_KEY, JSON.stringify(metadata));
             await Promise.all(blobPromises);
+            // 現在の構成に含まれない古いレイヤーのデータを掃除
             await clearOldBlobs(layerIds);
 
         } catch (e) {
@@ -180,6 +215,11 @@ export function loadLocalState() {
                 layer.visible = saved.visible ?? true;
                 layer.canvas.style.opacity = layer.opacity;
                 layer.canvas.style.display = layer.visible ? 'block' : 'none';
+
+                // ロード時に指紋を同期
+                if (saved.fp !== undefined) {
+                    _lastStoredFingerprints.set(layer.id, saved.fp);
+                }
 
                 try {
                     const blob = await getBlob(`layer-${saved.id}`);
