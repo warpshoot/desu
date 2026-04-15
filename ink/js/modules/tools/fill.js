@@ -58,37 +58,15 @@ export function dilateBox(boundary, w, h, radius) {
 }
 
 /**
- * カラー塗りつぶし (バケツ)
+ * フラッドフィル共通コア (scanline + gap-close)
  */
-export function bucketFillColor(startX, startY, fillColor, tolerance = 'normal', gapClose = 0) {
-    const { canvas, ctx } = getActiveContextAndCanvas();
-    if (!canvas || !ctx) return;
-
-    const dpr = CANVAS_DPR;
-    startX = Math.round(startX * dpr);
-    startY = Math.round(startY * dpr);
-    const w = canvas.width, h = canvas.height;
-    if (startX < 0 || startX >= w || startY < 0 || startY >= h) return;
-
-    const imgData = ctx.getImageData(0, 0, w, h);
-    const data = imgData.data;
-    const idx = (startY * w + startX) * 4;
-    const targetA = data[idx + 3];
-
-    if (data[idx] === fillColor[0] && data[idx + 1] === fillColor[1] &&
-        data[idx + 2] === fillColor[2] && data[idx + 3] === fillColor[3]) return;
-
+function _floodFill(data, w, h, startX, startY, targetA, tolerance, gapClose, setPixel) {
     const matchTarget = _makeMatchFn(data, targetA, tolerance);
-    const setPixel = (i) => {
-        data[i] = fillColor[0]; data[i + 1] = fillColor[1];
-        data[i + 2] = fillColor[2]; data[i + 3] = fillColor[3];
-    };
-
     const visited = new Uint8Array(w * h);
     let closedBoundary = null;
     let gapRadius = 0;
     if (gapClose > 0) {
-        gapRadius = Math.ceil(gapClose / 2 * dpr);
+        gapRadius = Math.ceil(gapClose / 2 * CANVAS_DPR);
         const boundary = new Uint8Array(w * h);
         for (let j = 0; j < w * h; j++) if (!matchTarget(j * 4)) boundary[j] = 1;
         closedBoundary = dilateBox(boundary, w, h, gapRadius);
@@ -123,7 +101,29 @@ export function bucketFillColor(startX, startY, fillColor, tolerance = 'normal',
         const expandedVisited = dilateBox(visited, w, h, gapRadius);
         for (let j = 0; j < w * h; j++) if (expandedVisited[j] && matchTarget(j * 4)) setPixel(j * 4);
     }
+}
 
+/**
+ * カラー塗りつぶし (バケツ)
+ */
+export function bucketFillColor(startX, startY, fillColor, tolerance = 'normal', gapClose = 0) {
+    const { canvas, ctx } = getActiveContextAndCanvas();
+    if (!canvas || !ctx) return;
+
+    const dpr = CANVAS_DPR;
+    startX = Math.round(startX * dpr);
+    startY = Math.round(startY * dpr);
+    const w = canvas.width, h = canvas.height;
+    if (startX < 0 || startX >= w || startY < 0 || startY >= h) return;
+
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+    const idx = (startY * w + startX) * 4;
+    if (data[idx] === fillColor[0] && data[idx + 1] === fillColor[1] &&
+        data[idx + 2] === fillColor[2] && data[idx + 3] === fillColor[3]) return;
+
+    _floodFill(data, w, h, startX, startY, data[idx + 3], tolerance, gapClose,
+        (i) => { data[i] = fillColor[0]; data[i+1] = fillColor[1]; data[i+2] = fillColor[2]; data[i+3] = fillColor[3]; });
     _applyImageData(ctx, imgData);
 }
 
@@ -142,53 +142,11 @@ export function bucketFillTransparent(startX, startY, tolerance = 'normal', gapC
 
     const imgData = ctx.getImageData(0, 0, w, h);
     const data = imgData.data;
-    const idx = (startY * w + startX) * 4;
-    const targetA = data[idx + 3];
+    const targetA = data[(startY * w + startX) * 4 + 3];
     if (targetA === 0) return;
 
-    const matchTarget = _makeMatchFn(data, targetA, tolerance);
-    const setPixel = (i) => { data[i] = 0; data[i + 1] = 0; data[i + 2] = 0; data[i + 3] = 0; };
-
-    const visited = new Uint8Array(w * h);
-    let closedBoundary = null;
-    let gapRadius = 0;
-    if (gapClose > 0) {
-        gapRadius = Math.ceil(gapClose / 2 * dpr);
-        const boundary = new Uint8Array(w * h);
-        for (let j = 0; j < w * h; j++) if (!matchTarget(j * 4)) boundary[j] = 1;
-        closedBoundary = dilateBox(boundary, w, h, gapRadius);
-    }
-
-    const isPassable = closedBoundary
-        ? (x, y) => !closedBoundary[y * w + x] && !visited[y * w + x]
-        : (x, y) => matchTarget((y * w + x) * 4) && !visited[y * w + x];
-
-    if (!isPassable(startX, startY)) return;
-
-    const stack = [[startX, startY]];
-    while (stack.length > 0) {
-        let [x, y] = stack.pop();
-        if (!isPassable(x, y)) continue;
-        while (x > 0 && isPassable(x - 1, y)) x--;
-        let spanAbove = false, spanBelow = false;
-        while (x < w && isPassable(x, y)) {
-            visited[y * w + x] = 1;
-            setPixel((y * w + x) * 4);
-            if (y > 0 && isPassable(x, y - 1)) {
-                if (!spanAbove) { stack.push([x, y - 1]); spanAbove = true; }
-            } else spanAbove = false;
-            if (y < h - 1 && isPassable(x, y + 1)) {
-                if (!spanBelow) { stack.push([x, y + 1]); spanBelow = true; }
-            } else spanBelow = false;
-            x++;
-        }
-    }
-
-    if (closedBoundary) {
-        const expandedVisited = dilateBox(visited, w, h, gapRadius);
-        for (let j = 0; j < w * h; j++) if (expandedVisited[j] && matchTarget(j * 4)) setPixel(j * 4);
-    }
-
+    _floodFill(data, w, h, startX, startY, targetA, tolerance, gapClose,
+        (i) => { data[i] = 0; data[i+1] = 0; data[i+2] = 0; data[i+3] = 0; });
     _applyImageData(ctx, imgData);
 }
 

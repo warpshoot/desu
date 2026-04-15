@@ -444,6 +444,34 @@ export function setupBrushPalette() {
     palette.addEventListener('pointerdown', (e) => e.stopPropagation());
 }
 
+// ============================================
+// Settings Panel Shared Helpers
+// ============================================
+
+function _setupPanelBoilerplate(panel, pinBtn, closeBtn, pinStateKey, onClose) {
+    panel.addEventListener('pointerdown', (e) => e.stopPropagation());
+    panel.addEventListener('pointermove', (e) => e.stopPropagation());
+    if (pinBtn) {
+        pinBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            state[pinStateKey] = !state[pinStateKey];
+            pinBtn.classList.toggle('active', state[pinStateKey]);
+        });
+    }
+    if (closeBtn) closeBtn.addEventListener('click', onClose);
+}
+
+function _positionAndShowPanel(panel, slotSelector, maxTopOffset) {
+    panel.classList.remove('hidden');
+    const activeSlot = document.querySelector(slotSelector);
+    if (activeSlot) {
+        const rect = activeSlot.getBoundingClientRect();
+        panel.style.left = '64px';
+        panel.style.top = `${Math.max(12, Math.min(window.innerHeight - maxTopOffset, rect.top - 60))}px`;
+    }
+    updateToneMenuVisibility();
+}
+
 export function setupBrushSettingsPanel() {
     const panel = document.getElementById('brush-settings-panel');
     if (!panel) return;
@@ -484,21 +512,12 @@ export function setupBrushSettingsPanel() {
     };
 
     controls.forEach(el => el && el.addEventListener('input', sync));
-    panel.addEventListener('pointermove', (e) => e.stopPropagation());
-    
-    const pinBtn = document.getElementById('brush-settings-pin');
-    if (pinBtn) {
-        pinBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            state.isBrushSettingsPinned = !state.isBrushSettingsPinned;
-            pinBtn.classList.toggle('active', state.isBrushSettingsPinned);
-        });
-    }
-
-    closeBtn.addEventListener('click', () => {
-        panel.classList.add('hidden');
-        updateToneMenuVisibility();
-    });
+    _setupPanelBoilerplate(panel,
+        document.getElementById('brush-settings-pin'),
+        closeBtn,
+        'isBrushSettingsPinned',
+        () => { panel.classList.add('hidden'); updateToneMenuVisibility(); }
+    );
 }
 
 export function openBrushSettings(idx) {
@@ -543,14 +562,7 @@ export function openBrushSettings(idx) {
         pinBtn.classList.toggle('active', state.isBrushSettingsPinned);
     }
 
-    panel.classList.remove('hidden');
-    const activeSlot = document.querySelector(`.brush-slot[data-idx="${idx}"]`);
-    if (activeSlot) {
-        const rect = activeSlot.getBoundingClientRect();
-        panel.style.left = `64px`;
-        panel.style.top = `${Math.max(12, Math.min(window.innerHeight - 412, rect.top - 60))}px`;
-    }
-    updateToneMenuVisibility();
+    _positionAndShowPanel(panel, `.brush-slot[data-idx="${idx}"]`, 412);
 }
 
 // Stubs for other panels - to be implemented fully if needed
@@ -626,25 +638,12 @@ export function setupFillSettingsPanel() {
         gapCloseSlider.addEventListener('change', () => _hideGapClosePreview());
     }
 
-    panel.addEventListener('pointerdown', (e) => e.stopPropagation());
-    panel.addEventListener('pointermove', (e) => e.stopPropagation());
-
-    const pinBtn = document.getElementById('fill-settings-pin');
-    if (pinBtn) {
-        pinBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            state.isFillSettingsPinned = !state.isFillSettingsPinned;
-            pinBtn.classList.toggle('active', state.isFillSettingsPinned);
-        });
-    }
-
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            panel.classList.add('hidden');
-            _hideGapClosePreview();
-            updateToneMenuVisibility();
-        });
-    }
+    _setupPanelBoilerplate(panel,
+        document.getElementById('fill-settings-pin'),
+        closeBtn,
+        'isFillSettingsPinned',
+        () => { panel.classList.add('hidden'); _hideGapClosePreview(); updateToneMenuVisibility(); }
+    );
 }
 
 export function openFillSettings(idx) {
@@ -684,14 +683,7 @@ export function openFillSettings(idx) {
         pinBtn.classList.toggle('active', state.isFillSettingsPinned);
     }
 
-    panel.classList.remove('hidden');
-    const activeSlot = document.querySelector(`.brush-slot[data-idx="${idx}"][data-category="fill"]`);
-    if (activeSlot) {
-        const rect = activeSlot.getBoundingClientRect();
-        panel.style.left = `64px`;
-        panel.style.top = `${Math.max(12, Math.min(window.innerHeight - 312, rect.top - 60))}px`;
-    }
-    updateToneMenuVisibility();
+    _positionAndShowPanel(panel, `.brush-slot[data-idx="${idx}"][data-category="fill"]`, 312);
 }
 
 export function setupEraserSettingsPanel() {
@@ -784,25 +776,12 @@ export function setupEraserSettingsPanel() {
         gapCloseSlider.addEventListener('change', () => _hideGapClosePreview());
     }
 
-    panel.addEventListener('pointerdown', (e) => e.stopPropagation());
-    panel.addEventListener('pointermove', (e) => e.stopPropagation());
-
-    const pinBtn = document.getElementById('eraser-settings-pin');
-    if (pinBtn) {
-        pinBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            state.isEraserSettingsPinned = !state.isEraserSettingsPinned;
-            pinBtn.classList.toggle('active', state.isEraserSettingsPinned);
-        });
-    }
-
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            panel.classList.add('hidden');
-            _hideGapClosePreview();
-            updateToneMenuVisibility();
-        });
-    }
+    _setupPanelBoilerplate(panel,
+        document.getElementById('eraser-settings-pin'),
+        closeBtn,
+        'isEraserSettingsPinned',
+        () => { panel.classList.add('hidden'); _hideGapClosePreview(); updateToneMenuVisibility(); }
+    );
 }
 
 export function openEraserSettings(idx) {
@@ -858,14 +837,7 @@ export function openEraserSettings(idx) {
         pinBtn.classList.toggle('active', state.isEraserSettingsPinned);
     }
 
-    panel.classList.remove('hidden');
-    const activeSlot = document.querySelector(`.brush-slot[data-idx="${idx}"][data-category="eraser"]`);
-    if (activeSlot) {
-        const rect = activeSlot.getBoundingClientRect();
-        panel.style.left = `64px`;
-        panel.style.top = `${Math.max(12, Math.min(window.innerHeight - 350, rect.top - 60))}px`;
-    }
-    updateToneMenuVisibility();
+    _positionAndShowPanel(panel, `.brush-slot[data-idx="${idx}"][data-category="eraser"]`, 350);
 }
 
 export async function executeClearLayer() {
