@@ -334,18 +334,22 @@ function setupLayerPanel() {
 
     // Add layer button
     addBtn.addEventListener('click', async () => {
-        // Save state before adding the layer so the add is undoable.
-        // restoreSnapshot clears layers not in the snapshot, so undoing will
-        // blank out this new layer's content correctly.
-        await saveState();
-        const layer = createLayer();
-        if (layer) {
-            // Apply current zoom/pan to the new layer immediately
-            applyTransform();
-            updateAllThumbnails();
-            renderLayerButtons();
-            updateActiveLayerIndicator();
-        }
+        showConfirmModal(
+            "この操作によりアンドゥ履歴が失われます。\n続けますか？",
+            'layerAdd',
+            async () => {
+                const layer = createLayer();
+                if (layer) {
+                    // Apply current zoom/pan to the new layer immediately
+                    applyTransform();
+
+                    await resetHistory();
+                    updateAllThumbnails();
+                    renderLayerButtons();
+                    updateActiveLayerIndicator();
+                }
+            }
+        );
     });
 
     // Layer button click/long-press handlers
@@ -1142,13 +1146,9 @@ function cancelCurrentOperation() {
     if (state.isPenDrawing || state.isErasing) {
         const layer = getActiveLayer();
         if (layer) restoreLayer(layer.id);
-        // Only pop if saveState() has already pushed (drawingPending=false).
-        // If drawingPending is still true, saveState is still mid-await and hasn't
-        // pushed yet — handlePointerDown will pop the entry after saveState completes.
-        // Popping here while pending would remove the *previous* operation's entry instead.
-        if (!state.drawingPending) {
-            state.undoStack.pop();
-        }
+        // Remove the saveState() entry that was added when drawing started
+        // Otherwise undo() would restore to the same state (no visible change)
+        state.undoStack.pop();
         state.isPenDrawing = false;
         state.lastPenPoint = null;
     }
