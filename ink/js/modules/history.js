@@ -96,7 +96,7 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
     //      GPU パイプライン同期のブロッキングが発生しない
     const snapshotFingerprints = new Map(_layerFingerprints);
     const layersToCaptureIds = new Set();
-    const currentLayerIdString = layers.map(l => l.id).join(',');
+    const currentLayerIdString = layers.map(l => `${l.id}:${Math.round(l.opacity * 100)}:${l.visible ? 1 : 0}`).join(',');
     const structureChanged = currentLayerIdString !== _lastSavedLayerIds;
 
     for (const layer of layers) {
@@ -229,7 +229,7 @@ export async function saveInitialState() {
     // これをしないと最初のストロークの saveState で _lastSavedLayerIds が ""
     // のままになり、structureChanged=true と判定されて空の重複スナップショットが
     // 積まれ、初回アンドゥが 2 ステップ消費される原因になる。
-    _lastSavedLayerIds = layers.map(l => l.id).join(',');
+    _lastSavedLayerIds = layers.map(l => `${l.id}:${Math.round(l.opacity * 100)}:${l.visible ? 1 : 0}`).join(',');
 }
 
 /**
