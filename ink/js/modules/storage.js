@@ -451,7 +451,10 @@ function _restoreSettings(s) {
     if (s.activeFillSlotIndex != null) state.activeFillSlotIndex = s.activeFillSlotIndex;
     if (s.activeEraserSlotIndex != null) state.activeEraserSlotIndex = s.activeEraserSlotIndex;
     if (s.mode) state.mode = s.mode;
-    if (s.subTool) state.subTool = s.subTool;
+    if (s.subTool) {
+        // 'clear' subTool is destructive — never restore it across sessions
+        state.subTool = (s.subTool === 'clear') ? 'pen' : s.subTool;
+    }
     if (s.penSize) state.penSize = s.penSize;
     if (s.eraserSize) state.eraserSize = s.eraserSize;
     if (s.stippleSize) state.stippleSize = s.stippleSize;
