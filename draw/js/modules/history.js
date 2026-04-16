@@ -128,6 +128,10 @@ function restoreSnapshot(snapshot) {
         if (bitmap) {
             layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
             layer.ctx.drawImage(bitmap, 0, 0);
+        } else {
+            // Layer was added after this snapshot was taken — clear it so undo
+            // correctly reflects the state where this layer didn't have content yet.
+            layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
         }
     }
 }
