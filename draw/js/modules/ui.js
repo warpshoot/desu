@@ -1480,6 +1480,8 @@ async function clearAll() {
         layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
         scheduleThumbnailUpdate(layer);
     }
+
+    await saveState();
 }
 
 // ============================================
