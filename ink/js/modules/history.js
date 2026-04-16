@@ -67,6 +67,16 @@ function _decRef(bitmap) {
     }
 }
 
+// Capture a layer at 1× DPR — 4× less memory than full DPR on 2× displays.
+// iOS history bitmaps at full DPR (~64MB each) cause memory pressure and hang createImageBitmap.
+function _captureLayer1x(layer) {
+    const dpr = CANVAS_DPR;
+    if (dpr <= 1) return createImageBitmap(layer.canvas);
+    const w = Math.floor(layer.canvas.width / dpr);
+    const h = Math.floor(layer.canvas.height / dpr);
+    return createImageBitmap(layer.canvas, { resizeWidth: w, resizeHeight: h, resizeQuality: 'medium' });
+}
+
 /**
  * レイヤーに変更があったことをマーク (描画操作の完了時に呼ぶ)
  */
@@ -127,7 +137,7 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
             const promises = new Map();
             for (const layer of layers) {
                 if (layersToCaptureIds.has(layer.id)) {
-                    promises.set(layer.id, createImageBitmap(layer.canvas));
+                    promises.set(layer.id, _captureLayer1x(layer));
                 }
             }
             resolve(promises);
@@ -161,7 +171,7 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
                 snapshot.bitmaps.set(layer.id, prevEntry.bitmaps.get(layer.id));
             } else {
                 // 初回保存など、どちらもない場合はキャプチャ
-                const bmp = await createImageBitmap(layer.canvas);
+                const bmp = await _captureLayer1x(layer);
                 snapshot.bitmaps.set(layer.id, bmp);
             }
         });
@@ -217,7 +227,7 @@ export async function saveInitialState() {
         fingerprints: new Map(_layerFingerprints)
     };
     const bitmaps = await Promise.all(
-        layers.map(layer => createImageBitmap(layer.canvas))
+        layers.map(layer => _captureLayer1x(layer))
     );
     for (let i = 0; i < layers.length; i++) {
         const bmp = bitmaps[i];
@@ -242,7 +252,7 @@ async function createSnapshot() {
         fingerprints: new Map(_layerFingerprints)
     };
     const bitmaps = await Promise.all(
-        layers.map(layer => createImageBitmap(layer.canvas))
+        layers.map(layer => _captureLayer1x(layer))
     );
     for (let i = 0; i < layers.length; i++) {
         const bmp = bitmaps[i];
