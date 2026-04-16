@@ -5,10 +5,11 @@ import {
     getLayer,
     CANVAS_DPR
 } from '../state.js';
-import { 
-    saveState, 
-    commitRedoClear, 
-    saveLayerChangeState 
+import {
+    saveState,
+    commitRedoClear,
+    saveLayerChangeState,
+    markLayerDirty
 } from '../history.js';
 import {
     dilateBox
@@ -841,7 +842,6 @@ export function openEraserSettings(idx) {
 }
 
 export async function executeClearLayer() {
-    const { saveState } = await import('../history.js');
     await saveState();
     const layer = getActiveLayer();
     if (layer) {
@@ -849,12 +849,13 @@ export async function executeClearLayer() {
         const clipped = pushSelectionClip(layer.ctx);
         layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
         if (clipped) popSelectionClip(layer.ctx);
+        markLayerDirty(layer.id);
         updateLayerThumbnail(layer);
     }
+    await saveState();
 }
 
 export async function clearAll() {
-    const { saveState } = await import('../history.js');
     await saveState();
     const { layers } = await import('../state.js');
     const { pushSelectionClip, popSelectionClip } = await import('../tools/selection.js');
@@ -863,6 +864,7 @@ export async function clearAll() {
         const clipped = pushSelectionClip(layer.ctx);
         layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
         if (clipped) popSelectionClip(layer.ctx);
+        markLayerDirty(layer.id);
         updateLayerThumbnail(layer);
     }
     await saveState();
