@@ -349,18 +349,29 @@ function _drawErase(ctx, pts, fromIdx, isStart, b) {
         ctx.stroke();
     }
 
-            for (let j = 0; j <= steps; j++) {
-                const t = j / steps;
-                const cw = w1 + (w2 - w1) * t;
-                if (cw <= 0) continue;
-                
-                const roundedW = Math.round(cw * 2) / 2;
-                if (roundedW !== lastStampSize) {
-                    lastStamp = _getRadialBrush(roundedW);
-                    lastStampSize = roundedW;
-                }
-                ctx.drawImage(lastStamp, p1.x + dx * t - roundedW / 2, p1.y + dy * t - roundedW / 2, roundedW, roundedW);
+    // Pass 2: 可変幅スタンプ (常に高速な drawImage を使用)
+    let lastStampSize = -1;
+    let lastStamp = null;
+    for (let i = startI; i < pts.length; i++) {
+        const p1 = pts[i-1], p2 = pts[i];
+        const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
+        const dx = p2.x - p1.x, dy = p2.y - p1.y;
+        const dist = Math.hypot(dx, dy);
+
+        const spacing = Math.max(0.5, Math.min(w1, w2) * 0.2);
+        const steps = Math.max(1, Math.ceil(dist / spacing));
+
+        for (let j = 0; j <= steps; j++) {
+            const t = j / steps;
+            const cw = w1 + (w2 - w1) * t;
+            if (cw <= 0) continue;
+
+            const roundedW = Math.round(cw * 2) / 2;
+            if (roundedW !== lastStampSize) {
+                lastStamp = _getRadialBrush(roundedW);
+                lastStampSize = roundedW;
             }
+            ctx.drawImage(lastStamp, p1.x + dx * t - roundedW / 2, p1.y + dy * t - roundedW / 2, roundedW, roundedW);
         }
     }
 
