@@ -230,8 +230,8 @@ export const dict = {
         'hud.mode.pen': 'ペンモード',
         'hud.mode.eraser': '消しゴムモード',
         'hud.mode.select': '選択モード',
-        'hud.stab.on': '手振れ補正 ON',
-        'hud.stab.off': '手振れ補正 OFF',
+        'hud.stab.on': '手ぶれ補正 ON',
+        'hud.stab.off': '手ぶれ補正 OFF',
         'prompt.loadLast': '前回の続きから始めますか？',
         'prompt.loadBackup': '異常終了が検出されました。バックアップから復旧しますか？',
         'confirm.unload': '描画中のデータがあります。ページを離れますか？'

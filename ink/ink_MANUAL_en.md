@@ -37,8 +37,8 @@ Switch between four main modes using the toolbar on the left.
 
 ## 3. Advanced Features
 
-### **String-pulling Stabilizer**
-Can be enabled from the Pen or Eraser settings panel. It allows you to draw extremely smooth lines by suppressing tremors.
+### **Stabilizer (String-pulling)**
+Can be enabled from the Pen or Eraser settings panel. By using a unique "string-pulling" mechanism, it allows you to draw extremely smooth lines by suppressing tremors.
 
 ### **Layer Functionality**
 Manage up to 5 layers.
