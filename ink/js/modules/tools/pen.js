@@ -58,6 +58,35 @@ let pressureBuffer = new Float32Array(PRESSURE_WINDOW);
 let pressureBufferLen = 0;
 let pressureBufferIdx = 0;
 
+// 座標スムージング用 (高周波ジッター除去用)
+let _lastRawX1 = -1, _lastRawY1 = -1;
+let _lastRawX2 = -1, _lastRawY2 = -1;
+
+/**
+ * 低レベルな座標フィルタリング (3点加重移動平均)
+ * スタビライザーOFF時でも、ハードウェア由来の微細な震えを消す。
+ */
+function _filterCoordinate(x, y) {
+    if (_lastRawX1 < 0) {
+        _lastRawX1 = x; _lastRawY1 = y;
+        _lastRawX2 = x; _lastRawY2 = y;
+        return { x, y };
+    }
+    // 3点平均 (最新の重みを高くしてラグを最小化)
+    const fx = (x * 0.5 + _lastRawX1 * 0.3 + _lastRawX2 * 0.2);
+    const fy = (y * 0.5 + _lastRawY1 * 0.3 + _lastRawY2 * 0.2);
+    
+    _lastRawX2 = _lastRawX1; _lastRawY2 = _lastRawY1;
+    _lastRawX1 = x; _lastRawY1 = y;
+    
+    return { x: fx, y: fy };
+}
+
+function _resetFilter() {
+    _lastRawX1 = -1; _lastRawY1 = -1;
+    _lastRawX2 = -1; _lastRawY2 = -1;
+}
+
 /**
  * ストロークの最後（一番新しい）点を返す。
  * 予測レンダリングの起点を決めるために使用。
@@ -285,8 +314,8 @@ function _rebuildSmoothedPoints(fromRawIdx) {
         const p3 = raw[Math.min(raw.length - 1, i + 1)];
 
         const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-        // 距離に応じた分割数 (短い区間は少なく、長い区間は多めに補間して「カクつき」を徹底排除)
-        const subdivisions = Math.max(4, Math.min(24, Math.ceil(dist / 1.5)));
+        // 距離が非常に短い（ジッターの範囲内）場合は補間を簡略化して波打ちを防ぐ
+        const subdivisions = dist < 1.0 ? 1 : Math.max(4, Math.min(24, Math.ceil(dist / 1.5)));
 
         const interpolated = _catmullRomSegment(p0, p1, p2, p3, subdivisions);
         for (let j = 0; j < interpolated.length; j++) smoothedPoints.push(interpolated[j]);
@@ -321,6 +350,10 @@ export function previewStraightLine(x, y) {
 
 export function startPenDrawing(x, y, pressure = 0.5) {
     state.isPenDrawing = true;
+    _resetFilter();
+    const filtered = _filterCoordinate(x, y);
+    x = filtered.x; y = filtered.y;
+
     pressureBufferLen = 0;
     pressureBufferIdx = 0;
     const smoothedP = _smoothPressure(pressure);
@@ -405,6 +438,12 @@ export function drawPenLine(x, y, pressure = 0.5, options = {}) {
         _stabAnchorY += dy * ratio;
         x = _stabAnchorX;
         y = _stabAnchorY;
+    }
+
+    if (!options.previewCtx) {
+        // 生データをフィルタリングしてジッターを除去
+        const filtered = _filterCoordinate(x, y);
+        x = filtered.x; y = filtered.y;
     }
 
     const lastPoint = strokePoints.length > 0 ? strokePoints[strokePoints.length - 1] : null;

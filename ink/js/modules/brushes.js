@@ -159,7 +159,7 @@ function _getRadialBrush(size) {
 
     const grad = ctx.createRadialGradient(s/2, s/2, 0, s/2, s/2, size/2);
     grad.addColorStop(0, 'rgba(0,0,0,1)');
-    grad.addColorStop(0.8, 'rgba(0,0,0,0.8)');
+    grad.addColorStop(0.95, 'rgba(0,0,0,0.85)'); // Harden edge to avoid 'serrated' overlap artifacts
     grad.addColorStop(1, 'rgba(0,0,0,0)');
 
     ctx.fillStyle = grad;
