@@ -2,7 +2,7 @@ import { initDOM, layers } from './modules/state.js';
 import { initCanvas, resizeViewport } from './modules/canvas.js';
 import { initUI, updateLayerThumbnail } from './modules/ui.js';
 import { saveInitialState } from './modules/history.js';
-import { loadLocalState, hasSavedState, hasBackupState, exportProject, importProject, forceSave, isStorageDirty } from './modules/storage.js';
+import { loadLocalState, hasSavedState, hasBackupState, exportProject, importProject, forceSave, isStorageDirty, getCanvasSizePref, getSavedStatePaperSize } from './modules/storage.js';
 import { getLang, setLang, t, applyTextToDOM } from './modules/i18n.js';
 
 window.onerror = function (msg, url, line, col, error) {
@@ -26,12 +26,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         let loaded = false;
         if (hasSavedState()) {
             if (confirm(t('prompt.loadLast'))) {
-                loaded = await loadLocalState();
+                const savedSize = getSavedStatePaperSize();
+                const pref = getCanvasSizePref();
+                if (savedSize && (savedSize.w !== pref || savedSize.h !== pref)) {
+                    const msg = t('confirm.canvasSizeMismatch')
+                        .replace('{0}', savedSize.w).replace('{1}', savedSize.h)
+                        .replace('{2}', pref).replace('{3}', pref);
+                    if (!confirm(msg)) {
+                        // User declined: start fresh (don't load)
+                    } else {
+                        loaded = await loadLocalState();
+                    }
+                } else {
+                    loaded = await loadLocalState();
+                }
             }
         } else if (hasBackupState()) {
             // Main state lost but backup exists
             if (confirm(t('prompt.loadBackup'))) {
-                loaded = await loadLocalState(true);
+                const savedSize = getSavedStatePaperSize(true);
+                const pref = getCanvasSizePref();
+                if (savedSize && (savedSize.w !== pref || savedSize.h !== pref)) {
+                    const msg = t('confirm.canvasSizeMismatch')
+                        .replace('{0}', savedSize.w).replace('{1}', savedSize.h)
+                        .replace('{2}', pref).replace('{3}', pref);
+                    if (!confirm(msg)) {
+                        // User declined: start fresh
+                    } else {
+                        loaded = await loadLocalState(true);
+                    }
+                } else {
+                    loaded = await loadLocalState(true);
+                }
             }
         }
 

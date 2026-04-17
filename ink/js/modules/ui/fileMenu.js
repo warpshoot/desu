@@ -9,7 +9,8 @@ import {
     importProject,
     exportConfig,
     importConfig,
-    resetSettings
+    resetSettings,
+    getCanvasSizePref
 } from '../storage.js';
 import { t } from '../i18n.js';
 import { resetHistory } from '../history.js';
@@ -25,6 +26,27 @@ import {
     renderBrushPalette
 } from './toolPanel.js';
 import { updateToneMenuVisibility } from './toneMenu.js';
+
+export async function doNewProject() {
+    const sz = getCanvasSizePref();
+    resizePaper(sz, sz);
+    centerCanvas();
+
+    while (layers.length > 1) {
+        deleteLayer(layers[layers.length - 1].id);
+    }
+    if (layers.length > 0) {
+        clearLayer(layers[0].id);
+        layers[0].opacity = 1.0;
+        layers[0].visible = true;
+        layers[0].canvas.style.opacity = '1.0';
+        layers[0].canvas.style.display = 'block';
+    }
+
+    await resetHistory();
+    renderLayerButtons();
+    if (layers[0]) updateLayerThumbnail(layers[0]);
+}
 
 export function setupFileUI() {
     const fileBtn = document.getElementById('fileBtn');
@@ -60,23 +82,7 @@ export function setupFileUI() {
         newBtn.addEventListener('click', async () => {
             hideAllMenus();
             if (confirm(t('confirm.new'))) {
-                resizePaper(2000, 2000);
-                centerCanvas();
-
-                while (layers.length > 1) {
-                    deleteLayer(layers[layers.length - 1].id);
-                }
-                if (layers.length > 0) {
-                    clearLayer(layers[0].id);
-                    layers[0].opacity = 1.0;
-                    layers[0].visible = true;
-                    layers[0].canvas.style.opacity = '1.0';
-                    layers[0].canvas.style.display = 'block';
-                }
-
-                await resetHistory();
-                renderLayerButtons();
-                if (layers[0]) updateLayerThumbnail(layers[0]);
+                await doNewProject();
             }
         });
     }
@@ -88,10 +94,28 @@ export function setupFileUI() {
             hideAllMenus();
         });
 
-        fileInput.addEventListener('change', (e) => {
+        fileInput.addEventListener('change', async (e) => {
             if (e.target.files.length > 0) {
                 const file = e.target.files[0];
                 if (confirm(t('confirm.import'))) {
+                    // Check for canvas size mismatch
+                    try {
+                        const text = await file.text();
+                        const data = JSON.parse(text);
+                        const pw = data.paperW || 2000;
+                        const ph = data.paperH || 2000;
+                        const pref = getCanvasSizePref();
+                        if (pw !== pref || ph !== pref) {
+                            const msg = t('confirm.canvasSizeMismatch')
+                                .replace('{0}', pw).replace('{1}', ph)
+                                .replace('{2}', pref).replace('{3}', pref);
+                            if (!confirm(msg)) {
+                                fileInput.value = '';
+                                return;
+                            }
+                        }
+                    } catch {}
+
                     importProject(file).then(async (success) => {
                         if (success) {
                             renderLayerButtons();

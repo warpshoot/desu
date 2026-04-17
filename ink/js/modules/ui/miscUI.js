@@ -1,12 +1,15 @@
 import { state, eventCanvas } from '../state.js';
 import { centerCanvas, applyTransform, updateBackgroundColor } from '../canvas.js';
-import { 
-    exportConfig, 
-    importConfig, 
-    resetSettings, 
-    saveLocalState 
+import {
+    exportConfig,
+    importConfig,
+    resetSettings,
+    saveLocalState,
+    getCanvasSizePref,
+    setCanvasSizePref
 } from '../storage.js';
 import { t } from '../i18n.js';
+import { doNewProject } from './fileMenu.js';
 import { showHUD } from './hud.js';
 import { hideAllMenus, handleOutsideClick } from './menuManager.js';
 import { undo, redo, saveState } from '../history.js';
@@ -124,7 +127,26 @@ export function setupSettingsPanel() {
     });
 
     if (closeBtn) closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
-    
+
+    // Canvas Size Preference
+    const canvasSizeSelect = document.getElementById('canvas-size-select');
+    if (canvasSizeSelect) {
+        canvasSizeSelect.value = String(getCanvasSizePref());
+        canvasSizeSelect.addEventListener('change', async () => {
+            const newSize = Number(canvasSizeSelect.value);
+            setCanvasSizePref(newSize);
+            panel.classList.add('hidden');
+            if (confirm(t('confirm.canvasSizeSwitch'))) {
+                await doNewProject();
+            }
+        });
+    }
+
+    // Sync select value each time the panel opens
+    btn.addEventListener('click', () => {
+        if (canvasSizeSelect) canvasSizeSelect.value = String(getCanvasSizePref());
+    });
+
     // Snapshot (Save)
     const saveBtn = document.getElementById('saveBtn');
     const saveMenu = document.getElementById('save-menu');
