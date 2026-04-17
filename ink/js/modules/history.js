@@ -71,14 +71,23 @@ function _decRef(bitmap) {
     }
 }
 
+// Serialize createImageBitmap calls globally.
+// Without this, rapid strokes queue up multiple concurrent resize operations,
+// each holding a full-DPR source copy (~64MB at 2000×2000/DPR2) until resolved.
+let _captureQueue = Promise.resolve();
+
 // Capture a layer at 1× DPR — 4× less memory than full DPR on 2× displays.
 // iOS history bitmaps at full DPR (~64MB each) cause memory pressure and hang createImageBitmap.
 function _captureLayer1x(layer) {
     const dpr = CANVAS_DPR;
-    if (dpr <= 1) return createImageBitmap(layer.canvas);
-    const w = Math.floor(layer.canvas.width / dpr);
-    const h = Math.floor(layer.canvas.height / dpr);
-    return createImageBitmap(layer.canvas, { resizeWidth: w, resizeHeight: h, resizeQuality: 'medium' });
+    const p = _captureQueue.then(() => {
+        if (dpr <= 1) return createImageBitmap(layer.canvas);
+        const w = Math.floor(layer.canvas.width / dpr);
+        const h = Math.floor(layer.canvas.height / dpr);
+        return createImageBitmap(layer.canvas, { resizeWidth: w, resizeHeight: h, resizeQuality: 'medium' });
+    });
+    _captureQueue = p.catch(() => {});
+    return p;
 }
 
 /**
