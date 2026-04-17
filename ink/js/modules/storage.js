@@ -38,9 +38,13 @@ const BACKUP_KEY = 'desu-draw-state-backup';
 const DB_NAME = 'DesuInkDB';
 const STORE_NAME = 'canvasData';
 let saveTimeout = null;
+let _saveLock = Promise.resolve();
+let _isDirty = false;
 
 // ストレージ上の指紋 (IndexedDB に最後に保存された状態)
 const _lastStoredFingerprints = new Map();
+
+export function isStorageDirty() { return _isDirty; }
 
 // --- IndexedDB Helpers ---
 function openDB() {
@@ -99,9 +103,26 @@ function clearOldBlobs(keepIds) {
 
 // Debounced save
 export function saveLocalState() {
+    _isDirty = true;
     clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(async () => {  // 5000ms: 頻繁な描画中の重複起動を抑制
+    saveTimeout = setTimeout(() => {
+        executeSave();
+    }, 5000);
+}
+
+/**
+ * 即座に保存を実行する (beforeunload 等で使用)
+ */
+export async function forceSave() {
+    if (!_isDirty) return;
+    clearTimeout(saveTimeout);
+    return executeSave();
+}
+
+async function executeSave() {
+    _saveLock = _saveLock.then(async () => {
         try {
+            document.dispatchEvent(new CustomEvent('desu:save-start'));
             const metadata = {
                 timestamp: Date.now(),
                 paperW: state.paperW,
@@ -174,10 +195,14 @@ export function saveLocalState() {
             // 現在の構成に含まれない古いレイヤーのデータを掃除
             await clearOldBlobs(layerIds);
 
+            _isDirty = false;
+            document.dispatchEvent(new CustomEvent('desu:save-end'));
         } catch (e) {
             console.error('[Storage] Save failed:', e);
+            document.dispatchEvent(new CustomEvent('desu:save-error'));
         }
-    }, 5000);
+    });
+    return _saveLock;
 }
 
 // Check if any state exists

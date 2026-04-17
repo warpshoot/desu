@@ -2,11 +2,16 @@ import { initDOM, layers } from './modules/state.js';
 import { initCanvas, resizeViewport } from './modules/canvas.js';
 import { initUI, updateLayerThumbnail } from './modules/ui.js';
 import { saveInitialState } from './modules/history.js';
-import { loadLocalState, hasSavedState, hasBackupState, exportProject, importProject } from './modules/storage.js';
+import { loadLocalState, hasSavedState, hasBackupState, exportProject, importProject, forceSave, isStorageDirty } from './modules/storage.js';
 import { getLang, setLang, t, applyTextToDOM } from './modules/i18n.js';
 
 window.onerror = function (msg, url, line, col, error) {
-    alert(`Error: ${msg}\nLine: ${line}:${col}\nURL: ${url}`);
+    // Emergency attempt to save if a crash occurs
+    try {
+        if (isStorageDirty()) forceSave();
+    } catch (e) {}
+    
+    alert(`[Critical Error] The application encountered an unexpected issue.\n\nMessage: ${msg}\nLocation: ${line}:${col}\n\nPlease try to export your project or refresh the page.`);
     return false;
 };
 
@@ -84,8 +89,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Guard against accidental loss
 window.addEventListener('beforeunload', (e) => {
-    // Basic check: if there is history (meaning drawing happened), warn
-    if (window.layers && window.layers.length > 0) {
+    // If there is dirty data in the storage buffer, warn the user
+    if (isStorageDirty()) {
+        forceSave(); // Best effort background save attempt
         e.preventDefault();
         e.returnValue = t('confirm.unload');
         return e.returnValue;

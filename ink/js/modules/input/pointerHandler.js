@@ -274,7 +274,15 @@ function handlePointerMove(e) {
     if (pointer.totalMove > 35) state.didInteract = true;
 
     if (e.pointerId === state.drawingPointerId) {
-        if (state._uiCollisionRects) {
+        // UI Collision Detection Throttling:
+        // Check only if the pointer has moved significantly (e.g., > 10px) or if we don't have a last check position
+        const distSinceLastUIAuto = state._lastUICheckX !== undefined 
+            ? Math.hypot(e.clientX - state._lastUICheckX, e.clientY - state._lastUICheckY)
+            : 999;
+
+        if (state._uiCollisionRects && distSinceLastUIAuto > 15) {
+            state._lastUICheckX = e.clientX;
+            state._lastUICheckY = e.clientY;
             const prox = 40;
             for (let item of state._uiCollisionRects) {
                 const r = item.rect;
@@ -291,7 +299,13 @@ function handlePointerMove(e) {
             }
         }
 
-        const hasPenInPointers = Array.from(state.activePointers.values()).some(p => p.type === 'pen');
+        let hasPenInPointers = false;
+        for (const p of state.activePointers.values()) {
+            if (p.type === 'pen') {
+                hasPenInPointers = true;
+                break;
+            }
+        }
         const isPenInvolved = hasPenInPointers || state.isPenDrawing || state.isPenSession;
         if (!isPenInvolved && (state.wasPinching || state.wasPanning)) return;
 
@@ -299,12 +313,14 @@ function handlePointerMove(e) {
             const last = state._lastStablePoint;
             if (last && state._jumpFilterCount < 3) {
                 const dist = Math.hypot(e.clientX - last.x, e.clientY - last.y);
-                const timeElapsed = Date.now() - (state.touchStartTime || 0);
+                const timeStarted = state.touchStartTime || Date.now();
+                const timeElapsed = Date.now() - timeStarted;
                 
                 // システムの遅延（ラグ）がある場合、最初の移動距離が大きくなるのは自然。
                 // 経過時間が長い場合は閾値を大幅に引き上げる。
-                const lagFactor = timeElapsed > 50 ? 3 : 1;
-                const threshold = (e.pointerType === 'pen' ? (window.innerWidth * 0.05) : (window.innerWidth * 0.03)) * lagFactor;
+                // 描画開始直後（ジャンプフィルタの試行回数が少ない時）は特にラグの影響を受けやすい。
+                const lagFactor = timeElapsed > 80 ? 4 : (timeElapsed > 30 ? 2 : 1);
+                const threshold = (e.pointerType === 'pen' ? (window.innerWidth * 0.04) : (window.innerWidth * 0.025)) * lagFactor;
                 
                 if (dist > threshold) {
                     state._jumpFilterCount++;
@@ -340,13 +356,22 @@ function handlePointerMove(e) {
                 const pt = getCanvasPoint(e.clientX, e.clientY);
                 setStraightLineEnd({ x: pt.x, y: pt.y, pressure: e.pressure });
             } else {
-                const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+                const events = (e.getCoalescedEvents && e.pointerType !== 'touch') ? e.getCoalescedEvents() : [e];
+                const predicted = (e.getPredictedEvents && e.pointerType !== 'touch') ? e.getPredictedEvents() : [];
+                
                 const isStipple = state.mode === 'pen' && state.subTool === 'stipple';
+                
                 const pts = events.map(ev => {
                     const p = getCanvasPoint(ev.clientX, ev.clientY);
                     return { x: p.x, y: p.y, pressure: ev.pressure, isStipple };
                 });
-                addPendingPoints(pts);
+                
+                const predPts = predicted.map(ev => {
+                    const p = getCanvasPoint(ev.clientX, ev.clientY);
+                    return { x: p.x, y: p.y, pressure: ev.pressure, isStipple, isPredicted: true };
+                });
+                
+                addPendingPoints(pts, predPts);
             }
         }
     }
@@ -476,6 +501,8 @@ async function handlePointerUp(e) {
         for (let item of state._uiCollisionRects) item.el.classList.remove('ui-faded');
         state._uiCollisionRects = null;
     }
+    state._lastUICheckX = undefined;
+    state._lastUICheckY = undefined;
     document.body.classList.remove('is-drawing-active');
     state.isPenDrawing = false;
     state.isLassoing = false;
@@ -504,6 +531,8 @@ function cancelCurrentOperation() {
         for (let item of state._uiCollisionRects) item.el.classList.remove('ui-faded');
         state._uiCollisionRects = null;
     }
+    state._lastUICheckX = undefined;
+    state._lastUICheckY = undefined;
     document.body.classList.remove('is-drawing-active');
     cancelAndFlushDrawPoints();
     if (state.isLassoing) finishLasso();

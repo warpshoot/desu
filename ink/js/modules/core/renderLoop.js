@@ -15,6 +15,7 @@ import {
 
 // RAF-based draw batching — prevents pointermove backlog on iPad
 let _pendingDrawPoints = [];
+let _predictedPoints = [];
 let _drawRafId = null;
 let _thumbRafId = null; // Throttled thumbnail update
 let _straightLineEnd = null;   // Shift+直線: RAF pending 更新用 (flushで null にリセット)
@@ -112,9 +113,20 @@ export function flushDrawPoints() {
         return;
     }
 
-    if (_pendingDrawPoints.length === 0) return;
+    if (_pendingDrawPoints.length === 0 && _predictedPoints.length === 0) return;
     const pts = _pendingDrawPoints;
+    const preds = _predictedPoints;
     _pendingDrawPoints = [];
+    _predictedPoints = [];
+
+    // Clear previous prediction ghost if any
+    if (lassoCtx && lassoCanvas) {
+        // If not in stabilizer mode, we clear lassoCanvas for prediction segments
+        // (Stabilizer handles its own clear)
+        if (!state.activeBrush?.stabilizerEnabled) {
+            lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
+        }
+    }
 
     // stipple が含まれるかチェック (stipple はバッチ未対応のため個別処理)
     let hasPen = false, hasStipple = false;
@@ -138,6 +150,30 @@ export function flushDrawPoints() {
             }
         }
     }
+
+    // Draw Predicted Points to lassoCtx for low-latency visual hint
+    if (preds.length > 0 && lassoCtx) {
+        // Predict segments are drawn to the screen-space lassoCanvas
+        // They are purely visual and NOT part of the stroke data.
+        const brush = state.activeBrush;
+        if (brush && !state.activeBrush?.stabilizerEnabled) {
+            lassoCanvas.style.display = 'block';
+            lassoCtx.save();
+            
+            // Screen-space transform for lassoCtx
+            const s = state.scale;
+            const tx = state.translateX;
+            const ty = state.translateY;
+            lassoCtx.translate(tx, ty);
+            lassoCtx.scale(s, s);
+
+            lassoCtx.globalAlpha = 0.4; // Ghost look
+            for (let i = 0; i < preds.length; i++) {
+                drawPenLine(preds[i].x, preds[i].y, preds[i].pressure, { previewCtx: lassoCtx });
+            }
+            lassoCtx.restore();
+        }
+    }
 }
 
 export function cancelAndFlushDrawPoints() {
@@ -158,7 +194,7 @@ export function clearStraightLineGuide() {
     lassoCanvas.style.display = 'none';
 }
 
-export function addPendingPoints(pts) {
+export function addPendingPoints(pts, predictedPts = []) {
     const isEraser = state.mode === 'eraser';
     const brushSize = isEraser ? state.eraserSize : (state.activeBrush?.size ?? 4);
     const padding = brushSize / 2 + 2;
@@ -166,10 +202,15 @@ export function addPendingPoints(pts) {
     if (Array.isArray(pts)) {
         _pendingDrawPoints.push(...pts);
         pts.forEach(p => _updateStrokeBounds(p.x, p.y, padding));
-    } else {
+    } else if (pts) {
         _pendingDrawPoints.push(pts);
         _updateStrokeBounds(pts.x, pts.y, padding);
     }
+
+    if (predictedPts.length > 0) {
+        _predictedPoints.push(...predictedPts);
+    }
+
     if (!_drawRafId) {
         _drawRafId = requestAnimationFrame(flushDrawPoints);
     }

@@ -117,12 +117,17 @@ function _drawOverlay() {
         const sw = br.x - tl.x;
         const sh = br.y - tl.y;
         if (sw > 0 && sh > 0) {
-            // Draw the floating imageData scaled to screen
-            const tmp = _getFsTempCanvas(fs.imageData.width, fs.imageData.height);
-            tmp.ctx.putImageData(fs.imageData, 0, 0);
+            // Draw the floating canvas scaled to screen
+            const source = fs.canvas || fs.imageData;
             ctx.save();
             ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(tmp.canvas, tl.x, tl.y, sw, sh);
+            if (source instanceof ImageData) {
+                const tmp = _getFsTempCanvas(source.width, source.height);
+                tmp.ctx.putImageData(source, 0, 0);
+                ctx.drawImage(tmp.canvas, tl.x, tl.y, sw, sh);
+            } else {
+                ctx.drawImage(source, tl.x, tl.y, sw, sh);
+            }
             ctx.restore();
 
             // Update mask to float position for ants
@@ -462,25 +467,34 @@ export function liftSelection(cut = true) {
     const physW = Math.round(w0 * dpr);
     const physH = Math.round(h0 * dpr);
 
-    const imgData = ctx.getImageData(physX, physY, physW, physH);
-
-    // If lasso: zero out pixels outside the lasso polygon within the bounding box
+    // --- GPU-based Clipping & Capture ---
+    const { canvas: fsCanvas, ctx: fsCtx } = _getFsTempCanvas(physW, physH);
+    fsCtx.clearRect(0, 0, physW, physH);
+    
+    fsCtx.save();
     if (mask.type === 'lasso' && mask.points) {
-        const data = imgData.data;
-        for (let py = 0; py < physH; py++) {
-            for (let px = 0; px < physW; px++) {
-                const cx = x0 + px / dpr;
-                const cy = y0 + py / dpr;
-                if (!isPointInPolygon(cx, cy, mask.points)) {
-                    const i = (py * physW + px) * 4;
-                    data[i + 3] = 0; // transparent
-                }
-            }
+        // Draw the lasso shape as a clipping mask on the offscreen canvas
+        fsCtx.beginPath();
+        fsCtx.moveTo((mask.points[0].x - x0) * dpr, (mask.points[0].y - y0) * dpr);
+        for (let i = 1; i < mask.points.length; i++) {
+            fsCtx.lineTo((mask.points[i].x - x0) * dpr, (mask.points[i].y - y0) * dpr);
         }
+        fsCtx.closePath();
+        fsCtx.clip();
     }
+    
+    // Copy pixels from the main canvas directly via GPU
+    fsCtx.drawImage(canvas, physX, physY, physW, physH, 0, 0, physW, physH);
+    fsCtx.restore();
+
+    // Create a NEW persistent canvas for this floating selection
+    const persistentCanvas = document.createElement('canvas');
+    persistentCanvas.width = physW;
+    persistentCanvas.height = physH;
+    persistentCanvas.getContext('2d').drawImage(fsCanvas, 0, 0);
 
     state.floatingSelection = {
-        imageData: imgData,
+        canvas: persistentCanvas,
         srcX: x0,
         srcY: y0,
         w: w0,
@@ -543,18 +557,21 @@ export function commitFloating() {
     const fs  = state.floatingSelection;
     const dpr = CANVAS_DPR;
 
-    // ImageData を temp canvas に書き出し、layer ctx に drawImage で貼る
-    const tmp  = document.createElement('canvas');
-    tmp.width  = fs.imageData.width;
-    tmp.height = fs.imageData.height;
-    tmp.getContext('2d').putImageData(fs.imageData, 0, 0);
-
+    const source = fs.canvas || fs.imageData;
     const destX = fs.srcX + fs.offsetX;
     const destY = fs.srcY + fs.offsetY;
 
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(tmp, destX, destY, tmp.width / dpr, tmp.height / dpr);
+    if (source instanceof ImageData) {
+        const tmp = document.createElement('canvas');
+        tmp.width = source.width;
+        tmp.height = source.height;
+        tmp.getContext('2d').putImageData(source, 0, 0);
+        ctx.drawImage(tmp, destX, destY, tmp.width / dpr, tmp.height / dpr);
+    } else {
+        ctx.drawImage(source, destX, destY, source.width / dpr, source.height / dpr);
+    }
     ctx.restore();
 
     markLayerDirty(layer.id);
@@ -629,24 +646,30 @@ export function copySelection() {
     const physW = Math.round(w0 * dpr);
     const physH = Math.round(h0 * dpr);
 
-    const imgData = ctx.getImageData(physX, physY, physW, physH);
-
-    // Mask lasso shape
+    // GPU-based clipboard capture (Canvas instead of ImageData)
+    const physW = Math.round(w0 * dpr);
+    const physH = Math.round(h0 * dpr);
+    const clipCanvas = document.createElement('canvas');
+    clipCanvas.width = physW;
+    clipCanvas.height = physH;
+    const clipCtx = clipCanvas.getContext('2d');
+    
+    clipCtx.save();
     if (mask.type === 'lasso' && mask.points) {
-        const data = imgData.data;
-        for (let py = 0; py < physH; py++) {
-            for (let px = 0; px < physW; px++) {
-                const cx = x0 + px / dpr;
-                const cy = y0 + py / dpr;
-                if (!isPointInPolygon(cx, cy, mask.points)) {
-                    data[(py * physW + px) * 4 + 3] = 0;
-                }
-            }
+        clipCtx.beginPath();
+        clipCtx.moveTo((mask.points[0].x - x0) * dpr, (mask.points[0].y - y0) * dpr);
+        for (let i = 1; i < mask.points.length; i++) {
+            clipCtx.lineTo((mask.points[i].x - x0) * dpr, (mask.points[i].y - y0) * dpr);
         }
+        clipCtx.closePath();
+        clipCtx.clip();
     }
+    const sourceCanvas = getActiveLayerCanvas();
+    clipCtx.drawImage(sourceCanvas, Math.round(x0 * dpr), Math.round(y0 * dpr), physW, physH, 0, 0, physW, physH);
+    clipCtx.restore();
 
     state._selectionClipboard = {
-        imageData: imgData,
+        canvas: clipCanvas,
         w: w0,
         h: h0
     };
@@ -674,18 +697,18 @@ export function pasteFromClipboard() {
         rect: { x: pasteX, y: pasteY, w: cb.w, h: cb.h }
     };
 
-    // Clone ImageData
-    const dpr  = CANVAS_DPR;
-    const physW = Math.round(cb.w * dpr);
-    const physH = Math.round(cb.h * dpr);
-    const cloned = new ImageData(
-        new Uint8ClampedArray(cb.imageData.data),
-        cb.imageData.width,
-        cb.imageData.height
-    );
+    // Clone Clipboard Source
+    let persistentCanvas;
+    if (cb.canvas) {
+        persistentCanvas = document.createElement('canvas');
+        persistentCanvas.width = cb.canvas.width;
+        persistentCanvas.height = cb.canvas.height;
+        persistentCanvas.getContext('2d').drawImage(cb.canvas, 0, 0);
+    }
 
     state.floatingSelection = {
-        imageData: cloned,
+        canvas: persistentCanvas,
+        imageData: cb.imageData, // Compatibility for old clipboard data if any
         srcX: pasteX,
         srcY: pasteY,
         w: cb.w,

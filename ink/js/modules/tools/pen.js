@@ -9,6 +9,7 @@ let lastDrawnIndex = 0;
 let _strokeOpacity = 1.0;
 let _usingStrokeCanvas = false;
 let _strokeCtxSaved = false;
+let _strokeClipped = false;
 
 // バッチモード — 複数の drawPenLine() 呼び出しをまとめて 1 回の drawBrushSegment で描画
 // iOS では RAF ごとに N 回 drawBrushSegment していたのを 1 回に削減するための仕組み
@@ -275,8 +276,8 @@ function _rebuildSmoothedPoints(fromRawIdx) {
         const p3 = raw[Math.min(raw.length - 1, i + 1)];
 
         const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-        // 距離に応じた分割数 (短い区間は少ない分割でOK)
-        const subdivisions = Math.max(2, Math.min(8, Math.ceil(dist / 3)));
+        // 距離に応じた分割数 (短い区間は少なく、長い区間は多めに補間して「カクつき」を徹底排除)
+        const subdivisions = Math.max(4, Math.min(24, Math.ceil(dist / 1.5)));
 
         const interpolated = _catmullRomSegment(p0, p1, p2, p3, subdivisions);
         for (let j = 0; j < interpolated.length; j++) smoothedPoints.push(interpolated[j]);
@@ -350,7 +351,7 @@ export function startPenDrawing(x, y, pressure = 0.5) {
         strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
         strokeCanvas.style.opacity = _strokeOpacity;
         
-        const clipped = pushSelectionClip(strokeCtx);
+        _strokeClipped = pushSelectionClip(strokeCtx);
         drawBrushSegment(strokeCtx, smoothedPoints, 0, true, brush, false);
     } else {
         const ctx = getActiveLayerCtx();
@@ -366,8 +367,10 @@ export function startPenDrawing(x, y, pressure = 0.5) {
     }
 }
 
-export function drawPenLine(x, y, pressure = 0.5) {
-    if (!state.isPenDrawing) return;
+export function drawPenLine(x, y, pressure = 0.5, options = {}) {
+    if (!state.isPenDrawing && !options.previewCtx) return;
+    
+    const previewCtx = options.previewCtx || null;
 
     const brush = _getDrawBrush();
 
@@ -421,6 +424,15 @@ export function drawPenLine(x, y, pressure = 0.5) {
     if (_batchMode) {
         // バッチモード: 描画は flushPenBatch() に委ねる
         // smoothedPoints への追加だけ行い、GPU 呼び出しは一切しない
+        return;
+    }
+
+    if (previewCtx) {
+        // 予測点（プレビュー）の描画
+        // smoothedPoints を使わず、直近の点との単純な補完でも十分。
+        // ここでは単純化のため、1点のみ描画
+        const previewPts = [lastPoint, { x, y, pressure: smoothedP }];
+        drawBrushSegment(previewCtx, previewPts, 1, false, brush, false);
         return;
     }
 
@@ -534,6 +546,10 @@ export async function endPenDrawing() {
 
                 // 履歴管理用にレイヤーの状態変更を通知
                 markLayerDirty(layer.id);
+            }
+            if (_strokeClipped) {
+                popSelectionClip(strokeCtx);
+                _strokeClipped = false;
             }
             if (_strokeCtxSaved) {
                 strokeCtx.restore();

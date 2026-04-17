@@ -9,8 +9,9 @@
 // インク色: 黒固定 (モノクロツール)
 const INK_COLOR = '#000000';
 
-// ブラシキャッシュ（binary用）— LRU的に上限管理
+// ブラシキャッシュ（binary用 & smooth用）— LRU的に上限管理
 const brushCache = new Map();
+const radialCache = new Map();
 const BRUSH_CACHE_MAX = 50;
 
 // =============================================
@@ -139,6 +140,39 @@ function getPixelBrush(size) {
 }
 
 // =============================================
+// 滑らかなブラシスタンプキャッシュ (Radial)
+// =============================================
+function _getRadialBrush(size) {
+    if (radialCache.has(size)) {
+        const c = radialCache.get(size);
+        radialCache.delete(size);
+        radialCache.set(size, c);
+        return c;
+    }
+
+    const c = document.createElement('canvas');
+    const radius = size / 2;
+    // 1px 以下の極小ブラシでも描画できるよう最小サイズを 2px に
+    const s = Math.ceil(Math.max(2, size));
+    c.width = s; c.height = s;
+    const ctx = c.getContext('2d');
+
+    const grad = ctx.createRadialGradient(s/2, s/2, 0, s/2, s/2, size/2);
+    grad.addColorStop(0, 'rgba(0,0,0,1)');
+    grad.addColorStop(0.8, 'rgba(0,0,0,0.8)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, s, s);
+
+    if (radialCache.size >= BRUSH_CACHE_MAX) {
+        radialCache.delete(radialCache.keys().next().value);
+    }
+    radialCache.set(size, c);
+    return c;
+}
+
+// =============================================
 // 統一描画エンジン
 // =============================================
 
@@ -200,26 +234,32 @@ function _drawStroke(ctx, pts, fromIdx, isStart, b) {
 
     // Pass 2: 可変幅 arc を全セグメント分まとめて 1 回の fill() で描画
     // (iOS Core Graphics では fill() 1回ごとに flush が走るため致命的に遅い — バッチ化で解決)
-    ctx.beginPath();
-    let hasArcs = false;
+    // さらに高速化のため、大きなセグメントや筆圧変化が大きい場合は drawImage スタンプを使用
+    let lastStampSize = -1;
+    let lastStamp = null;
+
     for (let i = startI; i < pts.length; i++) {
         const p1 = pts[i-1], p2 = pts[i];
         const w1 = widths[i-1], w2 = widths[i];
         const dx = p2.x - p1.x, dy = p2.y - p1.y;
         const dist = Math.hypot(dx, dy);
-        if (Math.abs(w1 - w2) > 1 || dist > 5) {
-            hasArcs = true;
-            const spacing = Math.max(2.0, Math.min(w1, w2) * 0.3);
-            const steps = Math.max(1, Math.ceil(dist / spacing));
-            for (let j = 0; j <= steps; j++) {
-                const t = j / steps;
-                const cx = p1.x + dx * t, cy = p1.y + dy * t;
-                const cw = w1 + (w2 - w1) * t;
-                if (cw > 0) ctx.arc(cx, cy, cw / 2, 0, Math.PI * 2);
+        
+        const spacing = Math.max(0.5, Math.min(w1, w2) * 0.2); // 密度を高めて滑らかに
+        const steps = Math.max(1, Math.ceil(dist / spacing));
+        
+        for (let j = 0; j <= steps; j++) {
+            const t = j / steps;
+            const cw = w1 + (w2 - w1) * t;
+            if (cw <= 0) continue;
+            
+            const roundedW = Math.round(cw * 2) / 2; // 0.5px 刻みでキャッシュヒット率を上げる
+            if (roundedW !== lastStampSize) {
+                lastStamp = _getRadialBrush(roundedW);
+                lastStampSize = roundedW;
             }
+            ctx.drawImage(lastStamp, p1.x + dx * t - roundedW / 2, p1.y + dy * t - roundedW / 2, roundedW, roundedW);
         }
     }
-    if (hasArcs) ctx.fill(); // 全 arc を 1 回の GPU flush で完了
 
     return pts.length - 1;
 }
@@ -312,27 +352,30 @@ function _drawErase(ctx, pts, fromIdx, isStart, b) {
         ctx.stroke();
     }
 
-    // Pass 2: 可変幅 arc をバッチ fill
-    ctx.beginPath();
-    let hasArcs = false;
+    // Pass 2: 可変幅スタンプ
+    let lastStampSize = -1;
+    let lastStamp = null;
     for (let i = startI; i < pts.length; i++) {
         const p1 = pts[i-1], p2 = pts[i];
         const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
         const dx = p2.x - p1.x, dy = p2.y - p1.y;
         const dist = Math.hypot(dx, dy);
-        if (Math.abs(w1 - w2) > 1 || dist > 5) {
-            hasArcs = true;
-            const spacing = Math.max(2.0, Math.min(w1, w2) * 0.3);
-            const steps = Math.max(1, Math.ceil(dist / spacing));
-            for (let j = 0; j <= steps; j++) {
-                const t = j / steps;
-                const cx = p1.x + dx * t, cy = p1.y + dy * t;
-                const cw = w1 + (w2 - w1) * t;
-                if (cw > 0) ctx.arc(cx, cy, cw / 2, 0, Math.PI * 2);
+        
+        const spacing = Math.max(0.5, Math.min(w1, w2) * 0.2);
+        const steps = Math.max(1, Math.ceil(dist / spacing));
+        for (let j = 0; j <= steps; j++) {
+            const t = j / steps;
+            const cw = w1 + (w2 - w1) * t;
+            if (cw <= 0) continue;
+            
+            const roundedW = Math.round(cw * 2) / 2;
+            if (roundedW !== lastStampSize) {
+                lastStamp = _getRadialBrush(roundedW);
+                lastStampSize = roundedW;
             }
+            ctx.drawImage(lastStamp, p1.x + dx * t - roundedW / 2, p1.y + dy * t - roundedW / 2, roundedW, roundedW);
         }
     }
-    if (hasArcs) ctx.fill();
 
     ctx.globalCompositeOperation = 'source-over';
     return pts.length - 1;
