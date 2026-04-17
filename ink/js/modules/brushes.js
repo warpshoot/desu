@@ -235,7 +235,7 @@ function _drawStroke(ctx, pts, fromIdx, isStart, b) {
     // 不透明度が 1.0 未満の場合は「一括スタンプ」だと重なった部分が濃くなってしまうため、
     // Canvas の一括塗りつぶし（arc パス）方式にフォールバックして品質を担保する。
     // 不透明なブラシの場合は、引き続き高速な drawImage スタンプを使用する。
-    const isTransparent = (options.opacity ?? 1.0) < 1.0 || (brush.opacity ?? 1.0) < 1.0;
+    const isTransparent = (b.opacity ?? 1.0) < 1.0;
 
     if (isTransparent) {
         ctx.beginPath();
@@ -373,7 +373,7 @@ function _drawErase(ctx, pts, fromIdx, isStart, b) {
     }
 
     // Pass 2: 可変幅スタンプ/パス
-    const isTransparent = (brush.opacity ?? 1.0) < 1.0;
+    const isTransparent = (b.opacity ?? 1.0) < 1.0;
     if (isTransparent) {
         ctx.beginPath();
         for (let i = startI; i < pts.length; i++) {
