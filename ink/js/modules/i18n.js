@@ -29,6 +29,9 @@ export const dict = {
 
         'settings.title': 'SETTINGS',
         'settings.paper': 'PAPER COLOR',
+        'settings.canvasSize': 'NEW PROJECT SIZE',
+        'settings.canvasSize.normal': '2000×2000 (Standard)',
+        'settings.canvasSize.lite': '1000×1000 (Lite)',
         'settings.config': 'TOOL CONFIG',
         'settings.export': 'Export Configuration (.json)',
         'settings.import': 'Import Configuration',
@@ -36,6 +39,8 @@ export const dict = {
         'settings.info': 'INFO / ABOUT',
         'settings.about': 'About DESU™ ink',
         'settings.lang': 'LANGUAGE',
+        'confirm.canvasSizeSwitch': 'Start a new project now with the new canvas size?\n(Unsaved progress will be lost)',
+        'confirm.canvasSizeMismatch': 'This project\'s canvas size ({0}×{1}) differs from your current setting ({2}×{3}).\nLoad anyway?',
 
         'file.title': 'PROJECT MANAGEMENT',
         'file.new': 'New Project',
@@ -162,6 +167,9 @@ export const dict = {
 
         'settings.title': '設定 (SETTINGS)',
         'settings.paper': '用紙カラー',
+        'settings.canvasSize': '新規プロジェクトサイズ',
+        'settings.canvasSize.normal': '2000×2000 (標準)',
+        'settings.canvasSize.lite': '1000×1000 (Lite)',
         'settings.config': 'ツール設定',
         'settings.export': '設定の書き出し (.json)',
         'settings.import': '設定の読み込み',
@@ -169,6 +177,8 @@ export const dict = {
         'settings.info': '情報 / ABOUT',
         'settings.about': 'DESU™ ink について',
         'settings.lang': '言語 (LANGUAGE)',
+        'confirm.canvasSizeSwitch': '新しいキャンバスサイズで今すぐ新規プロジェクトを開始しますか？\n（保存していない内容は失われます）',
+        'confirm.canvasSizeMismatch': 'このプロジェクトのキャンバスサイズ（{0}×{1}）は\n現在の設定（{2}×{3}）と異なります。\n読み込みますか？',
 
         'file.title': 'プロジェクト管理',
         'file.new': '新規プロジェクト',

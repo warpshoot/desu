@@ -35,6 +35,7 @@ import { makeDefaultBrushes, makeDefaultFillSlots, makeDefaultEraserSlots } from
 
 const STORAGE_KEY = 'desu-draw-state';
 const BACKUP_KEY = 'desu-draw-state-backup';
+const CANVAS_SIZE_PREF_KEY = 'desu-canvas-size-pref';
 const DB_NAME = 'DesuInkDB';
 const STORE_NAME = 'canvasData';
 let saveTimeout = null;
@@ -45,6 +46,26 @@ let _isDirty = false;
 const _lastStoredFingerprints = new Map();
 
 export function isStorageDirty() { return _isDirty; }
+
+export function getCanvasSizePref() {
+    return localStorage.getItem(CANVAS_SIZE_PREF_KEY) === '1000' ? 1000 : 2000;
+}
+
+export function setCanvasSizePref(size) {
+    localStorage.setItem(CANVAS_SIZE_PREF_KEY, String(size));
+}
+
+export function getSavedStatePaperSize(useBackup = false) {
+    const key = useBackup ? BACKUP_KEY : STORAGE_KEY;
+    try {
+        const json = localStorage.getItem(key);
+        if (!json) return null;
+        const data = JSON.parse(json);
+        return { w: data.paperW || 2000, h: data.paperH || 2000 };
+    } catch {
+        return null;
+    }
+}
 
 // --- IndexedDB Helpers ---
 function openDB() {
