@@ -232,32 +232,52 @@ function _drawStroke(ctx, pts, fromIdx, isStart, b) {
         ctx.stroke();
     }
 
-    // Pass 2: 可変幅 arc を全セグメント分まとめて 1 回の fill() で描画
-    // (iOS Core Graphics では fill() 1回ごとに flush が走るため致命的に遅い — バッチ化で解決)
-    // さらに高速化のため、大きなセグメントや筆圧変化が大きい場合は drawImage スタンプを使用
-    let lastStampSize = -1;
-    let lastStamp = null;
+    // 不透明度が 1.0 未満の場合は「一括スタンプ」だと重なった部分が濃くなってしまうため、
+    // Canvas の一括塗りつぶし（arc パス）方式にフォールバックして品質を担保する。
+    // 不透明なブラシの場合は、引き続き高速な drawImage スタンプを使用する。
+    const isTransparent = (options.opacity ?? 1.0) < 1.0 || (brush.opacity ?? 1.0) < 1.0;
 
-    for (let i = startI; i < pts.length; i++) {
-        const p1 = pts[i-1], p2 = pts[i];
-        const w1 = widths[i-1], w2 = widths[i];
-        const dx = p2.x - p1.x, dy = p2.y - p1.y;
-        const dist = Math.hypot(dx, dy);
-        
-        const spacing = Math.max(0.5, Math.min(w1, w2) * 0.2); // 密度を高めて滑らかに
-        const steps = Math.max(1, Math.ceil(dist / spacing));
-        
-        for (let j = 0; j <= steps; j++) {
-            const t = j / steps;
-            const cw = w1 + (w2 - w1) * t;
-            if (cw <= 0) continue;
+    if (isTransparent) {
+        ctx.beginPath();
+        for (let i = startI; i < pts.length; i++) {
+            const p1 = pts[i-1], p2 = pts[i];
+            const w1 = widths[i-1], w2 = widths[i];
+            const dx = p2.x - p1.x, dy = p2.y - p1.y;
+            const dist = Math.hypot(dx, dy);
             
-            const roundedW = Math.round(cw * 2) / 2; // 0.5px 刻みでキャッシュヒット率を上げる
-            if (roundedW !== lastStampSize) {
-                lastStamp = _getRadialBrush(roundedW);
-                lastStampSize = roundedW;
+            const spacing = Math.max(0.5, Math.min(w1, w2) * 0.2);
+            const steps = Math.max(1, Math.ceil(dist / spacing));
+            for (let j = 0; j <= steps; j++) {
+                const t = j / steps;
+                const cw = w1 + (w2 - w1) * t;
+                if (cw > 0) ctx.arc(p1.x + dx * t, p1.y + dy * t, cw / 2, 0, Math.PI * 2);
             }
-            ctx.drawImage(lastStamp, p1.x + dx * t - roundedW / 2, p1.y + dy * t - roundedW / 2, roundedW, roundedW);
+        }
+        ctx.fill();
+    } else {
+        let lastStampSize = -1;
+        let lastStamp = null;
+        for (let i = startI; i < pts.length; i++) {
+            const p1 = pts[i-1], p2 = pts[i];
+            const w1 = widths[i-1], w2 = widths[i];
+            const dx = p2.x - p1.x, dy = p2.y - p1.y;
+            const dist = Math.hypot(dx, dy);
+            
+            const spacing = Math.max(0.5, Math.min(w1, w2) * 0.2); // 密度を高めて滑らかに
+            const steps = Math.max(1, Math.ceil(dist / spacing));
+            
+            for (let j = 0; j <= steps; j++) {
+                const t = j / steps;
+                const cw = w1 + (w2 - w1) * t;
+                if (cw <= 0) continue;
+                
+                const roundedW = Math.round(cw * 2) / 2; // 0.5px 刻みでキャッシュヒット率を上げる
+                if (roundedW !== lastStampSize) {
+                    lastStamp = _getRadialBrush(roundedW);
+                    lastStampSize = roundedW;
+                }
+                ctx.drawImage(lastStamp, p1.x + dx * t - roundedW / 2, p1.y + dy * t - roundedW / 2, roundedW, roundedW);
+            }
         }
     }
 
@@ -352,28 +372,47 @@ function _drawErase(ctx, pts, fromIdx, isStart, b) {
         ctx.stroke();
     }
 
-    // Pass 2: 可変幅スタンプ
-    let lastStampSize = -1;
-    let lastStamp = null;
-    for (let i = startI; i < pts.length; i++) {
-        const p1 = pts[i-1], p2 = pts[i];
-        const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
-        const dx = p2.x - p1.x, dy = p2.y - p1.y;
-        const dist = Math.hypot(dx, dy);
-        
-        const spacing = Math.max(0.5, Math.min(w1, w2) * 0.2);
-        const steps = Math.max(1, Math.ceil(dist / spacing));
-        for (let j = 0; j <= steps; j++) {
-            const t = j / steps;
-            const cw = w1 + (w2 - w1) * t;
-            if (cw <= 0) continue;
-            
-            const roundedW = Math.round(cw * 2) / 2;
-            if (roundedW !== lastStampSize) {
-                lastStamp = _getRadialBrush(roundedW);
-                lastStampSize = roundedW;
+    // Pass 2: 可変幅スタンプ/パス
+    const isTransparent = (brush.opacity ?? 1.0) < 1.0;
+    if (isTransparent) {
+        ctx.beginPath();
+        for (let i = startI; i < pts.length; i++) {
+            const p1 = pts[i-1], p2 = pts[i];
+            const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
+            const dx = p2.x - p1.x, dy = p2.y - p1.y;
+            const dist = Math.hypot(dx, dy);
+            const spacing = Math.max(0.5, Math.min(w1, w2) * 0.2);
+            const steps = Math.max(1, Math.ceil(dist / spacing));
+            for (let j = 0; j <= steps; j++) {
+                const t = j / steps;
+                const cw = w1 + (w2 - w1) * t;
+                if (cw > 0) ctx.arc(p1.x + dx * t, p1.y + dy * t, cw / 2, 0, Math.PI * 2);
             }
-            ctx.drawImage(lastStamp, p1.x + dx * t - roundedW / 2, p1.y + dy * t - roundedW / 2, roundedW, roundedW);
+        }
+        ctx.fill();
+    } else {
+        let lastStampSize = -1;
+        let lastStamp = null;
+        for (let i = startI; i < pts.length; i++) {
+            const p1 = pts[i-1], p2 = pts[i];
+            const w1 = getW(p1.pressure), w2 = getW(p2.pressure);
+            const dx = p2.x - p1.x, dy = p2.y - p1.y;
+            const dist = Math.hypot(dx, dy);
+            
+            const spacing = Math.max(0.5, Math.min(w1, w2) * 0.2);
+            const steps = Math.max(1, Math.ceil(dist / spacing));
+            for (let j = 0; j <= steps; j++) {
+                const t = j / steps;
+                const cw = w1 + (w2 - w1) * t;
+                if (cw <= 0) continue;
+                
+                const roundedW = Math.round(cw * 2) / 2;
+                if (roundedW !== lastStampSize) {
+                    lastStamp = _getRadialBrush(roundedW);
+                    lastStampSize = roundedW;
+                }
+                ctx.drawImage(lastStamp, p1.x + dx * t - roundedW / 2, p1.y + dy * t - roundedW / 2, roundedW, roundedW);
+            }
         }
     }
 

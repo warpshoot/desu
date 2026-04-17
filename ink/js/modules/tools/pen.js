@@ -397,9 +397,11 @@ export function drawPenLine(x, y, pressure = 0.5, options = {}) {
         y = _stabAnchorY;
     }
 
-    const lastPoint = strokePoints[strokePoints.length - 1];
-    const dist = Math.hypot(x - lastPoint.x, y - lastPoint.y);
-    if (dist < 0.5) return;
+    const lastPoint = strokePoints.length > 0 ? strokePoints[strokePoints.length - 1] : null;
+    if (lastPoint) {
+        const dist = Math.hypot(x - lastPoint.x, y - lastPoint.y);
+        if (dist < 0.5) return;
+    }
 
     // Dirty rect を拡張
     if (x < _dirtyMinX) _dirtyMinX = x;

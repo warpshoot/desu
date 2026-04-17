@@ -169,7 +169,12 @@ export function flushDrawPoints() {
 
             lassoCtx.globalAlpha = 0.4; // Ghost look
             for (let i = 0; i < preds.length; i++) {
-                drawPenLine(preds[i].x, preds[i].y, preds[i].pressure, { previewCtx: lassoCtx });
+                const p = preds[i];
+                if (p.isStipple) {
+                    drawStippleLine(p.x, p.y, p.pressure, { previewCtx: lassoCtx });
+                } else {
+                    drawPenLine(p.x, p.y, p.pressure, { previewCtx: lassoCtx });
+                }
             }
             lassoCtx.restore();
         }
