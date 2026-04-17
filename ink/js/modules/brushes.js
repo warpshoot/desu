@@ -87,6 +87,14 @@ export function makeDefaultFillSlots() {
 
 
 
+// Slot icons (moved from ui.js)
+const SUB_TOOL_ICONS = {
+    pen:     { pen: 'icons/pen.png', stipple: 'icons/stipple.svg' },
+    fill:    { fill: 'icons/bet.png', tone: 'icons/tone.png' },
+    eraser:  { pen: 'icons/er2.svg', lasso: 'icons/er1.png', clear: null },
+    shape:   { line: 'icons/line.svg', rect: 'icons/rect.svg', circle: 'icons/circle.svg', poly: 'icons/poly.svg', star: 'icons/star.svg' }
+};
+
 // =============================================
 // デフォルト消しゴムスロット定義
 // =============================================
@@ -95,6 +103,17 @@ export function makeDefaultEraserSlots() {
         { subTool: 'pen', stabilizerEnabled: false, stabilizerDistance: 20, stabStringVisible: true, stabShowGuide: true, pressureSize: true, pressureCurve: 1.0 },
         { subTool: 'lasso', bucketEnabled: true, bucketTolerance: 'normal', bucketGapClose: 0, stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
         { subTool: 'clear', antiAlias: false },
+    ];
+}
+
+// =============================================
+// デフォルト図形スロット定義
+// =============================================
+export function makeDefaultShapeSlots() {
+    return [
+        { subTool: 'line',   opacity: 1.0, size: 2,   isFill: false, isStroke: true,  antiAlias: true, rotation: 0, fromCenter: false },
+        { subTool: 'rect',   opacity: 1.0, size: 4,   isFill: false, isStroke: true,  antiAlias: true, rotation: 0, fromCenter: false },
+        { subTool: 'star',   opacity: 1.0, size: 4,   isFill: true,  isStroke: false, antiAlias: true, sides: 5, ratio: 0.5, rotation: 0, fromCenter: false },
     ];
 }
 

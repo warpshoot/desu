@@ -55,6 +55,14 @@
                 <img src="icons/tone.png" class="tool-icon mode-icon" data-sub="tone" style="display:none;" alt="Tone">
                 <div class="hold-progress"></div>
             </div>
+            <div class="mode-btn" id="mode-shape" data-mode="shape" title="図形" data-i18n-title="tool.shape">
+                <svg class="tool-icon mode-icon" data-sub="line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19L19 5"/></svg>
+                <svg class="tool-icon mode-icon" data-sub="rect" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                <svg class="tool-icon mode-icon" data-sub="circle" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+                <svg class="tool-icon mode-icon" data-sub="poly" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 7v8l-9 5-9-5V9z"/></svg>
+                <svg class="tool-icon mode-icon" data-sub="star" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <div class="hold-progress"></div>
+            </div>
             <div class="mode-btn" id="mode-eraser" data-mode="eraser" title="消しゴム" data-i18n-title="tool.eraser">
                 <img src="icons/er2.svg" class="tool-icon mode-icon" data-sub="pen" style="filter: brightness(0);" alt="Eraser Pen">
                 <img src="icons/er1.png" class="tool-icon mode-icon" data-sub="lasso" style="filter: brightness(0); display:none;" alt="Eraser Lasso">
@@ -571,7 +579,65 @@
         </div>
     </div>
 
+    <!-- 図形設定パネル -->
+    <div id="shape-settings-panel" class="hidden tool-menu">
+        <div class="panel-header">
+            <div id="shape-settings-pin" class="settings-pin-btn" title="設定を固定"></div>
+            <span id="shape-settings-name" data-i18n="sh.title">図形設定</span>
+            <button id="shape-settings-close" class="panel-close">×</button>
+        </div>
+        <div id="shape-settings-body">
+            <div class="bs-row" id="sh-subtool-row">
+                <label data-i18n="fs.subtool">サブツール</label>
+                <select id="sh-subtool">
+                    <option value="line" data-i18n="sh.sub.line">直線</option>
+                    <option value="rect" data-i18n="sh.sub.rect">矩形</option>
+                    <option value="circle" data-i18n="sh.sub.circle">円</option>
+                    <option value="poly" data-i18n="sh.sub.poly">多角形</option>
+                    <option value="star" data-i18n="sh.sub.star">スター</option>
+                </select>
+            </div>
+            <div class="bs-row bs-toggles" id="sh-fill-row">
+                <label class="bs-toggle-label" id="sh-fill-label">
+                    <input type="checkbox" id="sh-fill"> <span data-i18n="sh.fill">塗りつぶし</span>
+                </label>
+            </div>
+            <div class="bs-row bs-toggles">
+                <label class="bs-toggle-label">
+                    <input type="checkbox" id="sh-stroke" checked> <span data-i18n="sh.stroke">線描き</span>
+                </label>
+            </div>
+            <div class="bs-row bs-toggles" id="sh-from-center-row">
+                <label class="bs-toggle-label">
+                    <input type="checkbox" id="sh-from-center"> <span data-i18n="sh.fromCenter">中心から描画</span>
+                </label>
+            </div>
+            <div class="bs-row" id="sh-rotation-row">
+                <label><span data-i18n="sh.rotation">角度</span> <span id="sh-rotation-val">0</span>°</label>
+                <input type="range" id="sh-rotation" min="0" max="359" step="1" value="0">
+            </div>
+            <div class="bs-row" id="sh-sides-row">
+                <label><span data-i18n="sh.sides">角数</span> <span id="sh-sides-val">5</span></label>
+                <input type="range" id="sh-sides" min="3" max="20" value="5">
+            </div>
+            <div class="bs-row" id="sh-ratio-row">
+                <label><span data-i18n="sh.ratio">内径比率</span> <span id="sh-ratio-val">50</span>%</label>
+                <input type="range" id="sh-ratio" min="1" max="99" value="50">
+            </div>
+            <div class="bs-row bs-toggles" id="sh-aa-row">
+                <label class="bs-toggle-label">
+                    <input type="checkbox" id="sh-aa" checked> <span data-i18n="fs.aa">アンチエイリアス</span>
+                </label>
+            </div>
+        </div>
+    </div>
 
+
+
+    <!-- 図形設定プレビュー (中央フローティング) -->
+    <div id="shape-preview-float" class="hidden">
+        <canvas id="sh-preview-canvas" width="240" height="240"></canvas>
+    </div>
 
     <!-- Scripts -->
     <script type="module" src="js/main.js"></script>

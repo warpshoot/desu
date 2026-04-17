@@ -16,6 +16,7 @@ import {
 } from '../tools/fill.js';
 import { previewStraightLine } from '../tools/pen.js';
 import { drawStippleLine } from '../tools/stipple.js';
+import { drawShape } from '../tools/shapes.js';
 import { hideAllMenus, handleOutsideClick } from './menuManager.js';
 import { updateLayerThumbnail } from './layerPanel.js';
 import { hasFloatingSelection, commitFloating } from '../tools/selection.js';
@@ -25,7 +26,8 @@ import { updateToneMenuVisibility } from './toneMenu.js';
 const SUB_TOOL_ICONS = {
     pen:     { pen: 'icons/pen.png', stipple: 'icons/stipple.svg' },
     fill:    { fill: 'icons/bet.png', tone: 'icons/tone.png' },
-    eraser:  { pen: 'icons/er2.svg', lasso: 'icons/er1.png', clear: null }
+    eraser:  { pen: 'icons/er2.svg', lasso: 'icons/er1.png', clear: null },
+    shape:   { line: 'icons/line.svg', rect: 'icons/rect.svg', circle: 'icons/circle.svg', poly: 'icons/poly.svg', star: 'icons/star.svg' }
 };
 
 let _editingBrushIdx = 0;
@@ -112,6 +114,9 @@ export async function handleModeTap(mode) {
         } else if (mode === 'select') {
             state.selectSubTool = state.selectSubTool === 'rect' ? 'lasso' : 'rect';
             state.subTool = state.selectSubTool;
+        } else if (mode === 'shape') {
+            state.activeShapeSlotIndex = (state.activeShapeSlotIndex + 1) % state.shapeSlots.length;
+            state.subTool = state.shapeSlots[state.activeShapeSlotIndex].subTool;
         }
     } else {
         state.mode = mode;
@@ -124,6 +129,8 @@ export async function handleModeTap(mode) {
             state.subTool = state.eraserSlots[state.activeEraserSlotIndex].subTool;
         } else if (mode === 'select') {
             state.subTool = state.selectSubTool;
+        } else if (mode === 'shape') {
+            state.subTool = state.shapeSlots[state.activeShapeSlotIndex].subTool;
         }
     }
 
@@ -158,6 +165,7 @@ export function updateToolButtonStates() {
         else if (mode === 'fill') currentSub = state.activeFillSlot.subTool;
         else if (mode === 'eraser') currentSub = state.activeEraserSlot.subTool;
         else if (mode === 'select') currentSub = state.selectSubTool; // select専用サブツール状態を参照
+        else if (mode === 'shape') currentSub = state.activeShape.subTool;
 
         if (currentSub) updateModeButtonIcon(mode, currentSub);
     });
@@ -174,9 +182,17 @@ export function updateToolButtonStates() {
         brushPalette.classList.toggle('disabled', state.mode === 'select');
     }
 
-    if (state.mode !== 'pen' && brushSettingsPanel) {
-        brushSettingsPanel.classList.add('hidden');
-    }
+    // Hide tool-specific panels if mode changes
+    const panels = {
+        pen:    'brush-settings-panel',
+        fill:   'fill-settings-panel',
+        eraser: 'eraser-settings-panel',
+        shape:  'shape-settings-panel'
+    };
+    Object.keys(panels).forEach(m => {
+        const p = document.getElementById(panels[m]);
+        if (p && state.mode !== m) p.classList.add('hidden');
+    });
 
     updateBrushSizeVisibility();
     if (window.updateSelectToolbar) window.updateSelectToolbar();
@@ -185,7 +201,7 @@ export function updateToolButtonStates() {
 export function updateBrushSizeVisibility() {
     const container = document.getElementById('size-slider-container');
     if (!container) return;
-    const needsSize = state.mode === 'pen' || (state.mode === 'eraser' && state.subTool === 'pen');
+    const needsSize = state.mode === 'pen' || (state.mode === 'eraser' && state.subTool === 'pen') || state.mode === 'shape';
     container.classList.toggle('disabled', !needsSize);
 }
 
@@ -199,6 +215,8 @@ export function updateBrushSizeSlider() {
         size = state.eraserSize;
     } else if (state.mode === 'pen' && state.subTool === 'stipple') {
         size = state.stippleSize;
+    } else if (state.mode === 'shape') {
+        size = state.activeShape.size;
     } else {
         size = state.activeBrush.size;
     }
@@ -229,21 +247,35 @@ export function setupColorPickers() {
             state.eraserSize = size;
         } else if (state.mode === 'pen' && state.subTool === 'stipple') {
             state.stippleSize = size;
+        } else if (state.mode === 'shape') {
+            state.activeShape.size = size;
         } else {
             state.activeBrush.size = size;
         }
 
         flashBrushSizePreview();
 
-        if (state.mode === 'pen' && (state.subTool === 'pen' || state.subTool === 'stipple')) {
-            const activeIdx = state.activeBrushIndex;
-            const activeSlotDot = document.querySelector(`.brush-slot[data-idx="${activeIdx}"] .brush-dot-preview`);
+        // 図形モード: 設定パネルを開いてプレビューを表示（タイマーもリセット）
+        if (state.mode === 'shape') {
+            const panel = document.getElementById('shape-settings-panel');
+            if (panel && panel.classList.contains('hidden')) {
+                openShapeSettings(state.activeShapeSlotIndex);
+            } else {
+                showShapePreview(state.activeShape);
+            }
+        }
+
+        if ((state.mode === 'pen' && (state.subTool === 'pen' || state.subTool === 'stipple')) || state.mode === 'shape') {
+            const activeIdx = state.mode === 'shape' ? state.activeShapeSlotIndex : state.activeBrushIndex;
+            const activeSlotDot = document.querySelector(`.brush-slot[data-idx="${activeIdx}"][data-category="${state.mode === 'shape' ? 'shape' : 'pen'}"] .brush-dot-preview`);
             if (activeSlotDot) {
                 const slotDotSize = Math.max(1, size || 1);
                 activeSlotDot.style.width = `${slotDotSize}px`;
                 activeSlotDot.style.height = `${slotDotSize}px`;
-                if (state.subTool === 'pen') {
+                if (state.mode === 'pen' && state.subTool === 'pen') {
                     activeSlotDot.style.opacity = state.activeBrush.opacity;
+                } else if (state.mode === 'shape') {
+                    activeSlotDot.style.opacity = state.activeShape.opacity ?? 1.0;
                 }
             }
         }
@@ -335,6 +367,37 @@ export function renderBrushPalette() {
         return;
     }
 
+    if (state.mode === 'shape') {
+        state.shapeSlots.forEach((slot, idx) => {
+            const el = document.createElement('div');
+            el.className = 'brush-slot' + (idx === state.activeShapeSlotIndex ? ' active' : '');
+            el.dataset.idx = idx;
+            el.dataset.category = 'shape';
+            const swatch = document.createElement('div');
+            swatch.className = 'brush-swatch';
+            
+            // Dot preview for size feedback
+            const dot = document.createElement('div');
+            dot.className = 'brush-dot-preview';
+            const displaySize = Math.max(1, slot.size || 1);
+            dot.style.width = `${displaySize}px`;
+            dot.style.height = `${displaySize}px`;
+            dot.style.backgroundColor = '#000';
+            dot.style.borderRadius = '50%';
+            dot.style.opacity = slot.isFill ? (slot.opacity ?? 1) : (slot.opacity ?? 1) * 0.5; // Faint dot if stroke only
+            swatch.appendChild(dot);
+
+            // Shape type badge
+            const badge = _makeSlotIcon(SUB_TOOL_ICONS.shape[slot.subTool]);
+            badge.className = 'slot-subtool-icon pen-slot-badge';
+            el.appendChild(badge);
+            
+            el.appendChild(swatch);
+            palette.appendChild(el);
+        });
+        return;
+    }
+
     state.brushes.forEach((brush, idx) => {
         const slot = document.createElement('div');
         slot.className = 'brush-slot' + (idx === state.activeBrushIndex ? ' active' : '');
@@ -419,6 +482,23 @@ export function setupBrushPalette() {
                 state.activeEraserSlotIndex = idx;
                 state.subTool = state.eraserSlots[idx].subTool;
                 updateModeButtonIcon('eraser', state.subTool);
+                updateToolButtonStates();
+                updateBrushSizeSlider();
+                renderBrushPalette();
+            }
+        } else if (category === 'shape') {
+            if (state.activeShapeSlotIndex === idx) {
+                const panel = document.getElementById('shape-settings-panel');
+                if (panel && !panel.classList.contains('hidden') && _editingShapeSlotIdx === idx) {
+                    hideAllMenus();
+                } else {
+                    openShapeSettings(idx);
+                }
+            } else {
+                hideAllMenus();
+                state.activeShapeSlotIndex = idx;
+                state.subTool = state.shapeSlots[idx].subTool;
+                updateModeButtonIcon('shape', state.subTool);
                 updateToolButtonStates();
                 updateBrushSizeSlider();
                 renderBrushPalette();
@@ -839,6 +919,161 @@ export function openEraserSettings(idx) {
     }
 
     _positionAndShowPanel(panel, `.brush-slot[data-idx="${idx}"][data-category="eraser"]`, 350);
+}
+
+let _editingShapeSlotIdx = 0;
+export function setupShapeSettingsPanel() {
+    const panel = document.getElementById('shape-settings-panel');
+    if (!panel) return;
+
+    const subToolSel     = document.getElementById('sh-subtool');
+    const fillCheck      = document.getElementById('sh-fill');
+    const strokeCheck    = document.getElementById('sh-stroke');
+    const fromCenterCheck = document.getElementById('sh-from-center');
+    const rotationSlider = document.getElementById('sh-rotation');
+    const sidesSlider    = document.getElementById('sh-sides');
+    const ratioSlider    = document.getElementById('sh-ratio');
+    const aaCheck        = document.getElementById('sh-aa');
+    const closeBtn       = document.getElementById('shape-settings-close');
+
+    const sync = () => {
+        const slot = state.shapeSlots[_editingShapeSlotIdx];
+        slot.subTool    = subToolSel.value;
+        slot.isFill     = fillCheck.checked;
+        slot.isStroke   = strokeCheck.checked;
+        slot.fromCenter = fromCenterCheck.checked;
+        slot.rotation   = parseInt(rotationSlider.value);
+        slot.sides      = parseInt(sidesSlider.value);
+        slot.ratio      = parseInt(ratioSlider.value) / 100;
+        slot.antiAlias  = aaCheck.checked;
+
+        document.getElementById('sh-sides-val').textContent = slot.sides;
+        document.getElementById('sh-ratio-val').textContent = Math.round(slot.ratio * 100);
+        document.getElementById('sh-rotation-val').textContent = slot.rotation;
+
+        const isLine = slot.subTool === 'line';
+        const isPoly = slot.subTool === 'poly';
+        const isStar = slot.subTool === 'star';
+
+        // 直線の時は塗りをグレーアウト
+        const fillLabel = document.getElementById('sh-fill-label');
+        if (fillLabel) fillLabel.classList.toggle('disabled', isLine);
+        if (isLine) { fillCheck.checked = false; slot.isFill = false; }
+
+        // 直線には中心からと角度は非表示
+        document.getElementById('sh-from-center-row').style.display = isLine ? 'none' : '';
+        document.getElementById('sh-rotation-row').style.display = isLine ? 'none' : '';
+        document.getElementById('sh-sides-row').style.display = (isPoly || isStar) ? '' : 'none';
+        document.getElementById('sh-ratio-row').style.display = isStar ? '' : 'none';
+
+        if (_editingShapeSlotIdx === state.activeShapeSlotIndex && state.mode === 'shape') {
+            state.subTool = slot.subTool;
+            updateModeButtonIcon('shape', state.subTool);
+            updateToolButtonStates();
+        }
+        renderBrushPalette();
+        showShapePreview(slot);
+    };
+
+    [subToolSel, fillCheck, strokeCheck, fromCenterCheck, rotationSlider, sidesSlider, ratioSlider, aaCheck].forEach(el => {
+        if (el) el.addEventListener('input', sync);
+    });
+
+    _setupPanelBoilerplate(panel,
+        document.getElementById('shape-settings-pin'),
+        closeBtn,
+        'isShapeSettingsPinned',
+        () => { panel.classList.add('hidden'); hideShapePreview(); updateToneMenuVisibility(); }
+    );
+}
+
+export function openShapeSettings(idx) {
+    _editingShapeSlotIdx = idx;
+    const slot = state.shapeSlots[idx];
+    const panel = document.getElementById('shape-settings-panel');
+    if (!panel) return;
+
+    const isLine = (slot.subTool || 'line') === 'line';
+    const isPoly = slot.subTool === 'poly';
+    const isStar = slot.subTool === 'star';
+
+    document.getElementById('sh-subtool').value = slot.subTool || 'line';
+    document.getElementById('sh-fill').checked = isLine ? false : (slot.isFill ?? false);
+    document.getElementById('sh-stroke').checked = slot.isStroke ?? true;
+    document.getElementById('sh-from-center').checked = slot.fromCenter ?? false;
+    document.getElementById('sh-rotation').value = slot.rotation ?? 0;
+    document.getElementById('sh-rotation-val').textContent = slot.rotation ?? 0;
+    document.getElementById('sh-sides').value = slot.sides ?? 5;
+    document.getElementById('sh-sides-val').textContent = slot.sides ?? 5;
+    document.getElementById('sh-ratio').value = Math.round((slot.ratio ?? 0.5) * 100);
+    document.getElementById('sh-ratio-val').textContent = Math.round((slot.ratio ?? 0.5) * 100);
+    document.getElementById('sh-aa').checked = slot.antiAlias ?? true;
+
+    // 直線の時は塗りをグレーアウト
+    const fillLabel = document.getElementById('sh-fill-label');
+    if (fillLabel) fillLabel.classList.toggle('disabled', isLine);
+
+    // 直線には中心からと角度は非表示
+    document.getElementById('sh-from-center-row').style.display = isLine ? 'none' : '';
+    document.getElementById('sh-rotation-row').style.display = isLine ? 'none' : '';
+    document.getElementById('sh-sides-row').style.display = (isPoly || isStar) ? '' : 'none';
+    document.getElementById('sh-ratio-row').style.display = isStar ? '' : 'none';
+
+    const pinBtn = document.getElementById('shape-settings-pin');
+    if (pinBtn) {
+        pinBtn.classList.toggle('active', !!state.isShapeSettingsPinned);
+    }
+
+    _positionAndShowPanel(panel, `.brush-slot[data-idx="${idx}"][data-category="shape"]`, 360);
+    showShapePreview(slot);
+}
+
+const SHAPE_PREVIEW_HIDE_DELAY = 2000; // 2秒後に自動非表示
+let _shapePreviewTimer = null;
+
+export function showShapePreview(slot) {
+    const float = document.getElementById('shape-preview-float');
+    if (float) float.classList.remove('hidden');
+    _renderShapePreview(slot);
+
+    // 既存タイマーリセット → 2秒後に自動消去
+    clearTimeout(_shapePreviewTimer);
+    _shapePreviewTimer = setTimeout(() => hideShapePreview(), SHAPE_PREVIEW_HIDE_DELAY);
+}
+
+export function hideShapePreview() {
+    clearTimeout(_shapePreviewTimer);
+    _shapePreviewTimer = null;
+    const float = document.getElementById('shape-preview-float');
+    if (float) float.classList.add('hidden');
+}
+
+function _renderShapePreview(slot) {
+    const canvas = document.getElementById('sh-preview-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // 白背景
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+
+    // 線幅の半分 + 余白 をパディングにして太い線でもはみ出さない
+    const pad = Math.ceil(slot.size / 2) + 12;
+    let x0, y0, x1, y1;
+    if (slot.subTool === 'line') {
+        x0 = pad;     y0 = h - pad;
+        x1 = w - pad; y1 = pad;
+    } else {
+        x0 = pad;     y0 = pad;
+        x1 = w - pad; y1 = h - pad;
+    }
+
+    // fromCenter はドラッグ挙動の違いなのでプレビューでは常に false
+    const previewOpts = { ...slot, fromCenter: false };
+    drawShape(ctx, slot.subTool, x0, y0, x1, y1, previewOpts, false);
 }
 
 export async function executeClearLayer() {

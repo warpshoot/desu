@@ -9,7 +9,7 @@ It features an enjoyable drawing experience and simple, lightweight operation.
 Equipped with functions such as pen drawing, filling, and screentones, it provides a stress-free and smooth drawing experience.
 
 ## 2. Modes and Tools
-Switch between four main modes using the toolbar on the left.
+Switch between five main modes using the toolbar on the left.
 
 ### **Pen Mode (Pen)**
 - **Pen**: A standard pen tool. You can configure thickness changes based on pressure and the use of anti-aliasing.
@@ -19,6 +19,21 @@ Switch between four main modes using the toolbar on the left.
 - **Lasso Fill (Fill)**: Fills the enclosed area.
 - **Tone (Screentone)**: Places screentones in the enclosed area. Select from a variety of patterns.
 - **Bucket**: By enabling "Bucket" in the settings panel of each tool, you can fill areas by tapping.
+
+### **Shape Mode (Shape)**
+Draw geometric shapes by dragging. Tap a slot to open the settings panel.
+- **Line**: Draws a straight line from start to end. Hold Shift while dragging to snap to 45° angles.
+- **Rectangle**: Drag diagonally to draw a rectangle. Hold Shift for a perfect square.
+- **Circle**: Draws an ellipse inscribed in the dragged area. Hold Shift for a perfect circle.
+- **Polygon (Poly)**: Regular polygon. Change the number of sides in the settings panel.
+- **Star**: Star shape. Adjust sides and inner radius ratio in the settings panel.
+
+**Settings Options:**
+- **Fill / Stroke**: Toggle fill and outline independently. Fill is unavailable (greyed out) for lines.
+- **Draw from Center**: When ON, the drag start point becomes the center of the shape.
+- **Rotation**: Set the rotation angle from 0–359°. Not applied to lines.
+- **Anti-aliasing**: Smooths jagged edges.
+- **Preview**: After changing settings or the stroke width slider, a 2-second preview appears in the center of the screen. It disappears as soon as drawing begins.
 
 ### **Eraser Mode (Eraser)**
 - **Eraser Pen**: Erases the area traced with the brush.
@@ -93,3 +108,4 @@ From the "SNAPSHOT" menu, you can export the following:
 
 ---
 *2026-04-17 Updated*
+

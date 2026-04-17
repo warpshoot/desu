@@ -12,6 +12,7 @@ import {
     setupBrushSettingsPanel, 
     setupFillSettingsPanel, 
     setupEraserSettingsPanel,
+    setupShapeSettingsPanel,
     updateModeButtonIcon,
     updateToolButtonStates,
     updateBrushSizeVisibility,
@@ -43,6 +44,7 @@ export function initUI() {
     setupBrushSettingsPanel();
     setupFillSettingsPanel();
     setupEraserSettingsPanel();
+    setupShapeSettingsPanel();
     setupFileUI();
     setupZoomControls();
     setupModifierBar();

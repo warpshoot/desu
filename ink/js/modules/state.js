@@ -1,4 +1,4 @@
-import { makeDefaultBrushes, makeDefaultFillSlots, makeDefaultEraserSlots } from './brushes.js';
+import { makeDefaultBrushes, makeDefaultFillSlots, makeDefaultEraserSlots, makeDefaultShapeSlots } from './brushes.js';
 
 // キャンバス用 DPR: iOS 3x 等で 6000×6000 になるのを防ぐため 2 に上限設定
 // 2x で十分なシャープさを保ちつつ、GPU/メモリ負荷を大幅削減
@@ -309,9 +309,11 @@ export const state = {
     //   fill:   'fill' | 'tone'
     //   eraser: 'pen' | 'lasso'
     //   select: 'rect' | 'lasso'
+    //   shape:  'line' | 'rect' | 'circle' | 'poly' | 'star'
     mode: 'pen',
     subTool: 'pen',
     selectSubTool: 'rect',  // select モード専用サブツール (mode切替後も保持)
+    shapeSubTool: 'line',   // shape モード専用サブツール
 
     // Backward-compatible getters (used by pen.js, fill.js, ui.js internals)
     get currentTool() {
@@ -339,6 +341,11 @@ export const state = {
     eraserSlots: makeDefaultEraserSlots(),
     activeEraserSlotIndex: 0,
     get activeEraserSlot() { return this.eraserSlots[this.activeEraserSlotIndex]; },
+
+    // 図形カテゴリスロット
+    shapeSlots: makeDefaultShapeSlots(),
+    activeShapeSlotIndex: 0,
+    get activeShape() { return this.shapeSlots[this.activeShapeSlotIndex]; },
 
     // Fixed canvas paper size (set once at first init, never changes)
     paperW: 0,

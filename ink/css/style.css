@@ -1507,7 +1507,8 @@ a.credit-val:hover {
    ============================================ */
 #brush-settings-panel,
 #fill-settings-panel,
-#eraser-settings-panel {
+#eraser-settings-panel,
+#shape-settings-panel {
     position: fixed;
     left: 72px;
     bottom: max(12px, env(safe-area-inset-bottom));
@@ -1523,13 +1524,35 @@ a.credit-val:hover {
 
 #brush-settings-panel.hidden,
 #fill-settings-panel.hidden,
-#eraser-settings-panel.hidden {
+#eraser-settings-panel.hidden,
+#shape-settings-panel.hidden {
     display: none;
+}
+
+#shape-preview-float {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9000;
+    pointer-events: none;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.08);
+}
+
+#shape-preview-float.hidden {
+    display: none;
+}
+
+#sh-preview-canvas {
+    display: block;
 }
 
 #brush-settings-header,
 #fill-settings-header,
-#eraser-settings-header {
+#eraser-settings-header,
+#shape-settings-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1543,7 +1566,8 @@ a.credit-val:hover {
 
 #brush-settings-close,
 #fill-settings-close,
-#eraser-settings-close {
+#eraser-settings-close,
+#shape-settings-close {
     background: none;
     border: none;
     font-size: 16px;
@@ -1555,7 +1579,8 @@ a.credit-val:hover {
 
 #brush-settings-body,
 #fill-settings-body,
-#eraser-settings-body {
+#eraser-settings-body,
+#shape-settings-body {
     padding: 10px 12px;
     display: flex;
     flex-direction: column;
@@ -1757,7 +1782,8 @@ body.is-drawing-active .tool-menu,
 body.is-drawing-active .flyout-menu,
 body.is-drawing-active #fill-settings-panel,
 body.is-drawing-active #eraser-settings-panel,
-body.is-drawing-active #brush-settings-panel {
+body.is-drawing-active #brush-settings-panel,
+body.is-drawing-active #shape-settings-panel {
     pointer-events: none !important;
     transition: opacity 0.2s ease-out;
 }

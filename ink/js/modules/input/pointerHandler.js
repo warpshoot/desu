@@ -28,7 +28,7 @@ import {
     resetStrokeBounds
 } from '../core/renderLoop.js';
 import { handlePinchPan, handleGestureTaps } from './gestureHandler.js';
-import { executeClearLayer } from '../ui/toolPanel.js';
+import { executeClearLayer, hideShapePreview } from '../ui/toolPanel.js';
 import { updateLayerThumbnail } from '../ui/layerPanel.js';
 import { 
     startPenDrawing, 
@@ -72,6 +72,7 @@ import {
 } from '../tools/selection.js';
 import { setSelectionToolbarInteractive } from '../ui/selectionUI.js';
 import { hideAllMenus, isAnyMenuOpen, hideUnpinnedMenus } from '../ui/menuManager.js';
+import { drawShape } from '../tools/shapes.js';
 
 let _thumbRafId = null;
 
@@ -256,6 +257,11 @@ async function handlePointerDown(e) {
                 setStrokeStartPoint({ x: canvasPoint.x, y: canvasPoint.y });
                 setLastStraightEnd(null);
             }
+        } else if (state.mode === 'shape') {
+            state.isShapeDragging = true;
+            state.shapeStartX = canvasPoint.x;
+            state.shapeStartY = canvasPoint.y;
+            hideShapePreview(); // 描画開始と同時にプレビューを消す
         }
         state._jumpFilterCount = 0;
         state._lastStablePoint = { x: e.clientX, y: e.clientY };
@@ -380,6 +386,11 @@ function handlePointerMove(e) {
                 
                 addPendingPoints(pts, predPts);
             }
+        } else if (state.isShapeDragging) {
+            const isShiftActive = state.isShiftPressed || (state._modShiftState && state._modShiftState !== 'idle');
+            const slot = state.activeShape;
+            strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
+            drawShape(strokeCtx, slot.subTool, state.shapeStartX, state.shapeStartY, canvasPoint.x, canvasPoint.y, slot, isShiftActive);
         }
     }
 }
@@ -502,6 +513,23 @@ async function handlePointerUp(e) {
                 _thumbRafId = null;
             });
             clearStraightLineGuide();
+        } else if (state.isShapeDragging) {
+            state.isShapeDragging = false;
+            strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
+            
+            const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
+            const isShiftActive = state.isShiftPressed || (state._modShiftState && state._modShiftState !== 'idle');
+            const slot = state.activeShape;
+            const ctx = getActiveLayerCtx();
+            
+            if (ctx) {
+                await saveState();
+                const clipped = pushSelectionClip(ctx);
+                drawShape(ctx, slot.subTool, state.shapeStartX, state.shapeStartY, canvasPoint.x, canvasPoint.y, slot, isShiftActive);
+                if (clipped) popSelectionClip(ctx);
+                updateLayerThumbnail(getActiveLayer());
+                await saveState({ keepRedo: true });
+            }
         }
         state.drawingPointerId = null;
     }

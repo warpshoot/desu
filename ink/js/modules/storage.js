@@ -132,9 +132,11 @@ async function executeSave() {
                     brushes: state.brushes,
                     fillSlots: state.fillSlots,
                     eraserSlots: state.eraserSlots,
+                    shapeSlots: state.shapeSlots,
                     activeBrushIndex: state.activeBrushIndex,
                     activeFillSlotIndex: state.activeFillSlotIndex,
                     activeEraserSlotIndex: state.activeEraserSlotIndex,
+                    activeShapeSlotIndex: state.activeShapeSlotIndex,
                     mode: state.mode,
                     subTool: state.subTool,
                     penSize: state.penSize,
@@ -415,7 +417,8 @@ export async function exportConfig() {
         const config = {
             brushes: state.brushes,
             fillSlots: state.fillSlots,
-            eraserSlots: state.eraserSlots
+            eraserSlots: state.eraserSlots,
+            shapeSlots: state.shapeSlots
             // Omit active indices, sizes, modes, etc. for simplicity
         };
         const json = JSON.stringify(config);
@@ -443,6 +446,7 @@ export function importConfig(file) {
                 state.activeBrushIndex = 0;
                 state.activeFillSlotIndex = 0;
                 state.activeEraserSlotIndex = 0;
+                state.activeShapeSlotIndex = 0;
 
                 document.dispatchEvent(new CustomEvent('desu:state-loaded'));
                 resolve(true);
@@ -491,6 +495,8 @@ function _restoreSettings(s) {
     if (s.brushes) state.brushes = s.brushes;
     if (s.fillSlots) state.fillSlots = s.fillSlots;
     if (s.eraserSlots) state.eraserSlots = s.eraserSlots;
+    if (s.shapeSlots) state.shapeSlots = s.shapeSlots;
+    if (s.activeShapeSlotIndex != null) state.activeShapeSlotIndex = s.activeShapeSlotIndex;
     if (s.activeBrushIndex != null) state.activeBrushIndex = s.activeBrushIndex;
     if (s.activeFillSlotIndex != null) state.activeFillSlotIndex = s.activeFillSlotIndex;
     if (s.activeEraserSlotIndex != null) state.activeEraserSlotIndex = s.activeEraserSlotIndex;

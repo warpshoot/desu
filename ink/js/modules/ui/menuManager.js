@@ -7,6 +7,10 @@ export function hideAllMenus() {
         menu.classList.add('hidden');
     });
 
+    // 図形プレビューフローティングも閉じる
+    const shapePreviewFloat = document.getElementById('shape-preview-float');
+    if (shapePreviewFloat) shapePreviewFloat.classList.add('hidden');
+
     // トーンメニュー（固定されていない場合）も閉じる
     const toneMenu = document.getElementById('tone-menu');
     if (toneMenu && !state.isToneMenuPinned) {
