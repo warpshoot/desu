@@ -31,7 +31,7 @@ export function initHUD() {
         .status-hud {
             position: fixed;
             top: 20px;
-            right: 20px;
+            left: 20px;
             z-index: 10000;
             background: rgba(0, 0, 0, 0.7);
             color: #fff;
