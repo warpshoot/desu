@@ -42,7 +42,7 @@ Can be enabled from the Pen or Eraser settings panel. It allows you to draw extr
 
 ### **Layer Functionality**
 Manage up to 5 layers.
-- **Long-press Menu**: Long-pressing a layer button displays a menu for opacity adjustment, visibility toggle, moving up/down, merging down, and deleting the layer.
+- **Layer Menu**: Clicking (or long-pressing) a layer button displays a menu for opacity adjustment, visibility toggle, moving up/down, merging down, and deleting the layer.
 
 ---
 
@@ -92,4 +92,4 @@ From the "SNAPSHOT" menu, you can export the following:
 - **Author**: [wpy](https://warpshoot.github.io/)
 
 ---
-*2026-04-13 Updated*
+*2026-04-17 Updated*
