@@ -647,8 +647,6 @@ export function copySelection() {
     const physH = Math.round(h0 * dpr);
 
     // GPU-based clipboard capture (Canvas instead of ImageData)
-    const physW = Math.round(w0 * dpr);
-    const physH = Math.round(h0 * dpr);
     const clipCanvas = document.createElement('canvas');
     clipCanvas.width = physW;
     clipCanvas.height = physH;
