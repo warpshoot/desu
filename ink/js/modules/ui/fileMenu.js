@@ -13,7 +13,7 @@ import {
 } from '../storage.js';
 import { t } from '../i18n.js';
 import { resetHistory } from '../history.js';
-import { applyTransform, resizePaper } from '../canvas.js';
+import { applyTransform, resizePaper, centerCanvas } from '../canvas.js';
 import { hideAllMenus, handleOutsideClick } from './menuManager.js';
 import { updateLayerThumbnail, renderLayerButtons } from './layerPanel.js';
 import { exportPSD } from '../save.js';
