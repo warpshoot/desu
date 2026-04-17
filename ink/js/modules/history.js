@@ -38,8 +38,6 @@ function _enqueue(task) {
 
     const p = _historyQueue.then(() => Promise.race([task(), timeout])).catch(err => {
         console.error('[History Queue Error]', err);
-        // Continue queue even on error to prevent blocking
-        return Promise.resolve();
     });
     _historyQueue = p;
     return p;
@@ -75,30 +73,11 @@ function _decRef(bitmap) {
 
 // Capture a layer at 1× DPR — 4× less memory than full DPR on 2× displays.
 // iOS history bitmaps at full DPR (~64MB each) cause memory pressure and hang createImageBitmap.
-// To prevent hangs on iPad Air 4, manually downscale on iOS instead of using resize parameters.
 function _captureLayer1x(layer) {
     const dpr = CANVAS_DPR;
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-    if (dpr <= 1) {
-        return createImageBitmap(layer.canvas);
-    }
-
+    if (dpr <= 1) return createImageBitmap(layer.canvas);
     const w = Math.floor(layer.canvas.width / dpr);
     const h = Math.floor(layer.canvas.height / dpr);
-
-    // On iOS, manually downscale canvas to avoid createImageBitmap resize parameter hangs
-    if (isIOS) {
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = w;
-        tempCanvas.height = h;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.imageSmoothingEnabled = true;
-        tempCtx.imageSmoothingQuality = 'medium';
-        tempCtx.drawImage(layer.canvas, 0, 0, layer.canvas.width, layer.canvas.height, 0, 0, w, h);
-        return createImageBitmap(tempCanvas);
-    }
-
     return createImageBitmap(layer.canvas, { resizeWidth: w, resizeHeight: h, resizeQuality: 'medium' });
 }
 
@@ -162,12 +141,7 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
     const promises = new Map();
     for (const layer of layers) {
         if (layersToCaptureIds.has(layer.id)) {
-            // Wrap createImageBitmap in error handling to prevent hangs from crashing the app
-            promises.set(layer.id, _captureLayer1x(layer).catch(err => {
-                console.error(`Failed to capture layer ${layer.id}:`, err);
-                // Return null on capture failure; restoreSnapshot will handle missing bitmaps
-                return null;
-            }));
+            promises.set(layer.id, _captureLayer1x(layer));
         }
     }
     const capturePromises = Promise.resolve(promises);
@@ -193,26 +167,14 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
         const captureTasks = layers.map(async (layer) => {
             if (snapshotPromises.has(layer.id)) {
                 const bmp = await snapshotPromises.get(layer.id);
-                if (bmp) {
-                    snapshot.bitmaps.set(layer.id, bmp);
-                } else if (prevEntry && prevEntry.bitmaps.has(layer.id)) {
-                    // Capture failed, use previous bitmap
-                    snapshot.bitmaps.set(layer.id, prevEntry.bitmaps.get(layer.id));
-                }
+                snapshot.bitmaps.set(layer.id, bmp);
             } else if (prevEntry && prevEntry.bitmaps.has(layer.id)) {
                 // 変更がないので前回の Bitmap 参照をそのまま使う (差分保存)
                 snapshot.bitmaps.set(layer.id, prevEntry.bitmaps.get(layer.id));
             } else {
                 // 初回保存など、どちらもない場合はキャプチャ
-                try {
-                    const bmp = await _captureLayer1x(layer).catch(err => {
-                        console.error(`Fallback capture failed for layer ${layer.id}:`, err);
-                        return null;
-                    });
-                    if (bmp) snapshot.bitmaps.set(layer.id, bmp);
-                } catch (err) {
-                    console.error(`Critical: Could not capture layer ${layer.id}:`, err);
-                }
+                const bmp = await _captureLayer1x(layer);
+                snapshot.bitmaps.set(layer.id, bmp);
             }
         });
 
@@ -221,7 +183,6 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
         // 4. 履歴スタックに採用されなかった（層が消えた等）孤立ビットマップを確実に破棄
         for (const [id, bmpPromise] of snapshotPromises) {
             const bmp = await bmpPromise;
-            if (!bmp) continue; // Skip null bitmaps from failed captures
             let isUsed = false;
             for (const usedBmp of snapshot.bitmaps.values()) {
                 if (usedBmp === bmp) {
@@ -229,7 +190,7 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
                     break;
                 }
             }
-            if (!isUsed && typeof bmp.close === 'function') {
+            if (!isUsed) {
                 bmp.close();
             }
         }
@@ -489,9 +450,7 @@ function _closeAllBitmaps(snapshot) {
     const bitmaps = snapshot.bitmaps || snapshot;
     if (bitmaps instanceof Map) {
         for (const bitmap of bitmaps.values()) {
-            if (bitmap) {
-                _decRef(bitmap);
-            }
+            _decRef(bitmap);
         }
     }
 }
