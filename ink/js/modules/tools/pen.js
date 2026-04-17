@@ -59,6 +59,15 @@ let pressureBufferLen = 0;
 let pressureBufferIdx = 0;
 
 /**
+ * ストロークの最後（一番新しい）点を返す。
+ * 予測レンダリングの起点を決めるために使用。
+ */
+export function getLastStrokePoint() {
+    if (strokePoints.length === 0) return null;
+    return strokePoints[strokePoints.length - 1];
+}
+
+/**
  * 手ぶれ補正の「糸」を描画 (lassoCanvasを使用)
  */
 function _drawStabString(cursorX, cursorY, brushX, brushY, brush) {
@@ -371,6 +380,7 @@ export function drawPenLine(x, y, pressure = 0.5, options = {}) {
     if (!state.isPenDrawing && !options.previewCtx) return;
     
     const previewCtx = options.previewCtx || null;
+    const forcedLastPoint = options.forcedLastPoint || null;
 
     const brush = _getDrawBrush();
 
@@ -431,9 +441,12 @@ export function drawPenLine(x, y, pressure = 0.5, options = {}) {
 
     if (previewCtx) {
         // 予測点（プレビュー）の描画
-        // smoothedPoints を使わず、直近の点との単純な補完でも十分。
-        // ここでは単純化のため、1点のみ描画
-        const previewPts = [lastPoint, { x, y, pressure: smoothedP }];
+        // forcedLastPoint があればそこから、なければストロークの末尾から。
+        const basePoint = forcedLastPoint || lastPoint;
+        if (!basePoint) return;
+        
+        const previewPts = [basePoint, { x, y, pressure: smoothedP }];
+        // プレビューは計算コストを抑えるため分割せず直線で描画
         drawBrushSegment(previewCtx, previewPts, 1, false, brush, false);
         return;
     }
