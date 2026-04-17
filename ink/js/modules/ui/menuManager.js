@@ -1,4 +1,5 @@
 import { state } from '../state.js';
+import { invalidateUICollisionCache } from '../input/pointerHandler.js';
 
 export function hideAllMenus() {
     const selectors = '.tool-menu, .flyout-menu, #settings-panel, #brush-settings-panel, #fill-settings-panel, #eraser-settings-panel, #select-toolbar';
@@ -18,6 +19,7 @@ export function hideAllMenus() {
     const settingsPanel = document.getElementById('settings-panel');
     if (settingsPanel) settingsPanel.classList.add('hidden');
 
+    invalidateUICollisionCache();
     document.removeEventListener('pointerdown', handleOutsideClick);
 }
 

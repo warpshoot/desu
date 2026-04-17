@@ -6,6 +6,8 @@ import {
     strokeCanvas,
     strokeCtx
 } from '../state.js';
+
+const UI_MONITOR_SELECTORS = '#toolbar-left, #toolbar-right, #modifier-bar, #layer-panel, #select-toolbar, #resetZoomBtn, .tool-menu:not(.hidden), .flyout-menu:not(.hidden), #fill-settings-panel:not(.hidden), #eraser-settings-panel:not(.hidden), #brush-settings-panel:not(.hidden)';
 import { getCanvasPoint } from '../utils.js';
 import {
     saveState,
@@ -188,8 +190,12 @@ async function handlePointerDown(e) {
         state.drawingPointerId = e.pointerId;
         state.strokeMade = false;
         document.body.classList.add('is-drawing-active');
-        state._uiCollisionRects = Array.from(document.querySelectorAll('#toolbar-left, #toolbar-right, #modifier-bar, #layer-panel, #select-toolbar, #resetZoomBtn, .tool-menu:not(.hidden), .flyout-menu:not(.hidden), #fill-settings-panel:not(.hidden), #eraser-settings-panel:not(.hidden), #brush-settings-panel:not(.hidden)'))
-            .map(el => { return { el, rect: el.getBoundingClientRect(), isFaded: false }; });
+
+        // Optimize: Lazy cache UI rects to avoid DOM query on every stroke
+        if (!state._uiCollisionRects) {
+            state._uiCollisionRects = Array.from(document.querySelectorAll(UI_MONITOR_SELECTORS))
+                .map(el => { return { el, rect: el.getBoundingClientRect(), isFaded: false }; });
+        }
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
         if (state.mode === 'select') {
@@ -498,8 +504,13 @@ async function handlePointerUp(e) {
         state.drawingPointerId = null;
     }
     if (state._uiCollisionRects) {
-        for (let item of state._uiCollisionRects) item.el.classList.remove('ui-faded');
-        state._uiCollisionRects = null;
+        // Keep the rects cached, but reset the fade state for the next stroke
+        for (let item of state._uiCollisionRects) {
+            if (item.isFaded) {
+                item.el.classList.remove('ui-faded');
+                item.isFaded = false;
+            }
+        }
     }
     state._lastUICheckX = undefined;
     state._lastUICheckY = undefined;
@@ -528,8 +539,13 @@ function handlePointerCancel(e) {
 
 function cancelCurrentOperation() {
     if (state._uiCollisionRects) {
-        for (let item of state._uiCollisionRects) item.el.classList.remove('ui-faded');
-        state._uiCollisionRects = null;
+        // Keep the rects cached, but reset the fade state
+        for (let item of state._uiCollisionRects) {
+            if (item.isFaded) {
+                item.el.classList.remove('ui-faded');
+                item.isFaded = false;
+            }
+        }
     }
     state._lastUICheckX = undefined;
     state._lastUICheckY = undefined;
@@ -555,4 +571,11 @@ function cancelCurrentOperation() {
     state.drawingPointerId = null;
     state.isLassoing = false;
     state.strokeMade = false;
+}
+
+/**
+ * Invalidate the UI collision cache. Call this when menus or panels are moved/toggled.
+ */
+export function invalidateUICollisionCache() {
+    state._uiCollisionRects = null;
 }
