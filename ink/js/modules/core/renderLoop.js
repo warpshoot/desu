@@ -157,7 +157,7 @@ export function flushDrawPoints() {
         // Predict segments are drawn to the screen-space lassoCanvas
         // They are purely visual and NOT part of the stroke data.
         const brush = state.activeBrush;
-        if (brush && !state.activeBrush?.stabilizerEnabled) {
+        if (brush && state.activeBrush?.stabilizerEnabled) {
             lassoCanvas.style.display = 'block';
             lassoCtx.save();
             
