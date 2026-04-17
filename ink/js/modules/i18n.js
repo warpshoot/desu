@@ -113,7 +113,10 @@ export const dict = {
         'hud.mode.eraser': 'Eraser Mode',
         'hud.mode.select': 'Select Mode',
         'hud.stab.on': 'Stabilizer ON',
-        'hud.stab.off': 'Stabilizer OFF'
+        'hud.stab.off': 'Stabilizer OFF',
+        'prompt.loadLast': 'Previous session found. Load it?',
+        'prompt.loadBackup': 'A crash was detected. Restore from backup?',
+        'confirm.unload': 'Drawing is in progress. Are you sure you want to leave?'
     },
     ja: {
         'tool.pen': 'ペン',
@@ -228,7 +231,10 @@ export const dict = {
         'hud.mode.eraser': '消しゴムモード',
         'hud.mode.select': '選択モード',
         'hud.stab.on': '手振れ補正 ON',
-        'hud.stab.off': '手振れ補正 OFF'
+        'hud.stab.off': '手振れ補正 OFF',
+        'prompt.loadLast': '前回の続きから始めますか？',
+        'prompt.loadBackup': '異常終了が検出されました。バックアップから復旧しますか？',
+        'confirm.unload': '描画中のデータがあります。ページを離れますか？'
     }
 };
 

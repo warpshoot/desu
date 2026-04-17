@@ -34,6 +34,7 @@ import { resizePaper, centerCanvas } from './canvas.js';
 import { makeDefaultBrushes, makeDefaultFillSlots, makeDefaultEraserSlots } from './brushes.js';
 
 const STORAGE_KEY = 'desu-draw-state';
+const BACKUP_KEY = 'desu-draw-state-backup';
 const DB_NAME = 'DesuInkDB';
 const STORE_NAME = 'canvasData';
 let saveTimeout = null;
@@ -162,6 +163,12 @@ export function saveLocalState() {
                 blobPromises.push(p);
             }
 
+            // バックアップを作成: 現在の正常な状態を退避
+            const lastGoodState = localStorage.getItem(STORAGE_KEY);
+            if (lastGoodState) {
+                localStorage.setItem(BACKUP_KEY, lastGoodState);
+            }
+
             localStorage.setItem(STORAGE_KEY, JSON.stringify(metadata));
             await Promise.all(blobPromises);
             // 現在の構成に含まれない古いレイヤーのデータを掃除
@@ -173,11 +180,21 @@ export function saveLocalState() {
     }, 5000);
 }
 
+// Check if any state exists
+export function hasSavedState() {
+    return localStorage.getItem(STORAGE_KEY) !== null;
+}
+
+export function hasBackupState() {
+    return localStorage.getItem(BACKUP_KEY) !== null;
+}
+
 // Load state
-export function loadLocalState() {
+export function loadLocalState(useBackup = false) {
+    const key = useBackup ? BACKUP_KEY : STORAGE_KEY;
     return new Promise(async (resolve) => {
         try {
-            const json = localStorage.getItem(STORAGE_KEY);
+            const json = localStorage.getItem(key);
             if (!json) return resolve(false);
 
             const data = JSON.parse(json);

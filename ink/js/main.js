@@ -2,7 +2,7 @@ import { initDOM, layers } from './modules/state.js';
 import { initCanvas, resizeViewport } from './modules/canvas.js';
 import { initUI, updateLayerThumbnail } from './modules/ui.js';
 import { saveInitialState } from './modules/history.js';
-import { loadLocalState, exportProject, importProject } from './modules/storage.js';
+import { loadLocalState, hasSavedState, hasBackupState, exportProject, importProject } from './modules/storage.js';
 import { getLang, setLang, t, applyTextToDOM } from './modules/i18n.js';
 
 window.onerror = function (msg, url, line, col, error) {
@@ -16,7 +16,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyTextToDOM(); // Initialize Language from localStorage
         initDOM();
         await initCanvas();
-        await loadLocalState(); // Validated: if fails, just continues
+        
+        // Startup Prompt: Load session or start fresh?
+        let loaded = false;
+        if (hasSavedState()) {
+            if (confirm(t('prompt.loadLast'))) {
+                loaded = await loadLocalState();
+            }
+        } else if (hasBackupState()) {
+            // Main state lost but backup exists
+            if (confirm(t('prompt.loadBackup'))) {
+                loaded = await loadLocalState(true);
+            }
+        }
+
         await saveInitialState();
         initUI();
 
@@ -64,9 +77,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 resizeViewport();
             }, 100);
         });
-
     } catch (e) {
-        console.error('Initialization error:', e);
-        alert('Initialization error: ' + e.message);
+        console.error('Initialization failed:', e);
+    }
+});
+
+// Guard against accidental loss
+window.addEventListener('beforeunload', (e) => {
+    // Basic check: if there is history (meaning drawing happened), warn
+    if (window.layers && window.layers.length > 0) {
+        e.preventDefault();
+        e.returnValue = t('confirm.unload');
+        return e.returnValue;
     }
 });

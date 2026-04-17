@@ -32,7 +32,11 @@ const _lastDispatchedFingerprints = new Map();
 let _historyQueue = Promise.resolve();
 
 function _enqueue(task) {
-    const p = _historyQueue.then(() => task()).catch(err => {
+    const timeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('History operation timed out')), 10000);
+    });
+
+    const p = _historyQueue.then(() => Promise.race([task(), timeout])).catch(err => {
         console.error('[History Queue Error]', err);
     });
     _historyQueue = p;
