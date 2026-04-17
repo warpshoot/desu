@@ -135,18 +135,16 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
         _lastDispatchedFingerprints.set(id, snapshotFingerprints.get(id));
     }
 
-    // 2. RAF で GPU アイドル後に createImageBitmap を呼び出す
-    const capturePromise = new Promise(resolve => {
-        requestAnimationFrame(() => {
-            const promises = new Map();
-            for (const layer of layers) {
-                if (layersToCaptureIds.has(layer.id)) {
-                    promises.set(layer.id, _captureLayer1x(layer));
-                }
-            }
-            resolve(promises);
-        });
-    });
+    // 2. 指紋が違っているレイヤーのキャプチャを即座に開始
+    //    (注: RAF を待たずに即時 snapsot を取ることで、次ストロークの描き出しが
+    //    このキャプチャに含まれてしまうのを防ぐ。createImageBitmap 自体は非同期で行われる)
+    const promises = new Map();
+    for (const layer of layers) {
+        if (layersToCaptureIds.has(layer.id)) {
+            promises.set(layer.id, _captureLayer1x(layer));
+        }
+    }
+    const capturePromises = Promise.resolve(promises);
 
     // 3. キューには即時登録 (shrinkLastUndoEntry との順序を保証)
     return _enqueue(async () => {
@@ -154,8 +152,8 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
             _clearRedoStack();
         }
 
-        // RAF が完了するまで待機 (= GPU アイドル後)
-        const snapshotPromises = await capturePromise;
+        // キャプチャ完了（Bitmap生成）を待つ
+        const snapshotPromises = await capturePromises;
 
         const prevEntry = state.undoStack.length > 0 ? state.undoStack[state.undoStack.length - 1] : null;
 

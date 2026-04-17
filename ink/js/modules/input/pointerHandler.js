@@ -326,7 +326,8 @@ function handlePointerMove(e) {
                 // 経過時間が長い場合は閾値を大幅に引き上げる。
                 // 描画開始直後（ジャンプフィルタの試行回数が少ない時）は特にラグの影響を受けやすい。
                 const lagFactor = timeElapsed > 80 ? 4 : (timeElapsed > 30 ? 2 : 1);
-                const threshold = (e.pointerType === 'pen' ? (window.innerWidth * 0.04) : (window.innerWidth * 0.025)) * lagFactor;
+                // ペン入力（高精細）はジャンプが起きにくいため、しれきい値を大幅に上げて「ハネ」の誤検出を防ぐ
+                const threshold = (e.pointerType === 'pen' ? (window.innerWidth * 0.15) : (window.innerWidth * 0.04)) * lagFactor;
                 
                 if (dist > threshold) {
                     state._jumpFilterCount++;
@@ -490,7 +491,8 @@ async function handlePointerUp(e) {
             }
 
             const bounds = getStrokeBounds();
-            await saveState({ keepRedo: true, rect: bounds });
+            // Don't await saveState here to keep the pointerup event lightning fast
+            saveState({ keepRedo: true, rect: bounds });
             resetStrokeBounds();
 
             if (_thumbRafId) cancelAnimationFrame(_thumbRafId);
