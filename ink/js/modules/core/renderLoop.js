@@ -152,43 +152,7 @@ export function flushDrawPoints() {
         }
     }
 
-    // Draw Predicted Points to lassoCtx for low-latency visual hint
-    if (preds.length > 0 && lassoCtx) {
-        // Predict segments are drawn to the screen-space lassoCanvas
-        // They are purely visual and NOT part of the stroke data.
-        const brush = state.activeBrush;
-        if (brush && state.activeBrush?.stabilizerEnabled) {
-            lassoCanvas.style.display = 'block';
-            lassoCtx.save();
-            
-            // Screen-space transform for lassoCtx
-            const s = state.scale;
-            const tx = state.translateX;
-            const ty = state.translateY;
-            lassoCtx.translate(tx, ty);
-            lassoCtx.scale(s, s);
-
-            lassoCtx.globalAlpha = 0.3; // Make ghost even more subtle
-            
-            // --- Chain prediction segments ---
-            // Start chain from the very last DRAWN point
-            let currentPredTail = getLastStrokePoint(); 
-            if (currentPredTail) {
-                for (let i = 0; i < preds.length; i++) {
-                    const p = preds[i];
-                    if (p.isStipple) {
-                        // Stipple prediction (just the tip)
-                        if (i === preds.length - 1) drawStippleLine(p.x, p.y, p.pressure, { previewCtx: lassoCtx });
-                    } else {
-                        // Connect tail -> p
-                        drawPenLine(p.x, p.y, p.pressure, { previewCtx: lassoCtx, forcedLastPoint: currentPredTail });
-                        currentPredTail = p;
-                    }
-                }
-            }
-            lassoCtx.restore();
-        }
-    }
+    // (Prediction ghost rendering removed to prevent jitter)
 }
 
 export function cancelAndFlushDrawPoints() {
