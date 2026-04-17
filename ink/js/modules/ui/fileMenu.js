@@ -61,10 +61,7 @@ export function setupFileUI() {
             hideAllMenus();
             if (confirm(t('confirm.new'))) {
                 resizePaper(2000, 2000);
-                state.scale = 1.0;
-                state.translateX = 0;
-                state.translateY = 0;
-                applyTransform();
+                centerCanvas();
 
                 while (layers.length > 1) {
                     deleteLayer(layers[layers.length - 1].id);

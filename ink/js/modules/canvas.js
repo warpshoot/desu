@@ -177,6 +177,8 @@ export function resizeViewport() {
 
     eventCanvas.width  = vw;
     eventCanvas.height = vh;
+    eventCanvas.style.width  = vw + 'px';
+    eventCanvas.style.height = vh + 'px';
 
     resizeSelectionOverlay();
 }

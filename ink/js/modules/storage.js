@@ -30,7 +30,7 @@ function _layerToBlob(layer, callback) {
     tmp.toBlob(callback, 'image/png');
 }
 
-import { resizePaper } from './canvas.js';
+import { resizePaper, centerCanvas } from './canvas.js';
 import { makeDefaultBrushes, makeDefaultFillSlots, makeDefaultEraserSlots } from './brushes.js';
 
 const STORAGE_KEY = 'desu-draw-state';
@@ -198,6 +198,7 @@ export function loadLocalState() {
             const checkFinish = () => {
                 loadedCount++;
                 if (loadedCount === data.layers.length) {
+                    centerCanvas();
                     document.dispatchEvent(new CustomEvent('desu:state-loaded'));
                     resolve(true);
                 }
@@ -348,6 +349,7 @@ export function importProject(file) {
                         layer.ctx.imageSmoothingEnabled = true;
                         loadedCount++;
                         if (loadedCount === data.layers.length) {
+                            centerCanvas();
                             document.dispatchEvent(new CustomEvent('desu:state-loaded'));
                             resolve(true);
                         }
