@@ -7,7 +7,8 @@ import {
 } from '../state.js';
 import {
     drawPenLine, previewStraightLine,
-    beginPenBatch, flushPenBatch
+    beginPenBatch, flushPenBatch,
+    getLastStrokePoint
 } from '../tools/pen.js';
 import {
     drawStippleLine
