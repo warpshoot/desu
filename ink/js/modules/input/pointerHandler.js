@@ -662,10 +662,12 @@ function cancelCurrentOperation() {
         state.isTransformingSelection = false;
         state._transformHandle = null;
         setSelectionToolbarInteractive(true);
+        if (eventCanvas) eventCanvas.style.cursor = '';
     }
     if (state.isMovingSelection) {
         state.isMovingSelection = false;
         setSelectionToolbarInteractive(true);
+        if (eventCanvas) eventCanvas.style.cursor = '';
     }
     if (state.isLassoing) finishLasso();
     if (state.isPenDrawing) {
