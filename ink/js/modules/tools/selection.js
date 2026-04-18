@@ -105,6 +105,15 @@ function _toScreen(canvasX, canvasY) {
 // Transform Handles
 // ============================================
 
+let _overlayRedrawCallback = null;
+export function setOverlayRedrawCallback(fn) { _overlayRedrawCallback = fn; }
+
+export function getHandleScreenPositions() {
+    const fs = state.floatingSelection || _maskToFakeFloat();
+    if (!fs) return null;
+    return _getTransformHandles(fs);
+}
+
 function _getTransformHandles(fs) {
     const cx = (fs.srcX + fs.offsetX + fs.w / 2) * state.scale + state.translateX;
     const cy = (fs.srcY + fs.offsetY + fs.h / 2) * state.scale + state.translateY;
@@ -345,6 +354,7 @@ function _drawOverlay() {
         }
         ctx.restore();
         _drawTransformUI(ctx, fs);
+        if (_overlayRedrawCallback) _overlayRedrawCallback();
         return;
     }
 
@@ -352,6 +362,7 @@ function _drawOverlay() {
     _drawAnts(ctx, mask);
     const fakeFloat = _maskToFakeFloat();
     if (fakeFloat) _drawTransformUI(ctx, fakeFloat);
+    if (_overlayRedrawCallback) _overlayRedrawCallback();
 }
 
 function _drawAnts(ctx, mask) {

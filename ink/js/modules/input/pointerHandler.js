@@ -89,6 +89,7 @@ export function setupPointerEvents(canvas) {
     canvas.addEventListener('pointercancel', handlePointerCancel);
     canvas.addEventListener('pointerleave', handlePointerUp);
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    window._startHandleTransform = startHandleTransform;
 }
 
 // ============================================
@@ -727,4 +728,64 @@ function cancelCurrentOperation() {
  */
 export function invalidateUICollisionCache() {
     state._uiCollisionRects = null;
+}
+
+/**
+ * Called by handle hit-area divs (z-index 9999) when a transform handle is grabbed
+ * above a UI panel that would otherwise block the event-canvas.
+ */
+export async function startHandleTransform(e, handle) {
+    const ec = document.getElementById('event-canvas');
+    if (!ec) return;
+
+    // Mirror the pointer-state setup from handlePointerDown
+    state.activePointers.set(e.pointerId, {
+        x: e.clientX, y: e.clientY, totalMove: 0, type: e.pointerType
+    });
+    state.drawingPointerId = e.pointerId;
+    state.touchStartTime = Date.now();
+    state.maxFingers = 1;
+    state.strokeMade = true;
+    state._gestureActionFired = false;
+    state.touchStartPos = { x: e.clientX, y: e.clientY };
+    state.isPinching = false;
+    state.wasPanning = false;
+    state.wasPinching = false;
+    state.didInteract = false;
+
+    // Route all subsequent move/up events to event-canvas
+    try { ec.setPointerCapture(e.pointerId); } catch (_) {}
+
+    if (hasFloatingSelection()) {
+        const fs = state.floatingSelection;
+        pushFloatSnapshot();
+        state.isTransformingSelection = true;
+        state._transformHandle = handle;
+        state._transformStartState = {
+            srcX: fs.srcX, srcY: fs.srcY, w: fs.w, h: fs.h,
+            offsetX: fs.offsetX, offsetY: fs.offsetY,
+            scaleX: fs.scaleX || 1, scaleY: fs.scaleY || 1,
+            rotation: fs.rotation || 0
+        };
+        state._transformStartPointer = { x: e.clientX, y: e.clientY };
+        setSelectionToolbarInteractive(false);
+        ec.style.cursor = _getCursorForHandle(handle, fs.rotation || 0);
+    } else {
+        await saveState();
+        liftSelection(true);
+        const fs = state.floatingSelection;
+        if (!fs) return;
+        pushFloatSnapshot();
+        state.isTransformingSelection = true;
+        state._transformHandle = handle;
+        state._transformStartState = {
+            srcX: fs.srcX, srcY: fs.srcY, w: fs.w, h: fs.h,
+            offsetX: fs.offsetX, offsetY: fs.offsetY,
+            scaleX: fs.scaleX || 1, scaleY: fs.scaleY || 1,
+            rotation: fs.rotation || 0
+        };
+        state._transformStartPointer = { x: e.clientX, y: e.clientY };
+        setSelectionToolbarInteractive(false);
+        ec.style.cursor = _getCursorForHandle(handle, 0);
+    }
 }
