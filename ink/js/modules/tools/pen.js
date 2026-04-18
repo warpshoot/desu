@@ -474,7 +474,7 @@ export function drawPenLine(x, y, pressure = 0.5, options = {}) {
     _lastPointTime = now;
     const moveDist = lastPoint ? Math.hypot(x - lastPoint.x, y - lastPoint.y) : 0;
     const rawSpeed = dt > 0 ? Math.min(1, (moveDist / dt) / _INK_POOL_SPEED_MAX) : 1.0;
-    _smoothedSpeed = _smoothedSpeed * 0.5 + rawSpeed * 0.5;
+    _smoothedSpeed = _smoothedSpeed * 0.88 + rawSpeed * 0.12;
 
     // Dirty rect を拡張
     if (x < _dirtyMinX) _dirtyMinX = x;

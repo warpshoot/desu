@@ -224,8 +224,10 @@ function _drawStroke(ctx, pts, fromIdx, isStart, b) {
             : b.size;
         if (pooling) {
             // 速度が遅いほど太く: 停止時 1.8x、高速時 1.0x
+            // 二乗カーブで中間速度のゆらぎ影響を抑制
             const speed = pt.speed ?? 1.0;
-            return Math.max(0.5, w * (1.0 + 0.8 * (1.0 - speed)));
+            const t = 1.0 - speed;
+            return Math.max(0.5, w * (1.0 + 0.8 * t * t));
         }
         return w;
     };
