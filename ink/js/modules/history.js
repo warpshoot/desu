@@ -71,21 +71,11 @@ function _decRef(bitmap) {
     }
 }
 
-// Serialize createImageBitmap calls globally.
-// Without this, rapid strokes queue up multiple concurrent resize operations,
-// each holding a full-DPR source copy (~64MB at 2000×2000/DPR2) until resolved.
+// Serialize createImageBitmap calls globally to prevent memory spikes on rapid strokes.
 let _captureQueue = Promise.resolve();
 
-// Capture a layer at 1× DPR — 4× less memory than full DPR on 2× displays.
-// iOS history bitmaps at full DPR (~64MB each) cause memory pressure and hang createImageBitmap.
-function _captureLayer1x(layer) {
-    const dpr = CANVAS_DPR;
-    const p = _captureQueue.then(() => {
-        if (dpr <= 1) return createImageBitmap(layer.canvas);
-        const w = Math.floor(layer.canvas.width / dpr);
-        const h = Math.floor(layer.canvas.height / dpr);
-        return createImageBitmap(layer.canvas, { resizeWidth: w, resizeHeight: h, resizeQuality: 'medium' });
-    });
+function _captureLayer(layer) {
+    const p = _captureQueue.then(() => createImageBitmap(layer.canvas));
     _captureQueue = p.catch(() => {});
     return p;
 }
@@ -150,7 +140,7 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
     const promises = new Map();
     for (const layer of layers) {
         if (layersToCaptureIds.has(layer.id)) {
-            promises.set(layer.id, _captureLayer1x(layer));
+            promises.set(layer.id, _captureLayer(layer));
         }
     }
     const capturePromises = Promise.resolve(promises);
@@ -182,7 +172,7 @@ export async function saveState({ keepRedo = false, rect = null } = {}) {
                 snapshot.bitmaps.set(layer.id, prevEntry.bitmaps.get(layer.id));
             } else {
                 // 初回保存など、どちらもない場合はキャプチャ
-                const bmp = await _captureLayer1x(layer);
+                const bmp = await _captureLayer(layer);
                 snapshot.bitmaps.set(layer.id, bmp);
             }
         });
@@ -238,7 +228,7 @@ export async function saveInitialState() {
         fingerprints: new Map(_layerFingerprints)
     };
     const bitmaps = await Promise.all(
-        layers.map(layer => _captureLayer1x(layer))
+        layers.map(layer => _captureLayer(layer))
     );
     for (let i = 0; i < layers.length; i++) {
         const bmp = bitmaps[i];
@@ -263,7 +253,7 @@ async function createSnapshot() {
         fingerprints: new Map(_layerFingerprints)
     };
     const bitmaps = await Promise.all(
-        layers.map(layer => _captureLayer1x(layer))
+        layers.map(layer => _captureLayer(layer))
     );
     for (let i = 0; i < layers.length; i++) {
         const bmp = bitmaps[i];
