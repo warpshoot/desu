@@ -7,8 +7,7 @@ import {
 } from '../state.js';
 import {
     drawPenLine, previewStraightLine,
-    beginPenBatch, flushPenBatch,
-    getLastStrokePoint
+    beginPenBatch, flushPenBatch
 } from '../tools/pen.js';
 import {
     drawStippleLine
@@ -16,7 +15,6 @@ import {
 
 // RAF-based draw batching — prevents pointermove backlog on iPad
 let _pendingDrawPoints = [];
-let _predictedPoints = [];
 let _drawRafId = null;
 let _thumbRafId = null; // Throttled thumbnail update
 let _straightLineEnd = null;   // Shift+直線: RAF pending 更新用 (flushで null にリセット)
@@ -114,20 +112,9 @@ export function flushDrawPoints() {
         return;
     }
 
-    if (_pendingDrawPoints.length === 0 && _predictedPoints.length === 0) return;
+    if (_pendingDrawPoints.length === 0) return;
     const pts = _pendingDrawPoints;
-    const preds = _predictedPoints;
     _pendingDrawPoints = [];
-    _predictedPoints = [];
-
-    // Clear previous prediction ghost if any
-    if (lassoCtx && lassoCanvas) {
-        // If not in stabilizer mode, we clear lassoCanvas for prediction segments
-        // (Stabilizer handles its own clear)
-        if (!state.activeBrush?.stabilizerEnabled) {
-            lassoCtx.clearRect(0, 0, lassoCanvas.width, lassoCanvas.height);
-        }
-    }
 
     // stipple が含まれるかチェック (stipple はバッチ未対応のため個別処理)
     let hasPen = false, hasStipple = false;
@@ -151,8 +138,6 @@ export function flushDrawPoints() {
             }
         }
     }
-
-    // (Prediction ghost rendering removed to prevent jitter)
 }
 
 export function cancelAndFlushDrawPoints() {
@@ -173,7 +158,7 @@ export function clearStraightLineGuide() {
     lassoCanvas.style.display = 'none';
 }
 
-export function addPendingPoints(pts, predictedPts = []) {
+export function addPendingPoints(pts) {
     const isEraser = state.mode === 'eraser';
     const brushSize = isEraser ? state.eraserSize : (state.activeBrush?.size ?? 4);
     const padding = brushSize / 2 + 2;
@@ -184,10 +169,6 @@ export function addPendingPoints(pts, predictedPts = []) {
     } else if (pts) {
         _pendingDrawPoints.push(pts);
         _updateStrokeBounds(pts.x, pts.y, padding);
-    }
-
-    if (predictedPts.length > 0) {
-        _predictedPoints.push(...predictedPts);
     }
 
     if (!_drawRafId) {
