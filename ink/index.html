@@ -507,7 +507,7 @@
                     </label>
                 </div>
                 <div class="bs-row" id="es-pressure-curve-row">
-                    <label><span data-i18n="es.presCurve">筆圧カーブ</span> <span id="es-pressure-curve-val">1.0</span></label>
+                    <label><span data-i18n="es.presCurve">感度</span> <span id="es-pressure-curve-val">1.0</span></label>
                     <input type="range" id="es-pressure-curve" min="0.3" max="3.0" step="0.1" value="1.0">
                 </div>
             </div>
@@ -549,28 +549,27 @@
                 <label><span data-i18n="fs.opacity">不透明度</span> <span id="bs-opacity-val">100</span>%</label>
                 <input type="range" id="bs-opacity" min="1" max="100" value="100">
             </div>
-            <div class="bs-row bs-toggles" id="bs-pen-pressure-row">
-                <label class="bs-toggle-label">
-                    <input type="checkbox" id="bs-pressure-size"> <span data-i18n="es.presSize">筆圧→幅</span>
-                </label>
-            </div>
-            <!-- 筆圧カーブ設定 (筆圧→幅の直下に移動) -->
-            <div class="bs-row" id="bs-pressure-curve-row">
-                <label><span data-i18n="es.presCurve">筆圧カーブ</span> <span id="bs-pressure-curve-val">1.0</span></label>
-                <input type="range" id="bs-pressure-curve" min="0.3" max="3.0" step="0.1" value="1.0">
-            </div>
             <div class="bs-row bs-toggles" id="bs-binary-row">
                 <label class="bs-toggle-label">
                     <input type="checkbox" id="bs-binary" checked> <span data-i18n="fs.aa">アンチエイリアス</span>
                 </label>
             </div>
+            <div class="bs-row bs-toggles" id="bs-pen-pressure-row">
+                <label class="bs-toggle-label">
+                    <input type="checkbox" id="bs-pressure-size"> <span data-i18n="es.presSize">筆圧→幅</span>
+                </label>
+            </div>
+            <div class="bs-row" id="bs-pressure-curve-row">
+                <label><span data-i18n="es.presCurve">感度</span> <span id="bs-pressure-curve-val">1.0</span></label>
+                <input type="range" id="bs-pressure-curve" min="0.3" max="3.0" step="0.1" value="1.0">
+            </div>
             <div class="bs-row bs-toggles" id="bs-ink-pooling-row">
                 <label class="bs-toggle-label">
-                    <input type="checkbox" id="bs-ink-pooling"> <span>インクだまり</span>
+                    <input type="checkbox" id="bs-ink-pooling"> <span id="bs-ink-pooling-label">速度→幅</span>
                 </label>
             </div>
             <div class="bs-row" id="bs-ink-pooling-strength-row">
-                <label><span>だまり強度</span> <span id="bs-ink-pooling-strength-val">1</span></label>
+                <label><span>感度</span> <span id="bs-ink-pooling-strength-val">1</span></label>
                 <input type="range" id="bs-ink-pooling-strength" min="1" max="5" step="1" value="1">
             </div>
 

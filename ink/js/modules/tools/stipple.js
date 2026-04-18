@@ -19,6 +19,11 @@ let strokePoints = [];
 let _dirtyMinX = Infinity, _dirtyMinY = Infinity;
 let _dirtyMaxX = -Infinity, _dirtyMaxY = -Infinity;
 
+// インクだまり: 速度トラッキング
+let _lastPointTime = 0;
+let _smoothedSpeed = 1.0;
+const _INK_POOL_SPEED_MAX = 3.0;
+
 export function getStippleDirtyRect() {
     if (_dirtyMinX > _dirtyMaxX) return null;
     const margin = (state.stippleSize || 31) + 2;
@@ -37,9 +42,11 @@ export function clearStippleDirtyRect() {
 
 export function startStippleDrawing(x, y, pressure = 0.5) {
     state.isPenDrawing = true;
+    _lastPointTime = performance.now();
+    _smoothedSpeed = 1.0;
     strokePoints = [{ x, y, pressure }];
     _dirtyMinX = x; _dirtyMinY = y; _dirtyMaxX = x; _dirtyMaxY = y;
-    _scatterDots(x, y, pressure);
+    _scatterDots(x, y, pressure, 1.0);
 }
 
 export function drawStippleLine(x, y, pressure = 0.5) {
@@ -50,6 +57,13 @@ export function drawStippleLine(x, y, pressure = 0.5) {
 
     const dist = Math.hypot(x - last.x, y - last.y);
     if (dist < 0.5) return;
+
+    // 速度計算
+    const now = performance.now();
+    const dt = now - _lastPointTime;
+    _lastPointTime = now;
+    const rawSpeed = dt > 0 ? Math.min(1, (dist / dt) / _INK_POOL_SPEED_MAX) : 1.0;
+    _smoothedSpeed = _smoothedSpeed * 0.88 + rawSpeed * 0.12;
 
     strokePoints.push({ x, y, pressure: smoothedPressure });
 
@@ -65,7 +79,7 @@ export function drawStippleLine(x, y, pressure = 0.5) {
         const cx = last.x + (x - last.x) * t;
         const cy = last.y + (y - last.y) * t;
         const cp = last.pressure + (smoothedPressure - last.pressure) * t;
-        _scatterDots(cx, cy, cp);
+        _scatterDots(cx, cy, cp, _smoothedSpeed);
     }
 }
 
@@ -78,18 +92,25 @@ export function endStippleDrawing() {
     }
 }
 
-function _scatterDots(cx, cy, pressure) {
+function _scatterDots(cx, cy, pressure, speed = 1.0) {
     const ctx = getActiveLayerCtx();
     if (!ctx) return;
 
     const radius = Math.max(1, state.stippleSize);
-    // 密度設定でドット数を決定 (密度1〜20、デフォルト5)
     const density = state.activeBrush ? (state.activeBrush.stippleDensity ?? 5) : 5;
     const pressureDensity = state.activeBrush ? (state.activeBrush.pressureDensity ?? true) : true;
     const gamma = state.activeBrush ? (state.activeBrush.pressureCurve ?? 1.0) : 1.0;
+    const inkPooling = state.activeBrush ? (state.activeBrush.inkPooling ?? false) : false;
+    const inkPoolingStrength = state.activeBrush ? (state.activeBrush.inkPoolingStrength ?? 1) : 1;
 
     const effectivePressure = pressureDensity ? applyPressureCurve(pressure, gamma) : 1.0;
-    const dotCount = Math.max(1, Math.round(density * effectivePressure));
+    let dotCount = Math.max(1, Math.round(density * effectivePressure));
+
+    // インクだまり: 遅いほどドット密集
+    if (inkPooling) {
+        const t = 1.0 - speed;
+        dotCount = Math.round(dotCount * (1.0 + inkPoolingStrength * 0.8 * t * t));
+    }
 
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = '#000000';

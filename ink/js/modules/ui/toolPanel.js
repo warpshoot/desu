@@ -618,8 +618,8 @@ function _refreshBrushSettingsRows(brush) {
     toggle('bs-pen-pressure-row', !isStipple);
     toggle('bs-pressure-curve-row', (!isStipple && brush.pressureSize) || (isStipple && (brush.pressureDensity ?? true)));
     toggle('bs-binary-row', !isStipple);
-    toggle('bs-ink-pooling-row', !isStipple && !brush.binary);
-    toggle('bs-ink-pooling-strength-row', !isStipple && !brush.binary && (brush.inkPooling ?? false));
+    toggle('bs-ink-pooling-row', isStipple || !brush.binary);
+    toggle('bs-ink-pooling-strength-row', (brush.inkPooling ?? false));
     toggle('bs-stabilizer-row', !isStipple);
     toggle('bs-stabilizer-dist-row', !isStipple && (brush.stabilizerEnabled ?? false));
     toggle('bs-stab-viz-row', !isStipple && (brush.stabilizerEnabled ?? false));
@@ -633,6 +633,8 @@ export function openBrushSettings(idx) {
 
     const isStipple = brush.subTool === 'stipple';
     document.getElementById('brush-settings-name').textContent = `ブラシ ${idx + 1} 設定`;
+    const poolingLabel = document.getElementById('bs-ink-pooling-label');
+    if (poolingLabel) poolingLabel.textContent = isStipple ? '速度→密度' : '速度→幅';
     document.getElementById('bs-subtool').value = brush.subTool || 'pen';
     document.getElementById('bs-density').value = brush.stippleDensity ?? 5;
     document.getElementById('bs-density-val').textContent = brush.stippleDensity ?? 5;
