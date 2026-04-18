@@ -370,21 +370,14 @@ function handlePointerMove(e) {
                 setStraightLineEnd({ x: pt.x, y: pt.y, pressure: e.pressure });
             } else {
                 const events = (e.getCoalescedEvents && e.pointerType !== 'touch') ? e.getCoalescedEvents() : [e];
-                const predicted = (e.getPredictedEvents && e.pointerType !== 'touch') ? e.getPredictedEvents() : [];
-                
                 const isStipple = state.mode === 'pen' && state.subTool === 'stipple';
-                
+
                 const pts = events.map(ev => {
                     const p = getCanvasPoint(ev.clientX, ev.clientY);
                     return { x: p.x, y: p.y, pressure: ev.pressure, isStipple };
                 });
-                
-                const predPts = predicted.map(ev => {
-                    const p = getCanvasPoint(ev.clientX, ev.clientY);
-                    return { x: p.x, y: p.y, pressure: ev.pressure, isStipple, isPredicted: true };
-                });
-                
-                addPendingPoints(pts, predPts);
+
+                addPendingPoints(pts);
             }
         } else if (state.isShapeDragging) {
             const isShiftActive = state.isShiftPressed || (state._modShiftState && state._modShiftState !== 'idle');

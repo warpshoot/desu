@@ -88,15 +88,6 @@ function _resetFilter() {
 }
 
 /**
- * ストロークの最後（一番新しい）点を返す。
- * 予測レンダリングの起点を決めるために使用。
- */
-export function getLastStrokePoint() {
-    if (strokePoints.length === 0) return null;
-    return strokePoints[strokePoints.length - 1];
-}
-
-/**
  * 手ぶれ補正の「糸」を描画 (lassoCanvasを使用)
  */
 function _drawStabString(cursorX, cursorY, brushX, brushY, brush) {
