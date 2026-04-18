@@ -179,15 +179,16 @@ export function updateSelectionTransform(screenX, screenY) {
     if (handle === 'bc' || handle === 'bl' || handle === 'br')  newSY =  ly / baseHH;
     else if (handle === 'tc' || handle === 'tl' || handle === 'tr') newSY = -ly / baseHH;
 
-    // Corner handles: proportional scale
+    // Corner handles: proportional scale, no flip
     if (handle === 'tl' || handle === 'tr' || handle === 'bl' || handle === 'br') {
         const avg = (Math.abs(newSX) + Math.abs(newSY)) / 2;
-        newSX = avg * Math.sign(newSX || 1);
-        newSY = avg * Math.sign(newSY || 1);
+        fs.scaleX = Math.max(0.05, avg);
+        fs.scaleY = Math.max(0.05, avg);
+    } else {
+        // Edge handles: clamp each axis independently, no flip
+        fs.scaleX = Math.max(0.05, newSX);
+        fs.scaleY = Math.max(0.05, newSY);
     }
-
-    fs.scaleX = Math.max(0.05, Math.abs(newSX)) * Math.sign(newSX || 1);
-    fs.scaleY = Math.max(0.05, Math.abs(newSY)) * Math.sign(newSY || 1);
     _drawOverlay();
 }
 
@@ -483,6 +484,9 @@ export function clearSelection() {
     _stopMarch();
     state.selectionMask = null;
     state.floatingSelection = null;
+    state.isTransformingSelection = false;
+    state._transformHandle = null;
+    state.isMovingSelection = false;
     _rectStart = null;
     _lassoPoints = [];
     if (_overlayCtx && _overlayCanvas) {
@@ -498,6 +502,9 @@ export function cancelSelection() {
     _stopMarch();
     state.selectionMask = null;
     state.floatingSelection = null;
+    state.isTransformingSelection = false;
+    state._transformHandle = null;
+    state.isMovingSelection = false;
     _rectStart = null;
     _lassoPoints = [];
     if (_overlayCtx && _overlayCanvas) {
@@ -840,6 +847,8 @@ export function pasteFromClipboard() {
     if (state.floatingSelection) {
         commitFloating();
     }
+    state.isTransformingSelection = false;
+    state._transformHandle = null;
 
     // Place paste at center of current viewport
     const centerCanvasX = Math.round(-state.translateX / state.scale + window.innerWidth  / (2 * state.scale));

@@ -605,6 +605,15 @@ function cancelCurrentOperation() {
     state._lastUICheckY = undefined;
     document.body.classList.remove('is-drawing-active');
     cancelAndFlushDrawPoints();
+    if (state.isTransformingSelection) {
+        state.isTransformingSelection = false;
+        state._transformHandle = null;
+        setSelectionToolbarInteractive(true);
+    }
+    if (state.isMovingSelection) {
+        state.isMovingSelection = false;
+        setSelectionToolbarInteractive(true);
+    }
     if (state.isLassoing) finishLasso();
     if (state.isPenDrawing) {
         const layer = getActiveLayer();
