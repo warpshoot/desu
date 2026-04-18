@@ -152,7 +152,7 @@ async function handlePointerDown(e) {
         // 前置きに過ぎない。ここで didInteract=true にすると handleGestureTaps の
         // タップ判定が潰れ、2本指アンドゥ/3本指リドゥが効かなくなる。
         // 実際に移動・ピンチ・パンがあれば後続の handlePointerMove で didInteract が立つ。
-        if (state.isPenDrawing || state.isLassoing) {
+        if (state.isPenDrawing || state.isLassoing || state.isShapeDragging) {
             cancelCurrentOperation();
         }
         
@@ -596,6 +596,12 @@ function cancelCurrentOperation() {
         // undoStack.pop() は削除: ストローク開始時に saveState を呼ばなくなったため
         // pop するエントリが存在せず、正規エントリを誤削除していた
         state.isPenDrawing = false;
+    }
+    if (state.isShapeDragging) {
+        if (strokeCanvas && strokeCtx) {
+            strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
+        }
+        state.isShapeDragging = false;
     }
     state.drawingPointerId = null;
     state.isLassoing = false;
