@@ -77,9 +77,12 @@ export function drawShape(ctx, type, x0, y0, x1, y1, options, isPerfect = false)
             ctx.lineTo(x1, y1);
             break;
 
-        case 'rect':
-            ctx.rect(x0, y0, dx, dy);
+        case 'rect': {
+            const rx = dx < 0 ? x1 : x0;
+            const ry = dy < 0 ? y1 : y0;
+            ctx.rect(rx, ry, Math.abs(dx), Math.abs(dy));
             break;
+        }
 
         case 'circle': {
             const centerX = x0 + dx / 2;
