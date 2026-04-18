@@ -32,6 +32,7 @@ export function makeDefaultBrushes() {
             stabilizerDistance: 5,
             stabStringVisible: true,
             stabShowGuide: true,
+            inkPooling: false,
         },
         {
             subTool: 'pen',
@@ -46,6 +47,7 @@ export function makeDefaultBrushes() {
             stabilizerDistance: 20,
             stabStringVisible: true,
             stabShowGuide: true,
+            inkPooling: false,
         },
         {
             subTool: 'stipple',
@@ -60,6 +62,7 @@ export function makeDefaultBrushes() {
             stabilizerDistance: 20,
             stabStringVisible: true,
             stabShowGuide: true,
+            inkPooling: false,
         }
     ];
 }
@@ -214,9 +217,18 @@ export function drawBrushSegment(ctx, points, fromIdx, isStart, brush, isErasing
 // =============================================
 function _drawStroke(ctx, pts, fromIdx, isStart, b) {
     const gamma = b.pressureCurve ?? 1.0;
-    const getW = (p) => b.pressureSize
-        ? Math.max(0.5, b.size * (0.3 + 1.2 * applyPressureCurve(p, gamma)))
-        : b.size;
+    const pooling = b.inkPooling ?? false;
+    const getW = (pt) => {
+        const w = b.pressureSize
+            ? Math.max(0.5, b.size * (0.3 + 1.2 * applyPressureCurve(pt.pressure, gamma)))
+            : b.size;
+        if (pooling) {
+            // 速度が遅いほど太く: 停止時 1.8x、高速時 1.0x
+            const speed = pt.speed ?? 1.0;
+            return Math.max(0.5, w * (1.0 + 0.8 * (1.0 - speed)));
+        }
+        return w;
+    };
 
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = INK_COLOR;
@@ -226,7 +238,7 @@ function _drawStroke(ctx, pts, fromIdx, isStart, b) {
 
     if (isStart) {
         const p = pts[0];
-        const w = getW(p.pressure);
+        const w = getW(p);
         ctx.beginPath(); ctx.arc(p.x, p.y, w / 2, 0, Math.PI * 2); ctx.fill();
         return 0;
     }
@@ -236,7 +248,7 @@ function _drawStroke(ctx, pts, fromIdx, isStart, b) {
     // 各点の幅を事前計算 (Pass 1 / Pass 2 で Math.pow を重複実行しない)
     const widths = new Array(pts.length);
     for (let i = Math.max(0, startI - 1); i < pts.length; i++) {
-        widths[i] = getW(pts[i].pressure);
+        widths[i] = getW(pts[i]);
     }
 
     // Pass 1: ストローク骨格 — セグメントごとに lineWidth を変えるため個別発行

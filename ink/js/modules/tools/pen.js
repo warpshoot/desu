@@ -27,6 +27,11 @@ let _dirtyMinX = Infinity, _dirtyMinY = Infinity;
 let _dirtyMaxX = -Infinity, _dirtyMaxY = -Infinity;
 let _dirtyMargin = 2; // ブラシ半径 + 余白
 
+// インクだまり: 速度トラッキング
+let _lastPointTime = 0;
+let _smoothedSpeed = 1.0; // 0=停止, 1=高速 (正規化)
+const _INK_POOL_SPEED_MAX = 3.0; // px/ms — これ以上の速度は 1.0 に正規化
+
 /**
  * 現ストロークの dirty rect を返す (キャンバス座標, CSS px 基準)
  * まだ何も描いていない場合は null
@@ -229,37 +234,43 @@ function _catmullRomSegment(p0, p1, p2, p3, subdivisions) {
         const A1x = p0.x + (p1.x - p0.x) * r01;
         const A1y = p0.y + (p1.y - p0.y) * r01;
         const A1p = p0.pressure + (p1.pressure - p0.pressure) * r01;
+        const A1s = p0.speed + (p1.speed - p0.speed) * r01;
 
         // A2 = lerp(p1, p2, t1, t2)
         const r12 = dt12 < 1e-10 ? 0 : (t - t1) / dt12;
         const A2x = p1.x + (p2.x - p1.x) * r12;
         const A2y = p1.y + (p2.y - p1.y) * r12;
         const A2p = p1.pressure + (p2.pressure - p1.pressure) * r12;
+        const A2s = p1.speed + (p2.speed - p1.speed) * r12;
 
         // A3 = lerp(p2, p3, t2, t3)
         const r23 = dt23 < 1e-10 ? 0 : (t - t2) / dt23;
         const A3x = p2.x + (p3.x - p2.x) * r23;
         const A3y = p2.y + (p3.y - p2.y) * r23;
         const A3p = p2.pressure + (p3.pressure - p2.pressure) * r23;
+        const A3s = p2.speed + (p3.speed - p2.speed) * r23;
 
         // B1 = lerp(A1, A2, t0, t2)
         const rB1 = dt02 < 1e-10 ? 0 : (t - t0) / dt02;
         const B1x = A1x + (A2x - A1x) * rB1;
         const B1y = A1y + (A2y - A1y) * rB1;
         const B1p = A1p + (A2p - A1p) * rB1;
+        const B1s = A1s + (A2s - A1s) * rB1;
 
         // B2 = lerp(A2, A3, t1, t3)
         const rB2 = dt13 < 1e-10 ? 0 : (t - t1) / dt13;
         const B2x = A2x + (A3x - A2x) * rB2;
         const B2y = A2y + (A3y - A2y) * rB2;
         const B2p = A2p + (A3p - A2p) * rB2;
+        const B2s = A2s + (A3s - A2s) * rB2;
 
         // C = lerp(B1, B2, t1, t2) — same ratio as r12
         const Cx = B1x + (B2x - B1x) * r12;
         const Cy = B1y + (B2y - B1y) * r12;
         const Cp = B1p + (B2p - B1p) * r12;
+        const Cs = B1s + (B2s - B1s) * r12;
 
-        result.push({ x: Cx, y: Cy, pressure: Math.max(0, Math.min(1, Cp)) });
+        result.push({ x: Cx, y: Cy, pressure: Math.max(0, Math.min(1, Cp)), speed: Math.max(0, Math.min(1, Cs)) });
     }
     return result;
 }
@@ -346,9 +357,11 @@ export function startPenDrawing(x, y, pressure = 0.5) {
 
     pressureBufferLen = 0;
     pressureBufferIdx = 0;
+    _lastPointTime = performance.now();
+    _smoothedSpeed = 1.0; // ストローク開始時は高速扱い (だまりなし)
     const smoothedP = _smoothPressure(pressure);
-    strokePoints = [{ x, y, pressure: smoothedP }];
-    smoothedPoints = [{ x, y, pressure: smoothedP }];
+    strokePoints = [{ x, y, pressure: smoothedP, speed: 1.0 }];
+    smoothedPoints = [{ x, y, pressure: smoothedP, speed: 1.0 }];
     lastDrawnIndex = 0;
 
     // 前ストロークの dirty bounds を保存してから初期化
@@ -455,6 +468,14 @@ export function drawPenLine(x, y, pressure = 0.5, options = {}) {
         if (dist < 0.5) return;
     }
 
+    // インクだまり用速度計算
+    const now = performance.now();
+    const dt = now - _lastPointTime;
+    _lastPointTime = now;
+    const moveDist = lastPoint ? Math.hypot(x - lastPoint.x, y - lastPoint.y) : 0;
+    const rawSpeed = dt > 0 ? Math.min(1, (moveDist / dt) / _INK_POOL_SPEED_MAX) : 1.0;
+    _smoothedSpeed = _smoothedSpeed * 0.5 + rawSpeed * 0.5;
+
     // Dirty rect を拡張
     if (x < _dirtyMinX) _dirtyMinX = x;
     if (y < _dirtyMinY) _dirtyMinY = y;
@@ -465,7 +486,7 @@ export function drawPenLine(x, y, pressure = 0.5, options = {}) {
     const smoothedP = _smoothPressure(pressure);
 
     const prevRawLen = strokePoints.length;
-    strokePoints.push({ x, y, pressure: smoothedP });
+    strokePoints.push({ x, y, pressure: smoothedP, speed: _smoothedSpeed });
 
     // Catmull-Rom 補間で滑らかな点列を再構築
     const prevSmoothedLen = smoothedPoints.length;
