@@ -848,6 +848,7 @@ export function copySelection() {
     if (mask.type === 'rect') {
         ({ x: x0, y: y0, w: w0, h: h0 } = mask.rect);
     } else {
+        if (!mask.points || mask.points.length < 3) return;
         const xs = mask.points.map(p => p.x);
         const ys = mask.points.map(p => p.y);
         x0 = Math.max(0,  Math.floor(Math.min(...xs)));
@@ -895,6 +896,7 @@ export function copySelection() {
 export function pasteFromClipboard() {
     if (!state._selectionClipboard) return;
     const cb = state._selectionClipboard;
+    if (!cb.w || !cb.h || cb.w <= 0 || cb.h <= 0) return;
 
     // Cancel any current floating selection
     if (state.floatingSelection) {
