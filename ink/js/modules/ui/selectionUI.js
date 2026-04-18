@@ -69,35 +69,45 @@ export function updateSelectionToolbar() {
     _toolbar.classList.remove('hidden');
 
     const mask = state.selectionMask;
-    let x0, y0, w0, h0;
+    let screenX, screenY, screenW, screenH;
 
-    if (mask.type === 'rect') {
-        ({ x: x0, y: y0, w: w0, h: h0 } = mask.rect);
-    } else {
-        // Lasso AABB
-        const xs = mask.points.map(p => p.x);
-        const ys = mask.points.map(p => p.y);
-        x0 = Math.min(...xs);
-        y0 = Math.min(...ys);
-        w0 = Math.max(...xs) - x0;
-        h0 = Math.max(...ys) - y0;
-    }
-
-    // Add floating offset if moving
     if (state.floatingSelection) {
-        x0 += state.floatingSelection.offsetX;
-        y0 += state.floatingSelection.offsetY;
+        // Use AABB of the transformed float in screen coords
+        const fs = state.floatingSelection;
+        const cx = (fs.srcX + fs.offsetX + fs.w / 2) * state.scale + state.translateX;
+        const cy = (fs.srcY + fs.offsetY + fs.h / 2) * state.scale + state.translateY;
+        const hw = fs.w * state.scale * (fs.scaleX || 1) / 2;
+        const hh = fs.h * state.scale * (fs.scaleY || 1) / 2;
+        const r  = fs.rotation || 0;
+        const ac = Math.abs(Math.cos(r)), as = Math.abs(Math.sin(r));
+        const aabbHW = hw * ac + hh * as;
+        const aabbHH = hw * as + hh * ac;
+        screenX = cx - aabbHW;
+        screenY = cy - aabbHH;
+        screenW = aabbHW * 2;
+        screenH = aabbHH * 2;
+    } else {
+        let x0, y0, w0, h0;
+        if (mask.type === 'rect') {
+            ({ x: x0, y: y0, w: w0, h: h0 } = mask.rect);
+        } else {
+            const xs = mask.points.map(p => p.x);
+            const ys = mask.points.map(p => p.y);
+            x0 = Math.min(...xs);
+            y0 = Math.min(...ys);
+            w0 = Math.max(...xs) - x0;
+            h0 = Math.max(...ys) - y0;
+        }
+        screenX = x0 * state.scale + state.translateX;
+        screenY = y0 * state.scale + state.translateY;
+        screenW = w0 * state.scale;
+        screenH = h0 * state.scale;
     }
-
-    // Convert canvas coords (x0, y0) to screen logical pixels
-    const screenX = x0 * state.scale + state.translateX;
-    const screenY = y0 * state.scale + state.translateY;
-    const screenW = w0 * state.scale;
-    const screenH = h0 * state.scale;
 
     // Position toolbar above or below the selection
-    const padding = 20; // Increased padding
-    let top = screenY - 60; // default above (increased from 50)
+    // Extra 30px clearance for the rotation handle stem
+    const padding = 20;
+    let top = screenY - 90;
     let left = screenX + (screenW / 2);
 
     // If too close to top, move below

@@ -2,7 +2,7 @@ import { state } from '../state.js';
 import { applyTransform } from '../canvas.js';
 import { undo, redo } from '../history.js';
 import { renderLayerButtons, updateAllThumbnails } from '../ui/layerPanel.js';
-import { resizeSelectionOverlay, cancelSelection } from '../tools/selection.js';
+import { resizeSelectionOverlay, cancelSelection, softUndoFloatTransform, softRedoFloatTransform } from '../tools/selection.js';
 
 let _lastGestureTime = 0;
 const _GESTURE_COOLDOWN_MS = 500;
@@ -108,18 +108,22 @@ export async function handleGestureTaps() {
         if (state.maxFingers === 2) {
             state._gestureActionFired = true;
             _lastGestureTime = now;
-            await undo();
-            cancelSelection();
-            renderLayerButtons();
-            updateAllThumbnails();
+            if (!softUndoFloatTransform()) {
+                await undo();
+                cancelSelection();
+                renderLayerButtons();
+                updateAllThumbnails();
+            }
             return true;
         } else if (state.maxFingers === 3) {
             state._gestureActionFired = true;
             _lastGestureTime = now;
-            await redo();
-            cancelSelection();
-            renderLayerButtons();
-            updateAllThumbnails();
+            if (!softRedoFloatTransform()) {
+                await redo();
+                cancelSelection();
+                renderLayerButtons();
+                updateAllThumbnails();
+            }
             return true;
         }
     }

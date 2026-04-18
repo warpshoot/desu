@@ -122,14 +122,19 @@ function _getTransformHandles(fs) {
     };
 }
 
-export function hitTestTransformHandle(screenX, screenY) {
+export function hitTestTransformHandle(screenX, screenY, isTouch = false) {
     if (!state.floatingSelection) return null;
     const handles = _getTransformHandles(state.floatingSelection);
-    const HIT = 12;
+    const HIT = isTouch ? 28 : 12;
     for (const [name, pos] of Object.entries(handles)) {
         if (Math.hypot(screenX - pos.x, screenY - pos.y) <= HIT) return name;
     }
     return null;
+}
+
+export function refreshSelectionOverlay() {
+    _drawOverlay();
+    updateSelectionToolbar();
 }
 
 export function isInFloatingSelection(canvasX, canvasY) {
@@ -157,7 +162,13 @@ export function updateSelectionTransform(screenX, screenY) {
     if (handle === 'rot') {
         const a0 = Math.atan2(state._transformStartPointer.y - cy, state._transformStartPointer.x - cx);
         const a1 = Math.atan2(screenY - cy, screenX - cx);
-        fs.rotation = s.rotation + (a1 - a0);
+        let newRot = s.rotation + (a1 - a0);
+        const isShiftActive = state.isShiftPressed || (state._modShiftState && state._modShiftState !== 'idle');
+        if (isShiftActive) {
+            const SNAP = Math.PI / 12; // 15° increments
+            newRot = Math.round(newRot / SNAP) * SNAP;
+        }
+        fs.rotation = newRot;
         _drawOverlay();
         return;
     }
@@ -190,6 +201,45 @@ export function updateSelectionTransform(screenX, screenY) {
         fs.scaleY = Math.max(0.05, newSY);
     }
     _drawOverlay();
+}
+
+// ============================================
+// Float Transform History (soft undo/redo)
+// ============================================
+
+function _snapshotFloat(fs) {
+    return { offsetX: fs.offsetX, offsetY: fs.offsetY, scaleX: fs.scaleX || 1, scaleY: fs.scaleY || 1, rotation: fs.rotation || 0 };
+}
+
+export function pushFloatSnapshot() {
+    if (!state.floatingSelection) return;
+    state._floatHistory.push(_snapshotFloat(state.floatingSelection));
+    state._floatRedoHistory = [];
+}
+
+export function softUndoFloatTransform() {
+    if (!state.floatingSelection || state._floatHistory.length === 0) return false;
+    const prev = state._floatHistory.pop();
+    state._floatRedoHistory.push(_snapshotFloat(state.floatingSelection));
+    Object.assign(state.floatingSelection, prev);
+    _drawOverlay();
+    updateSelectionToolbar();
+    return true;
+}
+
+export function softRedoFloatTransform() {
+    if (!state.floatingSelection || state._floatRedoHistory.length === 0) return false;
+    const next = state._floatRedoHistory.pop();
+    state._floatHistory.push(_snapshotFloat(state.floatingSelection));
+    Object.assign(state.floatingSelection, next);
+    _drawOverlay();
+    updateSelectionToolbar();
+    return true;
+}
+
+function _clearFloatHistory() {
+    state._floatHistory = [];
+    state._floatRedoHistory = [];
 }
 
 function _drawHandle(ctx, x, y, isRotation) {
@@ -487,6 +537,7 @@ export function clearSelection() {
     state.isTransformingSelection = false;
     state._transformHandle = null;
     state.isMovingSelection = false;
+    _clearFloatHistory();
     _rectStart = null;
     _lassoPoints = [];
     if (_overlayCtx && _overlayCanvas) {
@@ -505,6 +556,7 @@ export function cancelSelection() {
     state.isTransformingSelection = false;
     state._transformHandle = null;
     state.isMovingSelection = false;
+    _clearFloatHistory();
     _rectStart = null;
     _lassoPoints = [];
     if (_overlayCtx && _overlayCanvas) {
@@ -727,6 +779,7 @@ export function commitFloating() {
 
     markLayerDirty(layer.id);
     state.floatingSelection = null;
+    _clearFloatHistory();
 
     // 選択マスクを更新
     if (state.selectionMask) {
@@ -849,6 +902,7 @@ export function pasteFromClipboard() {
     }
     state.isTransformingSelection = false;
     state._transformHandle = null;
+    _clearFloatHistory();
 
     // Place paste at center of current viewport
     const centerCanvasX = Math.round(-state.translateX / state.scale + window.innerWidth  / (2 * state.scale));

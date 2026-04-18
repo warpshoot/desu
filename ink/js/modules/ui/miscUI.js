@@ -23,17 +23,19 @@ import {
     renderBrushPalette 
 } from './toolPanel.js';
 import { updateToneMenuVisibility } from './toneMenu.js';
-import { 
-    hasSelection, 
-    hasFloatingSelection, 
-    copySelection, 
-    deleteSelectionContent, 
-    clearSelection, 
-    commitFloating, 
+import {
+    hasSelection,
+    hasFloatingSelection,
+    copySelection,
+    deleteSelectionContent,
+    clearSelection,
+    commitFloating,
     pasteFromClipboard,
     liftSelection,
     resizeSelectionOverlay,
-    cancelSelection
+    cancelSelection,
+    softUndoFloatTransform,
+    softRedoFloatTransform
 } from '../tools/selection.js';
 
 const _MOD_DOUBLE_TAP_MS = 300;
@@ -283,20 +285,24 @@ export function setupKeyboardShortcuts() {
 
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
             e.preventDefault();
-            await undo();
+            if (!softUndoFloatTransform()) {
+                await undo();
+                cancelSelection();
+                renderLayerButtons();
+                updateAllThumbnails();
+            }
             showHUD(t('hud.undo'));
-            cancelSelection();
-            renderLayerButtons();
-            updateAllThumbnails();
         }
 
         if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && (e.key === 'z' || e.key === 'Z')) || (e.key === 'y' || e.key === 'Y'))) {
             e.preventDefault();
-            await redo();
+            if (!softRedoFloatTransform()) {
+                await redo();
+                cancelSelection();
+                renderLayerButtons();
+                updateAllThumbnails();
+            }
             showHUD(t('hud.redo'));
-            cancelSelection();
-            renderLayerButtons();
-            updateAllThumbnails();
         }
 
         if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {

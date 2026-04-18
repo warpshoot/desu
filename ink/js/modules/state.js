@@ -422,6 +422,8 @@ export const state = {
     _transformHandle: null,
     _transformStartState: null,
     _transformStartPointer: null,
+    _floatHistory: [],       // stack of float transform snapshots for soft-undo
+    _floatRedoHistory: [],   // redo stack for float transforms
 
     // Brush Sizes
     penSize: 2,
