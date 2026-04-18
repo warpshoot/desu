@@ -443,6 +443,7 @@ function _makeSlotIcon(src) {
 
 export function setupBrushPalette() {
     renderBrushPalette();
+    updateBrushSizeSlider(); // 復元されたstateの線幅をスライダに反映
     const palette = document.getElementById('brush-palette');
     if (!palette) return;
 
@@ -559,7 +560,8 @@ export function setupBrushSettingsPanel() {
     const closeBtn = document.getElementById('brush-settings-close');
     const controls = [
         'bs-subtool', 'bs-density', 'bs-pressure-density', 'bs-opacity',
-        'bs-pressure-size', 'bs-binary', 'bs-ink-pooling', 'bs-pressure-curve', 'bs-stabilizer',
+        'bs-pressure-size', 'bs-binary', 'bs-ink-pooling', 'bs-ink-pooling-strength',
+        'bs-pressure-curve', 'bs-stabilizer',
         'bs-stabilizer-dist', 'bs-stab-string', 'bs-stab-guide'
     ].map(id => document.getElementById(id));
 
@@ -572,6 +574,8 @@ export function setupBrushSettingsPanel() {
         brush.pressureSize = document.getElementById('bs-pressure-size').checked;
         brush.binary = !document.getElementById('bs-binary').checked;
         brush.inkPooling = document.getElementById('bs-ink-pooling').checked;
+        brush.inkPoolingStrength = parseInt(document.getElementById('bs-ink-pooling-strength').value);
+        document.getElementById('bs-ink-pooling-strength-val').textContent = brush.inkPoolingStrength;
         brush.pressureCurve = parseFloat(document.getElementById('bs-pressure-curve').value);
         brush.stabilizerEnabled = document.getElementById('bs-stabilizer').checked;
         brush.stabilizerDistance = parseInt(document.getElementById('bs-stabilizer-dist').value);
@@ -590,7 +594,7 @@ export function setupBrushSettingsPanel() {
             updateBrushSizeSlider();
         }
         renderBrushPalette();
-        openBrushSettings(_editingBrushIdx); // Refresh UI visibility
+        _refreshBrushSettingsRows(brush); // 行表示だけ更新 (パネル再配置しない)
     };
 
     controls.forEach(el => el && el.addEventListener('input', sync));
@@ -600,6 +604,25 @@ export function setupBrushSettingsPanel() {
         'isBrushSettingsPinned',
         () => { panel.classList.add('hidden'); updateToneMenuVisibility(); }
     );
+}
+
+function _refreshBrushSettingsRows(brush) {
+    const isStipple = brush.subTool === 'stipple';
+    const toggle = (id, show) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = show ? '' : 'none';
+    };
+    toggle('bs-density-row', isStipple);
+    toggle('bs-pressure-density-row', isStipple);
+    toggle('bs-opacity-row', !isStipple);
+    toggle('bs-pen-pressure-row', !isStipple);
+    toggle('bs-pressure-curve-row', (!isStipple && brush.pressureSize) || (isStipple && (brush.pressureDensity ?? true)));
+    toggle('bs-binary-row', !isStipple);
+    toggle('bs-ink-pooling-row', !isStipple && !brush.binary);
+    toggle('bs-ink-pooling-strength-row', !isStipple && !brush.binary && (brush.inkPooling ?? false));
+    toggle('bs-stabilizer-row', !isStipple);
+    toggle('bs-stabilizer-dist-row', !isStipple && (brush.stabilizerEnabled ?? false));
+    toggle('bs-stab-viz-row', !isStipple && (brush.stabilizerEnabled ?? false));
 }
 
 export function openBrushSettings(idx) {
@@ -619,27 +642,15 @@ export function openBrushSettings(idx) {
     document.getElementById('bs-pressure-size').checked = brush.pressureSize;
     document.getElementById('bs-binary').checked = !brush.binary;
     document.getElementById('bs-ink-pooling').checked = brush.inkPooling ?? false;
+    document.getElementById('bs-ink-pooling-strength').value = brush.inkPoolingStrength ?? 1;
+    document.getElementById('bs-ink-pooling-strength-val').textContent = brush.inkPoolingStrength ?? 1;
     document.getElementById('bs-pressure-curve').value = brush.pressureCurve ?? 1.0;
     document.getElementById('bs-pressure-curve-val').textContent = (brush.pressureCurve ?? 1.0).toFixed(1);
     document.getElementById('bs-stabilizer').checked = brush.stabilizerEnabled ?? false;
     document.getElementById('bs-stabilizer-dist').value = brush.stabilizerDistance ?? 20;
     document.getElementById('bs-stabilizer-dist-val').textContent = brush.stabilizerDistance ?? 20;
 
-    const toggle = (id, show) => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = show ? '' : 'none';
-    };
-
-    toggle('bs-density-row', isStipple);
-    toggle('bs-pressure-density-row', isStipple);
-    toggle('bs-opacity-row', !isStipple);
-    toggle('bs-pen-pressure-row', !isStipple);
-    toggle('bs-pressure-curve-row', !isStipple && brush.pressureSize);
-    toggle('bs-binary-row', !isStipple);
-    toggle('bs-ink-pooling-row', !isStipple && !brush.binary);
-    toggle('bs-stabilizer-row', !isStipple);
-    toggle('bs-stabilizer-dist-row', !isStipple && brush.stabilizerEnabled);
-    toggle('bs-stab-viz-row', !isStipple && brush.stabilizerEnabled);
+    _refreshBrushSettingsRows(brush);
 
     const pinBtn = document.getElementById('brush-settings-pin');
     if (pinBtn) {

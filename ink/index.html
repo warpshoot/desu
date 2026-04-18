@@ -569,6 +569,10 @@
                     <input type="checkbox" id="bs-ink-pooling"> <span>インクだまり</span>
                 </label>
             </div>
+            <div class="bs-row" id="bs-ink-pooling-strength-row">
+                <label><span>だまり強度</span> <span id="bs-ink-pooling-strength-val">1</span></label>
+                <input type="range" id="bs-ink-pooling-strength" min="1" max="5" step="1" value="1">
+            </div>
 
 
             <!-- 手ぶれ補正 (糸引きスタビライザー) -->
@@ -628,7 +632,7 @@
             </div>
             <div class="bs-row" id="sh-rotation-row">
                 <label><span data-i18n="sh.rotation">角度</span> <span id="sh-rotation-val">0</span>°</label>
-                <input type="range" id="sh-rotation" min="0" max="359" step="1" value="0">
+                <input type="range" id="sh-rotation" min="0" max="360" step="5" value="0">
             </div>
             <div class="bs-row" id="sh-sides-row">
                 <label><span data-i18n="sh.sides">角数</span> <span id="sh-sides-val">5</span></label>

@@ -795,11 +795,12 @@ canvas {
     -webkit-appearance: none;
     appearance: none;
     /* 回転済み: CSS width = 視覚上の高さ, CSS height = 視覚上の幅 */
-    width: 12px;
-    height: 32px;
-    background: #000;
-    border-radius: 3px;
-    border: none;
+    width: 28px;
+    height: 28px;
+    background: #fff;
+    border-radius: 50%;
+    border: 1px solid #333;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
     cursor: pointer;
 }
 

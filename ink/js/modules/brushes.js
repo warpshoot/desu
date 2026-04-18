@@ -33,6 +33,7 @@ export function makeDefaultBrushes() {
             stabStringVisible: true,
             stabShowGuide: true,
             inkPooling: false,
+            inkPoolingStrength: 1,
         },
         {
             subTool: 'pen',
@@ -48,6 +49,7 @@ export function makeDefaultBrushes() {
             stabStringVisible: true,
             stabShowGuide: true,
             inkPooling: false,
+            inkPoolingStrength: 1,
         },
         {
             subTool: 'stipple',
@@ -63,6 +65,7 @@ export function makeDefaultBrushes() {
             stabStringVisible: true,
             stabShowGuide: true,
             inkPooling: false,
+            inkPoolingStrength: 1,
         }
     ];
 }
@@ -223,11 +226,11 @@ function _drawStroke(ctx, pts, fromIdx, isStart, b) {
             ? Math.max(0.5, b.size * (0.3 + 1.2 * applyPressureCurve(pt.pressure, gamma)))
             : b.size;
         if (pooling) {
-            // 速度が遅いほど太く: 停止時 1.8x、高速時 1.0x
-            // 二乗カーブで中間速度のゆらぎ影響を抑制
+            // 速度が遅いほど太く。二乗カーブで中間速度のゆらぎ影響を抑制
             const speed = pt.speed ?? 1.0;
             const t = 1.0 - speed;
-            return Math.max(0.5, w * (1.0 + 0.8 * t * t));
+            const strength = b.inkPoolingStrength ?? 1;
+            return Math.max(0.5, w * (1.0 + strength * 0.8 * t * t));
         }
         return w;
     };

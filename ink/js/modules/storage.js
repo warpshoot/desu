@@ -513,7 +513,11 @@ export function resetSettings() {
 // --- Internal Helpers ---
 
 function _restoreSettings(s) {
-    if (s.brushes) state.brushes = s.brushes;
+    if (s.brushes) {
+        // 保存時に存在しなかった新プロパティにデフォルト値を補完
+        const defaults = makeDefaultBrushes();
+        state.brushes = s.brushes.map((b, i) => ({ ...(defaults[i] || defaults[0]), ...b }));
+    }
     if (s.fillSlots) state.fillSlots = s.fillSlots;
     if (s.eraserSlots) state.eraserSlots = s.eraserSlots;
     if (s.shapeSlots) state.shapeSlots = s.shapeSlots;
