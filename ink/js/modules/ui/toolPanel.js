@@ -384,7 +384,7 @@ export function renderBrushPalette() {
             dot.style.height = `${displaySize}px`;
             dot.style.backgroundColor = '#000';
             dot.style.borderRadius = '50%';
-            dot.style.opacity = slot.isFill ? (slot.opacity ?? 1) : (slot.opacity ?? 1) * 0.5; // Faint dot if stroke only
+            dot.style.opacity = slot.isStroke ? (slot.opacity ?? 1) : (slot.opacity ?? 1) * 0.5; // Faint dot if no stroke
             swatch.appendChild(dot);
 
             // Shape type badge
