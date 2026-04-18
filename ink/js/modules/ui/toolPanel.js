@@ -1060,15 +1060,22 @@ function _renderShapePreview(slot) {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, w, h);
 
-    // 線幅の半分 + 余白 をパディングにして太い線でもはみ出さない
-    const pad = Math.ceil(slot.size / 2) + 12;
+    const strokeHalf = Math.ceil(slot.size / 2);
+    const margin = 8;
+    // star/poly は hypot(dx,dy)/2 で外接円半径を計算するため √2 倍に膨らむ
+    // その分だけバウンディングボックスを縮小してはみ出しを防ぐ
+    const needsDiagScale = (slot.subTool === 'star' || slot.subTool === 'poly');
+    const halfSize = Math.max(0, needsDiagScale
+        ? Math.floor((w / 2 - margin - strokeHalf) / Math.SQRT2)
+        : (w / 2 - margin - strokeHalf));
+    const cx = w / 2, cy = h / 2;
     let x0, y0, x1, y1;
     if (slot.subTool === 'line') {
-        x0 = pad;     y0 = h - pad;
-        x1 = w - pad; y1 = pad;
+        x0 = cx - halfSize; y0 = cy + halfSize;
+        x1 = cx + halfSize; y1 = cy - halfSize;
     } else {
-        x0 = pad;     y0 = pad;
-        x1 = w - pad; y1 = h - pad;
+        x0 = cx - halfSize; y0 = cy - halfSize;
+        x1 = cx + halfSize; y1 = cy + halfSize;
     }
 
     // fromCenter はドラッグ挙動の違いなのでプレビューでは常に false

@@ -49,6 +49,12 @@ export function hideUnpinnedMenus() {
         eraserPanel.classList.add('hidden');
     }
 
+    // Shape settings
+    const shapePanel = document.getElementById('shape-settings-panel');
+    if (shapePanel && !state.isShapeSettingsPinned) {
+        shapePanel.classList.add('hidden');
+    }
+
     // Tone menu
     const toneMenu = document.getElementById('tone-menu');
     if (toneMenu && !state.isToneMenuPinned) {
