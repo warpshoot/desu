@@ -122,9 +122,26 @@ function _getTransformHandles(fs) {
     };
 }
 
+function _maskToFakeFloat() {
+    const mask = state.selectionMask;
+    if (!mask) return null;
+    let x0, y0, w0, h0;
+    if (mask.type === 'rect') {
+        ({ x: x0, y: y0, w: w0, h: h0 } = mask.rect);
+    } else if (mask.type === 'lasso' && mask.points && mask.points.length >= 3) {
+        const xs = mask.points.map(p => p.x);
+        const ys = mask.points.map(p => p.y);
+        x0 = Math.min(...xs); y0 = Math.min(...ys);
+        w0 = Math.max(...xs) - x0; h0 = Math.max(...ys) - y0;
+    } else return null;
+    if (w0 <= 0 || h0 <= 0) return null;
+    return { srcX: x0, srcY: y0, w: w0, h: h0, offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1, rotation: 0 };
+}
+
 export function hitTestTransformHandle(screenX, screenY, isTouch = false) {
-    if (!state.floatingSelection) return null;
-    const handles = _getTransformHandles(state.floatingSelection);
+    const fs = state.floatingSelection || _maskToFakeFloat();
+    if (!fs) return null;
+    const handles = _getTransformHandles(fs);
     const HIT = isTouch ? 28 : 12;
     for (const [name, pos] of Object.entries(handles)) {
         if (Math.hypot(screenX - pos.x, screenY - pos.y) <= HIT) return name;
@@ -331,8 +348,10 @@ function _drawOverlay() {
         return;
     }
 
-    // --- Draw marching ants for selection ---
+    // --- Draw marching ants + transform handles for plain selection ---
     _drawAnts(ctx, mask);
+    const fakeFloat = _maskToFakeFloat();
+    if (fakeFloat) _drawTransformUI(ctx, fakeFloat);
 }
 
 function _drawAnts(ctx, mask) {
@@ -848,6 +867,7 @@ export function copySelection() {
     if (mask.type === 'rect') {
         ({ x: x0, y: y0, w: w0, h: h0 } = mask.rect);
     } else {
+        if (!mask.points || mask.points.length < 3) return;
         const xs = mask.points.map(p => p.x);
         const ys = mask.points.map(p => p.y);
         x0 = Math.max(0,  Math.floor(Math.min(...xs)));
@@ -895,6 +915,7 @@ export function copySelection() {
 export function pasteFromClipboard() {
     if (!state._selectionClipboard) return;
     const cb = state._selectionClipboard;
+    if (!cb.w || !cb.h || cb.w <= 0 || cb.h <= 0) return;
 
     // Cancel any current floating selection
     if (state.floatingSelection) {

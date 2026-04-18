@@ -91,6 +91,7 @@ export function updateSelectionToolbar() {
         if (mask.type === 'rect') {
             ({ x: x0, y: y0, w: w0, h: h0 } = mask.rect);
         } else {
+            if (!mask.points || mask.points.length < 3) { _toolbar.classList.add('hidden'); return; }
             const xs = mask.points.map(p => p.x);
             const ys = mask.points.map(p => p.y);
             x0 = Math.min(...xs);
