@@ -118,6 +118,11 @@ function _updateSelectCursor(screenX, screenY) {
         return;
     }
     if (hasSelection()) {
+        const handle = hitTestTransformHandle(screenX, screenY, false);
+        if (handle) {
+            eventCanvas.style.cursor = _getCursorForHandle(handle, 0);
+            return;
+        }
         const cp = getCanvasPoint(screenX, screenY);
         if (isInSelection(cp.x, cp.y)) { eventCanvas.style.cursor = 'move'; return; }
     }
@@ -282,19 +287,39 @@ async function handlePointerDown(e) {
                     if (state.subTool === 'rect') startRectSelect(e.clientX, e.clientY);
                     else startLassoSelect(e.clientX, e.clientY);
                 }
-            } else if (hasSelection() && isInSelection(canvasPoint.x, canvasPoint.y)) {
-                state.isMovingSelection = true;
-                state._selMoveStartX = e.clientX;
-                state._selMoveStartY = e.clientY;
-                setSelectionToolbarInteractive(false);
-                await saveState();
-                liftSelection(true);
-            } else {
-                if (hasFloatingSelection()) {
-                    commitFloating();
+            } else if (hasSelection()) {
+                const isTouch = e.pointerType === 'touch';
+                const handle = hitTestTransformHandle(e.clientX, e.clientY, isTouch);
+                if (handle) {
                     await saveState();
-                    if (window.updateAllThumbnails) window.updateAllThumbnails();
+                    liftSelection(true);
+                    const fs = state.floatingSelection;
+                    pushFloatSnapshot();
+                    state.isTransformingSelection = true;
+                    state._transformHandle = handle;
+                    state._transformStartState = {
+                        srcX: fs.srcX, srcY: fs.srcY,
+                        w: fs.w, h: fs.h,
+                        offsetX: fs.offsetX, offsetY: fs.offsetY,
+                        scaleX: fs.scaleX || 1, scaleY: fs.scaleY || 1,
+                        rotation: fs.rotation || 0
+                    };
+                    state._transformStartPointer = { x: e.clientX, y: e.clientY };
+                    setSelectionToolbarInteractive(false);
+                    if (eventCanvas) eventCanvas.style.cursor = _getCursorForHandle(handle, 0);
+                } else if (isInSelection(canvasPoint.x, canvasPoint.y)) {
+                    state.isMovingSelection = true;
+                    state._selMoveStartX = e.clientX;
+                    state._selMoveStartY = e.clientY;
+                    setSelectionToolbarInteractive(false);
+                    await saveState();
+                    liftSelection(true);
+                } else {
+                    state.isMovingSelection = false;
+                    if (state.subTool === 'rect') startRectSelect(e.clientX, e.clientY);
+                    else startLassoSelect(e.clientX, e.clientY);
                 }
+            } else {
                 state.isMovingSelection = false;
                 if (state.subTool === 'rect') startRectSelect(e.clientX, e.clientY);
                 else startLassoSelect(e.clientX, e.clientY);
