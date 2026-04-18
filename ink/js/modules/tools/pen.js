@@ -176,7 +176,12 @@ function _getDrawBrush() {
  * O(1) リングバッファで shift() のコストを回避
  */
 function _smoothPressure(rawPressure) {
-    pressureBuffer[pressureBufferIdx] = rawPressure;
+    const brush = state.brushes[state.activeBrushIndex];
+    const curve = brush ? (brush.pressureCurve || 1.0) : 1.0;
+    // カーブをスムージング前に適用することで、軽タッチの遅延を防ぐ
+    const curvedPressure = Math.pow(Math.max(0, Math.min(1, rawPressure)), curve);
+
+    pressureBuffer[pressureBufferIdx] = curvedPressure;
     pressureBufferIdx = (pressureBufferIdx + 1) % PRESSURE_WINDOW;
     if (pressureBufferLen < PRESSURE_WINDOW) pressureBufferLen++;
 
@@ -190,13 +195,7 @@ function _smoothPressure(rawPressure) {
         sum += pressureBuffer[idx] * w;
         weightSum += w;
     }
-    const avg = sum / weightSum;
-    const brush = state.brushes[state.activeBrushIndex];
-    if (!brush) return avg;
-    
-    // Apply pressure curve (default 1.0 = linear)
-    const curve = brush.pressureCurve || 1.0;
-    return Math.pow(avg, curve);
+    return sum / weightSum;
 }
 
 /**

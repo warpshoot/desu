@@ -91,12 +91,10 @@ async function handlePointerDown(e) {
 
     if (e.cancelable) e.preventDefault();
 
-    if (!isIOS && !isPen) {
-        try {
-            const eventCanvas = document.getElementById('event-canvas');
-            if (eventCanvas) eventCanvas.setPointerCapture(e.pointerId);
-        } catch (err) { }
-    }
+    try {
+        const eventCanvas = document.getElementById('event-canvas');
+        if (eventCanvas) eventCanvas.setPointerCapture(e.pointerId);
+    } catch (err) { }
 
     if (isAnyMenuOpen()) {
         hideAllMenus();
@@ -332,8 +330,10 @@ function handlePointerMove(e) {
                 // 経過時間が長い場合は閾値を大幅に引き上げる。
                 // 描画開始直後（ジャンプフィルタの試行回数が少ない時）は特にラグの影響を受けやすい。
                 const lagFactor = timeElapsed > 80 ? 4 : (timeElapsed > 30 ? 2 : 1);
-                // ペン入力（高精細）はジャンプが起きにくいため、しれきい値を大幅に上げて「ハネ」の誤検出を防ぐ
-                const threshold = (e.pointerType === 'pen' ? (window.innerWidth * 0.15) : (window.innerWidth * 0.04)) * lagFactor;
+                // ペン入力（高精細）はジャンプが起きにくいため、閾値を大幅に上げて「ハネ」の誤検出を防ぐ
+                // ズーム倍率を考慮してキャンバス座標系に合わせた閾値にする
+                const scale = state.scale || 1;
+                const threshold = (e.pointerType === 'pen' ? (window.innerWidth * 0.15) : (window.innerWidth * 0.04)) * lagFactor / scale;
                 
                 if (dist > threshold) {
                     state._jumpFilterCount++;
