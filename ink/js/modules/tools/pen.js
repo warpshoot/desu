@@ -452,6 +452,14 @@ export function drawPenLine(x, y, pressure = 0.5, options = {}) {
         if (dist < 0.5) return;
     }
 
+    // 予測点（プレビュー）: strokePoints を汚染しないよう早期リターン
+    if (previewCtx) {
+        const basePoint = forcedLastPoint || lastPoint;
+        if (!basePoint) return;
+        drawBrushSegment(previewCtx, [basePoint, { x, y, pressure }], 1, false, brush, false);
+        return;
+    }
+
     // Dirty rect を拡張
     if (x < _dirtyMinX) _dirtyMinX = x;
     if (y < _dirtyMinY) _dirtyMinY = y;
@@ -475,18 +483,6 @@ export function drawPenLine(x, y, pressure = 0.5, options = {}) {
     if (_batchMode) {
         // バッチモード: 描画は flushPenBatch() に委ねる
         // smoothedPoints への追加だけ行い、GPU 呼び出しは一切しない
-        return;
-    }
-
-    if (previewCtx) {
-        // 予測点（プレビュー）の描画
-        // forcedLastPoint があればそこから、なければストロークの末尾から。
-        const basePoint = forcedLastPoint || lastPoint;
-        if (!basePoint) return;
-        
-        const previewPts = [basePoint, { x, y, pressure: smoothedP }];
-        // プレビューは計算コストを抑えるため分割せず直線で描画
-        drawBrushSegment(previewCtx, previewPts, 1, false, brush, false);
         return;
     }
 
