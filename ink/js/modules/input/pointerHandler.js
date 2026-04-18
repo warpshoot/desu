@@ -69,7 +69,10 @@ import {
     updateLassoSelect,
     finishLassoSelect,
     pushSelectionClip,
-    popSelectionClip
+    popSelectionClip,
+    isInFloatingSelection,
+    hitTestTransformHandle,
+    updateSelectionTransform
 } from '../tools/selection.js';
 import { setSelectionToolbarInteractive } from '../ui/selectionUI.js';
 import { hideAllMenus, isAnyMenuOpen, hideUnpinnedMenus } from '../ui/menuManager.js';
@@ -200,7 +203,21 @@ async function handlePointerDown(e) {
 
         if (state.mode === 'select') {
             if (hasFloatingSelection()) {
-                if (isInSelection(canvasPoint.x, canvasPoint.y)) {
+                const handle = hitTestTransformHandle(e.clientX, e.clientY);
+                if (handle) {
+                    const fs = state.floatingSelection;
+                    state.isTransformingSelection = true;
+                    state._transformHandle = handle;
+                    state._transformStartState = {
+                        srcX: fs.srcX, srcY: fs.srcY,
+                        w: fs.w, h: fs.h,
+                        offsetX: fs.offsetX, offsetY: fs.offsetY,
+                        scaleX: fs.scaleX || 1, scaleY: fs.scaleY || 1,
+                        rotation: fs.rotation || 0
+                    };
+                    state._transformStartPointer = { x: e.clientX, y: e.clientY };
+                    setSelectionToolbarInteractive(false);
+                } else if (isInFloatingSelection(canvasPoint.x, canvasPoint.y)) {
                     state.isMovingSelection = true;
                     state._selMoveStartX = e.clientX;
                     state._selMoveStartY = e.clientY;
@@ -222,11 +239,11 @@ async function handlePointerDown(e) {
                 await saveState();
                 liftSelection(true);
             } else {
-            if (hasFloatingSelection()) {
-                commitFloating();
-                await saveState();
-                if (window.updateAllThumbnails) window.updateAllThumbnails();
-            }
+                if (hasFloatingSelection()) {
+                    commitFloating();
+                    await saveState();
+                    if (window.updateAllThumbnails) window.updateAllThumbnails();
+                }
                 state.isMovingSelection = false;
                 if (state.subTool === 'rect') startRectSelect(e.clientX, e.clientY);
                 else startLassoSelect(e.clientX, e.clientY);
@@ -351,14 +368,17 @@ function handlePointerMove(e) {
         const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
 
         if (state.mode === 'select') {
-            if (state.isMovingSelection && hasFloatingSelection()) {
+            if (state.isTransformingSelection && hasFloatingSelection()) {
+                updateSelectionTransform(e.clientX, e.clientY);
+                state.didInteract = true;
+            } else if (state.isMovingSelection && hasFloatingSelection()) {
                 const dxS = (e.clientX - state._selMoveStartX) / state.scale;
                 const dyS = (e.clientY - state._selMoveStartY) / state.scale;
                 state._selMoveStartX = e.clientX;
                 state._selMoveStartY = e.clientY;
                 dragFloating(dxS, dyS);
                 state.didInteract = true;
-            } else if (!state.isMovingSelection) {
+            } else if (!state.isMovingSelection && !state.isTransformingSelection) {
                 if (state.subTool === 'rect') updateRectSelect(e.clientX, e.clientY);
                 else updateLassoSelect(e.clientX, e.clientY);
             }
@@ -427,7 +447,12 @@ async function handlePointerUp(e) {
 
     if (e.pointerId === state.drawingPointerId) {
         if (state.mode === 'select') {
-            if (state.isMovingSelection) {
+            if (state.isTransformingSelection) {
+                state.isTransformingSelection = false;
+                state._transformHandle = null;
+                setSelectionToolbarInteractive(true);
+                if (window.updateSelectToolbar) window.updateSelectToolbar();
+            } else if (state.isMovingSelection) {
                 state.isMovingSelection = false;
                 setSelectionToolbarInteractive(true);
                 if (window.updateSelectToolbar) window.updateSelectToolbar();

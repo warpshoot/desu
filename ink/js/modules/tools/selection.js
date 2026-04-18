@@ -101,6 +101,152 @@ function _toScreen(canvasX, canvasY) {
     };
 }
 
+// ============================================
+// Transform Handles
+// ============================================
+
+function _getTransformHandles(fs) {
+    const cx = (fs.srcX + fs.offsetX + fs.w / 2) * state.scale + state.translateX;
+    const cy = (fs.srcY + fs.offsetY + fs.h / 2) * state.scale + state.translateY;
+    const hw = fs.w * state.scale * (fs.scaleX || 1) / 2;
+    const hh = fs.h * state.scale * (fs.scaleY || 1) / 2;
+    const r = fs.rotation || 0;
+    const cos = Math.cos(r), sin = Math.sin(r);
+    const rot = (lx, ly) => ({ x: cx + lx * cos - ly * sin, y: cy + lx * sin + ly * cos });
+    const tc = rot(0, -hh);
+    return {
+        tl: rot(-hw, -hh), tc, tr: rot(hw, -hh),
+        ml: rot(-hw, 0),          mr: rot(hw, 0),
+        bl: rot(-hw,  hh), bc: rot(0, hh), br: rot(hw, hh),
+        rot: { x: tc.x + sin * 30, y: tc.y - cos * 30 }
+    };
+}
+
+export function hitTestTransformHandle(screenX, screenY) {
+    if (!state.floatingSelection) return null;
+    const handles = _getTransformHandles(state.floatingSelection);
+    const HIT = 12;
+    for (const [name, pos] of Object.entries(handles)) {
+        if (Math.hypot(screenX - pos.x, screenY - pos.y) <= HIT) return name;
+    }
+    return null;
+}
+
+export function isInFloatingSelection(canvasX, canvasY) {
+    const fs = state.floatingSelection;
+    if (!fs) return false;
+    const cx = fs.srcX + fs.offsetX + fs.w / 2;
+    const cy = fs.srcY + fs.offsetY + fs.h / 2;
+    const r = -(fs.rotation || 0);
+    const cos = Math.cos(r), sin = Math.sin(r);
+    const dx = canvasX - cx, dy = canvasY - cy;
+    const lx = dx * cos - dy * sin;
+    const ly = dx * sin + dy * cos;
+    return Math.abs(lx) <= (fs.w / 2) * Math.abs(fs.scaleX || 1) &&
+           Math.abs(ly) <= (fs.h / 2) * Math.abs(fs.scaleY || 1);
+}
+
+export function updateSelectionTransform(screenX, screenY) {
+    const fs = state.floatingSelection;
+    if (!fs || !state._transformStartState) return;
+    const s = state._transformStartState;
+    const handle = state._transformHandle;
+    const cx = (s.srcX + s.offsetX + s.w / 2) * state.scale + state.translateX;
+    const cy = (s.srcY + s.offsetY + s.h / 2) * state.scale + state.translateY;
+
+    if (handle === 'rot') {
+        const a0 = Math.atan2(state._transformStartPointer.y - cy, state._transformStartPointer.x - cx);
+        const a1 = Math.atan2(screenY - cy, screenX - cx);
+        fs.rotation = s.rotation + (a1 - a0);
+        _drawOverlay();
+        return;
+    }
+
+    // Undo rotation to get local (pre-rotation) coords
+    const r = s.rotation;
+    const cos = Math.cos(-r), sin = Math.sin(-r);
+    const dx = screenX - cx, dy = screenY - cy;
+    const lx = dx * cos - dy * sin;
+    const ly = dx * sin + dy * cos;
+    const baseHW = s.w * state.scale / 2;
+    const baseHH = s.h * state.scale / 2;
+
+    let newSX = s.scaleX, newSY = s.scaleY;
+
+    if (handle === 'mr' || handle === 'tr' || handle === 'br')  newSX =  lx / baseHW;
+    else if (handle === 'ml' || handle === 'tl' || handle === 'bl') newSX = -lx / baseHW;
+
+    if (handle === 'bc' || handle === 'bl' || handle === 'br')  newSY =  ly / baseHH;
+    else if (handle === 'tc' || handle === 'tl' || handle === 'tr') newSY = -ly / baseHH;
+
+    // Corner handles: proportional scale
+    if (handle === 'tl' || handle === 'tr' || handle === 'bl' || handle === 'br') {
+        const avg = (Math.abs(newSX) + Math.abs(newSY)) / 2;
+        newSX = avg * Math.sign(newSX || 1);
+        newSY = avg * Math.sign(newSY || 1);
+    }
+
+    fs.scaleX = Math.max(0.05, Math.abs(newSX)) * Math.sign(newSX || 1);
+    fs.scaleY = Math.max(0.05, Math.abs(newSY)) * Math.sign(newSY || 1);
+    _drawOverlay();
+}
+
+function _drawHandle(ctx, x, y, isRotation) {
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    if (isRotation) {
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+    } else {
+        ctx.rect(x - 5, y - 5, 10, 10);
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = '#333333';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+}
+
+function _drawTransformUI(ctx, fs) {
+    const h = _getTransformHandles(fs);
+
+    // Bounding box: white glow then dashed black
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(h.tl.x, h.tl.y);
+    ctx.lineTo(h.tr.x, h.tr.y);
+    ctx.lineTo(h.br.x, h.br.y);
+    ctx.lineTo(h.bl.x, h.bl.y);
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([]);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 3]);
+    ctx.lineDashOffset = -_marchOffset;
+    ctx.stroke();
+    ctx.restore();
+
+    // Rotation stem
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(h.tc.x, h.tc.y);
+    ctx.lineTo(h.rot.x, h.rot.y);
+    ctx.strokeStyle = 'rgba(80,130,255,0.9)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 2]);
+    ctx.stroke();
+    ctx.restore();
+
+    for (const name of ['tl', 'tc', 'tr', 'ml', 'mr', 'bl', 'bc', 'br']) {
+        _drawHandle(ctx, h[name].x, h[name].y, false);
+    }
+    _drawHandle(ctx, h.rot.x, h.rot.y, true);
+}
+
 function _drawOverlay() {
     if (!_overlayCtx || !_overlayCanvas) return;
     const ctx = _overlayCtx;
@@ -109,39 +255,29 @@ function _drawOverlay() {
     const mask = state.selectionMask;
     if (!mask) return;
 
-    // --- Draw floating selection preview (if moving) ---
+    // --- Draw floating selection preview with transform ---
     if (state.floatingSelection) {
         const fs = state.floatingSelection;
-        const tl = _toScreen(fs.srcX + fs.offsetX, fs.srcY + fs.offsetY);
-        const br = _toScreen(fs.srcX + fs.offsetX + fs.w, fs.srcY + fs.offsetY + fs.h);
-        const sw = br.x - tl.x;
-        const sh = br.y - tl.y;
-        if (sw > 0 && sh > 0) {
-            // Draw the floating canvas scaled to screen
-            const source = fs.canvas || fs.imageData;
-            ctx.save();
-            ctx.imageSmoothingEnabled = false;
-            if (source instanceof ImageData) {
-                const tmp = _getFsTempCanvas(source.width, source.height);
-                tmp.ctx.putImageData(source, 0, 0);
-                ctx.drawImage(tmp.canvas, tl.x, tl.y, sw, sh);
-            } else {
-                ctx.drawImage(source, tl.x, tl.y, sw, sh);
-            }
-            ctx.restore();
-
-            // Update mask to float position for ants
-            _drawAnts(ctx, {
-                type: 'rect',
-                rect: {
-                    x: fs.srcX + fs.offsetX,
-                    y: fs.srcY + fs.offsetY,
-                    w: fs.w,
-                    h: fs.h
-                }
-            });
-            return;
+        const cx = (fs.srcX + fs.offsetX + fs.w / 2) * state.scale + state.translateX;
+        const cy = (fs.srcY + fs.offsetY + fs.h / 2) * state.scale + state.translateY;
+        const sw = fs.w * state.scale;
+        const sh = fs.h * state.scale;
+        const source = fs.canvas || fs.imageData;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(fs.rotation || 0);
+        ctx.scale(fs.scaleX || 1, fs.scaleY || 1);
+        ctx.imageSmoothingEnabled = true;
+        if (source instanceof ImageData) {
+            const tmp = _getFsTempCanvas(source.width, source.height);
+            tmp.ctx.putImageData(source, 0, 0);
+            ctx.drawImage(tmp.canvas, -sw / 2, -sh / 2, sw, sh);
+        } else {
+            ctx.drawImage(source, -sw / 2, -sh / 2, sw, sh);
         }
+        ctx.restore();
+        _drawTransformUI(ctx, fs);
+        return;
     }
 
     // --- Draw marching ants for selection ---
@@ -500,7 +636,10 @@ export function liftSelection(cut = true) {
         w: w0,
         h: h0,
         offsetX: 0,
-        offsetY: 0
+        offsetY: 0,
+        scaleX: 1,
+        scaleY: 1,
+        rotation: 0
     };
 
     // Erase source pixels if cutting
@@ -545,7 +684,7 @@ export function dragFloating(dx, dy) {
 }
 
 /**
- * 浮島をアクティブレイヤーに確定コミット
+ * 浮島をアクティブレイヤーに確定コミット（変形あり）
  */
 export function commitFloating() {
     if (!state.floatingSelection) return;
@@ -556,37 +695,58 @@ export function commitFloating() {
     const { ctx } = layer;
     const fs  = state.floatingSelection;
     const dpr = CANVAS_DPR;
-
     const source = fs.canvas || fs.imageData;
-    const destX = fs.srcX + fs.offsetX;
-    const destY = fs.srcY + fs.offsetY;
+    const cx = fs.srcX + fs.offsetX + fs.w / 2;
+    const cy = fs.srcY + fs.offsetY + fs.h / 2;
+    const rotation = fs.rotation || 0;
+    const scaleX   = fs.scaleX   || 1;
+    const scaleY   = fs.scaleY   || 1;
 
     ctx.save();
-    ctx.imageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = true;
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+    ctx.scale(scaleX, scaleY);
     if (source instanceof ImageData) {
         const tmp = document.createElement('canvas');
-        tmp.width = source.width;
+        tmp.width  = source.width;
         tmp.height = source.height;
         tmp.getContext('2d').putImageData(source, 0, 0);
-        ctx.drawImage(tmp, destX, destY, tmp.width / dpr, tmp.height / dpr);
+        ctx.drawImage(tmp, -fs.w / 2, -fs.h / 2, fs.w, fs.h);
     } else {
-        ctx.drawImage(source, destX, destY, source.width / dpr, source.height / dpr);
+        ctx.drawImage(source, -fs.w / 2, -fs.h / 2, fs.w, fs.h);
     }
     ctx.restore();
 
     markLayerDirty(layer.id);
     state.floatingSelection = null;
 
-    // 選択マスクを移動先に追従
+    // 選択マスクを更新
     if (state.selectionMask) {
-        if (state.selectionMask.type === 'rect') {
-            state.selectionMask.rect.x += fs.offsetX;
-            state.selectionMask.rect.y += fs.offsetY;
-        } else if (state.selectionMask.type === 'lasso' && state.selectionMask.points) {
-            state.selectionMask.points = state.selectionMask.points.map(p => ({
-                x: p.x + fs.offsetX,
-                y: p.y + fs.offsetY
-            }));
+        const transformed = rotation !== 0 || scaleX !== 1 || scaleY !== 1;
+        if (transformed) {
+            // 変形あり: 変換後の AABB に置き換え
+            const hw = fs.w * Math.abs(scaleX) / 2;
+            const hh = fs.h * Math.abs(scaleY) / 2;
+            const ac = Math.abs(Math.cos(rotation));
+            const as = Math.abs(Math.sin(rotation));
+            const aabbHW = hw * ac + hh * as;
+            const aabbHH = hw * as + hh * ac;
+            state.selectionMask = {
+                type: 'rect',
+                rect: { x: cx - aabbHW, y: cy - aabbHH, w: aabbHW * 2, h: aabbHH * 2 }
+            };
+        } else {
+            // 移動のみ: マスクを追従
+            if (state.selectionMask.type === 'rect') {
+                state.selectionMask.rect.x += fs.offsetX;
+                state.selectionMask.rect.y += fs.offsetY;
+            } else if (state.selectionMask.type === 'lasso' && state.selectionMask.points) {
+                state.selectionMask.points = state.selectionMask.points.map(p => ({
+                    x: p.x + fs.offsetX,
+                    y: p.y + fs.offsetY
+                }));
+            }
         }
     }
 
@@ -601,20 +761,19 @@ export function copySelection() {
     if (!state.selectionMask) return;
 
     if (state.floatingSelection) {
-        // Floating selection means pixels are currently in the float buffer
-        // Clone it so the clipboard owns a clean copy
-        const src = state.floatingSelection.imageData;
-        const cloned = new ImageData(
-            new Uint8ClampedArray(src.data),
-            src.width,
-            src.height
-        );
+        const fs = state.floatingSelection;
+        const src = fs.canvas || fs.imageData;
         const dpr = CANVAS_DPR;
-        state._selectionClipboard = {
-            imageData: cloned,
-            w: src.width / dpr,
-            h: src.height / dpr
-        };
+        if (src instanceof HTMLCanvasElement) {
+            const clone = document.createElement('canvas');
+            clone.width  = src.width;
+            clone.height = src.height;
+            clone.getContext('2d').drawImage(src, 0, 0);
+            state._selectionClipboard = { canvas: clone, w: fs.w, h: fs.h };
+        } else if (src instanceof ImageData) {
+            const cloned = new ImageData(new Uint8ClampedArray(src.data), src.width, src.height);
+            state._selectionClipboard = { imageData: cloned, w: src.width / dpr, h: src.height / dpr };
+        }
         return;
     }
 
@@ -706,13 +865,16 @@ export function pasteFromClipboard() {
 
     state.floatingSelection = {
         canvas: persistentCanvas,
-        imageData: cb.imageData, // Compatibility for old clipboard data if any
+        imageData: cb.imageData,
         srcX: pasteX,
         srcY: pasteY,
         w: cb.w,
         h: cb.h,
         offsetX: 0,
-        offsetY: 0
+        offsetY: 0,
+        scaleX: 1,
+        scaleY: 1,
+        rotation: 0
     };
 
     _startMarch();
