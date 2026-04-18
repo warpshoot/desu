@@ -13,7 +13,8 @@ import {
     saveState,
     commitRedoClear,
     restoreLayer,
-    syncLayerFingerprint
+    syncLayerFingerprint,
+    markLayerDirty
 } from '../history.js';
 import { applyTransform, zoomAtPoint } from '../canvas.js';
 import {
@@ -508,21 +509,26 @@ async function handlePointerUp(e) {
             clearStraightLineGuide();
         } else if (state.isShapeDragging) {
             state.isShapeDragging = false;
-            strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
-            
+
             const canvasPoint = getCanvasPoint(e.clientX, e.clientY);
             const isShiftActive = state.isShiftPressed || (state._modShiftState && state._modShiftState !== 'idle');
             const slot = state.activeShape;
             const ctx = getActiveLayerCtx();
-            
+
             if (ctx) {
                 await saveState();
                 const clipped = pushSelectionClip(ctx);
                 drawShape(ctx, slot.subTool, state.shapeStartX, state.shapeStartY, canvasPoint.x, canvasPoint.y, slot, isShiftActive);
                 if (clipped) popSelectionClip(ctx);
+                markLayerDirty(getActiveLayer().id);
                 updateLayerThumbnail(getActiveLayer());
                 await saveState({ keepRedo: true });
             }
+            // ペンツールと同様に RAF で遅延クリア:
+            // layer canvas の GPU 反映前に strokeCanvas を消すと形状が一瞬消えて見える
+            requestAnimationFrame(() => {
+                strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
+            });
         }
         state.drawingPointerId = null;
     }
