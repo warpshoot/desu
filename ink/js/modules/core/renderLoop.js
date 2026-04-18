@@ -152,25 +152,7 @@ export function flushDrawPoints() {
         }
     }
 
-    // Prediction ghost on lassoCanvas (strokePoints untouched)
-    if (preds.length > 0 && !state.activeBrush?.stabilizerEnabled) {
-        const isPenMode = (state.mode === 'pen' && state.subTool !== 'stipple') ||
-                          (state.mode === 'eraser' && state.subTool === 'pen');
-        if (isPenMode && lassoCtx && lassoCanvas) {
-            const lastPt = getLastStrokePoint();
-            if (lastPt) {
-                lassoCanvas.style.display = 'block';
-                lassoCtx.save();
-                lassoCtx.globalAlpha = 0.4;
-                let predBase = lastPt;
-                for (const pt of preds) {
-                    drawPenLine(pt.x, pt.y, pt.pressure, { previewCtx: lassoCtx, forcedLastPoint: predBase });
-                    predBase = pt;
-                }
-                lassoCtx.restore();
-            }
-        }
-    }
+    // (Prediction ghost rendering removed to prevent jitter)
 }
 
 export function cancelAndFlushDrawPoints() {
