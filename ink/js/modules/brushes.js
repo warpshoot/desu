@@ -12,7 +12,7 @@ const INK_COLOR = '#000000';
 // ブラシキャッシュ（binary用 & smooth用）— LRU的に上限管理
 const brushCache = new Map();
 const radialCache = new Map();
-const BRUSH_CACHE_MAX = 50;
+const BRUSH_CACHE_MAX = 150;
 
 // =============================================
 // デフォルトブラシ定義

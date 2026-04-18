@@ -351,7 +351,10 @@ export function startPenDrawing(x, y, pressure = 0.5) {
     smoothedPoints = [{ x, y, pressure: smoothedP }];
     lastDrawnIndex = 0;
 
-    // Dirty rect 初期化
+    // 前ストロークの dirty bounds を保存してから初期化
+    const prevDirtyMinX = _dirtyMinX, prevDirtyMinY = _dirtyMinY;
+    const prevDirtyMaxX = _dirtyMaxX, prevDirtyMaxY = _dirtyMaxY;
+    const prevDirtyMargin = _dirtyMargin;
     const brush = _getDrawBrush();
     _dirtyMargin = Math.ceil(brush.size * 0.75) + 2; // max radius + 余白
     _dirtyMinX = x; _dirtyMinY = y; _dirtyMaxX = x; _dirtyMaxY = y;
@@ -380,7 +383,17 @@ export function startPenDrawing(x, y, pressure = 0.5) {
         }
         strokeCtx.save();
         _strokeCtxSaved = true;
-        strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
+        // 前ストロークの dirty rect のみクリア (全消しを避けGPU負荷を低減)
+        if (prevDirtyMinX <= prevDirtyMaxX) {
+            const m = prevDirtyMargin;
+            const cx = Math.max(0, prevDirtyMinX - m);
+            const cy = Math.max(0, prevDirtyMinY - m);
+            const cw = Math.min(strokeCanvas.width / CANVAS_DPR - cx, (prevDirtyMaxX - prevDirtyMinX) + m * 2);
+            const ch = Math.min(strokeCanvas.height / CANVAS_DPR - cy, (prevDirtyMaxY - prevDirtyMinY) + m * 2);
+            if (cw > 0 && ch > 0) strokeCtx.clearRect(cx, cy, cw, ch);
+        } else {
+            strokeCtx.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
+        }
         strokeCanvas.style.opacity = _strokeOpacity;
         
         _strokeClipped = pushSelectionClip(strokeCtx);
