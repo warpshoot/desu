@@ -87,36 +87,36 @@ function exitSaveMode() {
 export { exitSaveMode };
 
 /**
- * Merge all visible layers into a single canvas
+ * Merge all visible layers into a single canvas.
+ * outputScale is applied to logical (x,y,w,h) coordinates.
+ * Goes directly from physical layer canvas to output size in one pass,
+ * avoiding double-resampling that distorts tone patterns.
  */
-function mergeLayersToCanvas(x, y, w, h, transparent) {
+function mergeLayersToCanvas(x, y, w, h, transparent, outputScale = 1) {
+    const dpr = CANVAS_DPR;
+    const outW = Math.round(w * outputScale);
+    const outH = Math.round(h * outputScale);
+
     const mergedCanvas = document.createElement('canvas');
-    mergedCanvas.width = w;
-    mergedCanvas.height = h;
+    mergedCanvas.width = outW;
+    mergedCanvas.height = outH;
     const mergedCtx = mergedCanvas.getContext('2d');
     mergedCtx.imageSmoothingEnabled = false;
 
-    // Background color (if not transparent)
     if (!transparent) {
         mergedCtx.fillStyle = state.canvasColor;
-        mergedCtx.fillRect(0, 0, w, h);
+        mergedCtx.fillRect(0, 0, outW, outH);
     }
 
-    // Draw all visible layers in order (layer 1 at bottom, higher layers on top)
     for (const layer of layers) {
         if (layer.visible) {
             mergedCtx.save();
             mergedCtx.globalAlpha = layer.opacity;
-            // Draw image from original layer.canvas using canvas-space coordinates (x, y, w, h)
-            // Note: layer.canvas is already CANVAS_DPR sized, so we need to account for that.
-            const dpr = CANVAS_DPR;
-            // Actually, mergeLayersToCanvas usually receives canvas-space coords.
-            // layer.canvas is dpr-scaled.
-            const sX = x * dpr;
-            const sY = y * dpr;
-            const sW = w * dpr;
-            const sH = h * dpr;
-            mergedCtx.drawImage(layer.canvas, sX, sY, sW, sH, 0, 0, w, h);
+            const sX = Math.round(x * dpr);
+            const sY = Math.round(y * dpr);
+            const sW = Math.round(w * dpr);
+            const sH = Math.round(h * dpr);
+            mergedCtx.drawImage(layer.canvas, sX, sY, sW, sH, 0, 0, outW, outH);
             mergedCtx.restore();
         }
     }
@@ -134,39 +134,24 @@ export async function saveRegion(x, y, w, h, transparent) {
     }
 
     try {
-        const outputW = w * outputScale;
-        const outputH = h * outputScale;
+        const outW = Math.round(w * outputScale);
+        const outH = Math.round(h * outputScale);
 
-        const mergedCanvas = mergeLayersToCanvas(x, y, w, h, transparent);
-
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = outputW;
-        tempCanvas.height = outputH;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.imageSmoothingEnabled = false;
+        const mergedCanvas = mergeLayersToCanvas(x, y, w, h, transparent, outputScale);
 
         if (transparent) {
             const mergedCtx = mergedCanvas.getContext('2d');
-            const imgData = mergedCtx.getImageData(0, 0, w, h);
+            const imgData = mergedCtx.getImageData(0, 0, outW, outH);
             const data = imgData.data;
-
-            // Make white pixels transparent
             for (let i = 0; i < data.length; i += 4) {
                 if (data[i] === 255 && data[i + 1] === 255 && data[i + 2] === 255) {
                     data[i + 3] = 0;
                 }
             }
-
-            const sourceCanvas = document.createElement('canvas');
-            sourceCanvas.width = w;
-            sourceCanvas.height = h;
-            sourceCanvas.getContext('2d').putImageData(imgData, 0, 0);
-            tempCtx.drawImage(sourceCanvas, 0, 0, outputW, outputH);
-        } else {
-            tempCtx.drawImage(mergedCanvas, 0, 0, outputW, outputH);
+            mergedCtx.putImageData(imgData, 0, 0);
         }
 
-        const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+        const blob = await new Promise(resolve => mergedCanvas.toBlob(resolve, 'image/png'));
         const fileName = 'desu_draw_' + Date.now() + '.png';
         await shareOrDownload(blob, fileName);
         exitSaveMode();
@@ -186,44 +171,30 @@ export async function copyToClipboard(x, y, w, h, transparent) {
         setTimeout(() => { flash.style.opacity = '0'; }, 100);
     }
 
-    let tempCanvas = null;
+    let mergedCanvas = null;
 
     try {
-        const outputW = w * outputScale;
-        const outputH = h * outputScale;
+        const outW = Math.round(w * outputScale);
+        const outH = Math.round(h * outputScale);
 
-        const mergedCanvas = mergeLayersToCanvas(x, y, w, h, transparent);
-
-        tempCanvas = document.createElement('canvas');
-        tempCanvas.width = outputW;
-        tempCanvas.height = outputH;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.imageSmoothingEnabled = false;
+        mergedCanvas = mergeLayersToCanvas(x, y, w, h, transparent, outputScale);
 
         if (transparent) {
             const mergedCtx = mergedCanvas.getContext('2d');
-            const imgData = mergedCtx.getImageData(0, 0, w, h);
+            const imgData = mergedCtx.getImageData(0, 0, outW, outH);
             const data = imgData.data;
-
             for (let i = 0; i < data.length; i += 4) {
                 if (data[i] === 255 && data[i + 1] === 255 && data[i + 2] === 255) {
                     data[i + 3] = 0;
                 }
             }
-
-            const sourceCanvas = document.createElement('canvas');
-            sourceCanvas.width = w;
-            sourceCanvas.height = h;
-            sourceCanvas.getContext('2d').putImageData(imgData, 0, 0);
-            tempCtx.drawImage(sourceCanvas, 0, 0, outputW, outputH);
-        } else {
-            tempCtx.drawImage(mergedCanvas, 0, 0, outputW, outputH);
+            mergedCtx.putImageData(imgData, 0, 0);
         }
 
         await navigator.clipboard.write([
             new ClipboardItem({
                 'image/png': new Promise((resolve, reject) => {
-                    tempCanvas.toBlob((blob) => {
+                    mergedCanvas.toBlob((blob) => {
                         if (blob) resolve(blob);
                         else reject(new Error('Blob generation failed'));
                     }, 'image/png');
@@ -242,9 +213,9 @@ export async function copyToClipboard(x, y, w, h, transparent) {
         console.error('クリップボードコピーエラー:', err);
         alert(t('alert.clipFail'));
 
-        if (tempCanvas) {
+        if (mergedCanvas) {
             try {
-                const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+                const blob = await new Promise(resolve => mergedCanvas.toBlob(resolve, 'image/png'));
                 const fileName = 'desu_draw_' + Date.now() + '.png';
                 await shareOrDownload(blob, fileName);
             } catch (downloadErr) {
@@ -341,6 +312,8 @@ export async function exportPSD() {
     try {
         const w = layers[0].canvas.width;
         const h = layers[0].canvas.height;
+        const logW = Math.round(w / CANVAS_DPR);
+        const logH = Math.round(h / CANVAS_DPR);
 
         // PSD オブジェクト作成
         // 1. 各レイヤーを ag-psd 形式に変換
@@ -375,7 +348,8 @@ export async function exportPSD() {
         }
 
         // 2. コンポジット（統合画像）の作成 (これがないとサムネイルやプレビューが出ない)
-        const compositeCanvas = mergeLayersToCanvas(0, 0, w, h, transparent);
+        // Use logical dimensions with CANVAS_DPR as scale to get a 1:1 copy of layer canvases
+        const compositeCanvas = mergeLayersToCanvas(0, 0, logW, logH, transparent, CANVAS_DPR);
 
         const psd = {
             width: w,
