@@ -1,6 +1,6 @@
-# DESU™ beat AI Composition Manual
+# beat AI Composition Manual
 
-このドキュメントは、AIアシスタントが **DESU™ beat** 用の楽曲データ（JSON）を生成するための仕様書です。
+このドキュメントは、AIアシスタントが **beat** 用の楽曲データ（JSON）を生成するための仕様書です。
 ユーザーから楽曲作成の依頼があった場合、この仕様に従ってJSONデータを生成し、提供してください。
 
 [人間向けマニュアル (For Humans)](./MANUAL.md)

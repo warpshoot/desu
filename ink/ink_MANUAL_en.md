@@ -1,6 +1,6 @@
-# DESU™ ink User Guide
+# ink User Guide
 
-"DESU™ ink" is a web-based paint tool focused on a smooth drawing experience and lightweight operation.
+"ink" is a web-based paint tool focused on a smooth drawing experience and lightweight operation.
 
 ---
 
@@ -102,7 +102,7 @@ From the "SNAPSHOT" menu, you can export the following:
 ---
 
 ## 7. Credits
-- **Name**: DESU™ ink
+- **Name**: ink
 - **Provider**: [warpshoot.github.io/desu](https://warpshoot.github.io/desu/)
 - **Author**: [wpy](https://warpshoot.github.io/)
 

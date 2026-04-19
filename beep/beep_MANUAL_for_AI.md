@@ -1,6 +1,6 @@
-# DESU™ beep AI Composition Manual
+# beep AI Composition Manual
 
-このドキュメントは、AIアシスタントが **DESU™ beep** 用の楽曲データ（JSON）を生成するための仕様書です。
+このドキュメントは、AIアシスタントが **beep** 用の楽曲データ（JSON）を生成するための仕様書です。
 ユーザーから楽曲作成の依頼があった場合、この仕様に従ってJSONデータを生成し、提供してください。
 
 [人間向けマニュアル (For Humans)](./beep_MANUAL.md)
