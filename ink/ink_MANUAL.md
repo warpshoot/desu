@@ -1,6 +1,6 @@
-# DESU™ ink ユーザーガイド (User Manual)
+# ink ユーザーガイド (User Manual)
 
-「DESU™ ink」は、描き心地の良さと動作の軽さを追求した、Webブラウザで動くペイントツールです。
+「ink」は、描き心地の良さと動作の軽さを追求した、Webブラウザで動くペイントツールです。
 
 ---
 
@@ -102,7 +102,7 @@
 ---
 
 ## 7. クレジット
-- **名称**: DESU™ ink
+- **名称**: ink
 - **支給元**: [warpshoot.github.io/desu](https://warpshoot.github.io/desu/)
 - **製造**: [wpy](https://warpshoot.github.io/)
 
