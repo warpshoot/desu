@@ -1,4 +1,4 @@
-# DESU™ beep ユーザーガイド (User Manual)
+# beep ユーザーガイド (User Manual)
 
 8bit / Chiptune スタイルのレトロでポップなビートメイクツール。
 

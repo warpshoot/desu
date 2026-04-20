@@ -384,7 +384,7 @@ export function renderBrushPalette() {
             dot.style.height = `${displaySize}px`;
             dot.style.backgroundColor = '#000';
             dot.style.borderRadius = '50%';
-            dot.style.opacity = slot.isFill ? (slot.opacity ?? 1) : (slot.opacity ?? 1) * 0.5; // Faint dot if stroke only
+            dot.style.opacity = slot.isStroke ? (slot.opacity ?? 1) : (slot.opacity ?? 1) * 0.5; // Faint dot if no stroke
             swatch.appendChild(dot);
 
             // Shape type badge
@@ -1072,15 +1072,11 @@ function _renderShapePreview(slot) {
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    // 白背景
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, w, h);
-
     const strokeHalf = Math.ceil(slot.size / 2);
     const margin = 8;
     // star/poly は hypot(dx,dy)/2 で外接円半径を計算するため √2 倍に膨らむ
-    // その分だけバウンディングボックスを縮小してはみ出しを防ぐ
-    const needsDiagScale = (slot.subTool === 'star' || slot.subTool === 'poly');
+    // rect は回転時に角が √2 倍の距離まで張り出すため同様に縮小する
+    const needsDiagScale = (slot.subTool === 'star' || slot.subTool === 'poly' || slot.subTool === 'rect');
     const halfSize = Math.max(0, needsDiagScale
         ? Math.floor((w / 2 - margin - strokeHalf) / Math.SQRT2)
         : (w / 2 - margin - strokeHalf));

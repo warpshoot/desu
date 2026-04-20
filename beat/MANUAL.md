@@ -1,4 +1,4 @@
-# DESU™ beat ユーザーガイド (User Manual)
+# beat ユーザーガイド (User Manual)
 
 シンプルかつ強力なWebベースのビートメイク・パフォーマンスツール。
 

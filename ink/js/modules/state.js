@@ -413,11 +413,17 @@ export const state = {
 
     // Selection Tool
     selectionMask: null,          // { type:'rect'|'lasso', rect?:{x,y,w,h}, points?:[...] }
-    floatingSelection: null,      // { imageData, srcX, srcY, w, h, offsetX, offsetY }
-    _selectionClipboard: null,    // { imageData, w, h }
+    floatingSelection: null,      // { canvas, srcX, srcY, w, h, offsetX, offsetY, scaleX, scaleY, rotation }
+    _selectionClipboard: null,    // { canvas, w, h }
     isMovingSelection: false,
     _selMoveStartX: 0,
     _selMoveStartY: 0,
+    isTransformingSelection: false,
+    _transformHandle: null,
+    _transformStartState: null,
+    _transformStartPointer: null,
+    _floatHistory: [],       // stack of float transform snapshots for soft-undo
+    _floatRedoHistory: [],   // redo stack for float transforms
 
     // Brush Sizes
     penSize: 2,
