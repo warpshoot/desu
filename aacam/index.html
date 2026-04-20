@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>aacam</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --accent: #7fff6a;
+      --text: #ccc;
+      --text-dim: #666;
+      --bg: #0a0a0a;
+      --border: rgba(255,255,255,0.13);
+    }
+
+    body {
+      background: #000;
+      font-family: 'DM Mono', monospace;
+      overflow: hidden;
+      height: 100dvh;
+      width: 100vw;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    /* ── VIEWFINDER ── */
+    #viewfinder {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #aaCanvas {
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      touch-action: none;
+    }
+
+    .start-screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: rgba(0,0,0,0.7);
+      z-index: 10;
+    }
+
+    .start-buttons { display: flex; gap: 10px; }
+
+    .start-btn {
+      padding: 10px 24px;
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .start-btn:hover { background: var(--accent); color: #000; }
+
+    .start-btn.secondary {
+      border-color: var(--text-dim);
+      color: var(--text-dim);
+    }
+
+    .start-btn.secondary:hover { border-color: var(--text); background: var(--text); color: #000; }
+
+    /* ── TOP BAR ── */
+    #topBar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: max(env(safe-area-inset-top), 14px) 16px 14px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 100%);
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+
+    #topBar > * { pointer-events: auto; }
+
+    #credit-btn {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.3);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s;
+    }
+
+    #credit-btn:hover { border-color: var(--accent); }
+
+    #status {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: rgba(255,255,255,0.7);
+      text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+      transition: color 0.2s;
+    }
+
+    #status.live   { color: var(--accent); }
+    #status.frozen { color: #ffb300; }
+    #status.image  { color: #6699ff; }
+
+    #settingsBtn {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.3);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      color: var(--text);
+      font-size: 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    #settingsBtn.active { border-color: var(--accent); color: var(--accent); }
+
+    /* ── SETTINGS PANEL ── */
+    #settingsPanel {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 15;
+      background: rgba(10,10,10,0.3);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      border-bottom: 1px solid var(--border);
+      padding: calc(max(env(safe-area-inset-top), 14px) + 54px) 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transform: translateY(-110%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+    }
+
+    #settingsPanel.open { transform: translateY(0); }
+
+    .p-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .p-label {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      min-width: 52px;
+    }
+
+    .p-slider-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .p-slider-wrap input[type=range] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 3px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+      padding: 11px 0;
+      background-clip: content-box;
+    }
+
+    .p-slider-wrap input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--text);
+      cursor: pointer;
+    }
+
+    .p-slider-wrap input[type=range]::-moz-range-thumb {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--text);
+      cursor: pointer;
+      border: none;
+    }
+
+    .p-val {
+      font-size: 11px;
+      color: var(--text);
+      min-width: 28px;
+      text-align: right;
+    }
+
+    .p-row-col { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .p-row-col .fx-pills { flex: unset; width: 100%; }
+
+    /* Color swatches in panel */
+    .color-swatches {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+
+    .swatch-label {
+      cursor: pointer;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .swatch-input {
+      position: absolute;
+      opacity: 0; width: 0; height: 0;
+    }
+
+    .swatch-display {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.2);
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-clip: padding-box;
+    }
+
+    .swatch-input:checked + .swatch-display {
+      border-color: #fff;
+      transform: scale(1.15);
+    }
+
+    .swatch-display::after {
+      content: '';
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #000;
+      opacity: 0;
+      transition: opacity 0.1s;
+    }
+
+    .swatch-input:checked + .swatch-display::after { opacity: 0.7; }
+
+    .fx-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .fx-pill {
+      padding: 5px 11px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.13);
+      background: rgba(255,255,255,0.04);
+      color: var(--text-dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .fx-pill.on {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(127,255,106,0.1);
+    }
+
+    /* ── BOTTOM BAR ── */
+    #bottomBar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 28px calc(max(env(safe-area-inset-bottom), 18px) + 6px);
+      background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%);
+      transition: opacity 0.35s ease;
+    }
+
+    .bb-side {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 88px;
+    }
+
+    .bb-side.right { justify-content: flex-end; }
+
+    .bb-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: transparent;
+      border: none;
+      color: rgba(255,255,255,0.85);
+      cursor: pointer;
+      padding: 4px 5px;
+      border-radius: 6px;
+      transition: opacity 0.15s;
+    }
+
+    .bb-btn:disabled { opacity: 0.28; pointer-events: none; }
+    .bb-btn svg { width: 22px; height: 22px; }
+
+    .bb-lbl {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.55);
+    }
+
+    #shutterBtn {
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.45);
+      background: rgba(10,10,10,0.3);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.08s, background 0.2s, border-color 0.2s;
+      flex-shrink: 0;
+    }
+
+    #shutterBtn:active { transform: scale(0.91); }
+
+    #shutterBtn::after {
+      content: '';
+      position: absolute;
+      inset: 18px;
+      border-radius: 4px;
+      background: transparent;
+      transition: all 0.2s;
+    }
+
+    #shutterBtn.frozen { border-color: rgba(255,255,255,0.85); }
+    #shutterBtn.frozen::after { background: var(--accent); }
+
+    /* ── CREDIT MODAL ── */
+    #credit-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.82);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #credit-modal.visible { display: flex; }
+
+    #credit-content {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 20px 24px;
+      font-family: 'DM Mono', monospace;
+      width: 300px;
+      max-width: calc(100vw - 40px);
+      border-radius: 8px;
+    }
+
+    .credit-row { display: flex; gap: 12px; line-height: 1.9; }
+    .credit-key { color: var(--text-dim); font-size: 11px; min-width: 4em; flex-shrink: 0; }
+    .credit-val { font-size: 11px; color: var(--text); text-decoration: none; }
+    a.credit-val { text-decoration: underline; }
+    a.credit-val:hover { color: var(--accent); }
+    .credit-divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+    .credit-manual-link { font-size: 11px; color: var(--text); text-decoration: underline; margin-right: 16px; }
+    .credit-manual-link:hover { color: var(--accent); }
+
+    /* ── SAVE MODAL ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.82);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      z-index: 300;
+      padding: 16px 16px 0;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 420px;
+      background: rgba(14,14,14,0.97);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-header { display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-size: 13px; font-weight: 500; letter-spacing: 0.15em; color: var(--accent); }
+    .modal-close { background: transparent; border: none; color: var(--text-dim); font-family: 'DM Mono', monospace; font-size: 16px; cursor: pointer; padding: 2px 6px; line-height: 1; }
+    .modal-close:hover { color: var(--text); }
+
+    .modal-preview-wrap {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #modalPreview {
+      max-width: 100%; max-height: 100%;
+      object-fit: contain;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .modal-row { display: flex; align-items: center; gap: 8px; }
+    .modal-label { font-size: 10px; letter-spacing: 0.12em; color: var(--text-dim); min-width: 52px; }
+
+    .seg-group { display: flex; gap: 4px; }
+
+    .seg-btn {
+      padding: 5px 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: all 0.12s;
+    }
+
+    .seg-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(127,255,106,0.08); }
+
+    .modal-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .modal-actions .btn { flex: 1; min-width: 70px; }
+
+    .btn {
+      flex: 1;
+      padding: 8px 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: all 0.15s;
+    }
+
+    .btn:hover:not(:disabled) { border-color: var(--text); color: var(--text); }
+    .btn.primary { border-color: var(--accent); color: var(--accent); }
+    .btn.primary:hover:not(:disabled) { background: rgba(127,255,106,0.08); }
+    .btn:disabled { opacity: 0.3; cursor: default; }
+
+    /* ── UI HIDE ── */
+    body.ui-hidden #topBar,
+    body.ui-hidden #bottomBar,
+    body.ui-hidden #settingsPanel {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    #lp-indicator {
+      position: fixed;
+      pointer-events: none;
+      z-index: 500;
+      display: none;
+      transform: translate(-50%, -50%);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Long press indicator -->
+  <div id="lp-indicator">
+    <svg width="48" height="48" viewBox="0 0 48 48">
+      <circle cx="24" cy="24" r="19" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2.5"/>
+      <circle id="lp-arc" cx="24" cy="24" r="19" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5"
+        stroke-dasharray="119.38" stroke-dashoffset="119.38"
+        stroke-linecap="round" transform="rotate(-90 24 24)"/>
+    </svg>
+  </div>
+
+  <!-- Viewfinder -->
+  <div id="viewfinder">
+    <canvas id="aaCanvas" width="320" height="320" style="touch-action:none;"></canvas>
+    <div class="start-screen" id="startScreen">
+      <div class="start-buttons">
+        <button class="start-btn" id="startCamBtn">CAM</button>
+        <button class="start-btn secondary" id="startImgBtn">IMG</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden -->
+  <video id="videoFeed" playsinline autoplay muted style="display:none;"></video>
+  <canvas id="sampleCanvas" style="display:none;"></canvas>
+  <input type="file" id="fileInput" accept="image/*" style="display:none;">
+
+  <!-- Top bar -->
+  <div id="topBar">
+    <button id="credit-btn">?</button>
+    <div id="status">STANDBY</div>
+    <button id="settingsBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Settings panel -->
+  <div id="settingsPanel">
+    <div class="p-row p-row-col">
+      <div class="p-label">CHARS</div>
+      <div class="fx-pills" id="charSetPills"></div>
+    </div>
+    <div class="p-row">
+      <div class="p-label">COLS</div>
+      <div class="p-slider-wrap">
+        <input type="range" id="cols" min="20" max="120" value="60" step="10">
+        <div class="p-val" id="colsVal">60</div>
+      </div>
+    </div>
+    <div class="p-row">
+      <div class="p-label">BRIGHT</div>
+      <div class="p-slider-wrap">
+        <input type="range" id="brightness" min="-100" max="100" value="0">
+        <div class="p-val" id="brightVal">0</div>
+      </div>
+    </div>
+    <div class="p-row">
+      <div class="p-label">CONTST</div>
+      <div class="p-slider-wrap">
+        <input type="range" id="contrast" min="0.5" max="3" value="1" step="0.1">
+        <div class="p-val" id="contVal">1.0</div>
+      </div>
+    </div>
+    <div class="p-row">
+      <div class="p-label">SCHEME</div>
+      <div class="color-swatches" id="schemeSwatches"></div>
+    </div>
+    <div class="p-row">
+      <div class="p-label">FX</div>
+      <div class="fx-pills">
+        <button class="fx-pill" id="colorToggle">COLOR</button>
+        <button class="fx-pill on" id="invertToggle">INVERT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Credit modal -->
+  <div id="credit-modal">
+    <div id="credit-content">
+      <div class="credit-row">
+        <span class="credit-key">名称</span>
+        <span class="credit-val">DESU&trade; aacam</span>
+      </div>
+      <div class="credit-row">
+        <span class="credit-key">支給元</span>
+        <a href="https://warpshoot.github.io/desu/" target="_blank" class="credit-val">warpshoot.github.io/desu</a>
+      </div>
+      <div class="credit-row">
+        <span class="credit-key">製造</span>
+        <a href="https://warpshoot.github.io/" target="_blank" class="credit-val">wpy</a>
+      </div>
+      <hr class="credit-divider">
+      <div class="credit-row">
+        <span class="credit-key">説明書</span>
+        <a href="MANUAL.md" target="_blank" class="credit-manual-link">人間向け</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom bar -->
+  <div id="bottomBar">
+    <div class="bb-side left">
+      <button class="bb-btn" id="imgBtn">
+        <svg id="imgIconLoad" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21,15 16,10 5,21"/>
+        </svg>
+        <svg id="imgIconCam" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        <span class="bb-lbl" id="imgBtnLbl">IMG</span>
+      </button>
+    </div>
+
+    <button id="shutterBtn"></button>
+
+    <div class="bb-side right">
+      <button class="bb-btn" id="saveBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7,10 12,15 17,10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span class="bb-lbl">SAVE</span>
+      </button>
+      <button class="bb-btn" id="camSwitch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8m0 0V3m0 5h5m-5 4a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16m0 0h-5m5 0v5"/>
+        </svg>
+        <span class="bb-lbl">FLIP</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Save Modal -->
+  <div class="modal-overlay" id="saveModal" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">EXPORT</span>
+        <button class="modal-close" id="modalClose">x</button>
+      </div>
+      <div class="modal-preview-wrap">
+        <canvas id="modalPreview"></canvas>
+      </div>
+      <div class="modal-row">
+        <div class="modal-label">SIZE</div>
+        <div class="seg-group" id="sizeGroup">
+          <button class="seg-btn" data-size="320">320</button>
+          <button class="seg-btn active" data-size="640">640</button>
+          <button class="seg-btn" data-size="1280">1280</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="modalTextBtn">TEXT</button>
+        <button class="btn" id="modalCopyBtn">COPY</button>
+        <button class="btn primary" id="modalSaveBtn">SAVE</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CHAR_SETS = {
+      standard: ' .:-=+*#%@',
+      fine:     ' `.-\':_,^=;><+!rcxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
+      blocks:   ' ░▒▓█',
+      simple:   ' .+#@',
+      braille:  ' ⠁⠃⠇⡇⣇⣧⣷⣿',
+      jp:       ' ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ',
+      math:     ' +-=÷±∑√∞∫',
+      circles:  ' ・◦○◎◉●',
+      matrix:   ' 10ﾘｸｼｽﾄﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓ',
+      glitch:   ' ░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╚╔╩╦╠═╬╧',
+      kanji:    ' 九上代医吶阪励後峨荳偵溘翫薙縺縲繧繝譚',
+    };
+
+    const CHAR_SET_LABELS = {
+      standard: 'STANDARD', fine: 'FINE', blocks: 'BLOCKS', simple: 'SIMPLE',
+      braille: 'BRAILLE', jp: 'KATAKANA', math: 'MATH', circles: 'CIRCLES',
+      matrix: 'MATRIX', glitch: 'GLITCH', kanji: 'MOJIBAKE',
+    };
+
+    const SCHEMES = {
+      dark:  { label: 'DARK',  bg: '#000000', fg: '#cccccc', darkBg: true  },
+      green: { label: 'GREEN', bg: '#000000', fg: '#7fff6a', darkBg: true  },
+      amber: { label: 'AMBER', bg: '#000000', fg: '#ffb300', darkBg: true  },
+      cyan:  { label: 'CYAN',  bg: '#000000', fg: '#00e5ff', darkBg: true  },
+      blue:  { label: 'BLUE',  bg: '#000000', fg: '#6699ff', darkBg: true  },
+      red:   { label: 'RED',   bg: '#000000', fg: '#ff4444', darkBg: true  },
+      paper: { label: 'PAPER', bg: '#f5f0e8', fg: '#2a2a2a', darkBg: false },
+      white: { label: 'WHITE', bg: '#ffffff', fg: '#111111', darkBg: false },
+    };
+
+    // === STATE ===
+    let currentCharSet = 'standard';
+    let currentCols = 60;
+    let currentScheme = 'dark';
+    let brightness = 0, contrast = 1;
+    let colorMode = false, invertMode = true;
+    let mode = null;
+    let frozen = false, frozenFrame = null;
+    let facingMode = 'environment';
+    let stream = null, animFrameId = null;
+    let loadedImage = null;
+    let cropCenterX = 0.5, cropCenterY = 0.5, cropZoom = 1;
+    let CHAR_W = 7;
+    const CHAR_H = 12;
+
+    // === DOM ===
+    const aaCanvas    = document.getElementById('aaCanvas');
+    const ctx         = aaCanvas.getContext('2d');
+    const sampleCanvas = document.getElementById('sampleCanvas');
+    const sampleCtx   = sampleCanvas.getContext('2d');
+    const video       = document.getElementById('videoFeed');
+    const startScreen = document.getElementById('startScreen');
+    const statusEl    = document.getElementById('status');
+
+    // === UI HELPERS ===
+    function setStatus(text) {
+      statusEl.textContent = text;
+      statusEl.className = text === 'LIVE' ? 'live' : text === 'FROZEN' ? 'frozen' : text === 'IMAGE' ? 'image' : '';
+    }
+
+    function updateShutterVisual() {
+      document.getElementById('shutterBtn').classList.toggle('frozen', mode === 'cam' && frozen);
+    }
+
+    function updateActionBtns() {
+      document.getElementById('saveBtn').disabled = mode === null;
+    }
+
+    function updateImgBtn() {
+      const isImg = mode === 'img';
+      document.getElementById('imgIconLoad').style.display = isImg ? 'none' : '';
+      document.getElementById('imgIconCam').style.display  = isImg ? '' : 'none';
+      document.getElementById('imgBtnLbl').textContent = isImg ? 'CAM' : 'IMG';
+    }
+
+    function fitCanvasToViewport() {
+      const cW = aaCanvas.width, cH = aaCanvas.height;
+      if (!cW || !cH) return;
+      const scale = Math.min(window.innerWidth / cW, window.innerHeight / cH);
+      aaCanvas.style.width  = Math.round(cW * scale) + 'px';
+      aaCanvas.style.height = Math.round(cH * scale) + 'px';
+    }
+
+    window.addEventListener('resize', () => { fitCanvasToViewport(); });
+
+    // === MEASURE FONT ===
+    function measureCharWidth() {
+      const tmp = document.createElement('canvas');
+      const tc = tmp.getContext('2d');
+      tc.font = `${CHAR_H}px 'DM Mono', monospace`;
+      CHAR_W = tc.measureText('M').width;
+    }
+
+    document.fonts.ready.then(measureCharWidth);
+
+    // === SETTINGS PANEL ===
+    const settingsPanel = document.getElementById('settingsPanel');
+    const settingsBtn   = document.getElementById('settingsBtn');
+
+    settingsBtn.addEventListener('click', () => {
+      const open = settingsPanel.classList.toggle('open');
+      settingsBtn.classList.toggle('active', open);
+    });
+
+    document.getElementById('viewfinder').addEventListener('pointerdown', () => {
+      if (settingsPanel.classList.contains('open')) {
+        settingsPanel.classList.remove('open');
+        settingsBtn.classList.remove('active');
+      }
+    });
+
+    // === CREDIT MODAL ===
+    document.getElementById('credit-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      document.getElementById('credit-modal').classList.add('visible');
+    });
+    document.getElementById('credit-modal').addEventListener('click', e => {
+      if (e.target.id === 'credit-modal')
+        document.getElementById('credit-modal').classList.remove('visible');
+    });
+
+    // === INIT CONTROLS ===
+    const charSetPills = document.getElementById('charSetPills');
+    Object.entries(CHAR_SET_LABELS).forEach(([key, label]) => {
+      const btn = document.createElement('button');
+      btn.className = 'fx-pill' + (key === currentCharSet ? ' on' : '');
+      btn.textContent = label;
+      btn.addEventListener('click', () => {
+        charSetPills.querySelectorAll('.fx-pill').forEach(b => b.classList.remove('on'));
+        btn.classList.add('on');
+        currentCharSet = key;
+        maybeRender();
+      });
+      charSetPills.appendChild(btn);
+    });
+
+    document.getElementById('cols').addEventListener('input', e => {
+      currentCols = parseInt(e.target.value);
+      document.getElementById('colsVal').textContent = currentCols;
+      maybeRender();
+    });
+
+    document.getElementById('brightness').addEventListener('input', e => {
+      brightness = parseInt(e.target.value);
+      document.getElementById('brightVal').textContent = brightness;
+      maybeRender();
+    });
+
+    document.getElementById('contrast').addEventListener('input', e => {
+      contrast = parseFloat(e.target.value);
+      document.getElementById('contVal').textContent = contrast.toFixed(1);
+      maybeRender();
+    });
+
+    // Scheme swatches
+    const schemeSwatches = document.getElementById('schemeSwatches');
+    Object.entries(SCHEMES).forEach(([key, s]) => {
+      const label = document.createElement('label');
+      label.className = 'swatch-label'; label.title = s.label;
+      const input = document.createElement('input');
+      input.type = 'radio'; input.name = 'scheme'; input.value = key;
+      input.className = 'swatch-input';
+      if (key === currentScheme) input.checked = true;
+      input.addEventListener('change', e => {
+        if (e.target.checked) {
+          currentScheme = e.target.value;
+          invertMode = SCHEMES[currentScheme].darkBg;
+          document.getElementById('invertToggle').classList.toggle('on', invertMode);
+          maybeRender();
+        }
+      });
+      const display = document.createElement('div');
+      display.className = 'swatch-display';
+      display.style.backgroundColor = s.fg;
+      label.appendChild(input); label.appendChild(display);
+      schemeSwatches.appendChild(label);
+    });
+
+    document.getElementById('colorToggle').addEventListener('click', function() {
+      colorMode = !colorMode;
+      this.classList.toggle('on', colorMode);
+      maybeRender();
+    });
+
+    document.getElementById('invertToggle').addEventListener('click', function() {
+      invertMode = !invertMode;
+      this.classList.toggle('on', invertMode);
+      maybeRender();
+    });
+
+    function maybeRender() {
+      if (mode === 'img' || (mode === 'cam' && frozen)) renderSingle();
+    }
+
+    // === RENDERING ===
+    function getSourceDimensions() {
+      if (mode === 'cam') return { w: video.videoWidth || 1, h: video.videoHeight || 1 };
+      if (mode === 'img') return { w: loadedImage.naturalWidth, h: loadedImage.naturalHeight };
+      return { w: 1, h: 1 };
+    }
+
+    function applyBrightnessContrast(r, g, b) {
+      r = (r - 128) * contrast + 128 + brightness;
+      g = (g - 128) * contrast + 128 + brightness;
+      b = (b - 128) * contrast + 128 + brightness;
+      return [Math.max(0, Math.min(255, r)), Math.max(0, Math.min(255, g)), Math.max(0, Math.min(255, b))];
+    }
+
+    function getViewportAspect() { return window.innerWidth / window.innerHeight; }
+
+    function buildAACanvas(charScale) {
+      const cols = currentCols;
+      const { w: srcW, h: srcH } = getSourceDimensions();
+      const cellW = ['kanji', 'circles'].includes(currentCharSet) ? CHAR_H : CHAR_W;
+      const va = getViewportAspect();
+      const rows = Math.max(1, Math.round(cols * cellW / CHAR_H / va));
+
+      if (charScale == null) {
+        charScale = Math.max(1, Math.ceil(Math.min(window.innerWidth / (cols * cellW), window.innerHeight / (rows * CHAR_H))));
+      }
+
+      sampleCanvas.width = cols; sampleCanvas.height = rows;
+      sampleCtx.save();
+      sampleCtx.fillStyle = '#000';
+      sampleCtx.fillRect(0, 0, cols, rows);
+
+      if (mode === 'cam') {
+        const src = (frozen && frozenFrame) ? frozenFrame : video;
+        if (facingMode === 'user') { sampleCtx.translate(cols, 0); sampleCtx.scale(-1, 1); }
+        const srcAspect = srcW / srcH;
+        let drawX, drawY, drawW, drawH;
+        if (srcAspect > va) {
+          drawH = srcH; drawW = srcH * va; drawX = (srcW - drawW) / 2; drawY = 0;
+        } else {
+          drawW = srcW; drawH = srcW / va; drawX = 0; drawY = (srcH - drawH) / 2;
+        }
+        sampleCtx.drawImage(src, drawX, drawY, drawW, drawH, 0, 0, cols, rows);
+      } else {
+        const fitScale = Math.min(cols / srcW, rows / srcH);
+        const viewToSrcW = cols / (cropZoom * fitScale);
+        const viewToSrcH = rows / (cropZoom * fitScale);
+        const srcL = cropCenterX * srcW - viewToSrcW / 2;
+        const srcT = cropCenterY * srcH - viewToSrcH / 2;
+        sampleCtx.drawImage(loadedImage, srcL, srcT, viewToSrcW, viewToSrcH, 0, 0, cols, rows);
+      }
+      sampleCtx.restore();
+
+      const imgData = sampleCtx.getImageData(0, 0, cols, rows).data;
+      const chars = CHAR_SETS[currentCharSet];
+      const cW = Math.round(cellW * charScale), cH2 = Math.round(CHAR_H * charScale);
+      const out = document.createElement('canvas');
+      out.width = cols * cW; out.height = rows * cH2;
+      const oc = out.getContext('2d');
+      oc.fillStyle = SCHEMES[currentScheme].bg;
+      oc.fillRect(0, 0, out.width, out.height);
+      oc.font = `${cH2}px 'DM Mono', monospace`;
+      oc.textBaseline = 'top';
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const i = (row * cols + col) * 4;
+          let [r, g, b] = applyBrightnessContrast(imgData[i], imgData[i+1], imgData[i+2]);
+          const lum = 0.299*r + 0.587*g + 0.114*b;
+          const norm = lum / 255;
+          const ci = invertMode
+            ? Math.floor(norm * (chars.length - 1))
+            : Math.floor((1 - norm) * (chars.length - 1));
+          const ch = chars[Math.max(0, Math.min(chars.length - 1, ci))];
+          if (ch === ' ') continue;
+          oc.fillStyle = colorMode ? `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})` : SCHEMES[currentScheme].fg;
+          oc.fillText(ch, col * cW, row * cH2);
+        }
+      }
+      return out;
+    }
+
+    function renderFrame() {
+      if (!mode || frozen) return;
+      const out = buildAACanvas(null);
+      aaCanvas.width = out.width; aaCanvas.height = out.height;
+      ctx.drawImage(out, 0, 0);
+      fitCanvasToViewport();
+      if (mode === 'cam') animFrameId = requestAnimationFrame(renderFrame);
+    }
+
+    function renderSingle() {
+      const out = buildAACanvas(null);
+      aaCanvas.width = out.width; aaCanvas.height = out.height;
+      ctx.drawImage(out, 0, 0);
+      fitCanvasToViewport();
+    }
+
+    // === CAMERA ===
+    async function startCamera() {
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+      if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+      try {
+        setStatus('CONNECTING...');
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode, width: { ideal: 1280 }, height: { ideal: 1280 } },
+          audio: false,
+        });
+        video.srcObject = stream;
+        await video.play();
+        mode = 'cam'; frozen = false; frozenFrame = null;
+        startScreen.style.display = 'none';
+        setStatus('LIVE');
+        updateShutterVisual(); updateActionBtns(); updateImgBtn();
+        animFrameId = requestAnimationFrame(renderFrame);
+      } catch (e) {
+        setStatus('CAM ERR');
+        console.error(e);
+      }
+    }
+
+    document.getElementById('startCamBtn').onclick = startCamera;
+    document.getElementById('startImgBtn').onclick = () => document.getElementById('fileInput').click();
+
+    // === SHUTTER ===
+    document.getElementById('shutterBtn').addEventListener('click', () => {
+      if (mode === null) { startCamera(); return; }
+
+      if (mode === 'img') {
+        mode = 'cam'; frozen = false;
+        startScreen.style.display = 'none';
+        setStatus(stream ? 'LIVE' : 'CONNECTING...');
+        updateShutterVisual(); updateActionBtns(); updateImgBtn();
+        if (stream) { animFrameId = requestAnimationFrame(renderFrame); }
+        else { startCamera(); }
+        return;
+      }
+
+      frozen = !frozen;
+      if (frozen) {
+        frozenFrame = document.createElement('canvas');
+        frozenFrame.width = video.videoWidth; frozenFrame.height = video.videoHeight;
+        frozenFrame.getContext('2d').drawImage(video, 0, 0);
+        cancelAnimationFrame(animFrameId); animFrameId = null;
+        setStatus('FROZEN');
+        renderSingle();
+      } else {
+        frozenFrame = null;
+        setStatus('LIVE');
+        animFrameId = requestAnimationFrame(renderFrame);
+      }
+      updateShutterVisual(); updateActionBtns();
+    });
+
+    // === IMG BUTTON ===
+    document.getElementById('imgBtn').addEventListener('click', () => {
+      if (mode === 'img') {
+        mode = 'cam'; frozen = false;
+        setStatus(stream ? 'LIVE' : 'CONNECTING...');
+        updateShutterVisual(); updateActionBtns(); updateImgBtn();
+        if (stream) { animFrameId = requestAnimationFrame(renderFrame); }
+        else { startCamera(); }
+      } else {
+        document.getElementById('fileInput').click();
+      }
+    });
+
+    // === CAM SWITCH ===
+    document.getElementById('camSwitch').addEventListener('click', () => {
+      facingMode = facingMode === 'environment' ? 'user' : 'environment';
+      if (mode === 'cam') startCamera();
+    });
+
+    // === IMAGE LOADING ===
+    document.getElementById('fileInput').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        loadedImage = img;
+        cropCenterX = 0.5; cropCenterY = 0.5; cropZoom = 1;
+        mode = 'img'; frozen = false;
+        if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+        startScreen.style.display = 'none';
+        setStatus('IMAGE');
+        updateShutterVisual(); updateActionBtns(); updateImgBtn();
+        renderSingle();
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+      e.target.value = '';
+    });
+
+    // === IMAGE GESTURES ===
+    function panDelta(dxScreen, dyScreen, rect) {
+      const { w: srcW, h: srcH } = getSourceDimensions();
+      const cols = currentCols;
+      const cellW = ['kanji', 'circles'].includes(currentCharSet) ? CHAR_H : CHAR_W;
+      const va = getViewportAspect();
+      const rows = Math.max(1, Math.round(cols * cellW / CHAR_H / va));
+      const fitScale = Math.min(cols / srcW, rows / srcH);
+      return {
+        dx: dxScreen / rect.width  * cols / (cropZoom * fitScale) / srcW,
+        dy: dyScreen / rect.height * rows / (cropZoom * fitScale) / srcH,
+      };
+    }
+
+    function zoomAround(newZoom, nx, ny) {
+      const { w: srcW, h: srcH } = getSourceDimensions();
+      const cols = currentCols;
+      const cellW = ['kanji', 'circles'].includes(currentCharSet) ? CHAR_H : CHAR_W;
+      const va = getViewportAspect();
+      const rows = Math.max(1, Math.round(cols * cellW / CHAR_H / va));
+      const fitScale = Math.min(cols / srcW, rows / srcH);
+      const vswOld = cols / (cropZoom * fitScale);
+      const vshOld = rows / (cropZoom * fitScale);
+      const imgX = cropCenterX * srcW + (nx - 0.5) * vswOld;
+      const imgY = cropCenterY * srcH + (ny - 0.5) * vshOld;
+      cropZoom = Math.max(0.25, Math.min(8, newZoom));
+      const vswNew = cols / (cropZoom * fitScale);
+      const vshNew = rows / (cropZoom * fitScale);
+      cropCenterX = (imgX - (nx - 0.5) * vswNew) / srcW;
+      cropCenterY = (imgY - (ny - 0.5) * vshNew) / srcH;
+    }
+
+    const ptrs = new Map();
+    let pinchStartDist = null, pinchStartZoom = 1;
+    let lastDragX = 0, lastDragY = 0, lastTapTime = 0;
+
+    aaCanvas.addEventListener('pointerdown', e => {
+      if (mode !== 'img') return;
+      e.preventDefault();
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (ptrs.size === 1) {
+        lastDragX = e.clientX; lastDragY = e.clientY;
+        const now = Date.now();
+        if (now - lastTapTime < 300) { cropCenterX = 0.5; cropCenterY = 0.5; cropZoom = 1; renderSingle(); }
+        lastTapTime = now;
+      } else if (ptrs.size === 2) {
+        const [a, b] = [...ptrs.values()];
+        pinchStartDist = Math.hypot(b.x - a.x, b.y - a.y);
+        pinchStartZoom = cropZoom;
+      }
+    }, { passive: false });
+
+    aaCanvas.addEventListener('pointermove', e => {
+      if (mode !== 'img' || !ptrs.has(e.pointerId)) return;
+      e.preventDefault();
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (ptrs.size === 1) {
+        const rect = aaCanvas.getBoundingClientRect();
+        const { dx, dy } = panDelta(e.clientX - lastDragX, e.clientY - lastDragY, rect);
+        cropCenterX -= dx; cropCenterY -= dy;
+        lastDragX = e.clientX; lastDragY = e.clientY;
+        renderSingle();
+      } else if (ptrs.size === 2) {
+        const [a, b] = [...ptrs.values()];
+        const dist = Math.hypot(b.x - a.x, b.y - a.y);
+        const rect = aaCanvas.getBoundingClientRect();
+        const nx = ((a.x + b.x) / 2 - rect.left) / rect.width;
+        const ny = ((a.y + b.y) / 2 - rect.top) / rect.height;
+        zoomAround(pinchStartZoom * dist / pinchStartDist, nx, ny);
+        renderSingle();
+      }
+    }, { passive: false });
+
+    const endPtr = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinchStartDist = null; };
+    aaCanvas.addEventListener('pointerup', endPtr);
+    aaCanvas.addEventListener('pointercancel', endPtr);
+
+    aaCanvas.addEventListener('wheel', e => {
+      if (mode !== 'img') return;
+      e.preventDefault();
+      const rect = aaCanvas.getBoundingClientRect();
+      zoomAround(cropZoom * (e.deltaY > 0 ? 0.9 : 1.1),
+        (e.clientX - rect.left) / rect.width,
+        (e.clientY - rect.top) / rect.height);
+      renderSingle();
+    }, { passive: false });
+
+    // === BUILD TEXT ===
+    function buildAAText() {
+      const cols = currentCols;
+      const { w: srcW, h: srcH } = getSourceDimensions();
+      const cellW = ['kanji', 'circles'].includes(currentCharSet) ? CHAR_H : CHAR_W;
+      const va = getViewportAspect();
+      const rows = Math.max(1, Math.round(cols * cellW / CHAR_H / va));
+      sampleCanvas.width = cols; sampleCanvas.height = rows;
+      sampleCtx.save();
+      sampleCtx.fillStyle = '#000'; sampleCtx.fillRect(0, 0, cols, rows);
+      if (mode === 'cam') {
+        const src = (frozen && frozenFrame) ? frozenFrame : video;
+        if (facingMode === 'user') { sampleCtx.translate(cols, 0); sampleCtx.scale(-1, 1); }
+        const srcAspect = srcW / srcH;
+        let drawX, drawY, drawW, drawH;
+        if (srcAspect > va) {
+          drawH = srcH; drawW = srcH * va; drawX = (srcW - drawW) / 2; drawY = 0;
+        } else {
+          drawW = srcW; drawH = srcW / va; drawX = 0; drawY = (srcH - drawH) / 2;
+        }
+        sampleCtx.drawImage(src, drawX, drawY, drawW, drawH, 0, 0, cols, rows);
+      } else {
+        const fitScale = Math.min(cols / srcW, rows / srcH);
+        const viewToSrcW = cols / (cropZoom * fitScale);
+        const viewToSrcH = rows / (cropZoom * fitScale);
+        const srcL = cropCenterX * srcW - viewToSrcW / 2;
+        const srcT = cropCenterY * srcH - viewToSrcH / 2;
+        const scaleX = cols / viewToSrcW, scaleY = rows / viewToSrcH;
+        const cL = Math.max(0, srcL), cT = Math.max(0, srcT);
+        const cR = Math.min(srcW, srcL + viewToSrcW), cB = Math.min(srcH, srcT + viewToSrcH);
+        if (cR > cL && cB > cT) {
+          sampleCtx.drawImage(loadedImage,
+            cL, cT, cR-cL, cB-cT,
+            (cL-srcL)*scaleX, (cT-srcT)*scaleY,
+            (cR-cL)*scaleX, (cB-cT)*scaleY
+          );
+        }
+      }
+      sampleCtx.restore();
+      const imgData = sampleCtx.getImageData(0, 0, cols, rows).data;
+      const chars = CHAR_SETS[currentCharSet];
+      let text = '';
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const i = (row * cols + col) * 4;
+          let [r, g, b] = applyBrightnessContrast(imgData[i], imgData[i+1], imgData[i+2]);
+          const lum = 0.299*r + 0.587*g + 0.114*b;
+          const norm = lum / 255;
+          const ci = invertMode ? Math.floor(norm * (chars.length-1)) : Math.floor((1-norm) * (chars.length-1));
+          text += chars[Math.max(0, Math.min(chars.length-1, ci))];
+        }
+        text += '\n';
+      }
+      return text;
+    }
+
+    // === SAVE MODAL ===
+    let exportSize = 640;
+
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      exportSize = 640;
+      document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => {
+        b.classList.toggle('active', parseInt(b.dataset.size) === exportSize);
+      });
+      const out = buildAACanvas(1);
+      const preview = document.getElementById('modalPreview');
+      preview.width = out.width; preview.height = out.height;
+      preview.getContext('2d').drawImage(out, 0, 0);
+      document.getElementById('saveModal').style.display = 'flex';
+    });
+
+    document.getElementById('modalClose').onclick = () => { document.getElementById('saveModal').style.display = 'none'; };
+
+    document.getElementById('saveModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('saveModal')) document.getElementById('saveModal').style.display = 'none';
+    });
+
+    document.getElementById('sizeGroup').addEventListener('click', e => {
+      const btn = e.target.closest('.seg-btn'); if (!btn) return;
+      exportSize = parseInt(btn.dataset.size);
+      document.querySelectorAll('#sizeGroup .seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+
+    async function getExportBlob() {
+      return new Promise(resolve => {
+        const cols = currentCols;
+        const cellW = ['kanji', 'circles'].includes(currentCharSet) ? CHAR_H : CHAR_W;
+        const rows = Math.max(1, Math.round(cols * cellW / CHAR_H));
+        const natW = cols * cellW, natH = rows * CHAR_H;
+        const charScale = Math.max(1, Math.ceil(exportSize / Math.max(natW, natH)));
+        const src = buildAACanvas(charScale);
+        const ratio = exportSize / Math.max(src.width, src.height);
+        const ex = document.createElement('canvas');
+        ex.width = Math.round(src.width * ratio); ex.height = Math.round(src.height * ratio);
+        ex.getContext('2d').drawImage(src, 0, 0, ex.width, ex.height);
+        ex.toBlob(resolve, 'image/png');
+      });
+    }
+
+    document.getElementById('modalTextBtn').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(buildAAText());
+        const btn = document.getElementById('modalTextBtn');
+        const orig = btn.textContent;
+        btn.textContent = 'COPIED!'; setTimeout(() => btn.textContent = orig, 1500);
+      } catch (e) { console.error(e); }
+    };
+
+    document.getElementById('modalCopyBtn').onclick = async () => {
+      try {
+        const blob = await getExportBlob();
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        const btn = document.getElementById('modalCopyBtn');
+        const orig = btn.textContent;
+        btn.textContent = 'COPIED!'; setTimeout(() => btn.textContent = orig, 1500);
+      } catch (e) { console.error(e); }
+    };
+
+    document.getElementById('modalSaveBtn').onclick = async () => {
+      const blob = await getExportBlob();
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const name = `aacam_${ts}.png`;
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], name, { type: 'image/png' })] })) {
+        try { await navigator.share({ files: [new File([blob], name, { type: 'image/png' })] }); return; }
+        catch (e) { if (e.name === 'AbortError') return; }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    // === UI HIDE (long press) ===
+    const LP_DURATION = 600;
+    const LP_CIRC = 2 * Math.PI * 19;
+    const lpIndicator = document.getElementById('lp-indicator');
+    const lpArc = document.getElementById('lp-arc');
+    let lpPointerId = null, lpStartTime = null, lpRafId = null;
+    let lpStartX = 0, lpStartY = 0;
+    let uiHidden = false;
+
+    function lpCancel() {
+      if (lpRafId) { cancelAnimationFrame(lpRafId); lpRafId = null; }
+      lpIndicator.style.display = 'none';
+      lpPointerId = null; lpStartTime = null;
+    }
+
+    function lpStart(pid, x, y) {
+      lpPointerId = pid; lpStartX = x; lpStartY = y; lpStartTime = Date.now();
+      lpIndicator.style.left = x + 'px'; lpIndicator.style.top = y + 'px';
+      lpIndicator.style.display = 'block';
+      lpArc.style.strokeDashoffset = LP_CIRC;
+      (function tick() {
+        const p = Math.min(1, (Date.now() - lpStartTime) / LP_DURATION);
+        lpArc.style.strokeDashoffset = LP_CIRC * (1 - p);
+        if (p < 1) { lpRafId = requestAnimationFrame(tick); }
+        else {
+          lpRafId = null; lpIndicator.style.display = 'none';
+          lpPointerId = null; lpStartTime = null;
+          uiHidden = !uiHidden;
+          document.body.classList.toggle('ui-hidden', uiHidden);
+          if (uiHidden && settingsPanel.classList.contains('open')) {
+            settingsPanel.classList.remove('open'); settingsBtn.classList.remove('active');
+          }
+        }
+      })();
+    }
+
+    document.addEventListener('pointerdown', e => {
+      if (lpPointerId !== null) { lpCancel(); return; }
+      if (e.target.closest('button, input, select, a, label, .modal-overlay')) return;
+      if (document.getElementById('saveModal').style.display === 'flex') return;
+      if (document.getElementById('credit-modal').classList.contains('visible')) return;
+      lpStart(e.pointerId, e.clientX, e.clientY);
+    }, { passive: true });
+
+    document.addEventListener('pointermove', e => {
+      if (e.pointerId !== lpPointerId) return;
+      const dx = e.clientX - lpStartX, dy = e.clientY - lpStartY;
+      if (dx * dx + dy * dy > 100) lpCancel();
+    }, { passive: true });
+
+    document.addEventListener('pointerup',     e => { if (e.pointerId === lpPointerId) lpCancel(); }, { passive: true });
+    document.addEventListener('pointercancel', e => { if (e.pointerId === lpPointerId) lpCancel(); }, { passive: true });
+
+    window.addEventListener('load', () => { startCamera(); });
+  </script>
+</body>
+</html>
