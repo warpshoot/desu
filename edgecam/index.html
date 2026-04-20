@@ -489,9 +489,39 @@
     .btn.primary { border-color: var(--accent); color: var(--accent); }
     .btn.primary:hover:not(:disabled) { background: rgba(127,255,106,0.08); }
     .btn:disabled { opacity: 0.3; cursor: default; }
+
+    /* ── UI HIDE ── */
+    #topBar, #bottomBar {
+      transition: opacity 0.35s ease;
+    }
+
+    body.ui-hidden #topBar,
+    body.ui-hidden #bottomBar,
+    body.ui-hidden #settingsPanel {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    #lp-indicator {
+      position: fixed;
+      pointer-events: none;
+      z-index: 500;
+      display: none;
+      transform: translate(-50%, -50%);
+    }
   </style>
 </head>
 <body>
+
+  <!-- Long press indicator -->
+  <div id="lp-indicator">
+    <svg width="48" height="48" viewBox="0 0 48 48">
+      <circle cx="24" cy="24" r="19" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2.5"/>
+      <circle id="lp-arc" cx="24" cy="24" r="19" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.5"
+        stroke-dasharray="119.38" stroke-dashoffset="119.38"
+        stroke-linecap="round" transform="rotate(-90 24 24)"/>
+    </svg>
+  </div>
 
   <!-- Viewfinder -->
   <div id="viewfinder">
@@ -580,7 +610,7 @@
       <hr class="credit-divider">
       <div class="credit-row">
         <span class="credit-key">説明書</span>
-        <a href="MANUAL.md" target="_blank" class="credit-manual-link">人間向け</a>
+        <a href="MANUAL.md" target="_blank" class="credit-manual-link">日本語</a>
       </div>
     </div>
   </div>
@@ -1590,6 +1620,84 @@
     window.addEventListener('load', () => {
       startCamera();
     });
+
+    // === UI HIDE (long press) ===
+    const LP_DURATION = 600;
+    const LP_CIRC = 2 * Math.PI * 19; // ~119.38
+    const lpIndicator = document.getElementById('lp-indicator');
+    const lpArc = document.getElementById('lp-arc');
+
+    let lpPointerId = null, lpStartTime = null, lpRafId = null;
+    let lpStartX = 0, lpStartY = 0;
+    let uiHidden = false;
+
+    function lpShow(x, y) {
+      lpIndicator.style.left = x + 'px';
+      lpIndicator.style.top  = y + 'px';
+      lpIndicator.style.display = 'block';
+      lpArc.style.strokeDashoffset = LP_CIRC;
+    }
+
+    function lpHide() {
+      lpIndicator.style.display = 'none';
+    }
+
+    function lpCancel() {
+      if (lpRafId) { cancelAnimationFrame(lpRafId); lpRafId = null; }
+      lpHide();
+      lpPointerId = null;
+      lpStartTime = null;
+    }
+
+    function lpComplete() {
+      lpRafId = null;
+      lpHide();
+      lpPointerId = null;
+      lpStartTime = null;
+      uiHidden = !uiHidden;
+      document.body.classList.toggle('ui-hidden', uiHidden);
+      if (uiHidden && settingsPanel.classList.contains('open')) {
+        settingsPanel.classList.remove('open');
+        settingsBtn.classList.remove('active');
+      }
+    }
+
+    function lpStart(pid, x, y) {
+      lpPointerId = pid;
+      lpStartX = x; lpStartY = y;
+      lpStartTime = Date.now();
+      lpShow(x, y);
+      (function tick() {
+        const p = Math.min(1, (Date.now() - lpStartTime) / LP_DURATION);
+        lpArc.style.strokeDashoffset = LP_CIRC * (1 - p);
+        if (p < 1) { lpRafId = requestAnimationFrame(tick); }
+        else { lpComplete(); }
+      })();
+    }
+
+    document.addEventListener('pointerdown', e => {
+      if (lpPointerId !== null) { lpCancel(); return; }
+      if (e.target.closest('button, input, select, a, label, .modal')) return;
+      if (!document.getElementById('saveModal').style.display || document.getElementById('saveModal').style.display !== 'none') {
+        if (document.getElementById('saveModal').style.display === 'flex') return;
+      }
+      if (document.getElementById('credit-modal').classList.contains('visible')) return;
+      lpStart(e.pointerId, e.clientX, e.clientY);
+    }, { passive: true });
+
+    document.addEventListener('pointermove', e => {
+      if (e.pointerId !== lpPointerId) return;
+      const dx = e.clientX - lpStartX, dy = e.clientY - lpStartY;
+      if (dx * dx + dy * dy > 100) lpCancel();
+    }, { passive: true });
+
+    document.addEventListener('pointerup', e => {
+      if (e.pointerId === lpPointerId) lpCancel();
+    }, { passive: true });
+
+    document.addEventListener('pointercancel', e => {
+      if (e.pointerId === lpPointerId) lpCancel();
+    }, { passive: true });
   </script>
 </body>
 </html>
