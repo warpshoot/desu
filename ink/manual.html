@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ink — User Guide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <script src="../favicon.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f0f0f0;
+            color: #1a1a1a;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 24px;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(8px);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+        header .title { font-size: 18px; font-weight: 700; letter-spacing: 0.05em; text-decoration: none; color: inherit; }
+        header .title:hover { opacity: 0.6; }
+        .lang-toggle {
+            display: flex;
+            gap: 4px;
+        }
+        .lang-btn {
+            background: none;
+            border: 1px solid rgba(0,0,0,0.2);
+            border-radius: 4px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-family: inherit;
+            cursor: pointer;
+            color: #555;
+            transition: background 0.1s, color 0.1s;
+        }
+        .lang-btn.active {
+            background: #333;
+            color: #fff;
+            border-color: #333;
+        }
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 32px 24px 64px;
+        }
+        .overview-img {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 36px;
+            display: block;
+        }
+        h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+        .lead { color: #555; margin-bottom: 32px; }
+        hr { border: none; border-top: 1px solid rgba(0,0,0,0.1); margin: 28px 0; }
+        h2 { font-size: 15px; font-weight: 700; margin: 28px 0 10px; letter-spacing: 0.03em; }
+        h3 { font-size: 13px; font-weight: 700; margin: 18px 0 6px; color: #333; }
+        ul { padding-left: 18px; }
+        li { margin-bottom: 4px; }
+        p { margin-bottom: 8px; }
+        .tip {
+            background: rgba(0,0,0,0.04);
+            border-left: 3px solid #aaa;
+            padding: 8px 12px;
+            border-radius: 0 4px 4px 0;
+            margin: 12px 0;
+            font-size: 13px;
+            color: #555;
+        }
+        .credits { font-size: 13px; color: #555; }
+        .credits a { color: #333; }
+        .updated { font-size: 12px; color: #aaa; margin-top: 24px; }
+        [data-lang] { display: none; }
+        [data-lang].visible { display: block; }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="index.html" class="title">ink</a>
+        <div class="lang-toggle">
+            <button class="lang-btn active" onclick="setLang('ja')">日本語</button>
+            <button class="lang-btn" onclick="setLang('en')">English</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <img src="ink_info.png" alt="ink overview" class="overview-img">
+
+        <!-- Japanese -->
+        <div data-lang="ja" class="visible">
+            <h1>ink ユーザーガイド</h1>
+            <p class="lead">「ink」は、描き心地の良さと動作の軽さを追求した、Webブラウザで動くペイントツールです。</p>
+            <hr>
+            <h2>1. 基本コンセプト</h2>
+            <p>気持ちいい描き心地と、シンプルで軽快な動作を特徴としています。ペン描画、塗りつぶし、スクリーントーンなどの機能を備え、ストレスのない自由なドローイング体験を提供します。</p>
+            <hr>
+            <h2>2. モードとツール</h2>
+            <p>画面左のツールバーで5つのメインモードを切り替えます。</p>
+            <h3>ペンモード (Pen)</h3>
+            <ul>
+                <li><b>ペン</b>: 標準的なペンツール。筆圧による太さの変化やアンチエイリアスの有無を設定可能です。</li>
+                <li><b>点描 (Stipple)</b>: ペンの筆圧に合わせて点の密度が変わる描画ツール。</li>
+            </ul>
+            <h3>塗りモード (Fill/Lasso)</h3>
+            <ul>
+                <li><b>投げ縄塗り (Fill)</b>: 囲んだ範囲を塗りつぶします。</li>
+                <li><b>トーン (Screentone)</b>: 囲んだ範囲にスクリーントーンを配置。豊富なパターンから選択可能。</li>
+                <li><b>バケツ (Bucket)</b>: 各ツールの設定パネルで「バケツ有効」にすると、クリックによる塗りつぶしが可能です。</li>
+            </ul>
+            <h3>図形モード (Shape)</h3>
+            <p>ドラッグで幾何学図形を描きます。スロットをタップして設定パネルを開きます。</p>
+            <ul>
+                <li><b>直線</b>: 始点から終点まで直線を引きます。Shift を押しながらドラッグすると 45° スナップ。</li>
+                <li><b>矩形</b>: 対角にドラッグして長方形を描きます。Shift で正方形に。</li>
+                <li><b>円</b>: ドラッグした領域に内接する楕円を描きます。Shift で真円に。</li>
+                <li><b>多角形 (Poly)</b>: 正多角形。角数は設定パネルで変更可。</li>
+                <li><b>スター (Star)</b>: 星形。角数・内径比率を設定パネルで変更可。</li>
+            </ul>
+            <p><b>設定オプション:</b></p>
+            <ul>
+                <li><b>塗りつぶし / 線描き</b>: 塗りと輪郭線を個別に ON/OFF。直線は塗りなし（グレーアウト）。</li>
+                <li><b>中心から描画</b>: ON にするとドラッグ開始点が図形の中心になります。</li>
+                <li><b>角度</b>: 図形の回転角度を 0〜359° で指定。直線には適用されません。</li>
+                <li><b>アンチエイリアス</b>: 輪郭のギザギザを滑らかにします。</li>
+                <li><b>プレビュー</b>: 設定変更・線幅スライダー操作後、画面中央に 2 秒間プレビューが表示されます。</li>
+            </ul>
+            <h3>消しゴムモード (Eraser)</h3>
+            <ul>
+                <li><b>消しゴムペン</b>: ブラシでなぞった部分を消去。</li>
+                <li><b>投げ縄消去</b>: 囲んだ範囲を一気に消去。</li>
+                <li><b>全消し</b>: 選択中のレイヤーを即座にクリアします。</li>
+            </ul>
+            <h3>選択モード (Select)</h3>
+            <ul>
+                <li><b>矩形選択 (Rect)</b> / <b>投げ縄選択 (Lasso)</b>: 範囲を指定して、以下の操作が可能です。</li>
+                <li><b>移動</b>: 選択したピクセルをドラッグで移動。</li>
+                <li><b>コピー/カット/ペースト</b>: 他のレイヤーへの複製や切り取り。</li>
+                <li><b>削除</b>: 選択範囲をクリアします。</li>
+                <li><b>解除</b>: 選択を解除してキャンバスに確定させます。</li>
+            </ul>
+            <hr>
+            <h2>3. 高度な描画支援</h2>
+            <h3>手ぶれ補正 (糸引きスタビライザー)</h3>
+            <p>ペンや消しゴムの設定パネルから有効化できます。糸で引くような独特な操作感（String-pulling）により、震えを抑えた非常に滑らかな線を描くことができます。</p>
+            <h3>レイヤー機能</h3>
+            <p>最大5枚のレイヤーを管理できます。レイヤーボタンをクリック（または長押し）すると、不透明度調整、表示切り替え、上下移動、下のレイヤーと統合、レイヤー削除のメニューが表示されます。</p>
+            <hr>
+            <h2>4. プロジェクト管理</h2>
+            <p>画面右上の「PROJECT」メニューから操作します。</p>
+            <ul>
+                <li><b>新規プロジェクト</b>: キャンバスをリセットし、新しい作業を開始。</li>
+                <li><b>プロジェクトの保存/読み込み</b>: 作業状態を .json 形式でローカルに保存・復元できます（ドラッグ＆ドロップでも読み込み可能）。</li>
+                <li><b>PSD形式で書き出し</b>: レイヤー構造を維持したまま Adobe Photoshop 形式（PSD）でエクスポートします。</li>
+            </ul>
+            <hr>
+            <h2>5. 操作ガイド</h2>
+            <h3>タッチ / ジェスチャー</h3>
+            <ul>
+                <li><b>1本指</b>: 描画 / 投げ縄選択</li>
+                <li><b>2本指タップ</b>: 元に戻す (Undo)</li>
+                <li><b>3本指タップ</b>: やり直し (Redo)</li>
+                <li><b>ピンチ・スワイプ</b>: ズームと移動</li>
+            </ul>
+            <h3>キーボードショートカット</h3>
+            <ul>
+                <li><b>X</b>: ペンと消しゴムの切り替え</li>
+                <li><b>S</b>: アクティブなツールの手振れ補正 ON/OFF</li>
+                <li><b>Space + ドラッグ</b>: キャンバスの移動 (Pan)</li>
+                <li><b>Ctrl + Z</b>: Undo / <b>Ctrl + Y (or Shift+Ctrl+Z)</b>: Redo</li>
+                <li><b>Ctrl + C / X / V</b>: 選択範囲のコピー / カット / ペースト</li>
+                <li><b>Delete / Backspace</b>: 選択範囲の削除</li>
+                <li><b>Esc</b>: 設定メニューを閉じる / 選択の解除</li>
+                <li><b>Ctrl + S</b>: 保存（Snapshot）メニューを開く</li>
+            </ul>
+            <div class="tip">ショートカット実行時には、画面中央に操作内容が通知（HUD）として表示されます。</div>
+            <hr>
+            <h2>6. 保存と書き出し (Snapshot)</h2>
+            <ul>
+                <li><b>Canvas (Full)</b>: キャンバス全体の画像を保存。</li>
+                <li><b>Crop (Range)</b>: 指定した範囲だけを切り出して保存。</li>
+                <li><b>背景透過</b>: 背景を透明にして書き出すか選択。</li>
+                <li><b>拡大率 (Scale)</b>: 1X, 2X, 3X の解像度で書き出し可能。</li>
+            </ul>
+            <hr>
+            <h2>7. クレジット</h2>
+            <div class="credits">
+                <p><b>名称</b>: ink</p>
+                <p><b>配布元</b>: <a href="https://warpshoot.github.io/desu/" target="_blank">warpshoot.github.io/desu</a></p>
+                <p><b>製造</b>: <a href="https://warpshoot.github.io/" target="_blank">wpy</a></p>
+            </div>
+            <p class="updated">2026-04-17 Updated</p>
+        </div>
+
+        <!-- English -->
+        <div data-lang="en">
+            <h1>ink User Guide</h1>
+            <p class="lead">"ink" is a web-based paint tool focused on a smooth drawing experience and lightweight operation.</p>
+            <hr>
+            <h2>1. Core Concept</h2>
+            <p>It features an enjoyable drawing experience and simple, lightweight operation. Equipped with pen drawing, filling, and screentones, it provides a stress-free and smooth drawing experience.</p>
+            <hr>
+            <h2>2. Modes and Tools</h2>
+            <p>Switch between five main modes using the toolbar on the left.</p>
+            <h3>Pen Mode</h3>
+            <ul>
+                <li><b>Pen</b>: A standard pen tool. Configure thickness changes based on pressure and anti-aliasing.</li>
+                <li><b>Stipple</b>: Dot density changes according to pen pressure.</li>
+            </ul>
+            <h3>Fill Mode</h3>
+            <ul>
+                <li><b>Lasso Fill</b>: Fills the enclosed area.</li>
+                <li><b>Tone (Screentone)</b>: Places screentones in the enclosed area. Select from a variety of patterns.</li>
+                <li><b>Bucket</b>: Enable "Bucket" in the settings panel to fill areas by tapping.</li>
+            </ul>
+            <h3>Shape Mode</h3>
+            <p>Draw geometric shapes by dragging. Tap a slot to open the settings panel.</p>
+            <ul>
+                <li><b>Line</b>: Draws a straight line. Hold Shift to snap to 45°.</li>
+                <li><b>Rectangle</b>: Drag diagonally. Hold Shift for a square.</li>
+                <li><b>Circle</b>: Draws an ellipse. Hold Shift for a perfect circle.</li>
+                <li><b>Polygon</b>: Regular polygon. Change sides in the settings panel.</li>
+                <li><b>Star</b>: Adjust sides and inner radius ratio in the settings panel.</li>
+            </ul>
+            <p><b>Settings Options:</b></p>
+            <ul>
+                <li><b>Fill / Stroke</b>: Toggle fill and outline independently.</li>
+                <li><b>Draw from Center</b>: The drag start point becomes the center of the shape.</li>
+                <li><b>Rotation</b>: Set rotation angle from 0–359°.</li>
+                <li><b>Anti-aliasing</b>: Smooths jagged edges.</li>
+                <li><b>Preview</b>: A 2-second preview appears after changing settings.</li>
+            </ul>
+            <h3>Eraser Mode</h3>
+            <ul>
+                <li><b>Eraser Pen</b>: Erases the traced area.</li>
+                <li><b>Lasso Erase</b>: Erases the enclosed area.</li>
+                <li><b>Clear All</b>: Instantly clears the selected layer.</li>
+            </ul>
+            <h3>Select Mode</h3>
+            <ul>
+                <li><b>Rect</b> / <b>Lasso</b>: Specify a range for operations.</li>
+                <li><b>Move</b>: Move selected pixels by dragging.</li>
+                <li><b>Copy/Cut/Paste</b>: Duplicate or cut to other layers.</li>
+                <li><b>Delete</b>: Clears the selection.</li>
+                <li><b>Deselect</b>: Commits changes to the canvas.</li>
+            </ul>
+            <hr>
+            <h2>3. Advanced Features</h2>
+            <h3>Stabilizer (String-pulling)</h3>
+            <p>Enable from the Pen or Eraser settings panel. Uses a "string-pulling" mechanism to draw extremely smooth lines.</p>
+            <h3>Layers</h3>
+            <p>Manage up to 5 layers. Click (or long-press) a layer button for opacity, visibility, reorder, merge, and delete options.</p>
+            <hr>
+            <h2>4. Project Management</h2>
+            <ul>
+                <li><b>New Project</b>: Resets the canvas.</li>
+                <li><b>Save/Load</b>: Save and restore work in .json format (drag-and-drop supported).</li>
+                <li><b>Export PSD</b>: Exports in PSD format maintaining layer structure.</li>
+            </ul>
+            <hr>
+            <h2>5. Shortcuts & Gestures</h2>
+            <h3>Touch / Gestures</h3>
+            <ul>
+                <li><b>1-Finger</b>: Draw / Lasso Selection</li>
+                <li><b>2-Finger Tap</b>: Undo</li>
+                <li><b>3-Finger Tap</b>: Redo</li>
+                <li><b>Pinch & Swipe</b>: Zoom and Pan</li>
+            </ul>
+            <h3>Keyboard Shortcuts</h3>
+            <ul>
+                <li><b>X</b>: Toggle Pen / Eraser</li>
+                <li><b>S</b>: Toggle Stabilizer</li>
+                <li><b>Space + Drag</b>: Pan canvas</li>
+                <li><b>Ctrl + Z</b>: Undo / <b>Ctrl + Y</b>: Redo</li>
+                <li><b>Ctrl + C / X / V</b>: Copy / Cut / Paste</li>
+                <li><b>Delete / Backspace</b>: Delete selection</li>
+                <li><b>Esc</b>: Close menus / Deselect</li>
+                <li><b>Ctrl + S</b>: Open Snapshot menu</li>
+            </ul>
+            <div class="tip">A HUD notification appears in the center of the screen when a shortcut is activated.</div>
+            <hr>
+            <h2>6. Export (Snapshot)</h2>
+            <ul>
+                <li><b>Canvas (Full)</b>: Saves the entire canvas.</li>
+                <li><b>Crop (Range)</b>: Saves a specified area.</li>
+                <li><b>Transparent Background</b>: Export with transparent background.</li>
+                <li><b>Scale</b>: Export at 1X, 2X, or 3X resolution.</li>
+            </ul>
+            <hr>
+            <h2>7. Credits</h2>
+            <div class="credits">
+                <p><b>Name</b>: ink</p>
+                <p><b>Provider</b>: <a href="https://warpshoot.github.io/desu/" target="_blank">warpshoot.github.io/desu</a></p>
+                <p><b>Author</b>: <a href="https://warpshoot.github.io/" target="_blank">wpy</a></p>
+            </div>
+            <p class="updated">2026-04-17 Updated</p>
+        </div>
+    </div>
+
+    <script>
+        function setLang(lang) {
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                el.classList.toggle('visible', el.dataset.lang === lang);
+            });
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.trim() === (lang === 'ja' ? '日本語' : 'English'));
+            });
+        }
+    </script>
+</body>
+</html>
