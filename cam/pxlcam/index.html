@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -529,6 +529,10 @@
 
   <!-- Settings panel -->
   <div id="settingsPanel">
+    <div id="startOverlay">
+      <div class="start-title">PIXEL</div>
+      <div class="start-hint">tap shutter to start</div>
+    </div>
     <div class="p-row p-row-col">
       <div class="p-label">PALETTE</div>
       <div class="fx-pills" id="palettePills"></div>
@@ -582,11 +586,11 @@
     <div id="credit-content">
       <div class="credit-row">
         <span class="credit-key">名称</span>
-        <span class="credit-val">DESU&trade; pxlcam</span>
+        <span class="credit-val">pxlcam</span>
       </div>
       <div class="credit-row">
         <span class="credit-key">支給元</span>
-        <a href="https://warpshoot.github.io/desu/" target="_blank" class="credit-val">warpshoot.github.io/desu</a>
+        <a href="https://warpshoot.github.io/desu/" target="_blank" class="credit-val">warpshoot.github.io</a>
       </div>
       <div class="credit-row">
         <span class="credit-key">製造</span>
@@ -595,7 +599,7 @@
       <hr class="credit-divider">
       <div class="credit-row">
         <span class="credit-key">説明書</span>
-        <a href="MANUAL.md" target="_blank" class="credit-manual-link">日本語</a>
+        <a href="../MANUAL.md" target="_blank" class="credit-manual-link">日本語</a>
       </div>
     </div>
   </div>
@@ -1119,7 +1123,7 @@
         loadedImage = null;
         setStatus('CONNECTING...');
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode, width: { ideal: 256 }, height: { ideal: 256 } }
+          video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } }
         });
         video.srcObject = stream;
         await video.play();
@@ -1330,6 +1334,7 @@
           lpPointerId = null; lpStartTime = null;
           uiHidden = !uiHidden;
           document.body.classList.toggle('ui-hidden', uiHidden);
+          window.parent.postMessage({ type: 'TOGGLE_UI', hidden: uiHidden }, '*');
           if (uiHidden && settingsPanel.classList.contains('open')) {
             settingsPanel.classList.remove('open'); settingsBtn.classList.remove('active');
           }

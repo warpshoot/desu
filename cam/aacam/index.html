@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -98,23 +98,10 @@
     #topBar > * { pointer-events: auto; }
 
     #credit-btn {
+      opacity: 0 !important;
+      pointer-events: none !important;
       width: 32px; height: 32px;
-      border-radius: 50%;
-      border: 1px solid var(--border);
-      background: rgba(0,0,0,0.3);
-      backdrop-filter: blur(5px);
-      -webkit-backdrop-filter: blur(5px);
-      color: var(--text);
-      font-family: 'DM Mono', monospace;
-      font-size: 13px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: border-color 0.15s;
     }
-
-    #credit-btn:hover { border-color: var(--accent); }
 
     #status {
       font-size: 11px;
@@ -530,11 +517,9 @@
   <!-- Viewfinder -->
   <div id="viewfinder">
     <canvas id="aaCanvas" width="320" height="320" style="touch-action:none;"></canvas>
-    <div class="start-screen" id="startScreen">
-      <div class="start-buttons">
-        <button class="start-btn" id="startCamBtn">CAM</button>
-        <button class="start-btn secondary" id="startImgBtn">IMG</button>
-      </div>
+    <div id="startOverlay">
+      <div class="start-title">ASCII</div>
+      <div class="start-hint">tap shutter to start</div>
     </div>
   </div>
 
@@ -600,11 +585,11 @@
     <div id="credit-content">
       <div class="credit-row">
         <span class="credit-key">名称</span>
-        <span class="credit-val">DESU&trade; aacam</span>
+        <span class="credit-val">aacam</span>
       </div>
       <div class="credit-row">
         <span class="credit-key">支給元</span>
-        <a href="https://warpshoot.github.io/desu/" target="_blank" class="credit-val">warpshoot.github.io/desu</a>
+        <a href="https://warpshoot.github.io/desu/" target="_blank" class="credit-val">warpshoot.github.io</a>
       </div>
       <div class="credit-row">
         <span class="credit-key">製造</span>
@@ -613,7 +598,7 @@
       <hr class="credit-divider">
       <div class="credit-row">
         <span class="credit-key">説明書</span>
-        <a href="MANUAL.md" target="_blank" class="credit-manual-link">日本語</a>
+        <a href="../MANUAL.md" target="_blank" class="credit-manual-link">日本語</a>
       </div>
     </div>
   </div>
@@ -734,7 +719,7 @@
     const sampleCanvas = document.getElementById('sampleCanvas');
     const sampleCtx   = sampleCanvas.getContext('2d');
     const video       = document.getElementById('videoFeed');
-    const startScreen = document.getElementById('startScreen');
+    const startOverlay = document.getElementById('startOverlay');
     const statusEl    = document.getElementById('status');
 
     // === UI HELPERS ===
@@ -748,7 +733,8 @@
     }
 
     function updateActionBtns() {
-      document.getElementById('saveBtn').disabled = mode === null;
+      const canSave = (mode === 'img') || (mode === 'cam' && frozen);
+      document.getElementById('saveBtn').disabled = !canSave;
     }
 
     function updateImgBtn() {
@@ -982,13 +968,13 @@
       try {
         setStatus('CONNECTING...');
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode, width: { ideal: 1280 }, height: { ideal: 1280 } },
+          video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
           audio: false,
         });
         video.srcObject = stream;
         await video.play();
         mode = 'cam'; frozen = false; frozenFrame = null;
-        startScreen.style.display = 'none';
+        startOverlay.classList.add('hidden');
         setStatus('LIVE');
         updateShutterVisual(); updateActionBtns(); updateImgBtn();
         animFrameId = requestAnimationFrame(renderFrame);
@@ -998,8 +984,7 @@
       }
     }
 
-    document.getElementById('startCamBtn').onclick = startCamera;
-    document.getElementById('startImgBtn').onclick = () => document.getElementById('fileInput').click();
+
 
     // === SHUTTER ===
     document.getElementById('shutterBtn').addEventListener('click', () => {
@@ -1007,7 +992,7 @@
 
       if (mode === 'img') {
         mode = 'cam'; frozen = false;
-        startScreen.style.display = 'none';
+        startOverlay.classList.add('hidden');
         setStatus(stream ? 'LIVE' : 'CONNECTING...');
         updateShutterVisual(); updateActionBtns(); updateImgBtn();
         if (stream) { animFrameId = requestAnimationFrame(renderFrame); }
@@ -1061,7 +1046,7 @@
         cropCenterX = 0.5; cropCenterY = 0.5; cropZoom = 1;
         mode = 'img'; frozen = false;
         if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
-        startScreen.style.display = 'none';
+        startOverlay.classList.add('hidden');
         setStatus('IMAGE');
         updateShutterVisual(); updateActionBtns(); updateImgBtn();
         renderSingle();
@@ -1319,6 +1304,7 @@
           lpPointerId = null; lpStartTime = null;
           uiHidden = !uiHidden;
           document.body.classList.toggle('ui-hidden', uiHidden);
+          window.parent.postMessage({ type: 'TOGGLE_UI', hidden: uiHidden }, '*');
           if (uiHidden && settingsPanel.classList.contains('open')) {
             settingsPanel.classList.remove('open'); settingsBtn.classList.remove('active');
           }

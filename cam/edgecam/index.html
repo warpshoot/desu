@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -527,7 +527,7 @@
   <div id="viewfinder">
     <canvas id="contourCanvas"></canvas>
     <div id="startOverlay">
-      <div class="start-title">EDGECAM</div>
+      <div class="start-title">EDGE</div>
       <div class="start-hint">tap shutter to start</div>
     </div>
   </div>
@@ -601,7 +601,7 @@
       </div>
       <div class="credit-row">
         <span class="credit-key">支給元</span>
-        <a href="https://warpshoot.github.io/desu/" target="_blank" class="credit-val">warpshoot.github.io/desu</a>
+        <a href="https://warpshoot.github.io/desu/" target="_blank" class="credit-val">warpshoot.github.io</a>
       </div>
       <div class="credit-row">
         <span class="credit-key">製造</span>
@@ -610,7 +610,7 @@
       <hr class="credit-divider">
       <div class="credit-row">
         <span class="credit-key">説明書</span>
-        <a href="MANUAL.md" target="_blank" class="credit-manual-link">日本語</a>
+        <a href="../MANUAL.md" target="_blank" class="credit-manual-link">日本語</a>
       </div>
     </div>
   </div>
@@ -1656,6 +1656,7 @@
       lpStartTime = null;
       uiHidden = !uiHidden;
       document.body.classList.toggle('ui-hidden', uiHidden);
+      window.parent.postMessage({ type: 'TOGGLE_UI', hidden: uiHidden }, '*');
       if (uiHidden && settingsPanel.classList.contains('open')) {
         settingsPanel.classList.remove('open');
         settingsBtn.classList.remove('active');

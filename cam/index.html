@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>camera</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #000;
+      color: #fff;
+      font-family: 'DM Mono', monospace;
+      overflow: hidden;
+      width: 100vw;
+      height: 100dvh;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100dvh;
+      background: #000;
+    }
+
+    .iframe-container {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease-in-out;
+      will-change: opacity;
+    }
+
+    .iframe-container.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* Mode Selector (like iPhone) */
+    #mode-selector-wrap {
+      position: fixed;
+      bottom: 96px; /* slightly above the shutter buttons */
+      left: 0;
+      right: 0;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none; /* so swipes can pass through between buttons */
+      z-index: 100;
+      mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+      -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+    }
+
+    #mode-selector {
+      display: flex;
+      align-items: center;
+      gap: 30px;
+      transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+      pointer-events: auto; /* Buttons should be clickable */
+    }
+
+    .mode-btn {
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.5);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      cursor: pointer;
+      padding: 10px;
+      transition: color 0.3s;
+      white-space: nowrap;
+    }
+
+    .mode-btn.active {
+      color: #ffcc00; /* iPhone-like yellow, or use white #fff */
+    }
+
+    /* ── CREDIT MODAL ── */
+    #global-credit-btn {
+      position: fixed;
+      top: max(env(safe-area-inset-top), 14px);
+      left: 16px;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.13);
+      background: rgba(0,0,0,0.3);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      color: #ccc;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      transition: opacity 0.35s ease, border-color 0.15s;
+    }
+
+    #global-credit-btn:hover {
+      border-color: #ffcc00;
+    }
+
+    #credit-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.82);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #credit-modal.visible { display: flex; }
+
+    #credit-content {
+      background: #0a0a0a;
+      border: 1px solid rgba(255,255,255,0.13);
+      padding: 20px 24px;
+      font-family: 'DM Mono', monospace;
+      width: 300px;
+      max-width: calc(100vw - 40px);
+      border-radius: 8px;
+    }
+
+    .credit-row { display: flex; gap: 12px; line-height: 1.9; }
+    .credit-key { color: #666; font-size: 11px; min-width: 4em; flex-shrink: 0; }
+    .credit-val { font-size: 11px; color: #ccc; text-decoration: none; }
+    a.credit-val { text-decoration: underline; }
+    a.credit-val:hover { color: #ffcc00; }
+    .credit-divider { border: none; border-top: 1px solid rgba(255,255,255,0.13); margin: 12px 0; }
+    .credit-manual-link { font-size: 11px; color: #ccc; text-decoration: underline; margin-right: 16px; }
+    .credit-manual-link:hover { color: #ffcc00; }
+
+  </style>
+</head>
+<body>
+
+  <div id="container">
+    <div class="iframe-container active" id="wrap-0">
+      <iframe src="aacam/index.html" id="frame-aacam" allow="camera"></iframe>
+    </div>
+    <div class="iframe-container" id="wrap-1">
+      <iframe src="edgecam/index.html" id="frame-edgecam" allow="camera"></iframe>
+    </div>
+    <div class="iframe-container" id="wrap-2">
+      <iframe src="pxlcam/index.html" id="frame-pxlcam" allow="camera"></iframe>
+    </div>
+  </div>
+
+  <button id="global-credit-btn">?</button>
+
+  <!-- Credit modal -->
+  <div id="credit-modal">
+    <div id="credit-content">
+      <div class="credit-row">
+        <span class="credit-key">名称</span>
+        <span class="credit-val">camera</span>
+      </div>
+      <div class="credit-row">
+        <span class="credit-key">支給元</span>
+        <a href="https://warpshoot.github.io/desu/" target="_blank" class="credit-val">warpshoot.github.io</a>
+      </div>
+      <div class="credit-row">
+        <span class="credit-key">製造</span>
+        <a href="https://warpshoot.github.io/" target="_blank" class="credit-val">wpy</a>
+      </div>
+      <hr class="credit-divider">
+      <div class="credit-row">
+        <span class="credit-key">説明書</span>
+        <a href="MANUAL.md" target="_blank" class="credit-manual-link">日本語</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="mode-selector-wrap" style="transition: opacity 0.35s ease;">
+    <div id="mode-selector">
+      <button class="mode-btn active" data-index="0">ASCII</button>
+      <button class="mode-btn" data-index="1">EDGE</button>
+      <button class="mode-btn" data-index="2">PIXEL</button>
+    </div>
+  </div>
+
+  <script>
+    const wraps = document.querySelectorAll('.iframe-container');
+    const modeSelector = document.getElementById('mode-selector');
+    const btns = document.querySelectorAll('.mode-btn');
+    const creditBtn = document.getElementById('global-credit-btn');
+    const creditModal = document.getElementById('credit-modal');
+
+    creditBtn.addEventListener('click', () => {
+      creditModal.classList.add('visible');
+    });
+
+    creditModal.addEventListener('click', (e) => {
+      if (e.target === creditModal) creditModal.classList.remove('visible');
+    });
+    
+    let currentIndex = 0;
+    const TOTAL_APPS = 3;
+
+    // Center offset for the active mode text
+    // We adjust the translateX of mode-selector so the active button is in the center.
+    function updateSelectorPosition() {
+      // Hardcoded offsets for simplicity, or calculate dynamically.
+      // Assuming gap is 30px, each text is roughly 60px wide.
+      // If 0 is center, then to center index 0, we translate say 90px right.
+      // Let's use simple percentages or calculated values.
+      const activeBtn = btns[currentIndex];
+      const wrapCenter = window.innerWidth / 2;
+      const btnRect = activeBtn.getBoundingClientRect();
+      const selectorRect = modeSelector.getBoundingClientRect();
+      
+      // Calculate how much to shift the modeSelector to center the activeBtn
+      const currentShift = getComputedTranslateX(modeSelector);
+      const btnCenter = btnRect.left + (btnRect.width / 2);
+      const diff = wrapCenter - btnCenter;
+      
+      modeSelector.style.transform = `translateX(${currentShift + diff}px)`;
+    }
+
+    function getComputedTranslateX(el) {
+      const style = window.getComputedStyle(el);
+      const matrix = new DOMMatrixReadOnly(style.transform);
+      return matrix.m41;
+    }
+
+    function setMode(index) {
+      if (index < 0) index = 0;
+      if (index >= TOTAL_APPS) index = TOTAL_APPS - 1;
+      currentIndex = index;
+
+      // Update Iframes (Fade)
+      wraps.forEach((w, i) => {
+        if (i === currentIndex) {
+          w.classList.add('active');
+        } else {
+          w.classList.remove('active');
+        }
+      });
+
+      // Update Buttons
+      btns.forEach((b, i) => {
+        if (i === currentIndex) {
+          b.classList.add('active');
+          // iPhone active color changes (e.g. yellow)
+          b.style.color = '#ffcc00';
+        } else {
+          b.classList.remove('active');
+          b.style.color = 'rgba(255, 255, 255, 0.5)';
+        }
+      });
+
+      // Give DOM time to update layout, then adjust selector position
+      requestAnimationFrame(() => {
+        updateSelectorPosition();
+      });
+    }
+
+    btns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        setMode(parseInt(btn.dataset.index, 10));
+      });
+    });
+
+    // Initialize position
+    window.addEventListener('load', () => setMode(0));
+    window.addEventListener('resize', () => setMode(currentIndex));
+
+    // Listen for swipe messages and UI toggle from iframes
+    window.addEventListener('message', (e) => {
+      if (e.data) {
+        if (e.data.type === 'SWIPE') {
+          if (e.data.direction === 'left') setMode(currentIndex + 1);
+          else if (e.data.direction === 'right') setMode(currentIndex - 1);
+        } else if (e.data.type === 'TOGGLE_UI') {
+          const wrap = document.getElementById('mode-selector-wrap');
+          wrap.style.opacity = e.data.hidden ? '0' : '1';
+          wrap.style.pointerEvents = e.data.hidden ? 'none' : 'auto';
+          creditBtn.style.opacity = e.data.hidden ? '0' : '1';
+          creditBtn.style.pointerEvents = e.data.hidden ? 'none' : 'auto';
+        }
+      }
+    });
+
+    // Optional: basic swipe handling on the mode selector wrap area
+    let startX = 0;
+    let swipeThreshold = 30;
+    modeSelector.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, {passive: true});
+    modeSelector.addEventListener('touchend', e => {
+      let dx = e.changedTouches[0].clientX - startX;
+      if (dx > swipeThreshold) setMode(currentIndex - 1);
+      else if (dx < -swipeThreshold) setMode(currentIndex + 1);
+    }, {passive: true});
+
+  </script>
+</body>
+</html>
