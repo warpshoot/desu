@@ -1,138 +1,917 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>DESU™</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="./favicon.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>DESU™</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #08080b;
+  --text: #cac6be;
+  --dim: #42403c;
+  --mid: #7a7870;
+  --accent: #a88858;
+  --mono: 'Space Mono', monospace;
+  --jp: 'Hiragino Kaku Gothic ProN','Yu Gothic','Meiryo',sans-serif;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* scanlines */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent 0, transparent 3px, rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px);
+  pointer-events: none;
+  z-index: 9000;
+}
+
+/* ── BACKGROUND ── */
+#bg {
+  position: fixed; inset: 0;
+  background-image: url('images/kkj.jpg');
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.5) saturate(0.65);
+  transition: filter 1.2s ease;
+  z-index: 0;
+}
+#bg.lit { filter: brightness(0.62) saturate(0.75); }
+
+/* vignette */
+#vignette {
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 90% at 50% 50%, transparent 25%, rgba(8,8,11,0.65) 100%),
+    linear-gradient(to bottom, rgba(8,8,11,0.55) 0%, transparent 25%, transparent 75%, rgba(8,8,11,0.7) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ── FADE OVERLAY ── */
+#fadeOverlay {
+  position: fixed; inset: 0;
+  background: #08080b;
+  z-index: 8000;
+  opacity: 1;
+  transition: opacity 0.9s ease;
+  pointer-events: none;
+}
+#fadeOverlay.out { opacity: 0; }
+
+/* ── HUD ── */
+.hud {
+  position: fixed;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--dim);
+  z-index: 200;
+}
+#hud-tl { top: 26px; left: 28px; display: flex; align-items: center; gap: 12px; }
+#hud-tr { top: 26px; right: 28px; display: flex; align-items: center; gap: 14px; }
+#hud-br { bottom: 26px; right: 28px; }
+
+.logo { font-weight: 700; font-size: 11px; letter-spacing: 0.22em; color: var(--text); }
+.pulse { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); animation: blink 3s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+
+/* mute btn */
+#muteBtn {
+  background: none; border: none; cursor: pointer;
+  color: var(--dim); transition: color 0.2s;
+  display: flex; align-items: center;
+}
+#muteBtn:hover { color: var(--mid); }
+#muteBtn svg { width: 14px; height: 14px; fill: currentColor; }
+
+/* lang */
+.lang-sw { display: flex; }
+.lang-sw button {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em;
+  background: none; border: none; color: var(--dim);
+  cursor: pointer; padding: 2px 6px; transition: color 0.2s;
+}
+.lang-sw button.on { color: var(--accent); }
+.lang-sw button:hover:not(.on) { color: var(--mid); }
+
+/* ── START PROMPT ── */
+#startPrompt {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 300;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  background: rgba(8,8,11,0.9);
+  padding: 18px 28px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  opacity: 0; pointer-events: none;
+  transform: translateY(6px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+#startPrompt.show { opacity: 1; pointer-events: all; transform: translateY(0); }
+#startPrompt .label {
+  font-family: var(--jp); font-size: 13px;
+  color: rgba(202,198,190,0.55); letter-spacing: 0.2em;
+  transition: color 0.2s;
+}
+#startPrompt .caret {
+  font-size: 8px; color: var(--accent); opacity: 0.7;
+  animation: bob 2s ease-in-out infinite;
+}
+#startPrompt:hover .label { color: var(--text); }
+
+/* ── TEXT WINDOW ── */
+#textWindow {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 400;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: rgba(8,8,11,0.94);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 22px 32px 22px;
+  min-height: 100px;
+  opacity: 0; pointer-events: none;
+  transform: translateY(-8px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+#textWindow.active { opacity: 1; pointer-events: all; transform: translateY(0); }
+
+#faceIcon {
+  width: 52px; height: 52px;
+  object-fit: cover;
+  border: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+  filter: grayscale(20%);
+}
+
+.text-body { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+#nameDisplay {
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.25em; color: var(--accent);
+}
+#textContent {
+  font-family: var(--jp); font-size: 14px;
+  line-height: 1.9; color: var(--text);
+  letter-spacing: 0.04em; min-height: 2em;
+}
+
+#continueIcon {
+  font-size: 9px; color: var(--accent);
+  align-self: flex-end; margin-left: 16px;
+  opacity: 0; transition: opacity 0.3s;
+  cursor: pointer; animation: blink 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+#continueIcon.show { opacity: 1; }
+
+/* ── MENU SCREEN ── */
+#menuScreen {
+  position: fixed; inset: 0;
+  z-index: 500;
+  display: flex; flex-direction: column;
+  align-items: flex-start; justify-content: flex-end;
+  background: rgba(8,8,11,0.5);
+  backdrop-filter: blur(2px);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+#menuScreen.show { opacity: 1; pointer-events: all; }
+
+.menu-list {
+  display: flex; flex-direction: column; gap: 0;
+  width: 100%;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+.menu-btn {
+  display: flex; align-items: center; gap: 16px;
+  padding: 15px 28px;
+  background: rgba(8,8,11,0.9);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  cursor: pointer; transition: all 0.15s;
+}
+.menu-btn:hover { background: rgba(168,136,88,0.09); border-bottom-color: rgba(168,136,88,0.18); }
+.menu-btn:hover .mn { color: var(--accent); }
+.menu-btn:hover .mj { color: var(--text); }
+.mn { font-family: var(--mono); font-size: 8px; color: var(--dim); letter-spacing: 0.1em; width: 20px; flex-shrink: 0; transition: color 0.15s; }
+.mj { font-family: var(--jp); font-size: 13px; color: rgba(202,198,190,0.65); letter-spacing: 0.06em; transition: color 0.15s; }
+.me { font-family: var(--mono); font-size: 8px; color: var(--dim); letter-spacing: 0.1em; margin-left: auto; }
+
+.menu-close {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em;
+  color: var(--dim); cursor: pointer;
+  transition: color 0.2s; text-align: left;
+  padding: 14px 28px;
+  background: rgba(8,8,11,0.9);
+  width: 100%;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.menu-close:hover { color: var(--mid); }
+
+/* ── SUB SCREENS ── */
+.sub-screen {
+  position: fixed; inset: 0;
+  z-index: 600;
+  display: flex; flex-direction: column;
+  align-items: flex-start; justify-content: flex-end;
+  background: rgba(8,8,11,0.5);
+  backdrop-filter: blur(2px);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.sub-screen.show { opacity: 1; pointer-events: all; }
+
+.sub-inner {
+  width: 100%;
+  display: flex; flex-direction: column; gap: 0;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  background: rgba(8,8,11,0.9);
+  padding: 24px 28px 28px;
+}
+.sub-label {
+  font-family: var(--mono); font-size: 8px;
+  letter-spacing: 0.3em; color: var(--dim);
+  padding-bottom: 14px; margin-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.sub-grid { display: flex; flex-wrap: wrap; gap: 2px; margin-bottom: 16px; }
+.sub-link {
+  display: block; padding: 13px 20px;
+  border: 1px solid rgba(255,255,255,0.07);
+  text-decoration: none;
+  font-family: var(--jp); font-size: 14px;
+  color: rgba(202,198,190,0.5);
+  transition: all 0.2s; letter-spacing: 0.06em;
+}
+.sub-link:hover { color: var(--text); border-color: rgba(168,136,88,0.3); background: rgba(168,136,88,0.07); }
+.sub-link.mono { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; }
+.sub-back {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em;
+  color: var(--dim); cursor: pointer; transition: color 0.2s;
+}
+.sub-back:hover { color: var(--mid); }
+
+/* tool list with ? */
+.tool-row { display: flex; align-items: center; }
+.tool-info {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em;
+  color: var(--dim); padding: 13px 14px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.05); border-left: none;
+  transition: all 0.2s; background: rgba(8,8,11,0.88);
+}
+.tool-info:hover { color: var(--accent); border-color: rgba(168,136,88,0.25); }
+.tool-row .sub-link { flex: 1; }
+
+/* ── CHARACTER SCREEN ── */
+#charScreen {
+  position: fixed; inset: 0;
+  z-index: 600;
+  display: flex; flex-direction: column;
+  align-items: flex-start; justify-content: flex-end;
+  background: rgba(8,8,11,0.5);
+  backdrop-filter: blur(2px);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+#charScreen.show { opacity: 1; pointer-events: all; }
+
+/* large image — floats above the panel */
+#charStage {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+#charLargeImg {
+  max-height: 70vh;
+  max-width: 50vw;
+  object-fit: contain;
+  display: block;
+  opacity: 0; transform: translateY(14px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  filter: drop-shadow(0 0 60px rgba(168,136,88,0.12));
+}
+#charLargeImg.show { opacity: 1; transform: translateY(0); }
+
+#charHint {
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.2em; color: var(--dim);
+  transition: opacity 0.3s;
+  position: absolute;
+  bottom: 160px; left: 28px;
+}
+
+/* char panel — same style as sub-inner */
+.char-panel {
+  width: 100%;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  background: rgba(8,8,11,0.9);
+  padding: 20px 28px 24px;
+  display: flex; flex-direction: column; gap: 16px;
+  position: relative; z-index: 1;
+}
+.char-panel-label {
+  font-family: var(--mono); font-size: 8px;
+  letter-spacing: 0.3em; color: var(--dim);
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.char-icons-row {
+  display: flex; gap: 2px; flex-wrap: wrap;
+}
+.char-icon-btn {
+  width: 52px; height: 52px;
+  border: 1px solid rgba(255,255,255,0.07);
+  overflow: hidden; cursor: pointer;
+  transition: all 0.2s;
+  filter: grayscale(70%) brightness(0.6);
+  background: none; padding: 0; flex-shrink: 0;
+}
+.char-icon-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.char-icon-btn:hover { filter: grayscale(20%) brightness(0.9); border-color: rgba(255,255,255,0.15); }
+.char-icon-btn.active { filter: grayscale(0%) brightness(1); border-color: var(--accent); }
+
+.char-sub-back {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em;
+  color: var(--dim); cursor: pointer; transition: color 0.2s; display: inline-block;
+}
+.char-sub-back:hover { color: var(--mid); }
+
+/* text window overlay mode (over sub-screens) */
+#textWindow.overlay { z-index: 700; }
+</style>
 </head>
-
 <body>
-    <div id="app-container">
-        <!-- グローバルミュートボタン -->
-        <button class="mute-btn" id="globalMuteBtn" title="音声切り替え">
-            <svg class="mute-icon" viewBox="0 0 24 24">
-                <path
-                    d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-            </svg>
-            <svg class="unmute-icon" viewBox="0 0 24 24" style="display:none;">
-                <path
-                    d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
-            </svg>
-        </button>
 
-        <!-- 背景画像 -->
-        <img class="background" id="backgroundImage" src="" alt="背景">
+<div id="bg"></div>
+<div id="vignette"></div>
+<div id="fadeOverlay"></div>
 
-        <!-- フェード用オーバーレイ -->
-        <div class="fade-overlay" id="fadeOverlay"></div>
+<!-- HUD -->
+<div class="hud" id="hud-tl">
+  <span class="logo">DESU™</span>
+  <span class="pulse"></span>
+</div>
+<div class="hud" id="hud-tr">
+  <button id="muteBtn" title="音声切り替え">
+    <svg id="muteIcon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+    <svg id="unmuteIcon" viewBox="0 0 24 24" style="display:none"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+  </button>
+  <div class="lang-sw">
+    <button class="on" data-l="ja" onclick="setLang('ja')">JP</button>
+    <button data-l="en" onclick="setLang('en')">EN</button>
+  </div>
+</div>
+<div class="hud" id="hud-br">
+  © 2026 <a href="https://warpshoot.github.io/" target="_blank" style="color:var(--dim);text-decoration:none;">wpy</a>
+</div>
 
-        <!-- スタートプロンプト -->
-        <div class="start-prompt" id="startPrompt">
-            <span>声をかける</span>
-        </div>
+<!-- START PROMPT -->
+<div id="startPrompt">
+  <span class="label" id="speakLabel">声をかける</span>
+  <span class="caret">▼</span>
+</div>
 
-        <!-- テキストウィンドウ -->
-        <div class="text-window" id="textWindow">
-            <img class="face-icon" id="faceIcon" src="" alt="キャラクター">
-            <div class="text-area">
-                <div class="name-display" id="nameDisplay"></div>
-                <div class="text-content" id="textContent"></div>
-            </div>
-            <div class="continue-icon" id="continueIcon">▼</div>
-        </div>
+<!-- TEXT WINDOW -->
+<div id="textWindow">
+  <img id="faceIcon" src="images/shi_icon.jpg" alt="？">
+  <div class="text-body">
+    <div id="nameDisplay">？</div>
+    <div id="textContent"></div>
+  </div>
+  <div id="continueIcon">▼</div>
+</div>
 
-        <!-- メニュー画面 -->
-        <div class="menu-screen" id="menuScreen">
-            <div class="close-container">
-                <span class="close-button" id="closeMenuButton">×</span>
-            </div>
-            <div class="menu-container">
-                <span class="menu-button" id="episodesLink"><span>記録の閲覧</span></span>
-                <span class="menu-button" id="charactersLink"><span>周辺情報の確認</span></span>
-                <span class="menu-button" id="toolsLink"><span>支給品のチェック</span></span>
-                <span class="menu-button" id="buyLink"><span>現物の買い取り</span></span>
-            </div>
-        </div>
-
-        <!-- ツール画面 (支給品) -->
-        <div class="sub-screen" id="toolsScreen">
-            <div class="close-container">
-                <span class="close-button" id="closeToolsButton">×</span>
-            </div>
-            <div class="sub-container list-container">
-                <div class="list-item">
-                    <a href="./ink/" class="list-button">INK</a>
-                    <span class="tool-info-btn" data-tool="INK">?</span>
-                </div>
-                <div class="list-item">
-      <a href="./cam/" class="list-button">CAMERA</a>
-                    <span class="tool-info-btn" data-tool="EDGE CAM">?</span>
-                </div>
-                <div class="list-item">
-                    <a href="./beat/" class="list-button">BEAT</a>
-                    <span class="tool-info-btn" data-tool="BEAT">?</span>
-                </div>
-                <div class="list-item">
-                    <a href="./beep/" class="list-button">BEEP</a>
-                    <span class="tool-info-btn" data-tool="BEEP">?</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- エピソード画面 (記録) -->
-        <div class="sub-screen" id="episodesScreen">
-            <div class="close-container">
-                <span class="close-button" id="closeEpisodesButton">×</span>
-            </div>
-            <div class="sub-container">
-                <a href="./ep_oto/" class="list-button">音</a>
-                <a href="./ep_gara/" class="list-button">ガラ</a>
-                <a href="./ep_hen/" class="list-button">ヘン</a>
-                <a href="./ep_shita/" class="list-button">下</a>
-            </div>
-        </div>
-
-        <!-- 尋ねる画面 (旧 名簿) -->
-        <div class="sub-screen" id="charactersScreen">
-            <div class="close-container">
-                <span class="close-button" id="closeCharactersButton">×</span>
-            </div>
-
-            <div class="characters-content">
-                <!-- Character Icon Navigation (Photos to ask about) -->
-                <div class="character-icons">
-                    <button class="character-icon" data-character="desu">
-                        <img src="./characters/desu_icon.jpg" alt="デス">
-                    </button>
-                    <button class="character-icon" data-character="sakana">
-                        <img src="./characters/sakana_icon.jpg" alt="サカナ">
-                    </button>
-                    <button class="character-icon" data-character="shi">
-                        <img src="./characters/shi_icon.jpg" alt="し">
-                    </button>
-                    <button class="character-icon" data-character="holem">
-                        <img src="./characters/holem_icon.jpg" alt="ホーレム">
-                    </button>
-                    <button class="character-icon" data-character="wpy">
-                        <img src="./characters/wpy_icon.jpg" alt="wpy">
-                    </button>
-                </div>
-
-                <!-- Display area for the selected character's photo -->
-                <div class="character-display" id="characterDisplay" style="display: none;">
-                    <img id="characterLargeImage" src="" alt="Selected Character" class="character-image">
-                </div>
-            </div>
-        </div>
-
-        <div class="footer">&copy; 2026 <a href="https://warpshoot.github.io/" target="_blank"
-                rel="noopener noreferrer">wpy</a> / last update 20260414</div>
+<!-- MENU SCREEN -->
+<div id="menuScreen">
+  <div class="menu-list">
+    <div class="menu-btn" id="btn-episodes">
+      <span class="mn">01</span>
+      <span class="mj" id="mj1">記録の閲覧</span>
+      <span class="me">RECORDS</span>
     </div>
+    <div class="menu-btn" id="btn-characters">
+      <span class="mn">02</span>
+      <span class="mj" id="mj2">周辺情報の確認</span>
+      <span class="me">INTEL</span>
+    </div>
+    <div class="menu-btn" id="btn-tools">
+      <span class="mn">03</span>
+      <span class="mj" id="mj3">支給品のチェック</span>
+      <span class="me">SUPPLIES</span>
+    </div>
+    <div class="menu-btn" id="btn-buy">
+      <span class="mn">04</span>
+      <span class="mj" id="mj4">現物の買い取り</span>
+      <span class="me">BUY</span>
+    </div>
+  </div>
+  <div class="menu-close" id="menuClose">× <span id="closeLabel">立ち去る</span></div>
+</div>
 
-    <script src="script.js"></script>
+<!-- EPISODES SCREEN -->
+<div class="sub-screen" id="episodesScreen">
+  <div class="sub-inner">
+    <div class="sub-label" id="epLabel">RECORDS — エピソード</div>
+    <div class="sub-grid">
+      <a href="./ep_oto/" class="sub-link" target="_blank">音</a>
+      <a href="./ep_gara/" class="sub-link" target="_blank">ガラ</a>
+      <a href="./ep_hen/" class="sub-link" target="_blank">ヘン</a>
+      <a href="./ep_shita/" class="sub-link" target="_blank">下</a>
+    </div>
+    <div class="sub-back" id="epBack">× 戻る</div>
+  </div>
+</div>
+
+<!-- TOOLS SCREEN -->
+<div class="sub-screen" id="toolsScreen">
+  <div class="sub-inner">
+    <div class="sub-label" id="tpLabel">SUPPLIES — ウェブツール</div>
+    <div class="sub-grid" style="flex-direction:column;">
+      <div class="tool-row">
+        <a href="./ink/" class="sub-link mono" target="_blank">INK</a>
+        <span class="tool-info" data-tool="INK">?</span>
+      </div>
+      <div class="tool-row">
+        <a href="./cam/" class="sub-link mono" target="_blank">CAMERA</a>
+        <span class="tool-info" data-tool="CAMERA">?</span>
+      </div>
+      <div class="tool-row">
+        <a href="./beat/" class="sub-link mono" target="_blank">BEAT</a>
+        <span class="tool-info" data-tool="BEAT">?</span>
+      </div>
+      <div class="tool-row">
+        <a href="./beep/" class="sub-link mono" target="_blank">BEEP</a>
+        <span class="tool-info" data-tool="BEEP">?</span>
+      </div>
+    </div>
+    <div class="sub-back" id="tpBack">× 戻る</div>
+  </div>
+</div>
+
+<!-- CHARACTERS SCREEN -->
+<div id="charScreen">
+  <div id="charStage">
+    <img id="charLargeImg" alt="">
+  </div>
+  <div id="charHint">—</div>
+  <div class="char-panel">
+    <div class="char-panel-label" id="charLabel">AREA INFO — キャラクター</div>
+    <div class="char-icons-row">
+      <button class="char-icon-btn" data-char="desu"><img src="characters/desu_icon.jpg" alt="デス"></button>
+      <button class="char-icon-btn" data-char="sakana"><img src="characters/sakana_icon.jpg" alt="サカナ"></button>
+      <button class="char-icon-btn" data-char="shi"><img src="characters/shi_icon.jpg" alt="し"></button>
+      <button class="char-icon-btn" data-char="holem"><img src="characters/holem_icon.jpg" alt="ホーレム"></button>
+      <button class="char-icon-btn" data-char="wpy"><img src="characters/wpy_icon.jpg" alt="wpy"></button>
+    </div>
+    <div class="char-sub-back" id="charBack">× 戻る</div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──
+const DIALOGUES = {
+  greet: {
+    ja: ['…なにか用か', '……', '…なんだ', '…お前か'],
+    en: ['...Something you need?', '...', "...What is it?", "...You again."]
+  },
+  part: {
+    ja: ['……', '…またな', '…もういいのか'],
+    en: ['...', '...Come back.', "...That's it?"]
+  },
+  buy: {
+    ja: '…買い取り？　変わったやつだな',
+    en: "...Buy items? You're an odd one."
+  }
+};
+
+const CHARS = {
+  desu:   { name: 'デス',    nameEn: 'Desu',   img: 'characters/desu.png',
+    ja: '"デス" だ。うちで仕事を手伝ってもらってる。素性は俺もよく知らない',
+    en: '"Desu." Helps out around here. I don\'t know much about them either.' },
+  sakana: { name: 'サカナ',  nameEn: 'Sakana', img: 'characters/sakana.png',
+    ja: '"サカナ"。デスが連れてる魚だ。しゃべるぞ',
+    en: '"Sakana." A fish that Desu brought along. It talks.' },
+  shi:    { name: 'しーちゃん', nameEn: 'Shi', img: 'characters/shi.png',
+    ja: '"しーちゃん" は、うちのマスコットキャラクターだ。物騒なデザインだが、意外と人気があるらしい',
+    en: '"Shi." Our mascot. Dangerous-looking design, but apparently quite popular.' },
+  holem:  { name: 'ホーレム', nameEn: 'Holem', img: 'characters/holem.png',
+    ja: '"ガラ" か。ホーレムと呼ぶやつもいる。これについて詳しいことは話せない',
+    en: '"Gara," or some call it Holem. I can\'t tell you much about this one.' },
+  wpy:    { name: 'wpy',    nameEn: 'wpy',    img: 'characters/wpy.png',
+    ja: '"wpy" とか、"ワーピー" と呼ばれている奴だな。支給品はすべてこいつが作ってると聞いたことがある',
+    en: '"wpy," or "Warpy." I\'ve heard all the supplies come from this one.' }
+};
+
+const TOOLS = {
+  'INK':      { ja: 'スケッチや図示に使うそうだ。現場で使ってる奴を見たことがある', en: 'For sketching and diagrams. I\'ve seen it used in the field.' },
+  'CAMERA':      { ja: '妙な写りをするカメラだ。カメラ付きの端末から試してみるといい', en: 'A camera with strange results. Try it from a device with a camera.' },
+  'BEAT':     { ja: 'リズムを組める。音の記録や暗号に使うのだろう', en: 'For composing rhythms. Probably for recording sounds or ciphers.' },
+  'BEEP':     { ja: 'BEATの別型だ。こっちは音が軽い', en: 'A variant of BEAT. Lighter sound.' }
+};
+
+// ── STATE ──
+// 0=初期 1=挨拶中 2=挨拶完了 3=メニュー 4=ツール 5=記録 6=名簿
+// 7=別れ中 8=別れ完了 9=ツール説明中 10=ツール説明完了 11=名簿説明中 12=名簿説明完了 13=買い取り中 14=買い取り完了
+let state = 0;
+let isTyping = false;
+let typingTimer = null;
+let currentText = '';
+let isMuted = JSON.parse(localStorage.getItem('desu-muted') || 'false');
+let lang = localStorage.getItem('desu-lang') || 'ja';
+let audioCtx = null;
+
+// ── LANG ──
+const STR = {
+  speakLabel: { ja: '声をかける', en: 'Call out' },
+  mj1: { ja: '記録の閲覧', en: 'View Records' },
+  mj2: { ja: '界隈の話を聞く', en: 'Gather Intel' },
+  mj3: { ja: '支給品のチェック', en: 'Check Supplies' },
+  mj4: { ja: '現物の買い取り', en: 'Buy Items' },
+  closeLabel: { ja: '立ち去る', en: 'Leave' },
+  epLabel: { ja: 'RECORDS — エピソード', en: 'RECORDS — Episodes' },
+  epBack: { ja: '× 戻る', en: '× Back' },
+  tpLabel: { ja: 'SUPPLIES — ウェブツール', en: 'SUPPLIES — Web Tools' },
+  tpBack: { ja: '× 戻る', en: '× Back' },
+  charBack: { ja: '× 戻る', en: '× Back' },
+  charLabel: { ja: 'INTEL — キャラクター', en: 'INTEL — Characters' },
+};
+
+function setLang(l) {
+  lang = l;
+  localStorage.setItem('desu-lang', l);
+  document.querySelectorAll('[data-l]').forEach(b => b.classList.toggle('on', b.dataset.l === l));
+  Object.entries(STR).forEach(([id, map]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = map[l];
+  });
+}
+setLang(lang);
+
+// ── AUDIO ──
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+function playBeep() {
+  if (isMuted) return;
+  try {
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.frequency.value = 200; // し = 200Hz（元コードより）
+    gain.gain.value = 0.07;
+    osc.start(); osc.stop(audioCtx.currentTime + 0.030);
+  } catch(e) {}
+}
+function toggleMute() {
+  isMuted = !isMuted;
+  localStorage.setItem('desu-muted', isMuted);
+  document.getElementById('muteIcon').style.display = isMuted ? 'none' : '';
+  document.getElementById('unmuteIcon').style.display = isMuted ? '' : 'none';
+}
+document.getElementById('muteBtn').onclick = toggleMute;
+// init mute UI
+if (isMuted) {
+  document.getElementById('muteIcon').style.display = 'none';
+  document.getElementById('unmuteIcon').style.display = '';
+}
+
+// ── TYPEWRITER ──
+function typeText(text, onDone) {
+  isTyping = true; currentText = text;
+  const el = document.getElementById('textContent');
+  el.textContent = '';
+  let i = 0;
+  function step() {
+    if (i < text.length) {
+      el.textContent += text[i++];
+      playBeep();
+      typingTimer = setTimeout(step, 50);
+    } else {
+      isTyping = false;
+      setTimeout(() => {
+        document.getElementById('continueIcon').classList.add('show');
+        if (onDone) onDone();
+      }, 600);
+    }
+  }
+  step();
+}
+
+function skipType() {
+  if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+  isTyping = false;
+  document.getElementById('textContent').textContent = currentText;
+  document.getElementById('continueIcon').classList.add('show');
+}
+
+// ── TEXT WINDOW ──
+function showText(text, overlay) {
+  const tw = document.getElementById('textWindow');
+  tw.classList.toggle('overlay', !!overlay);
+  document.getElementById('nameDisplay').textContent = '？';
+  document.getElementById('continueIcon').classList.remove('show');
+  tw.classList.add('active');
+}
+function hideText(cb) {
+  const tw = document.getElementById('textWindow');
+  tw.classList.remove('active');
+  if (cb) setTimeout(cb, 300);
+}
+
+// ── FLOW ──
+function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function startGreet() {
+  state = 1;
+  initAudio();
+  document.getElementById('startPrompt').classList.remove('show');
+  showText();
+  typeText(rand(DIALOGUES.greet[lang]), () => { state = 2; });
+}
+
+function showMenu() {
+  state = 3;
+  hideText(() => {
+    document.getElementById('menuScreen').classList.add('show');
+  });
+}
+
+function startPart() {
+  if (state !== 3) return;
+  document.getElementById('menuScreen').classList.remove('show');
+  state = 7;
+  setTimeout(() => {
+    showText();
+    typeText(rand(DIALOGUES.part[lang]), () => { state = 8; });
+  }, 300);
+}
+
+function resetToInit() {
+  hideText(() => {
+    state = 0;
+    setTimeout(() => {
+      if (state === 0) document.getElementById('startPrompt').classList.add('show');
+    }, 400);
+  });
+}
+
+// ── MENU ACTIONS ──
+document.getElementById('btn-episodes').onclick = e => {
+  e.stopPropagation();
+  if (state !== 3) return;
+  state = 5;
+  document.getElementById('menuScreen').classList.add('sub-active');
+  document.getElementById('episodesScreen').classList.add('show');
+};
+document.getElementById('epBack').onclick = e => {
+  e.stopPropagation();
+  if (state !== 5) return;
+  state = 3;
+  document.getElementById('episodesScreen').classList.remove('show');
+};
+
+document.getElementById('btn-tools').onclick = e => {
+  e.stopPropagation();
+  if (state !== 3) return;
+  state = 4;
+  document.getElementById('toolsScreen').classList.add('show');
+};
+document.getElementById('tpBack').onclick = e => {
+  e.stopPropagation();
+  if (state !== 4 && state !== 9 && state !== 10) return;
+  if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+  hideText();
+  state = 4;
+  document.getElementById('toolsScreen').classList.remove('show');
+  state = 3;
+};
+
+document.getElementById('btn-buy').onclick = e => {
+  e.stopPropagation();
+  if (state !== 3) return;
+  document.getElementById('menuScreen').classList.remove('show');
+  state = 13;
+  setTimeout(() => {
+    showText();
+    typeText(DIALOGUES.buy[lang], () => { state = 14; });
+  }, 200);
+};
+
+document.getElementById('btn-characters').onclick = e => {
+  e.stopPropagation();
+  if (state !== 3) return;
+  state = 6;
+  document.getElementById('charScreen').classList.add('show');
+};
+document.getElementById('charBack').onclick = e => {
+  e.stopPropagation();
+  if (state !== 6 && state !== 11 && state !== 12) return;
+  if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+  hideText();
+  document.getElementById('charLargeImg').classList.remove('show');
+  document.getElementById('charHint').style.opacity = '1';
+  document.querySelectorAll('.char-icon-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('charScreen').classList.remove('show');
+  state = 3;
+};
+
+// Character icons
+document.querySelectorAll('.char-icon-btn').forEach(btn => {
+  btn.onclick = e => {
+    e.stopPropagation();
+    if (state !== 6 && state !== 11 && state !== 12) return;
+    if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+
+    document.querySelectorAll('.char-icon-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('charHint').style.opacity = '0';
+
+    const c = CHARS[btn.dataset.char];
+    // switch image
+    const img = document.getElementById('charLargeImg');
+    img.classList.remove('show');
+    setTimeout(() => {
+      img.src = c.img;
+      img.onload = () => img.classList.add('show');
+    }, 150);
+
+    // show description — interrupt any ongoing typing
+    state = 11;
+    showText('', true);
+    typeText(c[lang], () => { state = 12; });
+  };
+});
+
+// after char description: ▼ just closes text window, stays on char screen
+// handled in main click: state 12 → hide text, back to state 6
+
+// Tool info buttons
+document.querySelectorAll('.tool-info').forEach(btn => {
+  btn.onclick = e => {
+    e.stopPropagation();
+    if (state !== 4 && state !== 9 && state !== 10) return;
+    if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+    state = 9;
+    showText('', true);
+    typeText(TOOLS[btn.dataset.tool][lang], () => { state = 10; });
+  };
+});
+
+// Menu close
+document.getElementById('menuClose').onclick = e => { e.stopPropagation(); startPart(); };
+
+// ── MAIN CLICK ──
+document.body.addEventListener('click', e => {
+  if (e.target.tagName === 'A') return;
+
+  if (state === 0) {
+    startGreet();
+  } else if (isTyping) {
+    skipType();
+  } else if (state === 2) {
+    document.getElementById('continueIcon').classList.remove('show');
+    showMenu();
+  } else if (state === 3) {
+    startPart();
+  } else if (state === 4 || state === 9 || state === 10) {
+    if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+    hideText();
+    document.getElementById('toolsScreen').classList.remove('show');
+    state = 3;
+  } else if (state === 5) {
+    document.getElementById('episodesScreen').classList.remove('show');
+    state = 3;
+  } else if (state === 6) {
+    // tap background (above char panel) → back to menu
+    document.getElementById('charLargeImg').classList.remove('show');
+    document.getElementById('charHint').style.opacity = '1';
+    document.querySelectorAll('.char-icon-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('charScreen').classList.remove('show');
+    state = 3;
+  } else if (state === 11 || state === 12) {
+    // tap background while char description showing → close text, stay on char screen
+    if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+    document.getElementById('continueIcon').classList.remove('show');
+    hideText(() => {
+      document.getElementById('textWindow').classList.remove('overlay');
+      state = 6;
+    });
+  } else if (state === 8) {
+    document.getElementById('continueIcon').classList.remove('show');
+    resetToInit();
+  } else if (state === 10) {
+    document.getElementById('continueIcon').classList.remove('show');
+    hideText(() => {
+      document.getElementById('textWindow').classList.remove('overlay');
+      state = 4;
+    });
+  } else if (state === 14) {
+    document.getElementById('continueIcon').classList.remove('show');
+    window.open('https://minne.com/@warpshoot', '_blank');
+    resetToInit();
+  }
+});
+
+// ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (state === 3) startPart();
+    else if (state === 5) { document.getElementById('episodesScreen').classList.remove('show'); state = 3; }
+    else if (state === 4 || state === 9 || state === 10) {
+      if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+      hideText(); document.getElementById('toolsScreen').classList.remove('show'); state = 3;
+    }
+    else if (state === 6 || state === 11 || state === 12) {
+      if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+      hideText();
+      document.getElementById('charLargeImg').classList.remove('show');
+      document.getElementById('charHint').style.opacity = '1';
+      document.querySelectorAll('.char-icon-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('charScreen').classList.remove('show');
+      state = 3;
+    }
+  }
+});
+
+// ── INIT ──
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('bg').classList.add('lit');
+    document.getElementById('fadeOverlay').classList.add('out');
+    setTimeout(() => {
+      if (state === 0) document.getElementById('startPrompt').classList.add('show');
+    }, 800);
+  }, 300);
+});
+
+// bfcache reset
+window.addEventListener('pageshow', ev => {
+  if (!ev.persisted) return;
+  if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+  isTyping = false; state = 0;
+  const fo = document.getElementById('fadeOverlay');
+  fo.classList.remove('out');
+  document.getElementById('menuScreen').classList.remove('show','sub-active');
+  document.getElementById('episodesScreen').classList.remove('show');
+  document.getElementById('toolsScreen').classList.remove('show');
+  document.getElementById('charScreen').classList.remove('show');
+  document.getElementById('textWindow').classList.remove('active','overlay');
+  document.getElementById('startPrompt').classList.remove('show');
+  document.getElementById('continueIcon').classList.remove('show');
+  setTimeout(() => {
+    fo.classList.add('out');
+    setTimeout(() => { if (state === 0) document.getElementById('startPrompt').classList.add('show'); }, 800);
+  }, 300);
+});
+
+// ── TWEAKS ──
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{"accentColor":"#a88858","scanlines":true}/*EDITMODE-END*/;
+let tweaks = {...TWEAK_DEFAULTS};
+function applyTweaks() {
+  document.documentElement.style.setProperty('--accent', tweaks.accentColor);
+  document.body.classList.toggle('no-sl', !tweaks.scanlines);
+}
+applyTweaks();
+window.addEventListener('message', e => {
+  if (e.data?.type === '__activate_edit_mode') showTweaks(true);
+  if (e.data?.type === '__deactivate_edit_mode') showTweaks(false);
+});
+window.parent.postMessage({type:'__edit_mode_available'},'*');
+let tp = null;
+function showTweaks(show) {
+  if (!tp) {
+    tp = document.createElement('div');
+    tp.style.cssText = 'position:fixed;bottom:60px;right:20px;z-index:9999;background:#0e0e11;border:1px solid rgba(255,255,255,0.1);padding:20px;width:220px;font-family:Space Mono,monospace;font-size:11px;color:#7a7870;';
+    tp.innerHTML = `<div style="color:#cac6be;font-size:10px;letter-spacing:0.18em;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:12px;">TWEAKS</div>
+<label style="display:block;margin-bottom:14px;"><span style="display:block;margin-bottom:6px;font-size:9px;letter-spacing:0.15em;">ACCENT</span>
+<input type="color" value="${tweaks.accentColor}" style="width:100%;height:28px;background:none;border:1px solid rgba(255,255,255,0.08);cursor:pointer;"
+  oninput="tweaks.accentColor=this.value;applyTweaks();window.parent.postMessage({type:'__edit_mode_set_keys',edits:{accentColor:this.value}},'*')"></label>
+<label style="display:flex;align-items:center;gap:10px;cursor:pointer;"><input type="checkbox" ${tweaks.scanlines?'checked':''} style="accent-color:#a88858;"
+  onchange="tweaks.scanlines=this.checked;applyTweaks();window.parent.postMessage({type:'__edit_mode_set_keys',edits:{scanlines:this.checked}},'*')"><span style="font-size:9px;letter-spacing:0.12em;">SCANLINES</span></label>`;
+    document.body.appendChild(tp);
+  }
+  tp.style.display = show ? 'block' : 'none';
+}
+</script>
+<style>.no-sl::before{display:none}</style>
 </body>
-
 </html>

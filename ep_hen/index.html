@@ -1,41 +1,148 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>DESU™︎ ep. ヘン</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="../favicon.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>DESU™ ep. ヘン</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+:root { --bg:#08080b; --text:#cac6be; --dim:#42403c; --mid:#7a7870; --accent:#a88858; --mono:'Space Mono',monospace; --jp:'Hiragino Kaku Gothic ProN','Yu Gothic','Meiryo',sans-serif; }
+html,body { width:100%; height:100%; background:var(--bg); color:var(--text); overflow:hidden; cursor:pointer; user-select:none; }
+body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent 0,transparent 3px,rgba(0,0,0,0.07) 3px,rgba(0,0,0,0.07) 4px); pointer-events:none; z-index:9000; }
+
+#fadeOverlay { position:fixed; inset:0; background:#08080b; z-index:8000; opacity:1; transition:opacity 1s ease; pointer-events:none; }
+#fadeOverlay.out { opacity:0; }
+
+/* HUD */
+.hud { position:fixed; font-family:var(--mono); font-size:9px; letter-spacing:0.2em; color:var(--dim); z-index:200; }
+#hud-tl { top:26px; left:28px; display:flex; align-items:center; gap:12px; }
+#hud-tr { top:26px; right:28px; display:flex; align-items:center; gap:14px; }
+.logo { font-weight:700; font-size:11px; letter-spacing:0.22em; color:var(--text); text-decoration:none; }
+.ep-label { font-size:9px; color:var(--dim); letter-spacing:0.18em; }
+.pulse { width:4px; height:4px; border-radius:50%; background:var(--accent); animation:blink 3s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+#closeBtn { font-family:var(--mono); font-size:13px; color:var(--dim); cursor:pointer; transition:color 0.2s; background:none; border:none; letter-spacing:0.1em; }
+#closeBtn:hover { color:var(--text); }
+
+/* TITLE */
+#titleScreen { position:fixed; inset:0; z-index:5000; background:var(--bg); display:flex; flex-direction:column; justify-content:flex-end; opacity:1; transition:opacity 0.8s ease; }
+#titleScreen.hidden { opacity:0; pointer-events:none; }
+.title-ep { font-family:var(--mono); font-size:9px; letter-spacing:0.3em; color:var(--dim); padding:0 28px 8px; }
+.title-name { font-family:var(--jp); font-size:28px; font-weight:300; letter-spacing:0.15em; color:var(--text); padding:0 28px; }
+.start-bar { border-top:1px solid rgba(255,255,255,0.07); background:rgba(8,8,11,0.9); padding:18px 28px; display:flex; align-items:center; gap:14px; margin-top:32px; transition:background 0.2s; }
+.start-bar:hover { background:rgba(168,136,88,0.06); }
+.start-bar-label { font-family:var(--jp); font-size:13px; color:rgba(202,198,190,0.55); letter-spacing:0.2em; transition:color 0.2s; }
+.start-bar-caret { font-size:8px; color:var(--accent); opacity:0.7; animation:bob 2s ease-in-out infinite; }
+#titleScreen:hover .start-bar-label { color:var(--text); }
+@keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
+
+/* MANGA PAGES */
+.manga-page { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; background:var(--bg); opacity:0; pointer-events:none; transition:opacity 0.5s ease; }
+.manga-page.show { opacity:1; pointer-events:all; }
+.manga-image { max-width:100%; max-height:100%; object-fit:contain; }
+
+/* BOTTOM NAV */
+#bottomNav { position:fixed; bottom:0; left:0; right:0; z-index:300; border-top:1px solid rgba(255,255,255,0.07); background:rgba(8,8,11,0.85); padding:14px 28px; display:flex; align-items:center; opacity:0; pointer-events:none; transition:opacity 0.5s ease; }
+#bottomNav.show { opacity:1; pointer-events:all; }
+.back-label { font-family:var(--mono); font-size:9px; letter-spacing:0.18em; color:var(--dim); cursor:pointer; transition:color 0.2s; }
+.back-label:hover { color:var(--mid); }
+
+/* PAGE INDICATOR */
+#pageIndicator { position:fixed; top:26px; left:50%; transform:translateX(-50%); font-family:var(--mono); font-size:9px; letter-spacing:0.2em; color:var(--dim); z-index:200; opacity:0; transition:opacity 0.3s; }
+#pageIndicator.show { opacity:1; }
+
+/* END SCREEN */
+#endScreen { position:fixed; inset:0; z-index:6000; display:flex; flex-direction:column; justify-content:flex-end; opacity:0; pointer-events:none; transition:opacity 0.8s ease; }
+#endScreen.show { opacity:1; pointer-events:all; }
+.end-panel { border-top:1px solid rgba(255,255,255,0.07); background:rgba(8,8,11,0.9); }
+.end-btn { display:flex; align-items:center; gap:14px; padding:16px 28px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; transition:background 0.15s; }
+.end-btn:hover { background:rgba(168,136,88,0.07); }
+.end-btn:hover .end-label { color:var(--text); }
+.end-label { font-family:var(--jp); font-size:13px; color:rgba(202,198,190,0.55); letter-spacing:0.15em; transition:color 0.2s; }
+.end-en { font-family:var(--mono); font-size:8px; color:var(--dim); letter-spacing:0.15em; margin-left:auto; }
+</style>
 </head>
-
 <body>
-    <div id="app-container">
-        <!-- タイトル画面 -->
-        <div class="title-screen" id="titleScreen">
-            <div class="title-text">DESU™︎<br>ep. ヘン</div>
-        </div>
+<div id="fadeOverlay"></div>
 
-        <!-- 漫画ページ1 -->
-        <div class="manga-page" id="page1">
-            <img src="images/hen1.png" alt="ヘン - ページ1" class="manga-image">
-        </div>
+<div class="hud" id="hud-tl">
+  <a href="../index.html" class="logo" id="logoLink">DESU™</a>
+  <span class="pulse"></span>
+  <span class="ep-label">ep. ヘン</span>
+</div>
+<div class="hud" id="hud-tr">
+  <button id="closeBtn" onclick="goBack()">× 戻る</button>
+</div>
+<div id="pageIndicator">1 / 2</div>
 
-        <!-- 漫画ページ2 -->
-        <div class="manga-page" id="page2">
-            <img src="images/hen2.png" alt="ヘン - ページ2" class="manga-image">
-        </div>
+<div id="titleScreen">
+  <div class="title-ep">DESU™ — RECORDS</div>
+  <div class="title-name">ep. ヘン</div>
+  <div class="start-bar"><span class="start-bar-label">はじめる</span><span class="start-bar-caret">▼</span></div>
+</div>
 
-        <!-- クローズボタン（常時表示） -->
-        <span class="close-btn" id="closeBtnTop">×</span>
+<div class="manga-page" id="page1"><img src="images/hen1.png" class="manga-image" alt=""></div>
+<div class="manga-page" id="page2"><img src="images/hen2.png" class="manga-image" alt=""></div>
 
-        <!-- エンド画面 -->
-        <div class="replay-screen" id="replayScreen">
-            <span class="replay-button" id="replayButton">もう一度見る</span>
-        </div>
-    </div>
+<div id="bottomNav"><span class="back-label" onclick="goBack()">← 戻る</span></div>
 
-    <script src="script.js"></script>
+<div id="endScreen">
+  <div class="end-panel">
+    <div class="end-btn" id="replayBtn"><span class="end-label">もう一度見る</span><span class="end-en">REPLAY</span></div>
+    <div class="end-btn" id="backBtn"><span class="end-label">戻る</span><span class="end-en">← BACK</span></div>
+  </div>
+</div>
+
+<script>
+let page = 'title';
+function goBack() { window.location.href='../index.html'; }
+document.getElementById('backBtn').onclick=e=>{e.stopPropagation();goBack();};
+document.getElementById('logoLink').onclick=e=>{e.preventDefault();goBack();};
+
+document.getElementById('titleScreen').addEventListener('click',()=>{
+  if(page!=='title') return;
+  document.getElementById('titleScreen').classList.add('hidden');
+  setTimeout(()=>{
+    document.getElementById('page1').classList.add('show');
+    document.getElementById('bottomNav').classList.add('show');
+    document.getElementById('pageIndicator').classList.add('show');
+    document.getElementById('pageIndicator').textContent='1 / 2';
+    page='page1';
+  },600);
+});
+
+document.getElementById('page1').addEventListener('click',()=>{
+  if(page!=='page1') return;
+  document.getElementById('page1').classList.remove('show');
+  setTimeout(()=>{
+    document.getElementById('page2').classList.add('show');
+    document.getElementById('pageIndicator').textContent='2 / 2';
+    page='page2';
+  },300);
+});
+
+document.getElementById('page2').addEventListener('click',()=>{
+  if(page!=='page2') return;
+  document.getElementById('page2').classList.remove('show');
+  document.getElementById('bottomNav').classList.remove('show');
+  document.getElementById('pageIndicator').classList.remove('show');
+  setTimeout(()=>{
+    document.getElementById('endScreen').classList.add('show');
+    page='end';
+  },300);
+});
+
+document.getElementById('replayBtn').onclick=e=>{
+  e.stopPropagation();
+  document.getElementById('endScreen').classList.remove('show');
+  setTimeout(()=>{
+    document.getElementById('titleScreen').classList.remove('hidden');
+    page='title';
+  },600);
+};
+
+setTimeout(()=>document.getElementById('fadeOverlay').classList.add('out'),100);
+</script>
 </body>
-
 </html>

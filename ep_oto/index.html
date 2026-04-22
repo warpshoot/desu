@@ -1,58 +1,466 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>DESU™︎ ep. 音</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="../favicon.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>DESU™ ep. 音</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #08080b;
+  --text: #cac6be;
+  --dim: #42403c;
+  --mid: #7a7870;
+  --accent: #a88858;
+  --mono: 'Space Mono', monospace;
+  --jp: 'Hiragino Kaku Gothic ProN','Yu Gothic','Meiryo',sans-serif;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* scanlines */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent 0, transparent 3px, rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px);
+  pointer-events: none;
+  z-index: 9000;
+}
+
+/* ── BACKGROUND ── */
+#bg {
+  position: fixed; inset: 0;
+  background-image: url('images/bg.jpg');
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.45) saturate(0.6) blur(0px);
+  transition: filter 2s ease;
+  z-index: 0;
+}
+#bg.story { filter: brightness(0.35) saturate(0.5) blur(2px); transform: scale(1.03); transition: filter 2.5s ease, transform 2.5s ease; }
+
+/* vignette */
+#vignette {
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse 80% 90% at 50% 50%, transparent 20%, rgba(8,8,11,0.7) 100%);
+  z-index: 1; pointer-events: none;
+}
+
+/* fade overlay */
+#fadeOverlay {
+  position: fixed; inset: 0;
+  background: #08080b;
+  z-index: 8000;
+  opacity: 1;
+  transition: opacity 1.5s ease;
+  pointer-events: none;
+}
+#fadeOverlay.out { opacity: 0; }
+#fadeOverlay.in  { opacity: 1; }
+
+/* ── HUD ── */
+.hud {
+  position: fixed;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--dim);
+  z-index: 200;
+}
+#hud-tl { top: 26px; left: 28px; display: flex; align-items: center; gap: 12px; }
+#hud-tr { top: 26px; right: 28px; display: flex; align-items: center; gap: 14px; }
+
+.logo { font-weight: 700; font-size: 11px; letter-spacing: 0.22em; color: var(--text); text-decoration: none; }
+.ep-label { font-size: 9px; color: var(--dim); letter-spacing: 0.18em; }
+.pulse { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); animation: blink 3s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+
+/* close + mute */
+#closeBtn {
+  font-family: var(--mono); font-size: 13px; color: var(--dim);
+  cursor: pointer; transition: color 0.2s; background: none; border: none;
+  letter-spacing: 0.1em;
+}
+#closeBtn:hover { color: var(--text); }
+
+#muteBtn {
+  background: none; border: none; cursor: pointer;
+  color: var(--dim); transition: color 0.2s;
+  display: flex; align-items: center;
+}
+#muteBtn:hover { color: var(--mid); }
+#muteBtn svg { width: 14px; height: 14px; fill: currentColor; }
+
+/* ── TITLE SCREEN ── */
+#titleScreen {
+  position: fixed; inset: 0;
+  z-index: 5000;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  justify-content: flex-end;
+  opacity: 1;
+  transition: opacity 0.8s ease;
+  pointer-events: all;
+}
+#titleScreen.hidden { opacity: 0; pointer-events: none; }
+
+.title-ep {
+  font-family: var(--mono);
+  font-size: 9px; letter-spacing: 0.3em;
+  color: var(--dim);
+  padding: 0 28px 8px;
+}
+.title-name {
+  font-family: var(--jp);
+  font-size: 28px; font-weight: 300;
+  letter-spacing: 0.15em; color: var(--text);
+  padding: 0 28px 0;
+}
+
+/* start prompt bar */
+.start-bar {
+  border-top: 1px solid rgba(255,255,255,0.07);
+  background: rgba(8,8,11,0.9);
+  padding: 18px 28px;
+  display: flex; align-items: center; gap: 14px;
+  margin-top: 32px;
+  transition: background 0.2s;
+}
+.start-bar:hover { background: rgba(168,136,88,0.06); }
+.start-bar-label {
+  font-family: var(--jp); font-size: 13px;
+  color: rgba(202,198,190,0.55); letter-spacing: 0.2em;
+  transition: color 0.2s;
+}
+.start-bar-caret { font-size: 8px; color: var(--accent); opacity: 0.7; animation: bob 2s ease-in-out infinite; }
+#titleScreen:hover .start-bar-label { color: var(--text); }
+@keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
+
+/* ── TEXT WINDOW ── */
+#textWindow {
+  position: fixed;
+  bottom: 22%;
+  left: 50%; transform: translateX(-50%);
+  width: min(560px, 88vw);
+  z-index: 400;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+#textWindow.active { opacity: 1; pointer-events: all; }
+
+#textContent {
+  font-family: var(--jp); font-size: 15px;
+  line-height: 2.1; color: rgba(202,198,190,0.9);
+  letter-spacing: 0.04em;
+  opacity: 0; transition: opacity 0.5s ease;
+}
+#textContent.show { opacity: 1; }
+
+#continueIcon {
+  display: block;
+  margin-top: 24px;
+  font-size: 9px; color: var(--accent);
+  opacity: 0; transition: opacity 0.3s;
+  animation: blink 1.2s ease-in-out infinite;
+  text-align: center;
+}
+#continueIcon.show { opacity: 1; }
+
+/* ── BOTTOM NAV ── */
+#bottomNav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 300;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  background: rgba(8,8,11,0.85);
+  padding: 14px 28px;
+  display: flex; align-items: center; gap: 14px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+#bottomNav.show { opacity: 1; pointer-events: all; }
+.back-label {
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.18em; color: var(--dim);
+  cursor: pointer; transition: color 0.2s;
+}
+.back-label:hover { color: var(--mid); }
+#endScreen {
+  position: fixed; inset: 0;
+  z-index: 6000;
+  display: flex; flex-direction: column;
+  justify-content: flex-end;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+#endScreen.show { opacity: 1; pointer-events: all; }
+
+.end-panel {
+  border-top: 1px solid rgba(255,255,255,0.07);
+  background: rgba(8,8,11,0.9);
+}
+.end-btn {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 28px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  cursor: pointer; transition: background 0.15s;
+}
+.end-btn:hover { background: rgba(168,136,88,0.07); }
+.end-btn:hover .end-label { color: var(--text); }
+.end-label {
+  font-family: var(--jp); font-size: 13px;
+  color: rgba(202,198,190,0.55); letter-spacing: 0.15em;
+  transition: color 0.2s;
+}
+.end-en {
+  font-family: var(--mono); font-size: 8px;
+  color: var(--dim); letter-spacing: 0.15em; margin-left: auto;
+}
+</style>
 </head>
-
 <body>
-    <div id="app-container">
-        <!-- グローバルミュートボタン -->
-        <button class="mute-btn" id="globalMuteBtn" title="音声切り替え">
-            <svg class="mute-icon" viewBox="0 0 24 24" width="24" height="24">
-                <path
-                    d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-            </svg>
-            <svg class="unmute-icon" viewBox="0 0 24 24" width="24" height="24" style="display:none;">
-                <path
-                    d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
-            </svg>
-        </button>
 
-        <!-- タイトル画面 -->
-        <div class="title-screen" id="titleScreen">
-            <div class="title-text">DESU™︎<br>ep. 音</div>
-        </div>
+<div id="bg"></div>
+<div id="vignette"></div>
+<div id="fadeOverlay"></div>
 
-        <!-- 固定背景画像 -->
-        <img class="background" src="images/bg.jpg" alt="">
-        <div class="bg-overlay"></div>
+<!-- HUD -->
+<div class="hud" id="hud-tl">
+  <a href="../index.html" class="logo" onclick="return false;" id="logoLink">DESU™</a>
+  <span class="pulse"></span>
+  <span class="ep-label">ep. 音</span>
+</div>
+<div class="hud" id="hud-tr">
+  <button id="muteBtn">
+    <svg id="muteIcon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+    <svg id="unmuteIcon" viewBox="0 0 24 24" style="display:none"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+  </button>
+  <button id="closeBtn" onclick="goBack()">× 戻る</button>
+</div>
 
-        <!-- フェード用オーバーレイ -->
-        <div class="fade-overlay" id="fadeOverlay"></div>
+<!-- TITLE SCREEN -->
+<div id="titleScreen">
+  <div class="title-ep">DESU™ — RECORDS</div>
+  <div class="title-name">ep. 音</div>
+  <div class="start-bar">
+    <span class="start-bar-label">はじめる</span>
+    <span class="start-bar-caret">▼</span>
+  </div>
+</div>
 
-        <!-- テキストウィンドウ -->
-        <div class="text-window" id="textWindow">
-            <div class="text-area">
-                <div class="text-content" id="textContent"></div>
-            </div>
-            <div class="continue-icon" id="continueIcon">▼</div>
-        </div>
+<!-- BOTTOM NAV -->
+<div id="bottomNav">
+  <span class="back-label" onclick="goBack()">← 戻る</span>
+</div>
 
-        <!-- クローズボタン（常時表示） -->
-        <span class="close-btn" id="closeBtnTop">×</span>
+<!-- TEXT WINDOW -->
+<div id="textWindow">
+  <div id="textContent"></div>
+  <div id="continueIcon">▼</div>
+</div>
 
-        <!-- エンド画面 -->
-        <div class="replay-screen" id="replayScreen">
-            <span class="replay-button" id="replayButton">もう一度見る</span>
-        </div>
+<!-- END SCREEN -->
+<div id="endScreen">
+  <div class="end-panel">
+    <div class="end-btn" id="replayBtn">
+      <span class="end-label">もう一度見る</span>
+      <span class="end-en">REPLAY</span>
     </div>
+    <div class="end-btn" id="backBtn">
+      <span class="end-label">戻る</span>
+      <span class="end-en">← BACK</span>
+    </div>
+  </div>
+</div>
 
-    <script src="script.js"></script>
+<script>
+// ── TEXT DATA ──
+const paragraphs = [
+  "雨が降っている。",
+
+  "デスはフードの端から滴る水滴を気にする様子もなく、自販機の前に立っていた。百円玉を入れて、ボタンを押す。がこん、と缶が落ちる音だけが通りに響く。",
+
+  "「今日はブラックなんだ」\nサカナが横で浮いたまま言った。\n「うん」",
+
+  "デスは缶を拾い上げて、そのまま自販機の横にしゃがみ込んだ。屋根のない場所だったが、構わなかった。プルタブを起こすと、コーヒーの匂いが湿った空気に混ざる。",
+
+  "「終わった？」\nサカナが訊く。さっきの仕事のことだ。\n「うん。終わった」\n「どんなの」\n「おじいさん」\n「ふうん」",
+
+  "サカナはそれ以上訊かなかった。デスも言わなかった。いつもそうだ。回収の中身について、ふたりとも深く触れない。触れないことが、ふたりの間ではとっくに決まりごとになっている。",
+
+  "雨が少し強くなった。自販機の明かりが濡れたアスファルトに四角く映っている。\n\n「あのさ」\nデスが缶を両手で包みながら言った。\n「なに」\n「おじいさんの部屋、すごい静かだった」\n「……」\n「テレビもついてなくて、時計もなくて。なんの音もしなかった」",
+
+  "サカナはしばらく黙っていた。デスはコーヒーを一口飲んだ。\n\n「でも」\nデスが続けた。\n「窓のとこに、風鈴があった」\n「風鈴」\n「うん。鳴ってなかったけど」\n「しまい忘れたのかな」\n「わかんない」",
+
+  "デスはまた一口飲んで、空を見上げた。フードの隙間から覗く空は、一面灰色だった。\n\n「たぶん」\nデスが言った。\n「鳴ってほしかったんだと思う」",
+
+  "サカナは黙った。デスも黙った。\n\n雨粒が自販機の天板を叩く音が、しばらくふたりの間を埋めた。",
+
+  "「……帰る？」\nサカナが言った。\n「もうちょっと」\n\nデスは缶をまた口に運んだ。ぬるくなったコーヒーが喉を通る。\n\n自販機の光。雨の匂い。どこかでカラスが一声鳴いて、すぐ黙った。\n\nデスはまだ動かなかった。"
+];
+
+// ── STATE ──
+let idx = 0;
+let started = false;
+let busy = false;
+let isMuted = JSON.parse(localStorage.getItem('desu-muted') || 'false');
+let audioCtx = null, rainNode = null, masterGain = null;
+
+// ── AUDIO ──
+function initAudio() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0;
+  } catch(e) {}
+}
+
+function startRain() {
+  if (!audioCtx || isMuted) return;
+  if (rainNode) { try { rainNode.stop(); } catch(e) {} rainNode = null; }
+  const sr = audioCtx.sampleRate;
+  const buf = audioCtx.createBuffer(1, sr * 2, sr);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) {
+    d[i] = ((Math.random() * 2 - 1) + (d[i-1] || 0)) / 2;
+  }
+  rainNode = audioCtx.createBufferSource();
+  rainNode.buffer = buf; rainNode.loop = true;
+  const lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 600;
+  const hp = audioCtx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 300;
+  rainNode.connect(lp); lp.connect(hp); hp.connect(masterGain);
+  rainNode.start();
+  masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+  masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  masterGain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 3);
+}
+
+function stopRain() {
+  if (!audioCtx || !masterGain) return;
+  masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+  masterGain.gain.setValueAtTime(masterGain.gain.value, audioCtx.currentTime);
+  masterGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2);
+}
+
+function toggleMute() {
+  isMuted = !isMuted;
+  localStorage.setItem('desu-muted', isMuted);
+  document.getElementById('muteIcon').style.display = isMuted ? 'none' : '';
+  document.getElementById('unmuteIcon').style.display = isMuted ? '' : 'none';
+  if (isMuted && masterGain) {
+    masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+    masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  } else if (!isMuted && started) {
+    startRain();
+  }
+}
+document.getElementById('muteBtn').onclick = e => { e.stopPropagation(); toggleMute(); };
+if (isMuted) {
+  document.getElementById('muteIcon').style.display = 'none';
+  document.getElementById('unmuteIcon').style.display = '';
+}
+
+// ── NAVIGATION ──
+function goBack() { window.location.href = '../index.html'; }
+document.getElementById('backBtn').onclick = e => { e.stopPropagation(); goBack(); };
+document.getElementById('logoLink').onclick = e => { e.preventDefault(); goBack(); };
+
+// ── START ──
+function startStory() {
+  started = true; busy = true;
+  document.getElementById('titleScreen').classList.add('hidden');
+  setTimeout(() => {
+    document.getElementById('bg').classList.add('story');
+    document.getElementById('fadeOverlay').classList.add('out');
+    startRain();
+    setTimeout(() => {
+      document.getElementById('textWindow').classList.add('active');
+      document.getElementById('bottomNav').classList.add('show');
+      showParagraph(0);
+    }, 2000);
+  }, 600);
+}
+
+// ── PARAGRAPHS ──
+function showParagraph(i) {
+  if (i >= paragraphs.length) { endStory(); return; }
+  busy = true;
+  const tc = document.getElementById('textContent');
+  const ci = document.getElementById('continueIcon');
+  ci.classList.remove('show');
+  tc.classList.remove('show');
+  setTimeout(() => {
+    tc.innerHTML = paragraphs[i].replace(/\n/g, '<br>');
+    tc.classList.add('show');
+    setTimeout(() => { ci.classList.add('show'); busy = false; }, 500);
+  }, i === 0 ? 0 : 300);
+}
+
+function next() {
+  idx++;
+  showParagraph(idx);
+}
+
+// ── END ──
+function endStory() {
+  busy = true;
+  const fo = document.getElementById('fadeOverlay');
+  fo.classList.remove('out'); fo.classList.add('in');
+  stopRain();
+  document.getElementById('textWindow').classList.remove('active');
+  document.getElementById('continueIcon').classList.remove('show');
+  document.getElementById('bottomNav').classList.remove('show');
+  setTimeout(() => {
+    document.getElementById('endScreen').classList.add('show');
+    fo.classList.remove('in'); fo.classList.add('out');
+    busy = false;
+  }, 1800);
+}
+
+// ── REPLAY ──
+document.getElementById('replayBtn').onclick = e => {
+  e.stopPropagation();
+  busy = true;
+  document.getElementById('endScreen').classList.remove('show');
+  const fo = document.getElementById('fadeOverlay');
+  fo.classList.remove('out'); fo.classList.add('in');
+  setTimeout(() => {
+    idx = 0; started = false;
+    document.getElementById('textContent').innerHTML = '';
+    document.getElementById('textContent').classList.remove('show');
+    document.getElementById('bg').classList.remove('story');
+    document.getElementById('titleScreen').classList.remove('hidden');
+    if (audioCtx && rainNode) { try { rainNode.stop(); } catch(e) {} rainNode = null; }
+    if (masterGain) masterGain.gain.value = 0;
+    fo.classList.remove('in'); fo.classList.add('out');
+    setTimeout(() => { busy = false; }, 400);
+  }, 1000);
+};
+
+// ── CLICK ──
+document.body.addEventListener('click', () => {
+  if (busy) return;
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  if (!started) { initAudio(); startStory(); }
+  else { next(); }
+});
+
+// ── INIT ──
+// フェードアウトを即時実行（load待ちだと遅延する場合がある）
+setTimeout(() => {
+  document.getElementById('fadeOverlay').classList.add('out');
+}, 100);
+</script>
 </body>
-
 </html>
