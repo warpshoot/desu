@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>DESU™ ep. 下</title>
+<title>DESU™ ep. 丁E/title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
@@ -11,9 +11,9 @@
 html,body { width:100%; height:100%; background:var(--bg); color:var(--text); overflow:hidden; cursor:pointer; user-select:none; }
 body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent 0,transparent 3px,rgba(0,0,0,0.07) 3px,rgba(0,0,0,0.07) 4px); pointer-events:none; z-index:9000; }
 
-/* subtle animated bg — video missing from repo */
-#bg { position:fixed; inset:0; background:radial-gradient(ellipse 60% 80% at 40% 60%, #0f0f18 0%, #08080b 100%); z-index:0; }
-#bg::after { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 40% 40% at 60% 40%, rgba(80,80,120,0.08) 0%, transparent 70%); animation:bgshift 8s ease-in-out infinite alternate; }
+/* background video */
+#bgVideo { position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; filter: brightness(0.45) saturate(0.6); }
+#bgOverlay { position:fixed; inset:0; background:radial-gradient(ellipse 40% 40% at 60% 40%, rgba(80,80,120,0.08) 0%, transparent 70%); animation:bgshift 8s ease-in-out infinite alternate; z-index:0; }
 @keyframes bgshift { from{opacity:0.4} to{opacity:1} }
 #vignette { position:fixed; inset:0; background:radial-gradient(ellipse 80% 90% at 50% 50%,transparent 20%,rgba(8,8,11,0.65) 100%); z-index:1; pointer-events:none; }
 #fadeOverlay { position:fixed; inset:0; background:#08080b; z-index:8000; opacity:1; transition:opacity 1.5s ease; pointer-events:none; }
@@ -22,11 +22,13 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 .hud { position:fixed; font-family:var(--mono); font-size:9px; letter-spacing:0.2em; color:var(--dim); z-index:200; }
 #hud-tl { top:26px; left:28px; display:flex; align-items:center; gap:12px; }
 #hud-tr { top:26px; right:28px; display:flex; align-items:center; gap:14px; }
+#hud-bl { bottom:26px; left:28px; }
+#hud-br { bottom:26px; right:28px; }
 .logo { font-weight:700; font-size:11px; letter-spacing:0.22em; color:var(--text); text-decoration:none; }
 .ep-label { font-size:9px; color:var(--dim); letter-spacing:0.18em; }
 .pulse { width:4px; height:4px; border-radius:50%; background:var(--accent); animation:blink 3s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
-#closeBtn { font-family:var(--mono); font-size:13px; color:var(--dim); cursor:pointer; transition:color 0.2s; background:none; border:none; letter-spacing:0.1em; }
+#closeBtn { font-family:var(--mono); font-size:9px; letter-spacing:0.2em; color:var(--dim); cursor:pointer; transition:color 0.2s; background:none; border:none; }
 #closeBtn:hover { color:var(--text); }
 #muteBtn { background:none; border:none; cursor:pointer; color:var(--dim); transition:color 0.2s; display:flex; align-items:center; }
 #muteBtn:hover { color:var(--mid); }
@@ -43,9 +45,9 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 #titleScreen:hover .start-bar-label { color:var(--text); }
 @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
 
-#textWindow { position:fixed; bottom:0; left:0; right:0; z-index:400; border-top:1px solid rgba(255,255,255,0.07); background:rgba(8,8,11,0.94); backdrop-filter:blur(10px); display:flex; align-items:flex-start; gap:16px; padding:18px 28px 24px; min-height:100px; opacity:0; pointer-events:none; transform:translateY(8px); transition:opacity 0.3s ease,transform 0.3s ease; }
+#textWindow { position:fixed; top:0; left:0; right:0; z-index:400; border-bottom:1px solid rgba(255,255,255,0.07); background:rgba(8,8,11,0.94); backdrop-filter:blur(10px); display:flex; align-items:flex-start; gap:18px; padding:22px 32px 22px; min-height:100px; opacity:0; pointer-events:none; transform:translateY(-8px); transition:opacity 0.3s ease,transform 0.3s ease; }
 #textWindow.active { opacity:1; pointer-events:all; transform:translateY(0); }
-#faceIcon { width:48px; height:48px; object-fit:cover; border:1px solid rgba(255,255,255,0.08); flex-shrink:0; filter:grayscale(15%); }
+#faceIcon { width:52px; height:52px; object-fit:cover; border:1px solid rgba(255,255,255,0.08); flex-shrink:0; filter:grayscale(15%); }
 .text-body { flex:1; display:flex; flex-direction:column; gap:4px; }
 #nameDisplay { font-family:var(--mono); font-size:9px; letter-spacing:0.25em; }
 #nameDisplay.desu { color:#8aaccc; }
@@ -54,7 +56,7 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 #continueIcon { font-size:9px; color:var(--accent); align-self:flex-end; margin-left:12px; flex-shrink:0; opacity:0; transition:opacity 0.3s; animation:blink 1.2s ease-in-out infinite; }
 #continueIcon.show { opacity:1; }
 
-/* BOTTOM NAV — HUD bottom-left */
+/* BOTTOM NAV  EHUD bottom-left */
 #hud-bl { bottom:26px; left:28px; }
 #bottomNav { opacity:0; pointer-events:none; transition:opacity 0.5s ease; }
 #bottomNav.show { opacity:1; pointer-events:all; }
@@ -72,31 +74,33 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 </style>
 </head>
 <body>
-<div id="bg"></div>
+<video id="bgVideo" autoplay loop muted playsinline><source src="images/desu01.mp4" type="video/mp4"></video>
+<div id="bgOverlay"></div>
 <div id="vignette"></div>
 <div id="fadeOverlay"></div>
 
 <div class="hud" id="hud-tl">
   <a href="../index.html" class="logo" id="logoLink">DESU™</a>
   <span class="pulse"></span>
-  <span class="ep-label">ep. 下</span>
+  <span class="ep-label">ep. 丁E/span>
 </div>
 <div class="hud" id="hud-tr">
-  <button id="muteBtn">
+  <button id="muteBtn" title="音声刁E��替ぁE>
     <svg id="muteIcon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
     <svg id="unmuteIcon" viewBox="0 0 24 24" style="display:none"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
   </button>
-  <button id="closeBtn" onclick="goBack()">× 戻る</button>
+  <button id="closeBtn" onclick="goBack()">ÁE戻めE/button>
 </div>
+<div class="hud" id="hud-br">© 2026 <a href="https://warpshoot.github.io/" target="_blank" style="color:var(--dim);text-decoration:none;">wpy</a></div>
 
 <div id="titleScreen">
-  <div class="title-ep">DESU™ — RECORDS</div>
-  <div class="title-name">ep. 下</div>
-  <div class="start-bar"><span class="start-bar-label">はじめる</span><span class="start-bar-caret">▼</span></div>
+  <div class="title-ep">DESU™  ERECORDS</div>
+  <div class="title-name">ep. 丁E/div>
+  <div class="start-bar"><span class="start-bar-label">はじめめE/span><span class="start-bar-caret">▼</span></div>
 </div>
 
 <div id="textWindow">
-  <img id="faceIcon" alt="">
+  <img id="faceIcon" src="images/sakana.jpg" alt="">
   <div class="text-body">
     <div id="nameDisplay"></div>
     <div id="textContent"></div>
@@ -104,33 +108,33 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
   <div id="continueIcon">▼</div>
 </div>
 
-<div class="hud" id="hud-bl"><div id="bottomNav"><span class="back-label" onclick="goBack()">← 戻る</span></div></div>
+<div class="hud" id="hud-bl"><div id="bottomNav"><span class="back-label" onclick="goBack()">ↁE戻めE/span></div></div>
 
 <div id="endScreen">
   <div class="end-panel">
     <div class="end-btn" id="replayBtn"><span class="end-label">もう一度見る</span><span class="end-en">REPLAY</span></div>
-    <div class="end-btn" id="backBtn"><span class="end-label">戻る</span><span class="end-en">← BACK</span></div>
+    <div class="end-btn" id="backBtn"><span class="end-label">戻めE/span><span class="end-en">ↁEBACK</span></div>
   </div>
 </div>
 
 <script>
 const dialogues = [
-  {speaker:'sakana', text:'このまま少し行けば現場だ'},
-  {speaker:'desu',   text:'うん'},
-  {speaker:'sakana', text:'今度はグロいやつじゃないといいな'},
-  {speaker:'desu',   text:'うん'},
+  {speaker:'sakana', text:'こ�Eまま少し行けば現場だ'},
+  {speaker:'desu',   text:'ぁE��'},
+  {speaker:'sakana', text:'今度はグロぁE��つじゃなぁE��ぁE��な'},
+  {speaker:'desu',   text:'ぁE��'},
   {speaker:'sakana', text:'…'},
   {speaker:'desu',   text:'…'},
-  {speaker:'sakana', text:'…ところで\nそれ、下なにか履いてる？'},
-  {speaker:'desu',   text:'…いや'},
+  {speaker:'sakana', text:'…ところで\nそれ、下なにか履ぁE��る！E},
+  {speaker:'desu',   text:'…ぁE��'},
   {speaker:'sakana', text:'そうか…'},
-  {speaker:'desu',   text:'なんで？'},
-  {speaker:'sakana', text:'いや…\n風邪ひくなよ'},
+  {speaker:'desu',   text:'なんで�E�E},
+  {speaker:'sakana', text:'ぁE��…\n風邪ひくなめE},
   {speaker:'desu',   text:'大丈夫\nありがと'},
   {speaker:'sakana', text:'ん…\nあ、ここだ'}
 ];
 
-const speakerNames={sakana:'サカナ',desu:'デス'};
+const speakerNames={sakana:'サカチE,desu:'チE��'};
 const faceIconPaths={sakana:'images/sakana.jpg',desu:'images/desu.jpg'};
 const freqs={sakana:300,desu:700};
 
