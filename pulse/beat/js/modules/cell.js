@@ -1,4 +1,8 @@
-import { PITCH_RANGE, DURATION_RANGE, LONG_PRESS_DURATION, DRAG_THRESHOLD, TAP_THRESHOLD, ROLL_SUBDIVISIONS, SCALES } from './constants.js';
+import { PITCH_RANGE, DURATION_RANGE, SCALE_RANGE, LONG_PRESS_DURATION, DRAG_THRESHOLD, TAP_THRESHOLD, ROLL_SUBDIVISIONS, SCALES } from './constants.js';
+
+// Per-track weak velocity (track index 0-4: Kick, Snare, Hi-hat, Bass, Lead)
+// Tuned per instrument type: membrane needs bigger drop, noise stays audible, metal is delicate
+const WEAK_VELOCITY = [0.42, 0.65, 0.55, 0.5, 0.58];
 
 export class Cell {
     constructor(element, track, step, data, onChange, onLongPress, onPaintChange, getGlobalIsPainting, baseFreq, noteIndicator, getIsTwoFingerTouch, getScale) {
@@ -15,15 +19,12 @@ export class Cell {
         this.getScale = getScale;
         this.getIsTwoFingerTouch = getIsTwoFingerTouch || (() => false);
 
-        // Inner visual element (width-based duration; outer element stays fixed for hit area)
+        // Inner visual element (receives scaleX; outer element stays fixed for hit area)
         this.visual = document.createElement('div');
         this.visual.className = 'cell-visual';
         this.element.appendChild(this.visual);
 
-        // Pitch indicator inside .cell-visual so it shares the same stacking context.
-        // Previously kept in .cell to avoid scaleX distortion; now that duration uses
-        // width (not transform), placing it here prevents adjacent active cells
-        // (z-index:5) from covering it when their visual extends rightward.
+        // Visual pitch indicator (inside visual so it scales with note)
         this.pitchIndicator = document.createElement('div');
         this.pitchIndicator.className = 'pitch-indicator';
         this.visual.appendChild(this.pitchIndicator);
@@ -46,61 +47,44 @@ export class Cell {
 
 
     setupEvents() {
-        // Mouse events
-        this.element.addEventListener('mousedown', (e) => {
-            if (e.button === 0) { // Left click only
-                this.onPointerDown(e.clientX, e.clientY);
+        // Unified Pointer Events (Mouse, Touch, Stylus)
+        this.element.addEventListener('pointerdown', (e) => {
+            // Only handle primary pointer (usually first finger or pen)
+            if (!e.isPrimary) return;
+
+            // Two-finger gesture check (managed globally or via pointer count if needed)
+            if (this.getIsTwoFingerTouch && this.getIsTwoFingerTouch()) return;
+
+            // Prevent browser default behavior (like scrolling)
+            if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+                this.element.releasePointerCapture(e.pointerId); // Don't capture to allow some gestures if needed
             }
+
+            this.onPointerDown(e.clientX, e.clientY);
         });
 
-        this.element.addEventListener('mouseenter', () => {
+        this.element.addEventListener('pointerenter', (e) => {
             if (this.getGlobalIsPainting && this.getGlobalIsPainting()) {
                 this.paintActivate();
             }
         });
 
-        window.addEventListener('mousemove', (e) => {
-            if (this.isDragging) {
+        window.addEventListener('pointermove', (e) => {
+            if (this.isDragging && e.isPrimary) {
                 this.onPointerMove(e.clientX, e.clientY);
             }
         });
 
-        window.addEventListener('mouseup', () => {
-            this.onPointerUp();
+        window.addEventListener('pointerup', (e) => {
+            if (e.isPrimary) {
+                this.onPointerUp();
+            }
         });
 
-        // Touch events
-        this.element.addEventListener('touchstart', (e) => {
-            // Allow two-finger panning - don't handle touch at all
-            if (e.touches.length >= 2) {
-                return;
+        window.addEventListener('pointercancel', (e) => {
+            if (e.isPrimary) {
+                this.onPointerUp();
             }
-
-            if (e.touches.length === 1 && !this.getIsTwoFingerTouch()) {
-                // Only prevent default for single-finger touches
-                // This allows two-finger scrolling
-                e.preventDefault();
-                this.onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
-            }
-        }, { passive: false });
-
-        window.addEventListener('touchmove', (e) => {
-            // Cancel drag if two-finger touch detected
-            if (e.touches.length >= 2 || this.getIsTwoFingerTouch()) {
-                if (this.isDragging) {
-                    this.onPointerUp();
-                }
-                return;
-            }
-
-            if (this.isDragging && e.touches.length === 1) {
-                e.preventDefault();
-                this.onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
-            }
-        }, { passive: false });
-
-        window.addEventListener('touchend', () => {
-            this.onPointerUp();
         });
     }
 
@@ -147,27 +131,30 @@ export class Cell {
                     // Horizontal Drag -> Continuous Paint
                     this.isPaintDrag = true; // Flag to prevent duration adjustment
                     // Trigger global paint mode with track ID
-                    if (this.onPaintChange) this.onPaintChange(true, this.track);
+                    if (this.onPaintChange) this.onPaintChange(true, this.track, true);
                     this.paintActivate();
                     // We don't adjust duration on initial paint drag, just activate
                 } else {
                     // Vertical Drag -> One-shot Activate & Pitch Adjust
                     // Activate immediately but DO NOT trigger global continuous paint
                     this.data.active = true;
-                    this.element.classList.add('active'); // Add active class to show color
-                    // Reset to default/current duration
                     this.data.pitch = 0; // Reset pitch to center
                     this.startValue = 0; // Start adjusting from 0
                     this.triggerPulse();
                     this.updateVisuals();
+                    this.element.classList.add('adjusting');
+                    if (this.onPaintChange) this.onPaintChange(true, this.track, false);
                     if (this.onChange) this.onChange(this.track, this.step, this.data, false);
                 }
             } else {
                 // Active Cell Logic (Existing)
+                if (this.onPaintChange) this.onPaintChange(true, this.track, false);
                 if (this.dragDirection === 'vertical') {
                     this.startValue = this.data.pitch;
+                    this.element.classList.add('adjusting');
                 } else {
                     this.startValue = this.data.duration;
+                    this.element.classList.add('adjusting');
                 }
             }
         }
@@ -211,7 +198,7 @@ export class Cell {
             if (this.isPaintDrag) return;
 
             const range = DURATION_RANGE.max - DURATION_RANGE.min;
-            const sensitivity = range / 400;
+            const sensitivity = range / 400; // More precise for longer range
             let newValue = this.startValue + (deltaX * sensitivity);
             newValue = Math.max(DURATION_RANGE.min, Math.min(DURATION_RANGE.max, newValue));
             this.data.duration = newValue;
@@ -253,7 +240,7 @@ export class Cell {
             this.noteIndicator.classList.add('hidden');
         }
 
-        // Reset painting and adjusting state
+        // Reset painting state
         if (this.onPaintChange) {
             this.onPaintChange(false);
         }
@@ -271,7 +258,7 @@ export class Cell {
             this.data.velocity = 1.0;
             this.updateVisuals();
         } else if (this.data.velocity === 1.0) {
-            this.data.velocity = 0.5;
+            this.data.velocity = WEAK_VELOCITY[this.track] ?? 0.5;
             this.updateVisuals();
         } else {
             this.deactivate();
@@ -289,7 +276,7 @@ export class Cell {
         this.data.pitch = PITCH_RANGE.default;
         this.data.duration = DURATION_RANGE.default;
         this.visual.classList.remove('active', 'roll', 'weak');
-        this.element.classList.remove('active', 'playhead', 'weak');
+        this.element.classList.remove('playhead', 'weak');
         this.updateVisuals();
         if (this.onChange) {
             this.onChange(this.track, this.step, this.data, false);
@@ -337,17 +324,17 @@ export class Cell {
 
     updateVisuals() {
         if (!this.data.active) {
-            this.visual.style.width = '';
             this.visual.style.transform = '';
+            this.visual.style.setProperty('--base-scale-x', '1');
             this.visual.dataset.rollSubdivision = '';
-            this.element.classList.remove('active', 'weak');
-            this.visual.classList.remove('active', 'roll', 'weak');
+            this.element.classList.remove('active', 'roll', 'octave-low', 'weak');
+            this.visual.classList.remove('active', 'roll', 'octave-low', 'weak');
             this.pitchIndicator.style.display = 'none';
             return;
         }
 
-        this.element.classList.add('active');
         this.visual.classList.add('active');
+        this.element.classList.add('active');
 
         // Velocity: weak class for low velocity
         if (this.data.velocity < 1.0) {
@@ -358,13 +345,15 @@ export class Cell {
             this.visual.classList.remove('weak');
         }
 
-        // Width-based sizing: extend .cell-visual to the right by setting its width
-        // directly instead of using scaleX transform. This avoids Safari rendering
-        // issues with transform + border-radius inside a backdrop-filter container.
-        const cellWidth = this.element.offsetWidth || 28;
-        const targetWidth = Math.max(2, (this.data.duration * (cellWidth + 2)) - 2);
-        this.visual.style.width = `${targetWidth}px`;
-        this.visual.style.transform = '';
+        const effectivePitch = this.getEffectivePitch ? this.getEffectivePitch() : this.data.pitch;
+
+        // Scale based on duration (duration 1.0 = 1 full step)
+        // One step unit is 26px (24px width + 2px gap).
+        // We want (Duration * 26 - 2) pixels, then divide by 24 for scale.
+        const targetWidth = (this.data.duration * 26) - 2;
+        const scale = Math.max(0.1, targetWidth / 24);
+        this.visual.style.setProperty('--base-scale-x', scale);
+        this.visual.style.transform = `scaleX(${scale})`;
 
         // Store roll subdivision for CSS (on visual for ::after overlay)
         if (this.data.rollMode) {
@@ -375,14 +364,16 @@ export class Cell {
             this.visual.classList.remove('roll');
         }
 
-        // Pitch indicator (uses effective pitch to match actual playback)
-        const effectivePitch = this.getEffectivePitch ? this.getEffectivePitch() : this.data.pitch;
-        const range = PITCH_RANGE.max - PITCH_RANGE.min;
-        const rawNormalized = (effectivePitch - PITCH_RANGE.min) / range;
-        const normalized = Math.max(0, Math.min(1, rawNormalized));
-        const topPercent = (1 - normalized) * 90;
-        this.pitchIndicator.style.top = `${5 + topPercent}%`;
-        this.pitchIndicator.style.display = 'block';
+        // Pitch indicator
+        if (this.data.active) {
+            const range = PITCH_RANGE.max - PITCH_RANGE.min;
+            const normalized = (effectivePitch - PITCH_RANGE.min) / range;
+            const topPercent = (1 - normalized) * 90;
+            this.pitchIndicator.style.top = `${5 + topPercent}%`;
+            this.pitchIndicator.style.display = 'block';
+        } else {
+            this.pitchIndicator.style.display = 'none';
+        }
     }
 
     setPlayhead(isPlayhead) {

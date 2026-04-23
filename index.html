@@ -75,7 +75,7 @@ body::before {
   font-size: 9px;
   letter-spacing: 0.2em;
   color: var(--dim);
-  z-index: 200;
+  z-index: 12000;
 }
 #hud-tl { top: 26px; left: 28px; display: flex; align-items: center; gap: 12px; }
 #hud-tr { top: 26px; right: 28px; display: flex; align-items: center; gap: 14px; }
@@ -111,18 +111,19 @@ body::before {
   z-index: 300;
   border-top: 1px solid rgba(255,255,255,0.07);
   background: rgba(8,8,11,0.9);
-  padding: 18px 28px;
+  padding: 20px 28px;
   display: flex;
   align-items: center;
   gap: 14px;
   cursor: pointer;
   opacity: 0; pointer-events: none;
   transform: translateY(6px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition: all 0.4s ease;
 }
+#startPrompt:hover { background: rgba(168,136,88,0.08); }
 #startPrompt.show { opacity: 1; pointer-events: all; transform: translateY(0); }
 #startPrompt .label {
-  font-family: var(--jp); font-size: 13px;
+  font-family: var(--jp); font-size: 14px;
   color: rgba(202,198,190,0.55); letter-spacing: 0.2em;
   transition: color 0.2s;
 }
@@ -136,7 +137,7 @@ body::before {
 #textWindow {
   position: fixed;
   top: 0; left: 0; right: 0;
-  z-index: 400;
+  z-index: 10000;
   border-bottom: 1px solid rgba(255,255,255,0.07);
   background: rgba(8,8,11,0.94);
   backdrop-filter: blur(10px);
@@ -182,7 +183,7 @@ body::before {
 /* ── MENU SCREEN ── */
 #menuScreen {
   position: fixed; inset: 0;
-  z-index: 500;
+  z-index: 9100;
   display: flex; flex-direction: column;
   align-items: flex-start; justify-content: flex-end;
   background: rgba(8,8,11,0.5);
@@ -225,7 +226,7 @@ body::before {
 /* ── SUB SCREENS ── */
 .sub-screen {
   position: fixed; inset: 0;
-  z-index: 600;
+  z-index: 9200;
   display: flex; flex-direction: column;
   align-items: flex-start; justify-content: flex-end;
   background: rgba(8,8,11,0.5);
@@ -260,10 +261,14 @@ body::before {
 .sub-link:hover { color: var(--text); border-color: rgba(168,136,88,0.3); background: rgba(168,136,88,0.07); }
 .sub-link.mono { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; }
 .sub-back {
-  font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
   color: var(--dim); cursor: pointer; transition: color 0.2s;
+  padding: 14px 28px;
+  background: rgba(8,8,11,0.9);
+  margin: 16px -28px -28px;
+  border-top: 1px solid rgba(255,255,255,0.05);
 }
-.sub-back:hover { color: var(--mid); }
+.sub-back:hover { color: var(--mid); background: rgba(168,136,88,0.05); }
 
 /* tool list with ? */
 .tool-row { display: flex; align-items: center; }
@@ -279,7 +284,7 @@ body::before {
 /* ── CHARACTER SCREEN ── */
 #charScreen {
   position: fixed; inset: 0;
-  z-index: 600;
+  z-index: 9200;
   display: flex; flex-direction: column;
   align-items: flex-start; justify-content: flex-end;
   background: rgba(8,8,11,0.5);
@@ -349,13 +354,17 @@ body::before {
 .char-icon-btn.active { filter: grayscale(0%) brightness(1); border-color: var(--accent); }
 
 .char-sub-back {
-  font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em;
-  color: var(--dim); cursor: pointer; transition: color 0.2s; display: inline-block;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em;
+  color: var(--dim); cursor: pointer; transition: color 0.2s;
+  padding: 14px 28px;
+  background: rgba(8,8,11,0.9);
+  margin: 16px -28px -24px;
+  border-top: 1px solid rgba(255,255,255,0.05);
 }
-.char-sub-back:hover { color: var(--mid); }
+.char-sub-back:hover { color: var(--mid); background: rgba(168,136,88,0.05); }
 
 /* text window overlay mode (over sub-screens) */
-#textWindow.overlay { z-index: 700; }
+#textWindow.overlay { z-index: 11000; }
 </style>
 </head>
 <body>
@@ -409,7 +418,7 @@ body::before {
     </div>
     <div class="menu-btn" id="btn-characters">
       <span class="mn">02</span>
-      <span class="mj" id="mj2">周辺情報の確認</span>
+      <span class="mj" id="mj2">界隈の話を聞く</span>
       <span class="me">INTEL</span>
     </div>
     <div class="menu-btn" id="btn-tools">
@@ -420,7 +429,7 @@ body::before {
     <div class="menu-btn" id="btn-buy">
       <span class="mn">04</span>
       <span class="mj" id="mj4">現物の買い取り</span>
-      <span class="me">BUY</span>
+      <span class="me">TRADES</span>
     </div>
   </div>
   <div class="menu-close" id="menuClose">× <span id="closeLabel">立ち去る</span></div>
@@ -431,10 +440,10 @@ body::before {
   <div class="sub-inner">
     <div class="sub-label" id="epLabel">RECORDS — エピソード</div>
     <div class="sub-grid">
-      <a href="./ep_oto/" class="sub-link" target="_blank">音</a>
-      <a href="./ep_gara/" class="sub-link" target="_blank">ガラ</a>
-      <a href="./ep_hen/" class="sub-link" target="_blank">ヘン</a>
-      <a href="./ep_shita/" class="sub-link" target="_blank">下</a>
+      <a href="./ep_oto/" class="sub-link">音</a>
+      <a href="./ep_gara/" class="sub-link">ガラ</a>
+      <a href="./ep_hen/" class="sub-link">ヘン</a>
+      <a href="./ep_shita/" class="sub-link">下</a>
     </div>
     <div class="sub-back" id="epBack">× 戻る</div>
   </div>
@@ -454,12 +463,8 @@ body::before {
         <span class="tool-info" data-tool="CAMERA">?</span>
       </div>
       <div class="tool-row">
-        <a href="./beat/" class="sub-link mono" target="_blank">BEAT</a>
-        <span class="tool-info" data-tool="BEAT">?</span>
-      </div>
-      <div class="tool-row">
-        <a href="./beep/" class="sub-link mono" target="_blank">BEEP</a>
-        <span class="tool-info" data-tool="BEEP">?</span>
+        <a href="./pulse/" class="sub-link mono" target="_blank">PULSE</a>
+        <span class="tool-info" data-tool="PULSE">?</span>
       </div>
     </div>
     <div class="sub-back" id="tpBack">× 戻る</div>
@@ -498,33 +503,32 @@ const DIALOGUES = {
   },
   buy: {
     ja: '…買い取り？　変わったやつだな',
-    en: "...Buy items? You're an odd one."
+    en: "...Selling items? You're an odd one."
   }
 };
 
 const CHARS = {
   desu:   { name: 'デス',    nameEn: 'Desu',   img: 'characters/desu.png',
     ja: '"デス" だ。うちで仕事を手伝ってもらってる。素性は俺もよく知らない',
-    en: '"Desu." Helps out around here. I don\'t know much about them either.' },
+    en: 'That\'s "Desu." Helps out around here. I don\'t know much about their background either.' },
   sakana: { name: 'サカナ',  nameEn: 'Sakana', img: 'characters/sakana.png',
     ja: '"サカナ"。デスが連れてる魚だ。しゃべるぞ',
-    en: '"Sakana." A fish that Desu brought along. It talks.' },
+    en: '"Sakana." The fish accompanying Desu. Yes, it talks.' },
   shi:    { name: 'しーちゃん', nameEn: 'Shi', img: 'characters/shi.png',
     ja: '"しーちゃん" は、うちのマスコットキャラクターだ。物騒なデザインだが、意外と人気があるらしい',
-    en: '"Shi." Our mascot. Dangerous-looking design, but apparently quite popular.' },
+    en: '"Shi-chan" is our mascot. Looks dangerous, but apparently it\'s quite popular.' },
   holem:  { name: 'ホーレム', nameEn: 'Holem', img: 'characters/holem.png',
     ja: '"ガラ" か。ホーレムと呼ぶやつもいる。これについて詳しいことは話せない',
-    en: '"Gara," or some call it Holem. I can\'t tell you much about this one.' },
+    en: 'A "Gara." Some call it Holem. I can\'t give you any details about this one.' },
   wpy:    { name: 'wpy',    nameEn: 'wpy',    img: 'characters/wpy.png',
     ja: '"wpy" とか、"ワーピー" と呼ばれている奴だな。支給品はすべてこいつが作ってると聞いたことがある',
-    en: '"wpy," or "Warpy." I\'ve heard all the supplies come from this one.' }
+    en: 'That\'s "wpy," or "Warpy." I\'ve heard they\'re the one responsible for all our supplies.' }
 };
 
 const TOOLS = {
   'INK':      { ja: 'スケッチや図示に使うそうだ。現場で使ってる奴を見たことがある', en: 'For sketching and diagrams. I\'ve seen it used in the field.' },
-  'CAMERA':      { ja: '妙な写りをするカメラだ。カメラ付きの端末から試してみるといい', en: 'A camera with strange results. Try it from a device with a camera.' },
-  'BEAT':     { ja: 'リズムを組める。音の記録や暗号に使うのだろう', en: 'For composing rhythms. Probably for recording sounds or ciphers.' },
-  'BEEP':     { ja: 'BEATの別型だ。こっちは音が軽い', en: 'A variant of BEAT. Lighter sound.' }
+  'CAMERA':      { ja: '視覚を変換するプログラムらしい。カメラ付きの端末から試してみるといい', en: 'A program that transforms your vision. Try it if you have a device with a camera.' },
+  'PULSE':     { ja: '音が出る装置だ。これは…玩具、だな。', en: 'A device that makes sound. This is... just a toy, I suppose.' }
 };
 
 // ── STATE ──
@@ -541,10 +545,10 @@ let audioCtx = null;
 // ── LANG ──
 const STR = {
   speakLabel: { ja: '声をかける', en: 'Call out' },
-  mj1: { ja: '記録の閲覧', en: 'View Records' },
+  mj1: { ja: '記録の閲覧', en: 'Access Records' },
   mj2: { ja: '界隈の話を聞く', en: 'Gather Intel' },
   mj3: { ja: '支給品のチェック', en: 'Check Supplies' },
-  mj4: { ja: '現物の買い取り', en: 'Buy Items' },
+  mj4: { ja: '現物の買い取り', en: 'Sell Items' },
   closeLabel: { ja: '立ち去る', en: 'Leave' },
   epLabel: { ja: 'RECORDS — エピソード', en: 'RECORDS — Episodes' },
   epBack: { ja: '× 戻る', en: '× Back' },

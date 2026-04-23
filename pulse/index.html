@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>pulse</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #000;
+      color: #fff;
+      font-family: 'DM Mono', monospace;
+      overflow: hidden;
+      width: 100vw;
+      height: 100dvh;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100dvh;
+      background: #000;
+    }
+
+    .iframe-container {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+      will-change: opacity;
+    }
+
+    .iframe-container.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* ── HEADER HUD ── */
+    #hud {
+      position: fixed;
+      top: max(env(safe-area-inset-top), 20px);
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 200;
+      pointer-events: none;
+    }
+
+    #hud button {
+      pointer-events: auto;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #888;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      touch-action: manipulation;
+    }
+
+    #hud button:hover {
+      border-color: rgba(255,255,255,0.4);
+      color: #fff;
+    }
+
+    #global-credit-btn {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.7) !important;
+      border: 1px solid #000 !important;
+      color: #000 !important;
+      font-weight: bold;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+    }
+
+    #mode-toggle-btn {
+      padding: 0 18px;
+      height: 38px;
+      border-radius: 19px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #mode-toggle-btn svg {
+      width: 14px;
+      height: 14px;
+      opacity: 0.6;
+      transition: transform 0.4s ease;
+    }
+
+    #mode-toggle-btn:hover svg {
+      opacity: 1;
+      transform: rotate(180deg);
+    }
+
+    #mode-toggle-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* ── CREDIT MODAL ── */
+    #credit-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #credit-modal.visible { display: flex; }
+
+    #credit-content {
+      background: #0a0a0a;
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 30px;
+      font-family: 'DM Mono', monospace;
+      width: 320px;
+      max-width: calc(100vw - 40px);
+      border-radius: 12px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+
+    .credit-row { display: flex; gap: 15px; margin-bottom: 12px; }
+    .credit-key { color: #555; font-size: 11px; min-width: 5em; text-transform: uppercase; }
+    .credit-val { font-size: 12px; color: #aaa; text-decoration: none; }
+    a.credit-val { text-decoration: underline; color: #ccc; }
+    a.credit-val:hover { color: #fff; }
+    .credit-divider { border: none; border-top: 1px solid rgba(255,255,255,0.05); margin: 20px 0; }
+    .credit-manual-link { font-size: 11px; color: #888; text-decoration: underline; margin-right: 15px; }
+    .credit-manual-link:hover { color: #fff; }
+
+  </style>
+</head>
+<body>
+
+  <div id="container">
+    <div class="iframe-container active" id="wrap-0">
+      <iframe src="beat/index.html" id="frame-beat"></iframe>
+    </div>
+    <div class="iframe-container" id="wrap-1">
+      <iframe src="beep/index.html" id="frame-beep"></iframe>
+    </div>
+  </div>
+
+  <div id="hud">
+    <button id="global-credit-btn">?</button>
+    <button id="mode-toggle-btn">
+      <span id="mode-text">BEAT</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 16l-4-4 4-4M17 8l4 4-4 4M3 12h18" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Credit modal -->
+  <div id="credit-modal">
+    <div id="credit-content">
+      <div class="credit-row">
+        <span class="credit-key">Name</span>
+        <span class="credit-val">pulse</span>
+      </div>
+      <div class="credit-row">
+        <span class="credit-key">Source</span>
+        <a href="https://warpshoot.github.io/desu/" target="_blank" class="credit-val">warpshoot.github.io</a>
+      </div>
+      <div class="credit-row">
+        <span class="credit-key">Maker</span>
+        <a href="https://warpshoot.github.io/" target="_blank" class="credit-val">wpy</a>
+      </div>
+      <hr class="credit-divider">
+      <div class="credit-row">
+        <span class="credit-key">Manual</span>
+        <a href="MANUAL.md" target="_blank" class="credit-manual-link">PULSE MANUAL</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const wraps = document.querySelectorAll('.iframe-container');
+    const toggleBtn = document.getElementById('mode-toggle-btn');
+    const creditBtn = document.getElementById('global-credit-btn');
+    const creditModal = document.getElementById('credit-modal');
+
+    const MODES = [
+      { name: 'BEAT', color: '#ffffff' },
+      { name: 'BEEP', color: '#ff80ab' }
+    ];
+
+    let currentIndex = 0;
+
+    creditBtn.addEventListener('click', () => {
+      creditModal.classList.add('visible');
+    });
+
+    creditModal.addEventListener('click', (e) => {
+      if (e.target === creditModal) creditModal.classList.remove('visible');
+    });
+
+    function setMode(index) {
+      currentIndex = index % MODES.length;
+      const mode = MODES[currentIndex];
+
+      // Update Iframes
+      wraps.forEach((w, i) => {
+        const isActive = i === currentIndex;
+        w.classList.toggle('active', isActive);
+
+        // Notify iframe
+        const frame = w.querySelector('iframe');
+        if (frame && frame.contentWindow) {
+          frame.contentWindow.postMessage({ type: isActive ? 'activate' : 'deactivate' }, '*');
+        }
+      });
+
+      // Update Button
+      document.getElementById('mode-text').textContent = mode.name;
+      
+      if (currentIndex === 1) { // BEEP mode
+        toggleBtn.style.background = '#fff';
+        toggleBtn.style.color = mode.color;
+        toggleBtn.style.borderColor = '#fff';
+        toggleBtn.style.boxShadow = `0 4px 15px rgba(255, 128, 171, 0.4)`;
+      } else { // BEAT mode
+        toggleBtn.style.background = 'rgba(0,0,0,0.4)';
+        toggleBtn.style.color = mode.color;
+        toggleBtn.style.borderColor = `${mode.color}44`;
+        toggleBtn.style.boxShadow = `0 0 15px ${mode.color}11`;
+      }
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      setMode(currentIndex + 1);
+    });
+
+    // Ensure iframes get their initial state once they load
+    wraps.forEach((w, i) => {
+      const frame = w.querySelector('iframe');
+      frame.addEventListener('load', () => {
+        const isActive = i === currentIndex;
+        frame.contentWindow.postMessage({ type: isActive ? 'activate' : 'deactivate' }, '*');
+      });
+    });
+
+    // Initialize
+    setMode(0);
+
+  </script>
+</body>
+</html>

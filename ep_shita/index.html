@@ -19,7 +19,7 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 #fadeOverlay { position:fixed; inset:0; background:#08080b; z-index:8000; opacity:1; transition:opacity 1.5s ease; pointer-events:none; }
 #fadeOverlay.out { opacity:0; } #fadeOverlay.in { opacity:1; }
 
-.hud { position:fixed; font-family:var(--mono); font-size:9px; letter-spacing:0.2em; color:var(--dim); z-index:200; }
+.hud { position:fixed; font-family:var(--mono); font-size:9px; letter-spacing:0.2em; color:var(--dim); z-index:12000; }
 #hud-tl { top:26px; left:28px; display:flex; align-items:center; gap:12px; }
 #hud-tr { top:26px; right:28px; display:flex; align-items:center; gap:14px; }
 #hud-bl { bottom:26px; left:28px; }
@@ -28,7 +28,7 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 .ep-label { font-size:9px; color:var(--dim); letter-spacing:0.18em; }
 .pulse { width:4px; height:4px; border-radius:50%; background:var(--accent); animation:blink 3s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
-#closeBtn { font-family:var(--mono); font-size:9px; letter-spacing:0.2em; color:var(--dim); cursor:pointer; transition:color 0.2s; background:none; border:none; }
+#closeBtn { font-family:var(--mono); font-size:11px; letter-spacing:0.2em; color:var(--dim); cursor:pointer; transition:color 0.2s; background:none; border:none; }
 #closeBtn:hover { color:var(--text); }
 #muteBtn { background:none; border:none; cursor:pointer; color:var(--dim); transition:color 0.2s; display:flex; align-items:center; }
 #muteBtn:hover { color:var(--mid); }
@@ -38,14 +38,14 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 #titleScreen.hidden { opacity:0; pointer-events:none; }
 .title-ep { font-family:var(--mono); font-size:9px; letter-spacing:0.3em; color:var(--dim); padding:0 28px 8px; }
 .title-name { font-family:var(--jp); font-size:28px; font-weight:300; letter-spacing:0.15em; color:var(--text); padding:0 28px; }
-.start-bar { border-top:1px solid rgba(255,255,255,0.07); background:rgba(8,8,11,0.9); padding:18px 28px; display:flex; align-items:center; gap:14px; margin-top:32px; transition:background 0.2s; }
-.start-bar:hover { background:rgba(168,136,88,0.06); }
-.start-bar-label { font-family:var(--jp); font-size:13px; color:rgba(202,198,190,0.55); letter-spacing:0.2em; transition:color 0.2s; }
+.start-bar { border-top:1px solid rgba(255,255,255,0.07); background:rgba(8,8,11,0.9); padding:20px 28px; display:flex; align-items:center; gap:14px; margin-top:32px; transition:all 0.2s; }
+.start-bar:hover { background:rgba(168,136,88,0.08); }
+.start-bar-label { font-family:var(--jp); font-size:14px; color:rgba(202,198,190,0.55); letter-spacing:0.2em; transition:color 0.2s; }
 .start-bar-caret { font-size:8px; color:var(--accent); opacity:0.7; animation:bob 2s ease-in-out infinite; }
 #titleScreen:hover .start-bar-label { color:var(--text); }
 @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
 
-#textWindow { position:fixed; top:0; left:0; right:0; z-index:400; border-bottom:1px solid rgba(255,255,255,0.07); background:rgba(8,8,11,0.94); backdrop-filter:blur(10px); display:flex; align-items:flex-start; gap:18px; padding:22px 32px 22px; min-height:100px; opacity:0; pointer-events:none; transform:translateY(-8px); transition:opacity 0.3s ease,transform 0.3s ease; }
+#textWindow { position:fixed; top:0; left:0; right:0; z-index:10000; border-bottom:1px solid rgba(255,255,255,0.07); background:rgba(8,8,11,0.94); backdrop-filter:blur(10px); display:flex; align-items:flex-start; gap:18px; padding:22px 32px 22px; min-height:100px; opacity:0; pointer-events:none; transform:translateY(-8px); transition:opacity 0.3s ease,transform 0.3s ease; }
 #textWindow.active { opacity:1; pointer-events:all; transform:translateY(0); }
 #faceIcon { width:52px; height:52px; object-fit:cover; border:1px solid rgba(255,255,255,0.08); flex-shrink:0; filter:grayscale(15%); }
 .text-body { flex:1; display:flex; flex-direction:column; gap:4px; }
@@ -58,9 +58,10 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 
 /* BOTTOM NAV — HUD bottom-left */
 #hud-bl { bottom:26px; left:28px; }
-#bottomNav { opacity:0; pointer-events:none; transition:opacity 0.5s ease; }
+.back-label { font-family:var(--mono); font-size:11px; letter-spacing:0.18em; color:var(--dim); transition:color 0.2s; }
+#bottomNav { opacity:0; pointer-events:none; transition:opacity 0.5s ease; cursor:pointer; padding:10px 20px; margin:-10px -20px; }
+#bottomNav:hover .back-label { color:var(--mid); }
 #bottomNav.show { opacity:1; pointer-events:all; }
-.back-label { font-family:var(--mono); font-size:9px; letter-spacing:0.18em; color:var(--dim); cursor:pointer; transition:color 0.2s; }
 .back-label:hover { color:var(--mid); }
 
 #endScreen { position:fixed; inset:0; z-index:6000; display:flex; flex-direction:column; justify-content:flex-end; opacity:0; pointer-events:none; transition:opacity 0.8s ease; }
@@ -108,7 +109,7 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
   <div id="continueIcon">▼</div>
 </div>
 
-<div class="hud" id="hud-bl"><div id="bottomNav"><span class="back-label" onclick="goBack()">← 戻る</span></div></div>
+<div class="hud" id="hud-bl"><div id="bottomNav" onclick="goBack()"><span class="back-label">← 戻る</span></div></div>
 
 <div id="endScreen">
   <div class="end-panel">
@@ -219,6 +220,7 @@ document.getElementById('replayBtn').onclick=e=>{
   },1000);
 };
 
+document.querySelector('.start-bar').onclick=e=>{e.stopPropagation(); document.body.click();};
 document.body.addEventListener('click',()=>{
   if(!started)startStory();
   else if(isTyping)skipType();

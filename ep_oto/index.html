@@ -74,7 +74,7 @@ body::before {
   font-size: 9px;
   letter-spacing: 0.2em;
   color: var(--dim);
-  z-index: 200;
+  z-index: 12000;
 }
 #hud-tl { top: 26px; left: 28px; display: flex; align-items: center; gap: 12px; }
 #hud-tr { top: 26px; right: 28px; display: flex; align-items: center; gap: 14px; }
@@ -86,7 +86,7 @@ body::before {
 
 /* close + mute */
 #closeBtn {
-  font-family: var(--mono); font-size: 13px; color: var(--dim);
+  font-family: var(--mono); font-size: 11px; color: var(--dim);
   cursor: pointer; transition: color 0.2s; background: none; border: none;
   letter-spacing: 0.1em;
 }
@@ -130,14 +130,14 @@ body::before {
 .start-bar {
   border-top: 1px solid rgba(255,255,255,0.07);
   background: rgba(8,8,11,0.9);
-  padding: 18px 28px;
+  padding: 20px 28px;
   display: flex; align-items: center; gap: 14px;
   margin-top: 32px;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
-.start-bar:hover { background: rgba(168,136,88,0.06); }
+.start-bar:hover { background: rgba(168,136,88,0.08); }
 .start-bar-label {
-  font-family: var(--jp); font-size: 13px;
+  font-family: var(--jp); font-size: 14px;
   color: rgba(202,198,190,0.55); letter-spacing: 0.2em;
   transition: color 0.2s;
 }
@@ -189,11 +189,17 @@ body::before {
 }
 #bottomNav.show { opacity: 1; pointer-events: all; }
 .back-label {
-  font-family: var(--mono); font-size: 9px;
+  font-family: var(--mono); font-size: 11px;
   letter-spacing: 0.18em; color: var(--dim);
-  cursor: pointer; transition: color 0.2s;
+  transition: color 0.2s;
 }
-.back-label:hover { color: var(--mid); }
+#bottomNav {
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.5s ease;
+  cursor: pointer; padding: 10px 20px; margin: -10px -20px;
+}
+#bottomNav:hover .back-label { color: var(--mid); }
+#bottomNav.show { opacity: 1; pointer-events: all; }
 #endScreen {
   position: fixed; inset: 0;
   z-index: 6000;
@@ -235,7 +241,7 @@ body::before {
 
 <!-- HUD -->
 <div class="hud" id="hud-tl">
-  <a href="../index.html" class="logo" onclick="return false;" id="logoLink">DESU™</a>
+  <a href="../index.html" class="logo" id="logoLink">DESU™</a>
   <span class="pulse"></span>
   <span class="ep-label">ep. 音</span>
 </div>
@@ -246,6 +252,7 @@ body::before {
   </button>
   <button id="closeBtn" onclick="goBack()">× 戻る</button>
 </div>
+<div class="hud" id="hud-br">© 2026 <a href="https://warpshoot.github.io/" target="_blank" style="color:var(--dim);text-decoration:none;">wpy</a></div>
 
 <!-- TITLE SCREEN -->
 <div id="titleScreen">
@@ -258,9 +265,7 @@ body::before {
 </div>
 
 <!-- BOTTOM NAV -->
-<div id="bottomNav">
-  <span class="back-label" onclick="goBack()">← 戻る</span>
-</div>
+<div class="hud" id="hud-bl"><div id="bottomNav" onclick="goBack()"><span class="back-label">← 戻る</span></div></div>
 
 <!-- TEXT WINDOW -->
 <div id="textWindow">
@@ -448,6 +453,7 @@ document.getElementById('replayBtn').onclick = e => {
   }, 1000);
 };
 
+document.querySelector('.start-bar').onclick=e=>{e.stopPropagation(); document.body.click();};
 // ── CLICK ──
 document.body.addEventListener('click', () => {
   if (busy) return;

@@ -68,7 +68,7 @@ export const KNOB_PARAMS = {
 };
 
 // Storage key
-export const STORAGE_KEY = 'beep-state';
+export const STORAGE_KEY = 'pulse-beep-state';
 export const OLD_STORAGE_KEY = 'sequencer-state';
 
 // Visual feedback ranges

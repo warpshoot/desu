@@ -246,14 +246,20 @@
     function setMode(index) {
       if (index < 0) index = 0;
       if (index >= TOTAL_APPS) index = TOTAL_APPS - 1;
+      
       currentIndex = index;
 
       // Update Iframes (Fade)
       wraps.forEach((w, i) => {
+        const frame = w.querySelector('iframe');
         if (i === currentIndex) {
           w.classList.add('active');
+          // Notify the newly active iframe to start camera
+          frame.contentWindow.postMessage({ type: 'CAMERA_ACTIVATE' }, '*');
         } else {
           w.classList.remove('active');
+          // Notify inactive iframes to stop camera
+          frame.contentWindow.postMessage({ type: 'CAMERA_DEACTIVATE' }, '*');
         }
       });
 
@@ -261,7 +267,6 @@
       btns.forEach((b, i) => {
         if (i === currentIndex) {
           b.classList.add('active');
-          // iPhone active color changes (e.g. yellow)
           b.style.color = '#ffcc00';
         } else {
           b.classList.remove('active');

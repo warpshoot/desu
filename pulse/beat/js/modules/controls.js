@@ -238,23 +238,17 @@ export class Controls {
         let startY = 0;
         let startX = 0;
         let startBpm = 0;
+        let activePointerId = null;
 
         const onMove = (e) => {
-            // Only handle single-finger touches for BPM adjustment
-            if (e.touches && e.touches.length !== 1) return;
+            if (activePointerId !== e.pointerId) return;
 
-            if (e.touches && e.touches.length === 1) {
-                e.preventDefault();
-            }
+            const currentY = e.clientY;
+            const currentX = e.clientX;
 
-            const currentY = e.touches ? e.touches[0].clientY : e.clientY;
-            const currentX = e.touches ? e.touches[0].clientX : e.clientX;
-
-            // Calculate movement from both axes
             const dx = currentX - startX;
-            const dy = startY - currentY; // Up is positive
+            const dy = startY - currentY;
 
-            // Sensitivity: 1 bpm per 4 pixels
             const sensitivity = 0.25;
             const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
 
@@ -262,35 +256,32 @@ export class Controls {
             this.setBPM(newBpm);
         };
 
-        const onEnd = () => {
-            window.removeEventListener('mousemove', onMove);
-            window.removeEventListener('mouseup', onEnd);
-            window.removeEventListener('touchmove', onMove);
-            window.removeEventListener('touchend', onEnd);
+        const onEnd = (e) => {
+            if (activePointerId !== e.pointerId) return;
+
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onEnd);
+            window.removeEventListener('pointercancel', onEnd);
+            this.bpmDragValue.releasePointerCapture(e.pointerId);
+            activePointerId = null;
 
             if (this.onBPMChange) {
                 this.onBPMChange(parseInt(this.bpmDragValue.textContent));
             }
         };
 
-        this.bpmDragValue.addEventListener('mousedown', (e) => {
+        this.bpmDragValue.addEventListener('pointerdown', (e) => {
+            if (!e.isPrimary) return;
+            e.preventDefault();
+            activePointerId = e.pointerId;
             startY = e.clientY;
             startX = e.clientX;
             startBpm = parseInt(this.bpmDragValue.textContent);
-            window.addEventListener('mousemove', onMove);
-            window.addEventListener('mouseup', onEnd);
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onEnd);
+            window.addEventListener('pointercancel', onEnd);
+            this.bpmDragValue.setPointerCapture(e.pointerId);
         });
-
-        this.bpmDragValue.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1) {
-                e.preventDefault();
-                startY = e.touches[0].clientY;
-                startX = e.touches[0].clientX;
-                startBpm = parseInt(this.bpmDragValue.textContent);
-                window.addEventListener('touchmove', onMove, { passive: false });
-                window.addEventListener('touchend', onEnd);
-            }
-        }, { passive: false });
     }
 
     async togglePlay() {

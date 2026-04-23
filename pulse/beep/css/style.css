@@ -220,6 +220,7 @@ a.credit-val {
     font-size: 16px;
     font-weight: 900;
     letter-spacing: -0.5px;
+    touch-action: none;
 }
 
 .track-ctrls {
@@ -352,6 +353,7 @@ a.credit-val {
     position: relative;
     box-sizing: border-box;
     z-index: 1;
+    touch-action: none;
 }
 
 .cell-visual {
@@ -775,6 +777,7 @@ a.credit-val {
     align-items: center;
     justify-content: center;
     letter-spacing: 0.05em;
+    touch-action: none;
 }
 
 

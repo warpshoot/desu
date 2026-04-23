@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -701,10 +701,11 @@
     let currentRes = 64;
     let brightness = 0, contrast = 1, saturation = 1, hueShift = 0;
     let dither = false, showGrid = false;
-    let frozen = false;
-    let stream = null, facingMode = 'environment';
-    let animId = null;
     let mode = null;
+    let frozen = false;
+    let facingMode = 'environment';
+    let stream = null, animId = null;
+    let cameraRequestId = 0;
     let loadedImage = null, customized = false;
     let cropCenterX = 0.5, cropCenterY = 0.5, cropZoom = 1.0;
     const CROP_ZOOM_MIN = 0.25, CROP_ZOOM_MAX = 8.0;
@@ -1116,15 +1117,24 @@
 
     // === CAMERA ===
     async function startCamera() {
+      const requestId = ++cameraRequestId;
       if (animId) { cancelAnimationFrame(animId); animId = null; }
       try {
-        if (stream) { stream.getTracks().forEach(t => t.stop()); }
+        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
         mode = 'cam';
         loadedImage = null;
         setStatus('CONNECTING...');
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } }
+        const s = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false
         });
+
+        if (requestId !== cameraRequestId) {
+          s.getTracks().forEach(t => t.stop());
+          return;
+        }
+
+        stream = s;
         video.srcObject = stream;
         await video.play();
         document.getElementById('startScreen').style.display = 'none';
@@ -1135,8 +1145,25 @@
         updateImgBtn();
         loop();
       } catch (err) {
-        setStatus('CAM ERR');
-        console.error(err);
+        if (requestId === cameraRequestId) {
+          setStatus('CAM ERR');
+          console.error(err);
+        }
+      }
+    }
+
+    function stopCamera() {
+      cameraRequestId++;
+      if (animId) { cancelAnimationFrame(animId); animId = null; }
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+      video.srcObject = null;
+      if (mode === 'cam') {
+        mode = null;
+        setStatus('STANDBY');
+        updateShutterVisual(); updateActionBtns();
       }
     }
 
@@ -1359,7 +1386,14 @@
     document.addEventListener('pointerup', e => { if (e.pointerId === lpPointerId) lpCancel(); }, { passive: true });
     document.addEventListener('pointercancel', e => { if (e.pointerId === lpPointerId) lpCancel(); }, { passive: true });
 
-    window.addEventListener('load', () => { startCamera(); });
+
+    window.addEventListener('message', e => {
+      if (e.data.type === 'CAMERA_ACTIVATE') {
+        if (!stream && mode !== 'img') startCamera();
+      } else if (e.data.type === 'CAMERA_DEACTIVATE') {
+        stopCamera();
+      }
+    });
   </script>
 </body>
 </html>

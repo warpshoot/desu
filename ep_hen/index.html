@@ -15,14 +15,14 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 #fadeOverlay.out { opacity:0; }
 
 /* HUD */
-.hud { position:fixed; font-family:var(--mono); font-size:9px; letter-spacing:0.2em; color:var(--dim); z-index:200; }
+.hud { position:fixed; font-family:var(--mono); font-size:9px; letter-spacing:0.2em; color:var(--dim); z-index:12000; }
 #hud-tl { top:26px; left:28px; display:flex; align-items:center; gap:12px; }
 #hud-tr { top:26px; right:28px; display:flex; align-items:center; gap:14px; }
 .logo { font-weight:700; font-size:11px; letter-spacing:0.22em; color:var(--text); text-decoration:none; }
 .ep-label { font-size:9px; color:var(--dim); letter-spacing:0.18em; }
 .pulse { width:4px; height:4px; border-radius:50%; background:var(--accent); animation:blink 3s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
-#closeBtn { font-family:var(--mono); font-size:13px; color:var(--dim); cursor:pointer; transition:color 0.2s; background:none; border:none; letter-spacing:0.1em; }
+#closeBtn { font-family:var(--mono); font-size:11px; letter-spacing:0.2em; color:var(--dim); cursor:pointer; transition:color 0.2s; background:none; border:none; }
 #closeBtn:hover { color:var(--text); }
 
 /* TITLE */
@@ -30,9 +30,9 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 #titleScreen.hidden { opacity:0; pointer-events:none; }
 .title-ep { font-family:var(--mono); font-size:9px; letter-spacing:0.3em; color:var(--dim); padding:0 28px 8px; }
 .title-name { font-family:var(--jp); font-size:28px; font-weight:300; letter-spacing:0.15em; color:var(--text); padding:0 28px; }
-.start-bar { border-top:1px solid rgba(255,255,255,0.07); background:rgba(8,8,11,0.9); padding:18px 28px; display:flex; align-items:center; gap:14px; margin-top:32px; transition:background 0.2s; }
-.start-bar:hover { background:rgba(168,136,88,0.06); }
-.start-bar-label { font-family:var(--jp); font-size:13px; color:rgba(202,198,190,0.55); letter-spacing:0.2em; transition:color 0.2s; }
+.start-bar { border-top:1px solid rgba(255,255,255,0.07); background:rgba(8,8,11,0.9); padding:20px 28px; display:flex; align-items:center; gap:14px; margin-top:32px; transition:all 0.2s; }
+.start-bar:hover { background:rgba(168,136,88,0.08); }
+.start-bar-label { font-family:var(--jp); font-size:14px; color:rgba(202,198,190,0.55); letter-spacing:0.2em; transition:color 0.2s; }
 .start-bar-caret { font-size:8px; color:var(--accent); opacity:0.7; animation:bob 2s ease-in-out infinite; }
 #titleScreen:hover .start-bar-label { color:var(--text); }
 @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
@@ -42,11 +42,12 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 .manga-page.show { opacity:1; pointer-events:all; }
 .manga-image { max-width:100%; max-height:100%; object-fit:contain; }
 
-/* BOTTOM NAV */
-#bottomNav { position:fixed; bottom:0; left:0; right:0; z-index:300; border-top:1px solid rgba(255,255,255,0.07); background:rgba(8,8,11,0.85); padding:14px 28px; display:flex; align-items:center; opacity:0; pointer-events:none; transition:opacity 0.5s ease; }
+/* BOTTOM NAV — HUD bottom-left */
+#hud-bl { bottom:26px; left:28px; }
+.back-label { font-family:var(--mono); font-size:11px; letter-spacing:0.18em; color:var(--dim); transition:color 0.2s; }
+#bottomNav { opacity:0; pointer-events:none; transition:opacity 0.5s ease; cursor:pointer; padding:10px 20px; margin:-10px -20px; }
+#bottomNav:hover .back-label { color:var(--mid); }
 #bottomNav.show { opacity:1; pointer-events:all; }
-.back-label { font-family:var(--mono); font-size:9px; letter-spacing:0.18em; color:var(--dim); cursor:pointer; transition:color 0.2s; }
-.back-label:hover { color:var(--mid); }
 
 /* PAGE INDICATOR */
 #pageIndicator { position:fixed; top:26px; left:50%; transform:translateX(-50%); font-family:var(--mono); font-size:9px; letter-spacing:0.2em; color:var(--dim); z-index:200; opacity:0; transition:opacity 0.3s; }
@@ -74,6 +75,7 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 <div class="hud" id="hud-tr">
   <button id="closeBtn" onclick="goBack()">× 戻る</button>
 </div>
+<div class="hud" id="hud-br">© 2026 <a href="https://warpshoot.github.io/" target="_blank" style="color:var(--dim);text-decoration:none;">wpy</a></div>
 <div id="pageIndicator">1 / 2</div>
 
 <div id="titleScreen">
@@ -85,7 +87,7 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 <div class="manga-page" id="page1"><img src="images/hen1.png" class="manga-image" alt=""></div>
 <div class="manga-page" id="page2"><img src="images/hen2.png" class="manga-image" alt=""></div>
 
-<div id="bottomNav"><span class="back-label" onclick="goBack()">← 戻る</span></div>
+<div class="hud" id="hud-bl"><div id="bottomNav" onclick="goBack()"><span class="back-label">← 戻る</span></div></div>
 
 <div id="endScreen">
   <div class="end-panel">
@@ -100,6 +102,7 @@ function goBack() { window.location.href='../index.html'; }
 document.getElementById('backBtn').onclick=e=>{e.stopPropagation();goBack();};
 document.getElementById('logoLink').onclick=e=>{e.preventDefault();goBack();};
 
+document.querySelector('.start-bar').onclick=e=>{e.stopPropagation(); document.getElementById('titleScreen').click();};
 document.getElementById('titleScreen').addEventListener('click',()=>{
   if(page!=='title') return;
   document.getElementById('titleScreen').classList.add('hidden');

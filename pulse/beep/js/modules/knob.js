@@ -19,8 +19,8 @@ export class Knob {
     }
 
     setupEvents() {
-        // Store bound event handlers so we can remove them later
-        this.boundMouseDown = (e) => {
+        this.boundPointerDown = (e) => {
+            if (!e.isPrimary) return;
             e.preventDefault();
             e.stopPropagation();
             const now = Date.now();
@@ -31,47 +31,31 @@ export class Knob {
             }
             this.lastClickTime = now;
             this.onDragStart(e.clientY);
+            this.canvas.setPointerCapture(e.pointerId);
         };
-        this.boundMouseMove = (e) => this.onDragMove(e.clientY);
-        this.boundMouseUp = () => this.onDragEnd();
-        this.boundTouchStart = (e) => {
-            if (e.touches.length === 1) {
-                e.preventDefault();
-                const now = Date.now();
-                if (now - this.lastClickTime < 300) {
-                    this.resetToDefault();
-                    this.lastClickTime = 0;
-                    return;
-                }
-                this.lastClickTime = now;
-                this.onDragStart(e.touches[0].clientY);
+        this.boundPointerMove = (e) => {
+            if (this.isDragging && e.isPrimary) {
+                this.onDragMove(e.clientY);
             }
         };
-        this.boundTouchMove = (e) => {
-            if (this.isDragging && e.touches.length === 1) {
-                e.preventDefault();
-                this.onDragMove(e.touches[0].clientY);
+        this.boundPointerUp = (e) => {
+            if (e.isPrimary) {
+                this.onDragEnd();
+                this.canvas.releasePointerCapture(e.pointerId);
             }
         };
-        this.boundTouchEnd = () => this.onDragEnd();
 
-        // Add event listeners
-        this.canvas.addEventListener('mousedown', this.boundMouseDown);
-        window.addEventListener('mousemove', this.boundMouseMove);
-        window.addEventListener('mouseup', this.boundMouseUp);
-        this.canvas.addEventListener('touchstart', this.boundTouchStart, { passive: false });
-        window.addEventListener('touchmove', this.boundTouchMove, { passive: false });
-        window.addEventListener('touchend', this.boundTouchEnd);
+        this.canvas.addEventListener('pointerdown', this.boundPointerDown);
+        this.canvas.addEventListener('pointermove', this.boundPointerMove);
+        window.addEventListener('pointerup', this.boundPointerUp);
+        window.addEventListener('pointercancel', this.boundPointerUp);
     }
 
     destroy() {
-        // Remove all event listeners
-        this.canvas.removeEventListener('mousedown', this.boundMouseDown);
-        window.removeEventListener('mousemove', this.boundMouseMove);
-        window.removeEventListener('mouseup', this.boundMouseUp);
-        this.canvas.removeEventListener('touchstart', this.boundTouchStart);
-        window.removeEventListener('touchmove', this.boundTouchMove);
-        window.removeEventListener('touchend', this.boundTouchEnd);
+        this.canvas.removeEventListener('pointerdown', this.boundPointerDown);
+        this.canvas.removeEventListener('pointermove', this.boundPointerMove);
+        window.removeEventListener('pointerup', this.boundPointerUp);
+        window.removeEventListener('pointercancel', this.boundPointerUp);
     }
 
     onDragStart(y) {
@@ -161,7 +145,7 @@ export class Knob {
         }
 
         // Draw outer circle
-        this.ctx.strokeStyle = '#333';
+        this.ctx.strokeStyle = '#e1bee7'; // Pastel Purple (Background)
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
         this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
@@ -170,7 +154,7 @@ export class Knob {
         // Draw value arc
         const startAngle = Math.PI * 0.75;
         const endAngle = startAngle + (Math.PI * 1.5 * normalized);
-        this.ctx.strokeStyle = '#fff';
+        this.ctx.strokeStyle = '#8e24aa'; // Strong Purple (Active)
         this.ctx.lineWidth = 3;
         this.ctx.beginPath();
         this.ctx.arc(centerX, centerY, radius, startAngle, endAngle);
@@ -180,7 +164,7 @@ export class Knob {
         const angle = startAngle + (Math.PI * 1.5 * normalized);
         const x2 = centerX + Math.cos(angle) * (radius - 5);
         const y2 = centerY + Math.sin(angle) * (radius - 5);
-        this.ctx.strokeStyle = '#fff';
+        this.ctx.strokeStyle = '#8e24aa';
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
         this.ctx.moveTo(centerX, centerY);
@@ -188,7 +172,7 @@ export class Knob {
         this.ctx.stroke();
 
         // Draw center dot
-        this.ctx.fillStyle = '#fff';
+        this.ctx.fillStyle = '#8e24aa';
         this.ctx.beginPath();
         this.ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
         this.ctx.fill();

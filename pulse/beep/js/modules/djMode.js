@@ -204,6 +204,7 @@ export class DJMode {
             const fx = btn.dataset.fx;
 
             const activate = (e) => {
+                if (!e.isPrimary) return;
                 e.preventDefault();
                 e.stopPropagation();
                 this.activateFX(fx);
@@ -211,20 +212,16 @@ export class DJMode {
             };
 
             const deactivate = (e) => {
+                if (!e.isPrimary) return;
                 e.preventDefault();
                 this.deactivateFX(fx);
                 btn.classList.remove('active');
             };
 
-            // Mouse
-            btn.addEventListener('mousedown', activate);
-            btn.addEventListener('mouseup', deactivate);
-            btn.addEventListener('mouseleave', deactivate);
-
-            // Touch
-            btn.addEventListener('touchstart', activate, { passive: false });
-            btn.addEventListener('touchend', deactivate);
-            btn.addEventListener('touchcancel', deactivate);
+            btn.addEventListener('pointerdown', activate);
+            btn.addEventListener('pointerup', deactivate);
+            btn.addEventListener('pointercancel', deactivate);
+            btn.addEventListener('pointerleave', deactivate);
         });
     }
 
@@ -528,85 +525,50 @@ export class DJMode {
             const rect = this.djRibbon.getBoundingClientRect();
             const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
 
-            // Map 0..1 to -2..+2 (5 steps)
             const shift = (x * 4) - 2;
             this.pitchShift = shift;
-
             this.seq.audioEngine.setOctaveShift(shift);
 
-            // Update cursor
             if (this.djRibbonCursor) {
                 this.djRibbonCursor.style.left = `${x * 80}%`;
             }
         };
 
-        let activeTouchId = null;
+        let activePointerId = null;
 
         const onStart = (e) => {
+            if (!e.isPrimary) return;
             e.preventDefault();
-            if (activeTouchId !== null) return;
+            activePointerId = e.pointerId;
             this.ribbonTouching = true;
-
-            if (e.changedTouches) {
-                const touch = e.changedTouches[0];
-                activeTouchId = touch.identifier;
-                handleInput(touch.clientX);
-            } else {
-                handleInput(e.clientX);
-            }
+            handleInput(e.clientX);
+            this.djRibbon.setPointerCapture(e.pointerId);
         };
 
         const onMove = (e) => {
-            e.preventDefault();
-            if (e.changedTouches) {
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    if (e.changedTouches[i].identifier === activeTouchId) {
-                        handleInput(e.changedTouches[i].clientX);
-                        break;
-                    }
-                }
-            } else if (e.buttons === 1) {
+            if (activePointerId === e.pointerId) {
                 handleInput(e.clientX);
             }
         };
 
         const onEnd = (e) => {
-            e.preventDefault();
-            let shouldEnd = false;
-
-            if (e.changedTouches) {
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    if (e.changedTouches[i].identifier === activeTouchId) {
-                        shouldEnd = true;
-                        break;
-                    }
-                }
-            } else {
-                shouldEnd = true;
-            }
-
-            if (shouldEnd) {
-                activeTouchId = null;
+            if (activePointerId === e.pointerId) {
+                this.djRibbon.releasePointerCapture(e.pointerId);
+                activePointerId = null;
                 this.ribbonTouching = false;
                 this.pitchShift = 0;
                 this.seq.audioEngine.setOctaveShift(0);
                 if (this.djRibbonCursor) {
                     this.djRibbonCursor.style.left = '40%';
                 }
-                // Save after interaction
                 import('./storage.js').then(m => m.saveState(this.seq.state));
             }
         };
 
-        this.djRibbon.addEventListener('mousedown', onStart);
-        this.djRibbon.addEventListener('mousemove', onMove);
-        this.djRibbon.addEventListener('mouseup', onEnd);
-        this.djRibbon.addEventListener('mouseleave', onEnd);
-
-        this.djRibbon.addEventListener('touchstart', onStart, { passive: false });
-        this.djRibbon.addEventListener('touchmove', onMove, { passive: false });
-        this.djRibbon.addEventListener('touchend', onEnd);
-        this.djRibbon.addEventListener('touchcancel', onEnd);
+        this.djRibbon.addEventListener('pointerdown', onStart);
+        this.djRibbon.addEventListener('pointermove', onMove);
+        this.djRibbon.addEventListener('pointerup', onEnd);
+        this.djRibbon.addEventListener('pointercancel', onEnd);
     }
 
     // ========================
@@ -616,13 +578,16 @@ export class DJMode {
     setupXYPad() {
         if (!this.djXYPad) return;
 
-        let activeTouchId = null;
+        let activePointerId = null;
 
-        const handleStart = (clientX, clientY) => {
+        const handleStart = (e) => {
+            if (!e.isPrimary) return;
+            e.preventDefault();
+            activePointerId = e.pointerId;
+
             const rect = this.djXYPad.getBoundingClientRect();
-            // Calculate normalized x/y
-            const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-            const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+            const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
 
             this.xyState.touching = true;
             this.xyState.startX = x;
@@ -636,82 +601,40 @@ export class DJMode {
             this.djCurrent.classList.remove('hidden');
             this.djLine.classList.remove('hidden');
 
-            // Calculate initial audio effect
-            const deltaX = x - this.xyState.startX;
-            const deltaY = this.xyState.startY - y;
-            this.updateAudio(deltaX, deltaY);
+            this.updateAudio(x - x, y - y); // Initial delta is 0
+            this.djXYPad.setPointerCapture(e.pointerId);
         };
 
-        const handleMove = (clientX, clientY) => {
-            if (!this.xyState.touching) return;
-            const rect = this.djXYPad.getBoundingClientRect();
-            const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-            const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+        const handleMove = (e) => {
+            if (activePointerId === e.pointerId) {
+                const rect = this.djXYPad.getBoundingClientRect();
+                const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
 
-            this.xyState.targetX = x;
-            this.xyState.targetY = y;
-        };
-
-        const handleEnd = () => {
-            this.xyState.touching = false;
-            activeTouchId = null;
-
-            this.djOrigin.classList.add('hidden');
-            this.djCurrent.classList.add('hidden');
-            this.djLine.classList.add('hidden');
-            this.seq.audioEngine.resetDJFilter();
-
-            // Save after interaction
-            import('./storage.js').then(m => m.saveState(this.seq.state));
-        };
-
-        // Mouse Listeners
-        this.djXYPad.addEventListener('mousedown', (e) => {
-            handleStart(e.clientX, e.clientY);
-        });
-        this.djXYPad.addEventListener('mousemove', (e) => {
-            // Only move if mouse button down
-            if (e.buttons === 1) handleMove(e.clientX, e.clientY);
-        });
-        this.djXYPad.addEventListener('mouseup', handleEnd);
-        this.djXYPad.addEventListener('mouseleave', handleEnd);
-
-        // Touch Listeners (Multi-touch support)
-        this.djXYPad.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (activeTouchId !== null) return; // Already active
-
-            if (e.changedTouches.length > 0) {
-                const t = e.changedTouches[0];
-                activeTouchId = t.identifier;
-                handleStart(t.clientX, t.clientY);
-            }
-        }, { passive: false });
-
-        this.djXYPad.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            if (activeTouchId === null) return;
-
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                if (e.changedTouches[i].identifier === activeTouchId) {
-                    const t = e.changedTouches[i];
-                    handleMove(t.clientX, t.clientY);
-                    break;
-                }
-            }
-        }, { passive: false });
-
-        const onTouchEnd = (e) => {
-            if (activeTouchId === null) return;
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                if (e.changedTouches[i].identifier === activeTouchId) {
-                    handleEnd();
-                    break;
-                }
+                this.xyState.targetX = x;
+                this.xyState.targetY = y;
             }
         };
-        this.djXYPad.addEventListener('touchend', onTouchEnd);
-        this.djXYPad.addEventListener('touchcancel', onTouchEnd);
+
+        const handleEnd = (e) => {
+            if (activePointerId === e.pointerId) {
+                this.djXYPad.releasePointerCapture(e.pointerId);
+                this.xyState.touching = false;
+                activePointerId = null;
+
+                this.djOrigin.classList.add('hidden');
+                this.djCurrent.classList.add('hidden');
+                this.djLine.classList.add('hidden');
+                this.seq.audioEngine.resetDJFilter();
+
+                import('./storage.js').then(m => m.saveState(this.seq.state));
+            }
+        };
+
+        this.djXYPad.addEventListener('pointerdown', handleStart);
+        this.djXYPad.addEventListener('pointermove', handleMove);
+        this.djXYPad.addEventListener('pointerup', handleEnd);
+        this.djXYPad.addEventListener('pointercancel', handleEnd);
     }
 
     // ========================

@@ -68,7 +68,7 @@ export const KNOB_PARAMS = {
 };
 
 // Storage key
-export const STORAGE_KEY = 'beat-state';
+export const STORAGE_KEY = 'pulse-beat-state';
 export const OLD_STORAGE_KEY = 'sequencer-state';
 
 // Visual feedback ranges

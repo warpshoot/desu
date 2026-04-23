@@ -298,30 +298,19 @@ class Sequencer {
             this.isPainting = false;
         });
 
-        // Touch painting support
-        window.addEventListener('touchmove', (e) => {
-            if (e.touches.length >= 2) {
+        // Pointer painting support (Mouse, Touch, Pen)
+        window.addEventListener('pointermove', (e) => {
+            if (!e.isPrimary) {
                 this.isTwoFingerTouch = true;
                 this.isPainting = false;
                 return;
             }
 
-            if (this.isPainting && e.touches.length === 1) {
-                e.preventDefault();
-                const touch = e.touches[0];
-                const element = document.elementFromPoint(touch.clientX, touch.clientY);
-                if (element && element.classList.contains('cell')) {
-                    const track = parseInt(element.dataset.track);
-                    const step = parseInt(element.dataset.step);
-
-                    if (!isNaN(track) && !isNaN(step)) {
-                        if (this.paintingTrack === null || this.paintingTrack === track) {
-                            this.cells[track][step].paintActivate();
-                        }
-                    }
-                }
+            // If we are painting, we rely on Cell's pointerenter (enabled by releasePointerCapture)
+            if (this.isPainting && e.isPrimary) {
+                // Cell's pointerenter handles most cases now.
             }
-        }, { passive: false });
+        });
 
         // Keyboard: number keys 1-8 for pattern switch
         document.addEventListener('keydown', (e) => {
@@ -819,10 +808,8 @@ class Sequencer {
             });
         };
 
-        // Use mousedown and touchstart instead of click. 
-        // This prevents the menu from immediately closing if the user drags slightly off the button during a long press and then releases the mouse, triggering a document click.
-        document.addEventListener('mousedown', closeMenus);
-        document.addEventListener('touchstart', closeMenus, { passive: true });
+        // Use pointerdown to close menus
+        document.addEventListener('pointerdown', closeMenus);
     }
 
 
@@ -1126,5 +1113,14 @@ class Sequencer {
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
-    new Sequencer();
+    const sequencer = new Sequencer();
+
+    // Listen for mode-switching messages from parent
+    window.addEventListener('message', (e) => {
+        if (e.data.type === 'deactivate') {
+            if (sequencer.controls && typeof sequencer.controls.stop === 'function') {
+                sequencer.controls.stop();
+            }
+        }
+    });
 });

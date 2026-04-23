@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -714,12 +714,10 @@
     let currentColor  = loadSetting('color',  String);
     let currentSmooth = loadSetting('smooth', parseInt);
     let mode       = null;   // 'cam' | 'img'
-    let frozen     = false;
-    let frozenFrame = null;
+    let frozen = false, frozenFrame = null;
     let facingMode = 'environment';
-    let stream     = null;
-    let animFrameId = null;
-
+    let stream = null, animFrameId = null;
+    let cameraRequestId = 0;
     let loadedImage = null;
     let cropCenterX = 0.5, cropCenterY = 0.5, cropZoom = 1;
 
@@ -1224,13 +1222,22 @@
 
     // === CAMERA ===
     async function startCamera() {
+      const requestId = ++cameraRequestId;
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
       if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
       try {
         setStatus('CONNECTING...');
-        stream = await navigator.mediaDevices.getUserMedia({
+        const s = await navigator.mediaDevices.getUserMedia({
           video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
           audio: false,
         });
+
+        if (requestId !== cameraRequestId) {
+          s.getTracks().forEach(t => t.stop());
+          return;
+        }
+
+        stream = s;
         video.srcObject = stream;
         await video.play();
         mode = 'cam';
@@ -1244,8 +1251,25 @@
         updateImgBtn();
         animFrameId = requestAnimationFrame(renderFrame);
       } catch (e) {
-        setStatus('CAM ERR');
-        console.error(e);
+        if (requestId === cameraRequestId) {
+          setStatus('CAM ERR');
+          console.error(e);
+        }
+      }
+    }
+
+    function stopCamera() {
+      cameraRequestId++;
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+      video.srcObject = null;
+      if (mode === 'cam') {
+        mode = null;
+        setStatus('STANDBY');
+        updateShutterVisual(); updateActionBtns();
       }
     }
 
@@ -1617,8 +1641,13 @@
       } catch (e) { console.error(e); }
     };
 
-    window.addEventListener('load', () => {
-      startCamera();
+
+    window.addEventListener('message', e => {
+      if (e.data.type === 'CAMERA_ACTIVATE') {
+        if (!stream && mode !== 'img') startCamera();
+      } else if (e.data.type === 'CAMERA_DEACTIVATE') {
+        stopCamera();
+      }
     });
 
     // === UI HIDE (long press) ===
