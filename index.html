@@ -137,7 +137,7 @@ body::before {
 #textWindow {
   position: fixed;
   top: 0; left: 0; right: 0;
-  z-index: 15000;
+  z-index: 18000;
   border-bottom: 1px solid rgba(255,255,255,0.07);
   background: rgba(8,8,11,0.94);
   backdrop-filter: blur(10px);
@@ -365,7 +365,27 @@ body::before {
 .char-sub-back:hover { color: var(--mid); background: rgba(168,136,88,0.05); }
 
 /* text window overlay mode (over sub-screens) */
-#textWindow.overlay { z-index: 11000; }
+#textWindow.overlay { z-index: 19000; }
+
+/* ── CHOICE SCREEN ── */
+#choiceScreen {
+  position: fixed; inset: 0;
+  z-index: 17000;
+  display: flex; flex-direction: column;
+  align-items: flex-start; justify-content: flex-end;
+  background: rgba(8,8,11,0.5);
+  backdrop-filter: blur(2px);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+#choiceScreen.show { opacity: 1; pointer-events: all; }
+#choiceScreen .menu-btn { background: rgba(168,136,88,0.12); border-bottom-color: rgba(168,136,88,0.25); }
+#choiceScreen .menu-btn:hover { background: rgba(168,136,88,0.2); }
+#choiceScreen .choice-no { background: rgba(8,8,11,0.9); }
+#choiceScreen .choice-no:hover { background: rgba(255,255,255,0.05); }
+#choiceScreen .mj { color: var(--text); }
+#choiceScreen .mn { color: var(--accent); }
+#choiceScreen .caret { font-size: 8px; color: var(--accent); margin-left: auto; opacity: 0.7; animation: bob 2s ease-in-out infinite; }
 </style>
 </head>
 <body>
@@ -440,11 +460,11 @@ body::before {
 <div class="sub-screen" id="episodesScreen">
   <div class="sub-inner">
     <div class="sub-label" id="epLabel">RECORDS — エピソード</div>
-    <div class="sub-grid">
-      <a href="./ep_oto/" class="sub-link">音</a>
-      <a href="./ep_gara/" class="sub-link">ガラ</a>
-      <a href="./ep_hen/" class="sub-link">ヘン</a>
-      <a href="./ep_shita/" class="sub-link">下</a>
+    <div class="sub-grid" style="flex-direction:column;">
+      <a href="./ep_oto/" class="sub-link"><span class="mn" style="display:inline-block;width:24px;">01</span> 音</a>
+      <a href="./ep_gara/" class="sub-link"><span class="mn" style="display:inline-block;width:24px;">02</span> ガラ</a>
+      <a href="./ep_hen/" class="sub-link"><span class="mn" style="display:inline-block;width:24px;">03</span> ヘン</a>
+      <a href="./ep_shita/" class="sub-link"><span class="mn" style="display:inline-block;width:24px;">04</span> 下</a>
     </div>
     <div class="sub-back" id="epBack">× 戻る</div>
   </div>
@@ -491,6 +511,21 @@ body::before {
   </div>
 </div>
 
+<!-- CHOICE SCREEN -->
+<div id="choiceScreen">
+  <div class="menu-list">
+    <div class="menu-btn choice-yes" id="choiceYes">
+      <span class="mn">OK</span>
+      <span class="mj" id="choiceYesLabel">試す</span>
+      <span class="caret">▼</span>
+    </div>
+    <div class="menu-btn choice-no" id="choiceNo">
+      <span class="mn">NO</span>
+      <span class="mj" id="choiceNoLabel">やめる</span>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── DATA ──
 const DIALOGUES = {
@@ -503,8 +538,8 @@ const DIALOGUES = {
     en: ['...', '...Come back.', "...That's it?"]
   },
   buy: {
-    ja: '…買い取り？　変わったやつだな',
-    en: "...Selling items? You're an odd one."
+    ja: '…買い取り？　わかった。周りに人がいないタイミングで裏にまわってきてくれ',
+    en: "...Buying them? Understood. Come around back when nobody's watching."
   }
 };
 
@@ -529,7 +564,27 @@ const CHARS = {
 const TOOLS = {
   'INK':      { ja: 'スケッチや図示に使うそうだ。現場で使ってる奴を見たことがある', en: 'For sketching and diagrams. I\'ve seen it used in the field.' },
   'CAMERA':      { ja: '視覚を変換するプログラムらしい。カメラ付きの端末から試してみるといい', en: 'A program that transforms your vision. Try it if you have a device with a camera.' },
-  'PULSE':     { ja: '音が出る装置だ。これは…玩具、だな。', en: 'A device that makes sound. This is... just a toy, I suppose.' }
+  'PULSE':     { ja: '音が出る装置だ。これは…玩具、だな', en: 'A device that makes sound. This is... just a toy, I suppose.' }
+};
+
+const CHOICE_STR = {
+  tool: {
+    yes: { ja: '試す', en: 'Try it' },
+    no: { ja: 'やめる', en: 'Cancel' }
+  },
+  buy: {
+    yes: { ja: '裏へ向かう', en: 'Go around back' },
+    no: { ja: 'やめる', en: 'Cancel' }
+  },
+  wpy: {
+    yes: { ja: 'はい', en: 'Yes' },
+    no: { ja: 'いいえ', en: 'No' }
+  }
+};
+
+const WPY_INTRO = {
+  ja: '詳しく知りたいか？',
+  en: 'Want to know more?'
 };
 
 // ── STATE ──
@@ -542,6 +597,9 @@ let currentText = '';
 let isMuted = JSON.parse(localStorage.getItem('desu-muted') || 'false');
 let lang = localStorage.getItem('desu-lang') || 'ja';
 let audioCtx = null;
+let pendingLink = '';
+let currentChoiceType = ''; // 'tool' or 'buy'
+let typingCallback = null;
 
 // ── LANG ──
 const STR = {
@@ -601,7 +659,7 @@ if (isMuted) {
 
 // ── TYPEWRITER ──
 function typeText(text, onDone) {
-  isTyping = true; currentText = text;
+  isTyping = true; currentText = text; typingCallback = onDone;
   const el = document.getElementById('textContent');
   el.textContent = '';
   let i = 0;
@@ -614,7 +672,7 @@ function typeText(text, onDone) {
       isTyping = false;
       setTimeout(() => {
         document.getElementById('continueIcon').classList.add('show');
-        if (onDone) onDone();
+        if (typingCallback) { typingCallback(); typingCallback = null; }
       }, 600);
     }
   }
@@ -626,6 +684,7 @@ function skipType() {
   isTyping = false;
   document.getElementById('textContent').textContent = currentText;
   document.getElementById('continueIcon').classList.add('show');
+  if (typingCallback) { typingCallback(); typingCallback = null; }
 }
 
 // ── TEXT WINDOW ──
@@ -710,14 +769,90 @@ document.getElementById('tpBack').onclick = e => {
   state = 3;
 };
 
+// Tool link intercept
+document.querySelectorAll('#toolsScreen .sub-link').forEach(link => {
+  link.onclick = e => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (state !== 4) return;
+    
+    const toolKey = link.textContent.trim();
+    pendingLink = link.href;
+    currentChoiceType = 'tool';
+
+    if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+    state = 9;
+    showText('', true);
+    typeText(TOOLS[toolKey][lang], () => { 
+      state = 10;
+      showChoiceScreen();
+    });
+  };
+});
+
+function showChoiceScreen() {
+  const yesLabel = document.getElementById('choiceYesLabel');
+  const noLabel = document.getElementById('choiceNoLabel');
+  yesLabel.textContent = CHOICE_STR[currentChoiceType].yes[lang];
+  noLabel.textContent = CHOICE_STR[currentChoiceType].no[lang];
+  document.getElementById('choiceScreen').classList.add('show');
+}
+
+function hideChoiceScreen() {
+  document.getElementById('choiceScreen').classList.remove('show');
+}
+
+document.getElementById('choiceYes').onclick = e => {
+  e.stopPropagation();
+  if (currentChoiceType === 'wpy') {
+    // wpy プロフィール -> 個人サイトへ
+    window.open('https://warpshoot.github.io/', '_blank');
+    hideChoiceScreen();
+    hideText(() => {
+      document.getElementById('textWindow').classList.remove('overlay');
+      state = 6;
+    });
+  } else if (pendingLink) {
+    window.open(pendingLink, '_blank');
+    pendingLink = '';
+    hideChoiceScreen();
+    hideText();
+    if (currentChoiceType === 'buy') {
+      resetToInit();
+    } else {
+      state = 4;
+    }
+  }
+};
+
+document.getElementById('choiceNo').onclick = e => {
+  e.stopPropagation();
+  hideChoiceScreen();
+  hideText();
+  if (currentChoiceType === 'wpy') {
+    state = 6;
+    document.getElementById('textWindow').classList.remove('overlay');
+  } else if (currentChoiceType === 'buy') {
+    state = 3;
+    document.getElementById('menuScreen').classList.add('show');
+  } else {
+    state = 4;
+  }
+};
+
 document.getElementById('btn-buy').onclick = e => {
   e.stopPropagation();
   if (state !== 3) return;
   document.getElementById('menuScreen').classList.remove('show');
   state = 13;
+  pendingLink = 'https://minne.com/@warpshoot';
+  currentChoiceType = 'buy';
   setTimeout(() => {
     showText();
-    typeText(DIALOGUES.buy[lang], () => { state = 14; });
+    typeText(DIALOGUES.buy[lang], () => { 
+      state = 14; 
+      showChoiceScreen();
+    });
   }, 200);
 };
 
@@ -761,8 +896,25 @@ document.querySelectorAll('.char-icon-btn').forEach(btn => {
 
     // show description — interrupt any ongoing typing
     state = 11;
+    const charKey = btn.dataset.char;
     showText('', true);
-    typeText(c[lang], () => { state = 12; });
+    typeText(c[lang], () => { 
+      state = 12;
+      // wpy の場合は紹介セリフを表示
+      if (charKey === 'wpy') {
+        setTimeout(() => {
+          if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+          document.getElementById('continueIcon').classList.remove('show');
+          state = 15;
+          showText('', true);
+          typeText(WPY_INTRO[lang], () => {
+            state = 16;
+            currentChoiceType = 'wpy';
+            showChoiceScreen();
+          });
+        }, 800);
+      }
+    });
   };
 });
 
@@ -820,19 +972,33 @@ document.body.addEventListener('click', e => {
       document.getElementById('textWindow').classList.remove('overlay');
       state = 6;
     });
+  } else if (state === 15 || state === 16) {
+    // wpy プロフィール紹介中 → 背景タップで戻る
+    if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+    document.getElementById('continueIcon').classList.remove('show');
+    state = 6;
+    hideChoiceScreen();
+    hideText(() => {
+      document.getElementById('textWindow').classList.remove('overlay');
+    });
   } else if (state === 8) {
     document.getElementById('continueIcon').classList.remove('show');
     resetToInit();
   } else if (state === 10) {
     document.getElementById('continueIcon').classList.remove('show');
+    hideChoiceScreen(); // Ensure choices are hidden
     hideText(() => {
       document.getElementById('textWindow').classList.remove('overlay');
       state = 4;
     });
   } else if (state === 14) {
+    // tap background while choice showing
     document.getElementById('continueIcon').classList.remove('show');
-    window.open('https://minne.com/@warpshoot', '_blank');
-    resetToInit();
+    hideChoiceScreen();
+    hideText(() => {
+      state = 3;
+      document.getElementById('menuScreen').classList.add('show');
+    });
   }
 });
 
@@ -847,6 +1013,16 @@ document.addEventListener('keydown', e => {
     }
     else if (state === 6 || state === 11 || state === 12) {
       if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+      hideText();
+      document.getElementById('charLargeImg').classList.remove('show');
+      document.getElementById('charHint').style.opacity = '1';
+      document.querySelectorAll('.char-icon-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('charScreen').classList.remove('show');
+      state = 3;
+    }
+    else if (state === 15 || state === 16) {
+      if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+      hideChoiceScreen();
       hideText();
       document.getElementById('charLargeImg').classList.remove('show');
       document.getElementById('charHint').style.opacity = '1';
