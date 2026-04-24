@@ -271,16 +271,6 @@ body::before {
 }
 .sub-back:hover { color: var(--mid); background: rgba(168,136,88,0.05); }
 
-/* tool list with ? */
-.tool-row { display: flex; align-items: center; }
-.tool-info {
-  font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em;
-  color: var(--dim); padding: 13px 14px; cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.05); border-left: none;
-  transition: all 0.2s; background: rgba(8,8,11,0.88);
-}
-.tool-info:hover { color: var(--accent); border-color: rgba(168,136,88,0.25); }
-.tool-row .sub-link { flex: 1; }
 
 /* ── CHARACTER SCREEN ── */
 #charScreen {
@@ -475,18 +465,9 @@ body::before {
   <div class="sub-inner">
     <div class="sub-label" id="tpLabel">SUPPLIES — ウェブツール</div>
     <div class="sub-grid" style="flex-direction:column;">
-      <div class="tool-row">
-        <a href="./ink/" class="sub-link mono" target="_blank">INK</a>
-        <span class="tool-info" data-tool="INK">?</span>
-      </div>
-      <div class="tool-row">
-        <a href="./cam/" class="sub-link mono" target="_blank">CAMERA</a>
-        <span class="tool-info" data-tool="CAMERA">?</span>
-      </div>
-      <div class="tool-row">
-        <a href="./pulse/" class="sub-link mono" target="_blank">PULSE</a>
-        <span class="tool-info" data-tool="PULSE">?</span>
-      </div>
+      <a href="./ink/" class="sub-link mono" target="_blank" data-tool="INK"><span class="mn" style="display:inline-block;width:24px;">01</span> INK</a>
+      <a href="./cam/" class="sub-link mono" target="_blank" data-tool="CAMERA"><span class="mn" style="display:inline-block;width:24px;">02</span> CAMERA</a>
+      <a href="./pulse/" class="sub-link mono" target="_blank" data-tool="PULSE"><span class="mn" style="display:inline-block;width:24px;">03</span> PULSE</a>
     </div>
     <div class="sub-back" id="tpBack">× 戻る</div>
   </div>
@@ -776,7 +757,7 @@ document.querySelectorAll('#toolsScreen .sub-link').forEach(link => {
     e.stopPropagation();
     if (state !== 4) return;
     
-    const toolKey = link.textContent.trim();
+    const toolKey = link.dataset.tool;
     pendingLink = link.href;
     currentChoiceType = 'tool';
 
@@ -921,17 +902,6 @@ document.querySelectorAll('.char-icon-btn').forEach(btn => {
 // after char description: ▼ just closes text window, stays on char screen
 // handled in main click: state 12 → hide text, back to state 6
 
-// Tool info buttons
-document.querySelectorAll('.tool-info').forEach(btn => {
-  btn.onclick = e => {
-    e.stopPropagation();
-    if (state !== 4 && state !== 9 && state !== 10) return;
-    if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
-    state = 9;
-    showText('', true);
-    typeText(TOOLS[btn.dataset.tool][lang], () => { state = 10; });
-  };
-});
 
 // Menu close
 document.getElementById('menuClose').onclick = e => { e.stopPropagation(); startPart(); };
