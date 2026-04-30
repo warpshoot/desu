@@ -1380,11 +1380,20 @@
     }
 
     function zoomAround(newZoom, nx, ny) {
+      const { w: srcW, h: srcH } = getSourceDimensions();
+      const vAspect = window.innerWidth / window.innerHeight;
+      let gw, gh;
+      if (vAspect >= 1) { gw = Math.round(currentRes * vAspect); gh = currentRes; }
+      else { gw = currentRes; gh = Math.round(currentRes / vAspect); }
+      const fitScale = Math.min(gw / srcW, gh / srcH);
+      const kx = gw / (fitScale * srcW);
+      const ky = gh / (fitScale * srcH);
+
       const oldZoom = cropZoom;
       cropZoom = Math.max(0.25, Math.min(12, newZoom));
       const zoomRatio = (1 / oldZoom - 1 / cropZoom);
-      cropCenterX += (nx - 0.5) * zoomRatio;
-      cropCenterY += (ny - 0.5) * zoomRatio;
+      cropCenterX += (nx - 0.5) * kx * zoomRatio;
+      cropCenterY += (ny - 0.5) * ky * zoomRatio;
     }
 
     const ptrs = new Map();
@@ -1401,6 +1410,7 @@
         if (now - lastTapTime < 300) { cropCenterX = 0.5; cropCenterY = 0.5; cropZoom = 1; maybeRender(); }
         lastTapTime = now;
       } else if (ptrs.size === 2) {
+        lastTapTime = 0;
         const [a, b] = [...ptrs.values()];
         pinchStartDist = Math.hypot(b.x - a.x, b.y - a.y);
         pinchStartZoom = cropZoom;
