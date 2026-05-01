@@ -885,11 +885,27 @@
       const { w: srcW, h: srcH } = getSourceDimensions();
       const cellW = ['kanji', 'circles'].includes(currentCharSet) ? CHAR_H : CHAR_W;
       const va = getViewportAspect();
-      const rows = Math.max(1, Math.round(cols * cellW / CHAR_H / va));
 
-      if (charScale == null) {
-        charScale = Math.max(1, Math.ceil(Math.min(window.innerWidth / (cols * cellW), window.innerHeight / (rows * CHAR_H))));
+      // Compute integer pixel dimensions first so rows is consistent with actual canvas width.
+      // Using Math.round(cellW) avoids rows being computed from a float that doesn't match
+      // the integer cW used for drawing, which would make the canvas taller than the viewport
+      // aspect and leave a gap on the right side.
+      let cW, cH2, rows;
+      if (charScale != null) {
+        cW = Math.round(cellW * charScale);
+        cH2 = Math.round(CHAR_H * charScale);
+      } else {
+        const cWEst = Math.round(cellW);
+        const rowsEst = Math.max(1, Math.floor(cols * cWEst / CHAR_H / va));
+        charScale = Math.max(1, Math.ceil(Math.min(
+          window.innerWidth / (cols * cWEst),
+          window.innerHeight / (rowsEst * CHAR_H)
+        )));
+        cW = Math.round(cellW * charScale);
+        cH2 = Math.round(CHAR_H * charScale);
       }
+      // Math.floor keeps canvas aspect >= viewport aspect so scale is width-constrained
+      rows = Math.max(1, Math.floor(cols * cW / cH2 / va));
 
       sampleCanvas.width = cols; sampleCanvas.height = rows;
       sampleCtx.save();
@@ -919,7 +935,6 @@
 
       const imgData = sampleCtx.getImageData(0, 0, cols, rows).data;
       const chars = CHAR_SETS[currentCharSet];
-      const cW = Math.round(cellW * charScale), cH2 = Math.round(CHAR_H * charScale);
       const out = document.createElement('canvas');
       out.width = cols * cW; out.height = rows * cH2;
       const oc = out.getContext('2d');
@@ -1090,7 +1105,8 @@
       const cols = currentCols;
       const cellW = ['kanji', 'circles'].includes(currentCharSet) ? CHAR_H : CHAR_W;
       const va = getViewportAspect();
-      const rows = Math.max(1, Math.round(cols * cellW / CHAR_H / va));
+      const cWInt = Math.round(cellW);
+      const rows = Math.max(1, Math.floor(cols * cWInt / CHAR_H / va));
       const fitScale = Math.min(cols / srcW, rows / srcH);
       return {
         dx: dxScreen / rect.width  * cols / (cropZoom * fitScale) / srcW,
@@ -1103,7 +1119,8 @@
       const cols = currentCols;
       const cellW = ['kanji', 'circles'].includes(currentCharSet) ? CHAR_H : CHAR_W;
       const va = getViewportAspect();
-      const rows = Math.max(1, Math.round(cols * cellW / CHAR_H / va));
+      const cWInt = Math.round(cellW);
+      const rows = Math.max(1, Math.floor(cols * cWInt / CHAR_H / va));
       const fitScale = Math.min(cols / srcW, rows / srcH);
       const vswOld = cols / (cropZoom * fitScale);
       const vshOld = rows / (cropZoom * fitScale);
@@ -1177,7 +1194,8 @@
       const { w: srcW, h: srcH } = getSourceDimensions();
       const cellW = ['kanji', 'circles'].includes(currentCharSet) ? CHAR_H : CHAR_W;
       const va = getViewportAspect();
-      const rows = Math.max(1, Math.round(cols * cellW / CHAR_H / va));
+      const cWInt = Math.round(cellW);
+      const rows = Math.max(1, Math.floor(cols * cWInt / CHAR_H / va));
       sampleCanvas.width = cols; sampleCanvas.height = rows;
       sampleCtx.save();
       sampleCtx.fillStyle = '#000'; sampleCtx.fillRect(0, 0, cols, rows);
