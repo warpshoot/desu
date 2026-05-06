@@ -5,9 +5,8 @@ import {
     currentTonePresetId,
     createTonePreview
 } from '../tools/tonePresets.js';
-import { hideAllMenus } from './menuManager.js';
-
 let _activeTab = 'A';
+let _menuVisible = false;
 
 export function setupToneMenu() {
     const menu = document.getElementById('tone-menu');
@@ -116,13 +115,15 @@ export function updateToneMenuVisibility() {
 
         const activePresetId = fillSlot?.tonePresetId || currentTonePresetId;
 
-        // Switch to the tab containing the active preset (only if menu was just opened)
-        const activePreset = TONE_PRESETS.find(p => p.id === activePresetId);
-        if (activePreset && activePreset.category !== _activeTab) {
-            const tabBar = menu.querySelector('.tone-tabs');
-            const itemsContainer = document.getElementById('tone-items');
-            if (tabBar && itemsContainer) {
-                _switchTab(activePreset.category, tabBar, itemsContainer);
+        // Auto-switch to the tab containing the active preset, but only on first open
+        if (!_menuVisible) {
+            const activePreset = TONE_PRESETS.find(p => p.id === activePresetId);
+            if (activePreset && activePreset.category !== _activeTab) {
+                const tabBar = menu.querySelector('.tone-tabs');
+                const itemsContainer = document.getElementById('tone-items');
+                if (tabBar && itemsContainer) {
+                    _switchTab(activePreset.category, tabBar, itemsContainer);
+                }
             }
         }
 
@@ -130,6 +131,7 @@ export function updateToneMenuVisibility() {
             el.classList.toggle('active', el.dataset.id === activePresetId);
         });
 
+        _menuVisible = true;
         menu.classList.remove('hidden');
 
         const fillBtn = document.getElementById('mode-fill');
@@ -140,6 +142,7 @@ export function updateToneMenuVisibility() {
             menu.style.bottom = 'auto';
         }
     } else {
+        _menuVisible = false;
         menu.classList.add('hidden');
     }
 }
