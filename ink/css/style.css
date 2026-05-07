@@ -1245,6 +1245,12 @@ a.credit-val:hover {
     display: none;
 }
 
+.tone-menu.tone-inactive .tone-items,
+.tone-menu.tone-inactive .tone-tabs {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
 .tone-item {
     width: 48px;
     height: 48px;

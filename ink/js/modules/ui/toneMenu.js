@@ -134,6 +134,9 @@ export function updateToneMenuVisibility() {
         _menuVisible = true;
         menu.classList.remove('hidden');
 
+        const isActiveFill = state.mode === 'fill' && state.subTool === 'tone';
+        menu.classList.toggle('tone-inactive', !isActiveFill);
+
         const fillBtn = document.getElementById('mode-fill');
         if (fillBtn) {
             const rect = fillBtn.getBoundingClientRect();
