@@ -15,6 +15,8 @@ export const TONE_PRESETS = [
     { id: 'fine4',    name: 'C4', type: 'fine',     spacing: 5,  dotSize: 2,  category: 'A' },
     { id: 'organic1', name: 'F1', type: 'organic',  spacing: 10, dotSize: 2, randomness: 0.3, category: 'A' },
     { id: 'organic2', name: 'F2', type: 'organic',  spacing: 7,  dotSize: 2, randomness: 0.3, category: 'A' },
+    { id: 'large1',   name: 'L1', type: 'fine',     spacing: 24, dotSize: 4, category: 'A' },
+    { id: 'large2',   name: 'L2', type: 'fine',     spacing: 16, dotSize: 4, category: 'A' },
 
     // Tab B: Lines
     { id: 'diag1',  name: 'D1', type: 'diagonal',   spacing: 12, width: 1, category: 'B' },
@@ -23,18 +25,26 @@ export const TONE_PRESETS = [
     { id: 'horiz1', name: 'H1', type: 'horizontal', spacing: 12, width: 1, category: 'B' },
     { id: 'horiz2', name: 'H2', type: 'horizontal', spacing: 8,  width: 1, category: 'B' },
     { id: 'horiz3', name: 'H3', type: 'horizontal', spacing: 4,  width: 1, category: 'B' },
+    { id: 'vert1',  name: 'V1', type: 'vertical',   spacing: 12, width: 1, category: 'B' },
+    { id: 'vert2',  name: 'V2', type: 'vertical',   spacing: 8,  width: 1, category: 'B' },
+    { id: 'vert3',  name: 'V3', type: 'vertical',   spacing: 4,  width: 1, category: 'B' },
     { id: 'cross1', name: 'X1', type: 'crosshatch', spacing: 12, width: 1, category: 'B' },
     { id: 'cross2', name: 'X2', type: 'crosshatch', spacing: 8,  width: 1, category: 'B' },
+    { id: 'cross3', name: 'X3', type: 'crosshatch', spacing: 6,  width: 1, category: 'B' },
 
     // Tab C: Grid
-    { id: 'grid1',    name: 'E1', type: 'grid',      spacing: 12, width: 1,  category: 'C' },
-    { id: 'grid2',    name: 'E2', type: 'grid',      spacing: 8,  width: 1,  category: 'C' },
-    { id: 'grid3',    name: 'E3', type: 'grid',      spacing: 6,  width: 1,  category: 'C' },
-    { id: 'honey1',   name: 'W1', type: 'honeycomb', hexSize: 10, width: 1,  category: 'C' },
-    { id: 'honey2',   name: 'W2', type: 'honeycomb', hexSize: 6,  width: 1,  category: 'C' },
-    { id: 'brick1',   name: 'K1', type: 'brick',     spacing: 12, width: 1,  category: 'C' },
-    { id: 'brick2',   name: 'K2', type: 'brick',     spacing: 8,  width: 1,  category: 'C' },
-    { id: 'checker1', name: 'CK', type: 'checker',   spacing: 8,              category: 'C' },
+    { id: 'grid1',    name: 'E1',  type: 'grid',     spacing: 12, width: 1,  category: 'C' },
+    { id: 'grid2',    name: 'E2',  type: 'grid',     spacing: 8,  width: 1,  category: 'C' },
+    { id: 'grid3',    name: 'E3',  type: 'grid',     spacing: 6,  width: 1,  category: 'C' },
+    { id: 'honey1',   name: 'W1',  type: 'honeycomb', hexSize: 10, width: 1, category: 'C' },
+    { id: 'honey2',   name: 'W2',  type: 'honeycomb', hexSize: 6,  width: 1, category: 'C' },
+    { id: 'brick1',   name: 'K1',  type: 'brick',    spacing: 12, width: 1,  category: 'C' },
+    { id: 'brick2',   name: 'K2',  type: 'brick',    spacing: 8,  width: 1,  category: 'C' },
+    { id: 'brick3',   name: 'K3',  type: 'brick',    spacing: 6,  width: 1,  category: 'C' },
+    { id: 'dotgrid1', name: 'G1',  type: 'dotgrid',  spacing: 10, dotSize: 2, category: 'C' },
+    { id: 'dotgrid2', name: 'G2',  type: 'dotgrid',  spacing: 7,  dotSize: 2, category: 'C' },
+    { id: 'checker1', name: 'CK1', type: 'checker',  spacing: 8,              category: 'C' },
+    { id: 'checker2', name: 'CK2', type: 'checker',  spacing: 5,              category: 'C' },
 ];
 
 // Current selected preset ID (default to first one)
@@ -82,8 +92,9 @@ export function createPatternCanvas(preset, dpr = 1) {
         if (s % 2 !== 0) s++;
         tileW = tileH = Math.max(2, s);
     } else if (preset.type === 'diagonal' || preset.type === 'grid' ||
-               preset.type === 'horizontal' || preset.type === 'crosshatch' ||
-               preset.type === 'brick') {
+               preset.type === 'horizontal' || preset.type === 'vertical' ||
+               preset.type === 'crosshatch' || preset.type === 'brick' ||
+               preset.type === 'dotgrid') {
         tileW = tileH = spacing;
     } else if (preset.type === 'checker') {
         tileW = tileH = spacing * 2;
@@ -113,6 +124,15 @@ export function createPatternCanvas(preset, dpr = 1) {
     } else if (preset.type === 'horizontal') {
         const lw = Math.max(1, Math.round(preset.width * dpr));
         ctx.fillRect(0, 0, tileW, lw);
+    } else if (preset.type === 'vertical') {
+        const lw = Math.max(1, Math.round(preset.width * dpr));
+        ctx.fillRect(0, 0, lw, tileH);
+    } else if (preset.type === 'dotgrid') {
+        const dotSize = Math.max(1, Math.round(preset.dotSize * dpr));
+        const cx = Math.floor(tileW / 2), cy = Math.floor(tileH / 2);
+        ctx.beginPath();
+        ctx.arc(cx, cy, dotSize / 2, 0, Math.PI * 2);
+        ctx.fill();
     } else if (preset.type === 'crosshatch') {
         // 45° + 135° diagonal lines — both directions tile correctly in a square tile
         const lw = Math.max(1, Math.round(preset.width * dpr));
@@ -256,6 +276,22 @@ function drawPatternOnCanvas(ctx, width, height, preset) {
         const lw = Math.max(1, Math.ceil(preset.width));
         for (let y = 0; y < height; y += spacing) {
             ctx.fillRect(0, y, width, lw);
+        }
+    } else if (preset.type === 'vertical') {
+        const spacing = preset.spacing;
+        const lw = Math.max(1, Math.ceil(preset.width));
+        for (let x = 0; x < width; x += spacing) {
+            ctx.fillRect(x, 0, lw, height);
+        }
+    } else if (preset.type === 'dotgrid') {
+        const spacing = preset.spacing;
+        const dotSize = preset.dotSize;
+        for (let y = 0; y < height + spacing; y += spacing) {
+            for (let x = 0; x < width + spacing; x += spacing) {
+                ctx.beginPath();
+                ctx.arc(x, y, dotSize / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
     } else if (preset.type === 'crosshatch') {
         const spacing = preset.spacing;
