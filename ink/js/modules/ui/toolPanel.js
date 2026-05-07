@@ -80,10 +80,54 @@ export function setupToolPanel() {
     updateToneMenuVisibility();
 }
 
+const PANEL_CONFIG = {
+    pen:    { id: 'brush-settings-panel',  pinKey: 'isBrushSettingsPinned',  pinBtnId: 'brush-settings-pin' },
+    fill:   { id: 'fill-settings-panel',   pinKey: 'isFillSettingsPinned',   pinBtnId: 'fill-settings-pin' },
+    eraser: { id: 'eraser-settings-panel', pinKey: 'isEraserSettingsPinned', pinBtnId: 'eraser-settings-pin' },
+    shape:  { id: 'shape-settings-panel',  pinKey: 'isShapeSettingsPinned',  pinBtnId: 'shape-settings-pin' },
+};
+
+function _anyPanelPinnedAndVisible() {
+    return Object.values(PANEL_CONFIG).some(({ id, pinKey }) => {
+        const p = document.getElementById(id);
+        return p && !p.classList.contains('hidden') && state[pinKey];
+    });
+}
+
+function _openPanelForMode(mode) {
+    switch (mode) {
+        case 'pen':    openBrushSettings(state.activeBrushIndex); break;
+        case 'fill':   openFillSettings(state.activeFillSlotIndex); break;
+        case 'eraser': openEraserSettings(state.activeEraserSlotIndex); break;
+        case 'shape':  openShapeSettings(state.activeShapeSlotIndex); break;
+    }
+}
+
+function _transferPinnedPanel(fromMode, toMode) {
+    const from = PANEL_CONFIG[fromMode];
+    if (from) {
+        state[from.pinKey] = false;
+        const oldPanel = document.getElementById(from.id);
+        if (oldPanel) oldPanel.classList.add('hidden');
+        const oldPin = document.getElementById(from.pinBtnId);
+        if (oldPin) oldPin.classList.remove('active');
+    }
+    const to = PANEL_CONFIG[toMode];
+    if (to) {
+        state[to.pinKey] = true;
+        _openPanelForMode(toMode);
+        const newPin = document.getElementById(to.pinBtnId);
+        if (newPin) newPin.classList.add('active');
+    }
+}
+
 export async function handleModeTap(mode) {
     const toneMenu = document.getElementById('tone-menu');
     const wasOnTone = state.mode === 'fill' && state.subTool === 'tone';
     const wasToneMenuVisible = toneMenu && !toneMenu.classList.contains('hidden');
+
+    const prevMode = state.mode;
+    const hadPinnedPanel = _anyPanelPinnedAndVisible();
 
     hideAllMenus();
 
@@ -140,7 +184,11 @@ export async function handleModeTap(mode) {
     updateBrushSizeVisibility();
     updateBrushSizeSlider();
     renderBrushPalette();
-    
+
+    if (state.mode !== prevMode && hadPinnedPanel) {
+        _transferPinnedPanel(prevMode, state.mode);
+    }
+
     // External call to modifier bar update
     if (window.updateModifierBar) window.updateModifierBar();
 }
