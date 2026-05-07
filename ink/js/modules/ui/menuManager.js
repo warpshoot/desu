@@ -2,10 +2,19 @@ import { state } from '../state.js';
 import { invalidateUICollisionCache } from '../input/pointerHandler.js';
 
 export function hideAllMenus() {
-    const selectors = '.tool-menu, .flyout-menu, #settings-panel, #brush-settings-panel, #fill-settings-panel, #eraser-settings-panel, #select-toolbar';
+    const selectors = '.tool-menu, .flyout-menu, #settings-panel, #select-toolbar';
     document.querySelectorAll(selectors).forEach(menu => {
         menu.classList.add('hidden');
     });
+
+    const brushPanel = document.getElementById('brush-settings-panel');
+    if (brushPanel && !state.isBrushSettingsPinned) brushPanel.classList.add('hidden');
+    const fillPanel = document.getElementById('fill-settings-panel');
+    if (fillPanel && !state.isFillSettingsPinned) fillPanel.classList.add('hidden');
+    const eraserPanel = document.getElementById('eraser-settings-panel');
+    if (eraserPanel && !state.isEraserSettingsPinned) eraserPanel.classList.add('hidden');
+    const shapePanel = document.getElementById('shape-settings-panel');
+    if (shapePanel && !state.isShapeSettingsPinned) shapePanel.classList.add('hidden');
 
     // 図形プレビューフローティングも閉じる
     const shapePreviewFloat = document.getElementById('shape-preview-float');
