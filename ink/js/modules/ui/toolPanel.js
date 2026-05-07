@@ -182,16 +182,17 @@ export function updateToolButtonStates() {
         brushPalette.classList.toggle('disabled', state.mode === 'select');
     }
 
-    // Hide tool-specific panels if mode changes
+    // Hide tool-specific panels if mode changes (respect pin state)
     const panels = {
-        pen:    'brush-settings-panel',
-        fill:   'fill-settings-panel',
-        eraser: 'eraser-settings-panel',
-        shape:  'shape-settings-panel'
+        pen:    { id: 'brush-settings-panel',  pinKey: 'isBrushSettingsPinned' },
+        fill:   { id: 'fill-settings-panel',   pinKey: 'isFillSettingsPinned' },
+        eraser: { id: 'eraser-settings-panel', pinKey: 'isEraserSettingsPinned' },
+        shape:  { id: 'shape-settings-panel',  pinKey: 'isShapeSettingsPinned' },
     };
     Object.keys(panels).forEach(m => {
-        const p = document.getElementById(panels[m]);
-        if (p && state.mode !== m) p.classList.add('hidden');
+        const { id, pinKey } = panels[m];
+        const p = document.getElementById(id);
+        if (p && state.mode !== m && !state[pinKey]) p.classList.add('hidden');
     });
 
     updateBrushSizeVisibility();
