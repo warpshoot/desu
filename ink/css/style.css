@@ -973,9 +973,6 @@ canvas {
     width: 260px;
     z-index: 401;
     transition: opacity 0.2s;
-    background: var(--bg-panel-solid);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
 }
 
 #save-body {
