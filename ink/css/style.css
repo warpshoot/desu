@@ -1363,6 +1363,127 @@ a.credit-val:hover {
 }
 
 /* ============================================
+   Resume Modal
+   ============================================ */
+#resume-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: resume-fade-in 0.15s ease;
+}
+
+#resume-modal.hidden {
+    display: none;
+}
+
+@keyframes resume-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+#resume-content {
+    background: #fff;
+    border-radius: 16px;
+    width: 300px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+    animation: resume-slide-up 0.18s ease;
+}
+
+@keyframes resume-slide-up {
+    from { transform: translateY(12px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+
+#resume-thumbnail-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: #ebebeb;
+    overflow: hidden;
+    position: relative;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+#resume-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+#resume-thumbnail-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #bbb;
+    font-size: 13px;
+}
+
+#resume-info {
+    padding: 14px 18px 6px;
+}
+
+.resume-badge {
+    display: inline-block;
+    background: #e05a20;
+    color: #fff;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 99px;
+    margin-bottom: 6px;
+    letter-spacing: 0.03em;
+}
+
+#resume-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #111;
+    margin: 0 0 3px;
+}
+
+#resume-date {
+    font-size: 11px;
+    color: #999;
+    margin: 0;
+}
+
+.resume-buttons {
+    display: flex;
+    gap: 8px;
+    padding: 14px 18px 18px;
+}
+
+.resume-buttons button {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    background: #fff;
+    color: #555;
+    transition: opacity 0.1s;
+}
+
+.resume-buttons button:active {
+    opacity: 0.7;
+}
+
+.resume-buttons button.primary {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+}
+
+/* ============================================
    Brush Palette
    ============================================ */
 #brush-palette {
