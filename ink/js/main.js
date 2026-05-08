@@ -4,7 +4,7 @@ import { initUI, updateLayerThumbnail } from './modules/ui.js';
 import { saveInitialState } from './modules/history.js';
 import { loadLocalState, hasSavedState, hasBackupState, exportProject, importProject, forceSave, isStorageDirty, getCanvasSizePref, getSavedStatePaperSize, getSavedStateThumbnail, getSavedStateTimestamp } from './modules/storage.js';
 import { getLang, setLang, t, applyTextToDOM } from './modules/i18n.js';
-import { showResumeModal } from './modules/ui/modals.js';
+import { showResumeModal, showSimpleConfirm, showToast } from './modules/ui/modals.js';
 
 window.onerror = function (msg, url, line, col, error) {
     // Emergency attempt to save if a crash occurs
@@ -12,7 +12,26 @@ window.onerror = function (msg, url, line, col, error) {
         if (isStorageDirty()) forceSave();
     } catch (e) {}
     
-    alert(`[Critical Error] The application encountered an unexpected issue.\n\nMessage: ${msg}\nLocation: ${line}:${col}\n\nPlease try to export your project or refresh the page.`);
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:Inter,sans-serif';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#fff;border-radius:12px;padding:24px;max-width:360px;width:calc(100% - 48px);box-shadow:0 8px 40px rgba(0,0,0,0.4)';
+    const title = document.createElement('p');
+    title.style.cssText = 'font-size:13px;font-weight:bold;color:#c0392b;margin:0 0 8px';
+    title.textContent = 'Critical Error';
+    const detail = document.createElement('p');
+    detail.style.cssText = 'font-size:12px;color:#555;line-height:1.6;margin:0 0 8px;white-space:pre-wrap';
+    detail.textContent = `${msg}\n${line}:${col}`;
+    const hint = document.createElement('p');
+    hint.style.cssText = 'font-size:11px;color:#999;margin:0 0 16px';
+    hint.textContent = 'Please export your project or refresh the page.';
+    const btn = document.createElement('button');
+    btn.style.cssText = 'width:100%;padding:10px;background:#111;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:bold;cursor:pointer';
+    btn.textContent = 'OK';
+    btn.addEventListener('click', () => overlay.remove());
+    box.append(title, detail, hint, btn);
+    overlay.appendChild(box);
+    if (document.body) document.body.appendChild(overlay);
     return false;
 };
 
@@ -34,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const msg = t('confirm.canvasSizeMismatch')
                         .replace('{0}', savedSize.w).replace('{1}', savedSize.h)
                         .replace('{2}', pref).replace('{3}', pref);
-                    if (confirm(msg)) {
+                    if (await showSimpleConfirm(msg, { okLabel: '読み込む', cancelLabel: 'キャンセル' })) {
                         loaded = await loadLocalState();
                     }
                 } else {
@@ -58,7 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const msg = t('confirm.canvasSizeMismatch')
                         .replace('{0}', savedSize.w).replace('{1}', savedSize.h)
                         .replace('{2}', pref).replace('{3}', pref);
-                    if (confirm(msg)) {
+                    if (await showSimpleConfirm(msg, { okLabel: '読み込む', cancelLabel: 'キャンセル' })) {
                         loaded = await loadLocalState(true);
                     }
                 } else {
@@ -87,20 +106,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.stopPropagation();
         });
 
-        window.addEventListener('drop', (e) => {
+        window.addEventListener('drop', async (e) => {
             e.preventDefault();
             e.stopPropagation();
             if (e.dataTransfer.files.length > 0) {
                 const file = e.dataTransfer.files[0];
                 if (file.name.endsWith('.desu') || file.name.endsWith('.json')) {
-                    if (confirm(t('confirm.import'))) {
-                        importProject(file).then(success => {
-                            if (success) {
-                                alert(t('alert.importSuccess'));
-                            } else {
-                                alert(t('alert.importFail'));
-                            }
-                        });
+                    if (await showSimpleConfirm(t('confirm.import'), { okLabel: '読み込む', cancelLabel: 'キャンセル' })) {
+                        const success = await importProject(file);
+                        if (success) {
+                            showToast(t('alert.importSuccess'), 'success');
+                        } else {
+                            showToast(t('alert.importFail'), 'error');
+                        }
                     }
                 }
             }

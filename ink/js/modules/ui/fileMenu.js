@@ -26,6 +26,7 @@ import {
     renderBrushPalette
 } from './toolPanel.js';
 import { updateToneMenuVisibility } from './toneMenu.js';
+import { showSimpleConfirm, showToast } from './modals.js';
 
 export async function doNewProject() {
     const sz = getCanvasSizePref();
@@ -81,7 +82,7 @@ export function setupFileUI() {
     if (newBtn) {
         newBtn.addEventListener('click', async () => {
             hideAllMenus();
-            if (confirm(t('confirm.new'))) {
+            if (await showSimpleConfirm(t('confirm.new'), { okLabel: '作成する', cancelLabel: 'キャンセル' })) {
                 await doNewProject();
             }
         });
@@ -97,7 +98,7 @@ export function setupFileUI() {
         fileInput.addEventListener('change', async (e) => {
             if (e.target.files.length > 0) {
                 const file = e.target.files[0];
-                if (confirm(t('confirm.import'))) {
+                if (await showSimpleConfirm(t('confirm.import'), { okLabel: '読み込む', cancelLabel: 'キャンセル' })) {
                     // Check for canvas size mismatch
                     try {
                         const text = await file.text();
@@ -109,25 +110,24 @@ export function setupFileUI() {
                             const msg = t('confirm.canvasSizeMismatch')
                                 .replace('{0}', pw).replace('{1}', ph)
                                 .replace('{2}', pref).replace('{3}', pref);
-                            if (!confirm(msg)) {
+                            if (!await showSimpleConfirm(msg, { okLabel: '読み込む', cancelLabel: 'キャンセル' })) {
                                 fileInput.value = '';
                                 return;
                             }
                         }
                     } catch {}
 
-                    importProject(file).then(async (success) => {
-                        if (success) {
-                            renderLayerButtons();
-                            for (const layer of layers) {
-                                updateLayerThumbnail(layer);
-                            }
-                            await resetHistory();
-                        } else {
-                            alert(t('alert.importFail'));
+                    const success = await importProject(file);
+                    if (success) {
+                        renderLayerButtons();
+                        for (const layer of layers) {
+                            updateLayerThumbnail(layer);
                         }
-                        fileInput.value = '';
-                    });
+                        await resetHistory();
+                    } else {
+                        showToast(t('alert.importFail'), 'error');
+                    }
+                    fileInput.value = '';
                 } else {
                     fileInput.value = '';
                 }
