@@ -47,7 +47,7 @@
         <div id="tool-panel">
             <div class="mode-btn active" id="mode-pen" data-mode="pen" title="ペン" data-i18n-title="tool.pen">
                 <img src="icons/pen.png" class="tool-icon mode-icon" data-sub="pen" alt="Pen">
-                <img src="icons/stipple.svg" class="tool-icon mode-icon" data-sub="stipple" style="filter: brightness(0); display:none;" alt="Stipple">
+                <img src="icons/stipple.svg" class="tool-icon mode-icon icon-dark" data-sub="stipple" style="display:none;" alt="Stipple">
                 <div class="hold-progress"></div>
             </div>
             <div class="mode-btn" id="mode-fill" data-mode="fill" title="塗り" data-i18n-title="tool.fill">
@@ -56,26 +56,24 @@
                 <div class="hold-progress"></div>
             </div>
             <div class="mode-btn" id="mode-shape" data-mode="shape" title="図形" data-i18n-title="tool.shape">
-                <svg class="tool-icon mode-icon" data-sub="line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19L19 5"/></svg>
-                <svg class="tool-icon mode-icon" data-sub="rect" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-                <svg class="tool-icon mode-icon" data-sub="circle" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
-                <svg class="tool-icon mode-icon" data-sub="poly" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 7v8l-9 5-9-5V9z"/></svg>
-                <svg class="tool-icon mode-icon" data-sub="star" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <svg class="tool-icon mode-icon" data-sub="line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><path d="M5 19L19 5"/></svg>
+                <svg class="tool-icon mode-icon" data-sub="rect" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18"/></svg>
+                <svg class="tool-icon mode-icon" data-sub="circle" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><circle cx="12" cy="12" r="9"/></svg>
+                <svg class="tool-icon mode-icon" data-sub="poly" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 7v8l-9 5-9-5V9z"/></svg>
+                <svg class="tool-icon mode-icon" data-sub="star" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                 <div class="hold-progress"></div>
             </div>
             <div class="mode-btn" id="mode-eraser" data-mode="eraser" title="消しゴム" data-i18n-title="tool.eraser">
                 <img src="icons/er2.svg" class="tool-icon mode-icon icon-dark" data-sub="pen" alt="Eraser Pen">
                 <img src="icons/er1.png" class="tool-icon mode-icon icon-dark" data-sub="lasso" style="display:none;" alt="Eraser Lasso">
-                <svg class="tool-icon mode-icon" data-sub="clear" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/><path d="M9 7V4h6v3"/></svg>
+                <svg class="tool-icon mode-icon" data-sub="clear" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/><path d="M9 7V4h6v3"/></svg>
                 <div class="hold-progress"></div>
             </div>
             <div class="mode-btn" id="mode-select" data-mode="select" title="選択" data-i18n-title="tool.select">
-                <!-- rect sub-tool icon -->
-                <svg class="tool-icon mode-icon" data-sub="rect" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <svg class="tool-icon mode-icon" data-sub="rect" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="3" width="18" height="18" stroke-dasharray="4 2"/>
                 </svg>
-                <!-- lasso sub-tool icon -->
-                <svg class="tool-icon mode-icon" data-sub="lasso" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <svg class="tool-icon mode-icon" data-sub="lasso" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M4 12 C4 7 8 4 12 4 C16 4 20 7 20 11 C20 14 18 16 15 17 L13 21 L11 17 C8 16 4 14 4 12 Z" stroke-dasharray="4 2"/>
                 </svg>
                 <div class="hold-progress"></div>
