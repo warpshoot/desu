@@ -64,8 +64,8 @@
                 <div class="hold-progress"></div>
             </div>
             <div class="mode-btn" id="mode-eraser" data-mode="eraser" title="消しゴム" data-i18n-title="tool.eraser">
-                <img src="icons/er2.svg" class="tool-icon mode-icon" data-sub="pen" style="filter: brightness(0);" alt="Eraser Pen">
-                <img src="icons/er1.png" class="tool-icon mode-icon" data-sub="lasso" style="filter: brightness(0); display:none;" alt="Eraser Lasso">
+                <img src="icons/er2.svg" class="tool-icon mode-icon icon-dark" data-sub="pen" alt="Eraser Pen">
+                <img src="icons/er1.png" class="tool-icon mode-icon icon-dark" data-sub="lasso" style="display:none;" alt="Eraser Lasso">
                 <svg class="tool-icon mode-icon" data-sub="clear" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/><path d="M9 7V4h6v3"/></svg>
                 <div class="hold-progress"></div>
             </div>
@@ -153,8 +153,8 @@
 
             <div class="menu-divider"></div>
             <div class="settings-section-label" data-i18n="settings.canvasSize">NEW PROJECT SIZE</div>
-            <div class="bs-row" style="margin: 0 16px 12px; display:flex; justify-content:space-between; align-items:center;">
-                <select id="canvas-size-select" style="background:transparent; color:inherit; border:1px solid #333; padding:4px; border-radius:4px; font-family:Inter,sans-serif; width:100%;">
+            <div class="bs-row settings-select-row">
+                <select id="canvas-size-select">
                     <option value="2000" data-i18n="settings.canvasSize.normal">2000×2000 (Standard)</option>
                     <option value="1000" data-i18n="settings.canvasSize.lite">1000×1000 (Lite)</option>
                 </select>
@@ -162,9 +162,9 @@
 
             <div class="menu-divider"></div>
             <div class="settings-section-label" data-i18n="settings.config">TOOL CONFIG</div>
-            <div class="bs-row" style="margin: 0 16px 12px; padding-bottom: 12px; border-bottom: 1px solid #111; display:flex; justify-content:space-between; align-items:center;">
-                <label data-i18n="settings.lang" style="font-size:12px; color:#888;">LANGUAGE</label>
-                <select id="lang-select" style="background:transparent; color:inherit; border:1px solid #333; padding:4px; border-radius:4px; font-family:Inter,sans-serif;">
+            <div class="bs-row settings-select-row settings-select-row--divided">
+                <label data-i18n="settings.lang">LANGUAGE</label>
+                <select id="lang-select">
                     <option value="ja">日本語</option>
                     <option value="en">English</option>
                 </select>
@@ -175,7 +175,7 @@
             <div class="menu-item" id="importConfigBtn">
                 <span data-i18n="settings.import">Import Configuration</span>
             </div>
-            <div class="menu-item" id="resetConfigBtn" style="color: #d33;">
+            <div class="menu-item" id="resetConfigBtn">
                 <span data-i18n="settings.reset">Reset All Settings</span>
             </div>
 
