@@ -538,6 +538,60 @@ function _restoreSettings(s) {
 }
 
 
+export function getSavedStateTimestamp(useBackup = false) {
+    const key = useBackup ? BACKUP_KEY : STORAGE_KEY;
+    try {
+        const json = localStorage.getItem(key);
+        if (!json) return null;
+        return JSON.parse(json).timestamp || null;
+    } catch { return null; }
+}
+
+export async function getSavedStateThumbnail(useBackup = false) {
+    const key = useBackup ? BACKUP_KEY : STORAGE_KEY;
+    try {
+        const json = localStorage.getItem(key);
+        if (!json) return null;
+        const data = JSON.parse(json);
+        if (!data.layers?.length) return null;
+
+        const paperW = data.paperW || 2000;
+        const paperH = data.paperH || 2000;
+        const thumbW = 300;
+        const thumbH = Math.round(paperH * (thumbW / paperW));
+
+        const offscreen = document.createElement('canvas');
+        offscreen.width = thumbW;
+        offscreen.height = thumbH;
+        const ctx = offscreen.getContext('2d');
+        ctx.fillStyle = data.settings?.canvasColor || '#ffffff';
+        ctx.fillRect(0, 0, thumbW, thumbH);
+
+        for (const layerMeta of data.layers) {
+            if (layerMeta.visible === false) continue;
+            try {
+                const blob = await getBlob(`layer-${layerMeta.id}`);
+                if (!blob) continue;
+                const url = URL.createObjectURL(blob);
+                await new Promise(resolve => {
+                    const img = new Image();
+                    img.onload = () => {
+                        ctx.globalAlpha = layerMeta.opacity ?? 1.0;
+                        ctx.drawImage(img, 0, 0, thumbW, thumbH);
+                        ctx.globalAlpha = 1.0;
+                        URL.revokeObjectURL(url);
+                        resolve();
+                    };
+                    img.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+                    img.src = url;
+                });
+            } catch { /* skip layer */ }
+        }
+
+        return offscreen.toDataURL('image/jpeg', 0.85);
+    } catch { return null; }
+}
+
 async function _shareOrDownload(content, filename, type) {
     if (navigator.canShare) {
         const file = new File([content], filename, { type });

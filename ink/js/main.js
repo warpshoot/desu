@@ -2,8 +2,9 @@ import { initDOM, layers } from './modules/state.js';
 import { initCanvas, resizeViewport } from './modules/canvas.js';
 import { initUI, updateLayerThumbnail } from './modules/ui.js';
 import { saveInitialState } from './modules/history.js';
-import { loadLocalState, hasSavedState, hasBackupState, exportProject, importProject, forceSave, isStorageDirty, getCanvasSizePref, getSavedStatePaperSize } from './modules/storage.js';
+import { loadLocalState, hasSavedState, hasBackupState, exportProject, importProject, forceSave, isStorageDirty, getCanvasSizePref, getSavedStatePaperSize, getSavedStateThumbnail, getSavedStateTimestamp } from './modules/storage.js';
 import { getLang, setLang, t, applyTextToDOM } from './modules/i18n.js';
+import { showResumeModal } from './modules/ui/modals.js';
 
 window.onerror = function (msg, url, line, col, error) {
     // Emergency attempt to save if a crash occurs
@@ -25,16 +26,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Startup Prompt: Load session or start fresh?
         let loaded = false;
         if (hasSavedState()) {
-            if (confirm(t('prompt.loadLast'))) {
+            const [thumb, ts] = await Promise.all([getSavedStateThumbnail(), Promise.resolve(getSavedStateTimestamp())]);
+            if (await showResumeModal({ thumbnailUrl: thumb, timestamp: ts })) {
                 const savedSize = getSavedStatePaperSize();
                 const pref = getCanvasSizePref();
                 if (savedSize && (savedSize.w !== pref || savedSize.h !== pref)) {
                     const msg = t('confirm.canvasSizeMismatch')
                         .replace('{0}', savedSize.w).replace('{1}', savedSize.h)
                         .replace('{2}', pref).replace('{3}', pref);
-                    if (!confirm(msg)) {
-                        // User declined: start fresh (don't load)
-                    } else {
+                    if (confirm(msg)) {
                         loaded = await loadLocalState();
                     }
                 } else {
@@ -43,16 +43,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         } else if (hasBackupState()) {
             // Main state lost but backup exists
-            if (confirm(t('prompt.loadBackup'))) {
+            const [thumb, ts] = await Promise.all([getSavedStateThumbnail(true), Promise.resolve(getSavedStateTimestamp(true))]);
+            if (await showResumeModal({
+                title: '作業データを復旧できます',
+                badge: '異常終了',
+                thumbnailUrl: thumb,
+                timestamp: ts,
+                okLabel: '復旧する',
+                cancelLabel: '破棄して新規作成'
+            })) {
                 const savedSize = getSavedStatePaperSize(true);
                 const pref = getCanvasSizePref();
                 if (savedSize && (savedSize.w !== pref || savedSize.h !== pref)) {
                     const msg = t('confirm.canvasSizeMismatch')
                         .replace('{0}', savedSize.w).replace('{1}', savedSize.h)
                         .replace('{2}', pref).replace('{3}', pref);
-                    if (!confirm(msg)) {
-                        // User declined: start fresh
-                    } else {
+                    if (confirm(msg)) {
                         loaded = await loadLocalState(true);
                     }
                 } else {
