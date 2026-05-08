@@ -1,3 +1,58 @@
+:root {
+  /* Backgrounds */
+  --bg-app: #c8c8c8;
+  --bg-panel: rgba(255, 255, 255, 0.88);
+  --bg-panel-solid: #ffffff;
+  --bg-hover: rgba(0, 0, 0, 0.06);
+  --bg-active: rgba(0, 0, 0, 0.12);
+  --bg-overlay: rgba(0, 0, 0, 0.5);
+  --bg-input: #ffffff;
+
+  /* Text */
+  --text-primary: #1a1a1a;
+  --text-secondary: #555;
+  --text-muted: #888;
+  --text-faint: #bbb;
+  --text-inverse: #ffffff;
+
+  /* Borders */
+  --border: #ddd;
+  --border-strong: #333;
+
+  /* Accent */
+  --accent: #111;
+  --accent-danger: #e05a20;
+
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 99px;
+
+  /* Spacing (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.15);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.25);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.35);
+
+  /* Transitions */
+  --transition-fast: 0.1s ease;
+  --transition-base: 0.18s ease;
+
+  /* Z-index layers */
+  --z-panel: 100;
+  --z-flyout: 200;
+  --z-modal: 1000;
+  --z-resume-modal: 2000;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -13,9 +68,9 @@ body {
     height: 100%;
     overflow: hidden;
     touch-action: none;
-    background: #c8c8c8;
+    background: var(--bg-app);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color: #1a1a1a;
+    color: var(--text-primary);
 }
 
 /* ============================================
@@ -48,7 +103,7 @@ canvas {
     image-rendering: crisp-edges !important;
     image-rendering: -webkit-optimize-contrast !important;
     -ms-interpolation-mode: nearest-neighbor !important;
-    
+
     transform-style: preserve-3d;
     backface-visibility: hidden;
 }
@@ -143,7 +198,7 @@ canvas {
     left: 0;
     touch-action: none;
     transform-origin: 0 0;
-    z-index: 200;
+    z-index: var(--z-flyout);
     pointer-events: auto;
 }
 
@@ -152,12 +207,12 @@ canvas {
    ============================================ */
 #modifier-bar {
     position: fixed;
-    left: 12px;
-    bottom: max(12px, env(safe-area-inset-bottom, 12px));
+    left: var(--radius-lg);
+    bottom: max(var(--radius-lg), env(safe-area-inset-bottom, var(--radius-lg)));
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    z-index: 300;
+    gap: var(--space-2);
+    z-index: var(--z-flyout);
     pointer-events: none;
 }
 
@@ -180,7 +235,7 @@ canvas {
     -webkit-user-drag: none;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     pointer-events: auto;
-    color: #333;
+    color: var(--border-strong);
     font-size: 11px;
     font-weight: bold;
 }
@@ -195,16 +250,16 @@ canvas {
 
 /* held: 押している間 → 塗りつぶし円 */
 .mod-btn.active {
-    background: #333;
-    border-color: #333;
-    color: #fff;
+    background: var(--border-strong);
+    border-color: var(--border-strong);
+    color: var(--text-inverse);
 }
 
 /* locked: ダブルタップでロック → 塗りつぶし + 白い中心点 */
 .mod-btn.locked {
-    background: #333;
-    border-color: #333;
-    color: #fff;
+    background: var(--border-strong);
+    border-color: var(--border-strong);
+    color: var(--text-inverse);
 }
 
 .mod-btn.locked::after {
@@ -213,7 +268,7 @@ canvas {
     width: 6px;
     height: 6px;
     border-radius: 50% !important;
-    background: #fff;
+    background: var(--text-inverse);
     pointer-events: none;
 }
 
@@ -222,14 +277,14 @@ canvas {
     position: absolute;
     width: 100%;
     height: 100%;
-    border: 1px solid #333;
+    border: 1px solid var(--border-strong);
     border-radius: 50% !important;
     pointer-events: none;
-    
+
     /* 初期状態 */
     transform: scale(1);
     opacity: 0;
-    
+
     /* 離した時の戻りアニメーション */
     transition: transform 0.2s ease-out, opacity 0.2s ease-out;
 }
@@ -255,8 +310,8 @@ canvas {
     margin-bottom: auto;
     display: flex;
     flex-direction: column;
-    z-index: 300;
-    padding: 8px 6px 8px 8px; /* コンパクト化 */
+    z-index: var(--z-flyout);
+    padding: var(--space-2) 6px var(--space-2) var(--space-2); /* コンパクト化 */
     background: rgba(255, 255, 255, 0.6);
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
@@ -267,15 +322,15 @@ canvas {
 /* Layer Panel — right side, vertically centered */
 #layer-panel {
     position: fixed;
-    right: 12px;
+    right: var(--radius-lg);
     top: 50%;
     transform: translateY(-50%);
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 6px;
-    z-index: 300;
-    padding: 8px 4px;
+    z-index: var(--z-flyout);
+    padding: var(--space-2) var(--space-1);
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
@@ -286,14 +341,14 @@ canvas {
 #layer-buttons {
     display: flex;
     flex-direction: column-reverse;
-    gap: 4px;
+    gap: var(--space-1);
 }
 
 .layer-btn {
     width: 48px;
     height: 32px;
-    border-radius: 4px;
-    border: 1px solid #999;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--text-muted);
     /* Gray inactive border */
     background: rgba(255, 255, 255, 0.8);
     display: flex;
@@ -301,7 +356,7 @@ canvas {
     justify-content: center;
     font-size: 18px;
     font-weight: bold;
-    color: #333;
+    color: var(--border-strong);
     cursor: pointer;
     transition: all 0.15s;
     overflow: visible;
@@ -314,8 +369,8 @@ canvas {
 
 .layer-btn.active {
     border: 1px solid #000;
-    background: #fff;
-    border-radius: 4px;
+    background: var(--bg-panel-solid);
+    border-radius: var(--radius-sm);
     transform: translateX(5px); /* 右にシフト */
 }
 
@@ -339,7 +394,7 @@ canvas {
     top: 50%;
     transform: translateY(-50%);
     font-size: 13px;
-    color: #fff;
+    color: var(--text-inverse);
     line-height: 1;
     pointer-events: none;
 }
@@ -359,8 +414,8 @@ canvas {
 .layer-add-btn {
     width: 48px;
     height: 32px;
-    border-radius: 8px;
-    border: 2px dashed #999;
+    border-radius: var(--radius-md);
+    border: 2px dashed var(--text-muted);
     /* Gray inactive border */
     /* Light blue */
     background: rgba(255, 255, 255, 0.5);
@@ -368,14 +423,14 @@ canvas {
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    color: #666;
+    color: var(--text-secondary);
     /* Gray text */
     cursor: pointer;
     transition: all 0.15s;
 }
 
 .layer-add-btn:hover {
-    border-color: #666;
+    border-color: var(--text-secondary);
     background: rgba(255, 255, 255, 0.8);
 }
 
@@ -390,7 +445,7 @@ canvas {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
 }
 
 #tool-panel .mode-btn {
@@ -434,7 +489,7 @@ canvas {
 
 .mode-btn.active {
     border: 1px solid #000;
-    background: #fff;
+    background: var(--bg-panel-solid);
     transform: translateX(-5px);
 }
 
@@ -472,7 +527,7 @@ canvas {
    ============================================ */
 .flyout-menu {
     position: fixed;
-    background: rgba(255, 255, 255, 0.92);
+    background: var(--bg-panel);
     backdrop-filter: blur(16px) saturate(180%);
     -webkit-backdrop-filter: blur(16px) saturate(180%);
     border: 1px solid rgba(0, 0, 0, 0.15);
@@ -481,7 +536,7 @@ canvas {
     flex-direction: row;
     gap: 2px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-    z-index: 500;
+    z-index: var(--z-flyout);
     pointer-events: none;
 }
 
@@ -539,7 +594,7 @@ canvas {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     transform: translateX(-5px);
     /* Move left */
 }
@@ -563,7 +618,7 @@ canvas {
     top: 50%;
     transform: translateY(-50%);
     font-size: 13px;
-    color: #fff;
+    color: var(--text-inverse);
     line-height: 1;
     pointer-events: none;
 }
@@ -576,13 +631,13 @@ canvas {
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     border: 1px solid rgba(0, 0, 0, 0.12);
-    padding: 8px;
+    padding: var(--space-2);
     display: flex;
     flex-direction: column;
     gap: 2px;
     min-width: 140px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-    z-index: 500;
+    z-index: var(--z-flyout);
 }
 
 .tool-menu.hidden {
@@ -599,17 +654,17 @@ canvas {
     border-radius: 0px;
     font-size: 13px;
     font-weight: 500;
-    color: #444;
+    color: var(--text-primary);
     cursor: pointer;
-    transition: background 0.1s;
+    transition: background var(--transition-fast);
 }
 
 .tool-menu .menu-item:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--bg-hover);
 }
 
 .tool-menu .menu-item:active {
-    background: rgba(0, 0, 0, 0.1);
+    background: var(--bg-active);
 }
 
 
@@ -630,7 +685,7 @@ canvas {
 
 /* Active tool in menu */
 .tool-menu .menu-item.active {
-    border: 1px solid #333;
+    border: 1px solid var(--border-strong);
     border-radius: 6px;
 }
 
@@ -641,7 +696,7 @@ canvas {
     flex-direction: row;
     align-items: center;
     padding: 6px 10px;
-    gap: 8px;
+    gap: var(--space-2);
 }
 
 .layer-menu-horizontal #layerOpacitySlider {
@@ -649,7 +704,7 @@ canvas {
     height: 4px;
     -webkit-appearance: none;
     appearance: none;
-    background: #ddd;
+    background: var(--border);
     border-radius: 2px;
 }
 
@@ -657,11 +712,10 @@ canvas {
     -webkit-appearance: none;
     width: 16px;
     height: 16px;
-    background: #333;
+    background: var(--border-strong);
     border-radius: 50%;
     cursor: pointer;
 }
-
 
 
 
@@ -697,14 +751,14 @@ canvas {
    ============================================ */
 #toolbar-right {
     position: fixed;
-    right: 12px;
-    top: max(12px, env(safe-area-inset-top));
+    right: var(--radius-lg);
+    top: max(var(--radius-lg), env(safe-area-inset-top));
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 16px; /* Spaced out labels */
-    z-index: 300;
-    padding: 8px 16px;
+    gap: var(--space-4); /* Spaced out labels */
+    z-index: var(--z-flyout);
+    padding: var(--space-2) var(--space-4);
     background: rgba(255, 255, 255, 0.4);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -715,10 +769,10 @@ canvas {
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.12em;
-    color: #1a1a1a;
+    color: var(--text-primary);
     cursor: pointer;
     transition: all 0.2s;
-    padding: 4px 6px;
+    padding: var(--space-1) 6px;
     position: relative;
     opacity: 0.8;
 }
@@ -755,8 +809,8 @@ canvas {
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    padding: 8px 4px;
-    margin-bottom: 8px;
+    padding: var(--space-2) var(--space-1);
+    margin-bottom: var(--space-2);
     width: 36px;
     transition: opacity 0.2s;
 }
@@ -767,12 +821,12 @@ canvas {
 }
 
 #size-slider-container.disabled #brushSize {
-    background: #999;
+    background: var(--text-muted);
     /* Inactive track color */
 }
 
 #size-slider-container.disabled #brushSize::-webkit-slider-thumb {
-    background: #999;
+    background: var(--text-muted);
     /* Inactive thumb color */
 }
 
@@ -797,10 +851,10 @@ canvas {
     /* 回転済み: CSS width = 視覚上の高さ, CSS height = 視覚上の幅 */
     width: 28px;
     height: 28px;
-    background: #fff;
+    background: var(--bg-panel-solid);
     border-radius: 50%;
-    border: 1px solid #333;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-sm);
     cursor: pointer;
 }
 
@@ -809,8 +863,8 @@ canvas {
 #sizeDisplay {
     font-size: 14px;
     font-weight: bold;
-    color: #333;
-    color: #333;
+    color: var(--border-strong);
+    color: var(--border-strong);
     background: transparent;
     /* Remove background */
     padding: 0;
@@ -837,18 +891,18 @@ canvas {
 #resetZoomBtn {
     display: none;
     position: fixed;
-    bottom: max(12px, env(safe-area-inset-bottom, 12px));
-    right: max(12px, env(safe-area-inset-right, 12px));
+    bottom: max(var(--radius-lg), env(safe-area-inset-bottom, var(--radius-lg)));
+    right: max(var(--radius-lg), env(safe-area-inset-right, var(--radius-lg)));
     width: 44px;
     height: 44px;
     border-radius: 50% !important;
     border: 1px solid rgba(0, 0, 0, 0.1);
     background: rgba(255, 255, 255, 0.8);
-    z-index: 300;
+    z-index: var(--z-flyout);
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: #333;
+    color: var(--border-strong);
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -882,11 +936,11 @@ canvas {
     left: 0;
     width: 100%;
     height: 100%;
-    background: #ffffff;
+    background: var(--bg-panel-solid);
     opacity: 0;
     pointer-events: none;
     z-index: 9999;
-    transition: opacity 0.1s ease-out;
+    transition: opacity var(--transition-fast) ease-out;
 }
 
 #save-overlay {
@@ -896,22 +950,22 @@ canvas {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: 400;
+    background: var(--bg-overlay);
+    z-index: var(--z-flyout);
 }
 
 #save-ui {
     display: none;
     position: fixed;
     top: 72px;
-    right: 20px;
+    right: var(--space-5);
     width: 260px;
     z-index: 401;
     transition: opacity 0.2s;
 }
 
 #save-body {
-    padding: 12px;
+    padding: var(--radius-lg);
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -932,12 +986,12 @@ canvas {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: var(--radius-lg);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.05em;
     margin: 20px 0 32px 0;
-    color: #444;
+    color: var(--text-primary);
     cursor: pointer;
 }
 
@@ -957,7 +1011,7 @@ canvas {
 
 #save-ui input[type="checkbox"]:checked::after {
     content: '✓';
-    color: #fff;
+    color: var(--text-inverse);
     font-size: 10px;
     position: absolute;
     top: 50%;
@@ -966,15 +1020,15 @@ canvas {
 }
 
 .option-group {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-5);
     text-align: left;
 }
 
 .option-group-label {
     font-size: 9px;
     font-weight: 800;
-    color: #999;
-    margin-bottom: 8px;
+    color: var(--text-muted);
+    margin-bottom: var(--space-2);
     letter-spacing: 0.1em;
 }
 
@@ -986,12 +1040,12 @@ canvas {
 
 .option-btn {
     padding: 6px 14px;
-    border: 1px solid #ddd;
-    background: #fff;
+    border: 1px solid var(--border);
+    background: var(--bg-panel-solid);
     font-size: 10px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.1s;
+    transition: all var(--transition-fast);
     letter-spacing: 0.05em;
 }
 
@@ -1001,7 +1055,7 @@ canvas {
 
 .option-btn.active {
     background: #000;
-    color: #fff;
+    color: var(--text-inverse);
     border-color: #000;
 }
 
@@ -1013,9 +1067,9 @@ canvas {
 }
 
 .save-btn {
-    padding: 12px 16px;
+    padding: var(--radius-lg) var(--space-4);
     border: 1px solid #000;
-    background: #fff;
+    background: var(--bg-panel-solid);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.1em;
@@ -1025,7 +1079,7 @@ canvas {
 
 .save-btn.primary {
     background: #000;
-    color: #fff;
+    color: var(--text-inverse);
     grid-column: span 2;
 }
 .save-btn:active {
@@ -1033,7 +1087,7 @@ canvas {
 }
 
 .save-btn.primary:active {
-    background: #333;
+    background: var(--border-strong);
 }
 
 
@@ -1051,7 +1105,6 @@ canvas {
 
 
 
-
 /* ============================================
    Credit Button & Modal
    ============================================ */
@@ -1061,11 +1114,11 @@ canvas {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--bg-overlay);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--z-modal);
 }
 
 #credit-modal.hidden {
@@ -1074,8 +1127,8 @@ canvas {
 
 #credit-content {
     background: rgba(255, 255, 255, 0.95);
-    padding: 24px 32px;
-    border-radius: 12px;
+    padding: var(--space-6) 32px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
     min-width: 280px;
     backdrop-filter: blur(10px);
@@ -1087,13 +1140,13 @@ canvas {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: var(--radius-lg);
     font-size: 13px;
-    gap: 24px;
+    gap: var(--space-6);
 }
 
 .credit-key {
-    color: #666;
+    color: var(--text-secondary);
     font-weight: 500;
     white-space: nowrap;
 }
@@ -1135,8 +1188,8 @@ a.credit-val:hover {
     bottom: 80px;
     /* Above bottom area, aligned with tool buttons approx */
     background: rgba(255, 255, 255, 0.95);
-    border: 1px solid #ccc;
-    border-radius: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
     padding: 0;
     /* Remove global padding so tone-items can control width precisely */
     display: flex;
@@ -1152,12 +1205,12 @@ a.credit-val:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 12px;
+    padding: var(--space-2) var(--radius-lg);
     border-bottom: 1px solid #eee;
     background: #f5f5f5;
     font-weight: bold;
     font-size: 12px;
-    color: #333;
+    color: var(--border-strong);
     border-radius: 8px 8px 0 0;
 }
 
@@ -1166,18 +1219,18 @@ a.credit-val:hover {
     border: none;
     font-size: 16px;
     cursor: pointer;
-    color: #666;
+    color: var(--text-secondary);
     line-height: 1;
     padding: 0 2px;
 }
 
 #tone-menu-close:hover {
-    color: #333;
+    color: var(--border-strong);
 }
 
 .tone-tabs {
     display: flex;
-    padding: 0 8px;
+    padding: 0 var(--space-2);
     gap: 2px;
     border-bottom: 1px solid #e8e8e8;
 }
@@ -1193,19 +1246,19 @@ a.credit-val:hover {
     background: none;
     border: none;
     border-bottom: 2px solid transparent;
-    color: #aaa;
+    color: var(--text-faint);
     margin-bottom: -1px;
     transition: color 0.15s, border-color 0.15s;
     border-radius: 0;
 }
 
 .tone-tab.active {
-    color: #111;
-    border-bottom-color: #111;
+    color: var(--accent);
+    border-bottom-color: var(--accent);
 }
 
 .tone-tab:hover:not(.active) {
-    color: #555;
+    color: var(--text-secondary);
     background: #f5f5f5;
 }
 
@@ -1222,8 +1275,8 @@ a.credit-val:hover {
 .settings-pin-btn {
     width: 14px;
     height: 14px;
-    background: #fff;
-    border: 1px solid #999;
+    background: var(--bg-panel-solid);
+    border: 1px solid var(--text-muted);
     border-radius: 50% !important;
     /* Circle - override global reset */
     cursor: pointer;
@@ -1232,7 +1285,7 @@ a.credit-val:hover {
 
 .tone-menu-pin.active,
 .settings-pin-btn.active {
-    background: #333;
+    background: var(--border-strong);
     /* Dark circle when active */
 }
 
@@ -1253,7 +1306,7 @@ a.credit-val:hover {
 .tone-item {
     width: 48px;
     height: 48px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border);
     border-radius: 6px;
     display: flex;
     align-items: center;
@@ -1261,14 +1314,14 @@ a.credit-val:hover {
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
-    background: #fff;
-    color: #333;
-    transition: all 0.1s;
+    background: var(--bg-panel-solid);
+    color: var(--border-strong);
+    transition: all var(--transition-fast);
 }
 
 .tone-item:hover {
     background: #f5f5f5;
-    border-color: #999;
+    border-color: var(--text-muted);
 }
 
 .tone-item:active {
@@ -1277,7 +1330,7 @@ a.credit-val:hover {
 
 .tone-item.active {
     border: 2px solid #000;
-    background: #fff;
+    background: var(--bg-panel-solid);
 }
 
 /* ============================================
@@ -1289,11 +1342,11 @@ a.credit-val:hover {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--bg-overlay);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--z-modal);
 }
 
 #confirm-modal.hidden {
@@ -1302,17 +1355,17 @@ a.credit-val:hover {
 
 #confirm-content {
     background: rgba(255, 255, 255, 0.95);
-    padding: 24px;
-    border-radius: 12px;
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
     width: 320px;
     text-align: center;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-md);
 }
 
 #confirm-message {
     font-size: 15px;
-    color: #333;
-    margin-bottom: 20px;
+    color: var(--border-strong);
+    margin-bottom: var(--space-5);
     line-height: 1.6;
     white-space: pre-wrap;
 }
@@ -1321,10 +1374,10 @@ a.credit-val:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: var(--space-2);
     font-size: 13px;
-    color: #666;
-    margin-bottom: 24px;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-6);
     cursor: pointer;
     user-select: none;
 }
@@ -1337,25 +1390,25 @@ a.credit-val:hover {
 
 .confirm-buttons {
     display: flex;
-    gap: 12px;
+    gap: var(--radius-lg);
     justify-content: center;
 }
 
 .confirm-buttons button {
-    padding: 10px 24px;
-    border: 1px solid #333;
-    background: #fff;
-    border-radius: 8px;
+    padding: 10px var(--space-6);
+    border: 1px solid var(--border-strong);
+    background: var(--bg-panel-solid);
+    border-radius: var(--radius-md);
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
     min-width: 100px;
-    transition: transform 0.1s;
+    transition: transform var(--transition-fast);
 }
 
 .confirm-buttons button.primary {
-    background: #333;
-    color: #fff;
+    background: var(--border-strong);
+    color: var(--text-inverse);
 }
 
 .confirm-buttons button:active {
@@ -1368,12 +1421,12 @@ a.credit-val:hover {
 #resume-modal {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
+    background: var(--bg-overlay);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000;
-    animation: resume-fade-in 0.15s ease;
+    z-index: var(--z-resume-modal);
+    animation: resume-fade-in var(--transition-fast);
 }
 
 #resume-modal.hidden {
@@ -1386,12 +1439,12 @@ a.credit-val:hover {
 }
 
 #resume-content {
-    background: #fff;
+    background: var(--bg-panel-solid);
     border-radius: 16px;
     width: 300px;
     overflow: hidden;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
-    animation: resume-slide-up 0.18s ease;
+    box-shadow: var(--shadow-lg);
+    animation: resume-slide-up var(--transition-base);
 }
 
 @keyframes resume-slide-up {
@@ -1421,7 +1474,7 @@ a.credit-val:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #bbb;
+    color: var(--text-faint);
     font-size: 13px;
 }
 
@@ -1431,12 +1484,12 @@ a.credit-val:hover {
 
 .resume-badge {
     display: inline-block;
-    background: #e05a20;
-    color: #fff;
+    background: var(--accent-danger);
+    color: var(--text-inverse);
     font-size: 10px;
     font-weight: bold;
-    padding: 2px 8px;
-    border-radius: 99px;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-pill);
     margin-bottom: 6px;
     letter-spacing: 0.03em;
 }
@@ -1444,33 +1497,33 @@ a.credit-val:hover {
 #resume-title {
     font-size: 14px;
     font-weight: bold;
-    color: #111;
+    color: var(--accent);
     margin: 0 0 3px;
 }
 
 #resume-date {
     font-size: 11px;
-    color: #999;
+    color: var(--text-muted);
     margin: 0;
 }
 
 .resume-buttons {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
     padding: 14px 18px 18px;
 }
 
 .resume-buttons button {
     flex: 1;
     padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
     font-size: 13px;
     font-weight: bold;
     cursor: pointer;
-    background: #fff;
-    color: #555;
-    transition: opacity 0.1s;
+    background: var(--bg-panel-solid);
+    color: var(--text-secondary);
+    transition: opacity var(--transition-fast);
 }
 
 .resume-buttons button:active {
@@ -1478,9 +1531,9 @@ a.credit-val:hover {
 }
 
 .resume-buttons button.primary {
-    background: #111;
-    color: #fff;
-    border-color: #111;
+    background: var(--accent);
+    color: var(--text-inverse);
+    border-color: var(--accent);
 }
 
 /* ============================================
@@ -1498,8 +1551,8 @@ a.credit-val:hover {
     position: relative;
     width: 36px;
     height: 36px;
-    border: 1px solid #ccc;
-    background: #fff;
+    border: 1px solid var(--border);
+    background: var(--bg-panel-solid);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1539,7 +1592,7 @@ a.credit-val:hover {
     top: 50%;
     transform: translateY(-50%);
     font-size: 13px;
-    color: #fff;
+    color: var(--text-inverse);
     line-height: 1;
     pointer-events: none;
 }
@@ -1587,7 +1640,7 @@ a.credit-val:hover {
     background: rgba(255, 255, 255, 0.75);
     border: 1px solid rgba(0, 0, 0, 0.12);
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
-    z-index: 400;
+    z-index: var(--z-flyout);
     width: 260px;
     font-size: 13px;
     backdrop-filter: blur(24px) saturate(180%);
@@ -1600,11 +1653,11 @@ a.credit-val:hover {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 12px;
+    padding: var(--space-2) var(--radius-lg);
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     font-size: 11px;
     font-weight: 600;
-    color: #333;
+    color: var(--border-strong);
     margin-bottom: 10px;
 }
 
@@ -1613,7 +1666,7 @@ a.credit-val:hover {
     border: none;
     cursor: pointer;
     font-size: 16px;
-    color: #888;
+    color: var(--text-muted);
     padding: 0 2px;
     line-height: 1;
 }
@@ -1623,7 +1676,7 @@ a.credit-val:hover {
 }
 
 #settings-body {
-    padding: 12px;
+    padding: var(--radius-lg);
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -1632,14 +1685,14 @@ a.credit-val:hover {
 .settings-section-label {
     font-size: 11px;
     font-weight: 600;
-    color: #888;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
 
 #bg-color-swatches {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
     flex-wrap: wrap;
 }
 
@@ -1650,7 +1703,7 @@ a.credit-val:hover {
     cursor: pointer;
     position: relative;
     flex-shrink: 0;
-    transition: transform 0.1s;
+    transition: transform var(--transition-fast);
 }
 
 .bg-color-swatch:active {
@@ -1672,14 +1725,14 @@ a.credit-val:hover {
 #shape-settings-panel {
     position: fixed;
     left: 72px;
-    bottom: max(12px, env(safe-area-inset-bottom));
+    bottom: max(var(--radius-lg), env(safe-area-inset-bottom));
     width: 240px;
     background: rgba(255, 255, 255, 0.72);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     border: 1px solid rgba(0, 0, 0, 0.15);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-    z-index: 500;
+    z-index: var(--z-flyout);
     font-size: 13px;
 }
 
@@ -1697,7 +1750,7 @@ a.credit-val:hover {
     transform: translate(-50%, -50%);
     z-index: 9000;
     pointer-events: none;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: 0 8px 32px rgba(0,0,0,0.18);
     background: rgba(245, 245, 247, 0.78);
@@ -1719,12 +1772,12 @@ a.credit-val:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 12px;
+    padding: var(--space-2) var(--radius-lg);
     border-bottom: 1px solid #eee;
     background: #f5f5f5;
     font-weight: bold;
     font-size: 12px;
-    color: #333;
+    color: var(--border-strong);
 }
 
 #brush-settings-close,
@@ -1735,7 +1788,7 @@ a.credit-val:hover {
     border: none;
     font-size: 16px;
     cursor: pointer;
-    color: #666;
+    color: var(--text-secondary);
     line-height: 1;
     padding: 0 4px;
 }
@@ -1744,17 +1797,17 @@ a.credit-val:hover {
 #fill-settings-body,
 #eraser-settings-body,
 #shape-settings-body {
-    padding: 10px 12px;
+    padding: 10px var(--radius-lg);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
 }
 
 .bs-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--space-2);
 }
 
 .bs-row.disabled {
@@ -1769,7 +1822,7 @@ a.credit-val:hover {
 
 .bs-row label {
     font-size: 12px;
-    color: #555;
+    color: var(--text-secondary);
     flex-shrink: 0;
     min-width: 72px;
 }
@@ -1778,9 +1831,9 @@ a.credit-val:hover {
 .bs-row select {
     flex: 1;
     padding: 3px 6px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     font-size: 12px;
-    background: #fff;
+    background: var(--bg-panel-solid);
     min-width: 0;
     -webkit-user-select: text;
     user-select: text;
@@ -1791,7 +1844,7 @@ a.credit-val:hover {
     min-width: 0;
     /* タッチ領域を広げるため高さを確保（見た目のトラックは accent-color で制御） */
     height: 28px;
-    accent-color: #333;
+    accent-color: var(--border-strong);
     cursor: pointer;
     /* WebKit: サム(つまみ)を大きくして掴みやすく */
     -webkit-appearance: none;
@@ -1801,7 +1854,7 @@ a.credit-val:hover {
 
 .bs-row input[type="range"]::-webkit-slider-runnable-track {
     height: 3px;
-    background: #ccc;
+    background: var(--border);
     border-radius: 2px;
 }
 
@@ -1811,14 +1864,14 @@ a.credit-val:hover {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #333;
+    background: var(--border-strong);
     margin-top: -7.5px; /* (18px - 3px) / 2 を上にオフセット */
     cursor: pointer;
 }
 
 .bs-row input[type="range"]::-moz-range-track {
     height: 3px;
-    background: #ccc;
+    background: var(--border);
     border-radius: 2px;
 }
 
@@ -1826,7 +1879,7 @@ a.credit-val:hover {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #333;
+    background: var(--border-strong);
     border: none;
     cursor: pointer;
 }
@@ -1834,7 +1887,7 @@ a.credit-val:hover {
 .bs-row input[type="color"] {
     width: 40px;
     height: 28px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     padding: 0;
     cursor: pointer;
 }
@@ -1842,7 +1895,7 @@ a.credit-val:hover {
 .bs-toggles {
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    gap: var(--space-1);
 }
 
 .bs-toggle-label {
@@ -1850,7 +1903,7 @@ a.credit-val:hover {
     align-items: center;
     gap: 6px;
     font-size: 12px;
-    color: #444;
+    color: var(--text-primary);
     cursor: pointer;
     min-width: unset !important;
 }
@@ -1876,14 +1929,14 @@ a.credit-val:hover {
     position: fixed;
     /* Position below the main tool panel */
     top: 15px;
-    left: 80px; 
+    left: 80px;
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
     background: rgba(255, 255, 255, 0.95);
-    padding: 8px;
-    border-radius: 12px;
+    padding: var(--space-2);
+    border-radius: var(--radius-lg);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-    z-index: 400;
+    z-index: var(--z-flyout);
     transition: opacity 0.2s, transform 0.2s;
     border: 1px solid rgba(0,0,0,0.1);
 }
@@ -1899,21 +1952,21 @@ a.credit-val:hover {
     height: 36px;
     border: none;
     background: transparent;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: #333;
-    transition: background 0.1s;
+    color: var(--border-strong);
+    transition: background var(--transition-fast);
 }
 
 .sel-btn:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--bg-hover);
 }
 
 .sel-btn:active {
-    background: rgba(0, 0, 0, 0.1);
+    background: var(--bg-active);
     transform: scale(0.95);
 }
 
@@ -1959,11 +2012,11 @@ body.is-drawing-active #shape-settings-panel {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.45);
+    background: var(--bg-overlay);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    color: #fff;
-    padding: 16px 32px;
+    color: var(--text-inverse);
+    padding: var(--space-4) 32px;
     font-size: 20px;
     font-weight: 700;
     letter-spacing: 0.1em;
@@ -1985,4 +2038,3 @@ body.is-drawing-active #shape-settings-panel {
 #hud-container:not(.visible) {
     transform: translate(-50%, -50%) scale(0.95);
 }
-
