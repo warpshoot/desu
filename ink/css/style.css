@@ -1347,6 +1347,7 @@ a.credit-val:hover {
     align-items: center;
     justify-content: center;
     z-index: var(--z-modal);
+    animation: resume-fade-in 0.15s ease;
 }
 
 #confirm-modal.hidden {
@@ -1413,6 +1414,57 @@ a.credit-val:hover {
 
 .confirm-buttons button:active {
     transform: scale(0.96);
+}
+
+/* ============================================
+   Toast Notifications
+   ============================================ */
+#toast-container {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    z-index: 3000;
+    pointer-events: none;
+    width: 100%;
+    max-width: 360px;
+}
+
+.toast {
+    background: var(--accent);
+    color: var(--text-inverse);
+    padding: 10px var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    max-width: 320px;
+    width: fit-content;
+    text-align: center;
+    box-shadow: var(--shadow-md);
+    animation: toast-in 0.2s ease;
+    pointer-events: auto;
+    line-height: 1.5;
+}
+
+.toast-error   { background: #c0392b; }
+.toast-warning { background: var(--accent-danger); }
+.toast-success { background: #2d6a4f; }
+
+.toast-exit {
+    animation: toast-out 0.25s ease forwards;
+}
+
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toast-out {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-8px); }
 }
 
 /* ============================================

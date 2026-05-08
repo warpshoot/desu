@@ -10,6 +10,7 @@ import {
 } from '../storage.js';
 import { t } from '../i18n.js';
 import { doNewProject } from './fileMenu.js';
+import { showSimpleConfirm, showToast } from './modals.js';
 import { showHUD } from './hud.js';
 import { hideAllMenus, handleOutsideClick } from './menuManager.js';
 import { undo, redo, saveState } from '../history.js';
@@ -138,7 +139,7 @@ export function setupSettingsPanel() {
             const newSize = Number(canvasSizeSelect.value);
             setCanvasSizePref(newSize);
             panel.classList.add('hidden');
-            if (confirm(t('confirm.canvasSizeSwitch'))) {
+            if (await showSimpleConfirm(t('confirm.canvasSizeSwitch'), { okLabel: '変更する', cancelLabel: 'キャンセル' })) {
                 await doNewProject();
             }
         });
@@ -193,7 +194,7 @@ export function setupSettingsPanel() {
                     updateBrushSizeSlider();
                     renderBrushPalette();
                 } else {
-                    alert(t('alert.importFail'));
+                    showToast(t('alert.importFail'), 'error');
                 }
                 configInput.value = '';
             }
@@ -202,8 +203,8 @@ export function setupSettingsPanel() {
 
     // Reset Config
     if (resetConfigBtn) {
-        resetConfigBtn.addEventListener('click', () => {
-            if (confirm(t('confirm.reset'))) {
+        resetConfigBtn.addEventListener('click', async () => {
+            if (await showSimpleConfirm(t('confirm.reset'), { okLabel: 'リセット', cancelLabel: 'キャンセル' })) {
                 resetSettings();
                 updateModeButtonIcon(state.mode, state.subTool);
                 updateToolButtonStates();

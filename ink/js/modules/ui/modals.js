@@ -1,3 +1,54 @@
+export function showToast(message, type = 'default', duration = 4000) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast' + (type !== 'default' ? ' toast-' + type : '');
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('toast-exit');
+        setTimeout(() => toast.remove(), 250);
+    }, duration);
+}
+
+export function showSimpleConfirm(message, { okLabel = 'OK', cancelLabel = 'キャンセル' } = {}) {
+    return new Promise(resolve => {
+        const modal = document.getElementById('confirm-modal');
+        const msgEl = document.getElementById('confirm-message');
+        const suppressRow = modal?.querySelector('.confirm-checkbox-label');
+        const cancelBtn = document.getElementById('confirm-cancel-btn');
+        const okBtn = document.getElementById('confirm-ok-btn');
+
+        if (!modal || !msgEl || !cancelBtn || !okBtn) {
+            resolve(window.confirm(message));
+            return;
+        }
+
+        msgEl.textContent = message;
+        if (suppressRow) suppressRow.style.display = 'none';
+
+        const newCancel = cancelBtn.cloneNode(true);
+        cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+        const newOk = okBtn.cloneNode(true);
+        okBtn.parentNode.replaceChild(newOk, okBtn);
+
+        newCancel.textContent = cancelLabel;
+        newOk.textContent = okLabel;
+
+        const cleanup = () => {
+            modal.classList.add('hidden');
+            if (suppressRow) suppressRow.style.display = '';
+        };
+
+        newCancel.addEventListener('click', () => { cleanup(); resolve(false); });
+        newOk.addEventListener('click', () => { cleanup(); resolve(true); });
+
+        modal.classList.remove('hidden');
+    });
+}
+
 export function showResumeModal({ title, badge, thumbnailUrl, timestamp, okLabel, cancelLabel } = {}) {
     return new Promise(resolve => {
         const modal = document.getElementById('resume-modal');

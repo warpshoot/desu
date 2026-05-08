@@ -5,6 +5,7 @@ import {
     CANVAS_DPR
 } from './state.js';
 import { t } from './i18n.js';
+import { showToast } from './ui/modals.js';
 
 // Share or download a blob file (iOS Safari compatible)
 async function shareOrDownload(blob, fileName) {
@@ -157,7 +158,7 @@ export async function saveRegion(x, y, w, h, transparent) {
         exitSaveMode();
     } catch (err) {
         console.error('保存エラー:', err);
-        alert(t('alert.saveFail') + '\n' + err.message);
+        showToast(t('alert.saveFail') + '\n' + err.message, 'error');
         exitSaveMode();
     }
 }
@@ -211,7 +212,7 @@ export async function copyToClipboard(x, y, w, h, transparent) {
 
     } catch (err) {
         console.error('クリップボードコピーエラー:', err);
-        alert(t('alert.clipFail'));
+        showToast(t('alert.clipFail'), 'warning');
 
         if (mergedCanvas) {
             try {
@@ -220,10 +221,10 @@ export async function copyToClipboard(x, y, w, h, transparent) {
                 await shareOrDownload(blob, fileName);
             } catch (downloadErr) {
                 console.error('ダウンロードエラー:', downloadErr);
-                alert(t('alert.downloadFail') + '\n' + downloadErr.message);
+                showToast(t('alert.downloadFail') + '\n' + downloadErr.message, 'error');
             }
         } else {
-            alert(t('alert.genFail'));
+            showToast(t('alert.genFail'), 'error');
         }
     }
 }
@@ -299,7 +300,7 @@ export function redoSelection() {
 export async function exportPSD() {
     if (layers.length === 0) return;
     if (typeof agPsd === 'undefined') {
-        alert(t('alert.psdLibFail'));
+        showToast(t('alert.psdLibFail'), 'error');
         return;
     }
 
@@ -368,7 +369,7 @@ export async function exportPSD() {
         exitSaveMode();
     } catch (err) {
         console.error('PSD出力エラー:', err);
-        alert(t('alert.psdFail') + '\n' + err.message);
+        showToast(t('alert.psdFail') + '\n' + err.message, 'error');
         exitSaveMode();
     }
 }
