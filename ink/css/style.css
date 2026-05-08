@@ -22,6 +22,12 @@
   /* Accent */
   --accent: #111;
   --accent-danger: #e05a20;
+  --color-danger: #e74c3c;
+  --color-error: #c0392b;
+  --color-success: #2d6a4f;
+
+  /* Subtle backgrounds */
+  --bg-subtle: #f5f5f5;
 
   /* Border radius */
   --radius-sm: 4px;
@@ -745,11 +751,11 @@ canvas {
 }
 
 .layer-delete.danger {
-    color: #e74c3c;
+    color: var(--color-danger);
 }
 
 .layer-delete.danger svg {
-    stroke: #e74c3c;
+    stroke: var(--color-danger);
 }
 
 .layer-delete.disabled {
@@ -1094,7 +1100,7 @@ canvas {
     grid-column: span 2;
 }
 .save-btn:active {
-    background: #eee;
+    background: var(--bg-subtle);
 }
 
 .save-btn.primary:active {
@@ -1217,8 +1223,8 @@ a.credit-val:hover {
     justify-content: space-between;
     align-items: center;
     padding: var(--space-2) var(--radius-lg);
-    border-bottom: 1px solid #eee;
-    background: #f5f5f5;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-subtle);
     font-weight: var(--weight-bold);
     font-size: var(--font-caption);
     color: var(--border-strong);
@@ -1270,7 +1276,7 @@ a.credit-val:hover {
 
 .tone-tab:hover:not(.active) {
     color: var(--text-secondary);
-    background: #f5f5f5;
+    background: var(--bg-subtle);
 }
 
 .tone-items {
@@ -1331,7 +1337,7 @@ a.credit-val:hover {
 }
 
 .tone-item:hover {
-    background: #f5f5f5;
+    background: var(--bg-subtle);
     border-color: var(--text-muted);
 }
 
@@ -1442,9 +1448,9 @@ a.credit-val:hover {
     line-height: 1.5;
 }
 
-.toast-error   { background: #c0392b; }
+.toast-error   { background: var(--color-error); }
 .toast-warning { background: var(--accent-danger); }
-.toast-success { background: #2d6a4f; }
+.toast-success { background: var(--color-success); }
 
 .toast-exit {
     animation: toast-out 0.25s ease forwards;
@@ -1500,7 +1506,7 @@ a.credit-val:hover {
 #resume-thumbnail-wrap {
     width: 100%;
     aspect-ratio: 1 / 1;
-    background: #ebebeb;
+    background: var(--bg-subtle);
     overflow: hidden;
     position: relative;
     border-bottom: 1px solid #e8e8e8;
@@ -1818,8 +1824,8 @@ a.credit-val:hover {
     justify-content: space-between;
     align-items: center;
     padding: var(--space-2) var(--radius-lg);
-    border-bottom: 1px solid #eee;
-    background: #f5f5f5;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-subtle);
     font-weight: var(--weight-bold);
     font-size: var(--font-caption);
     color: var(--border-strong);
@@ -1885,7 +1891,7 @@ a.credit-val:hover {
 }
 
 #resetConfigBtn {
-    color: #d33;
+    color: var(--color-danger);
 }
 
 .icon-dark {
@@ -2058,7 +2064,7 @@ a.credit-val:hover {
 }
 
 .sel-btn-danger {
-    color: #ff4757;
+    color: var(--color-danger);
 }
 
 .sel-btn-danger:hover {
