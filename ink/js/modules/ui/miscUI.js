@@ -153,6 +153,8 @@ export function setupSettingsPanel() {
     // Snapshot (Save)
     const saveBtn = document.getElementById('saveBtn');
     const saveMenu = document.getElementById('save-menu');
+    const saveMenuClose = document.getElementById('save-menu-close');
+    if (saveMenuClose) saveMenuClose.addEventListener('click', () => saveMenu?.classList.add('hidden'));
     if (saveBtn && saveMenu) {
         saveBtn.addEventListener('click', (e) => {
             e.stopPropagation();
