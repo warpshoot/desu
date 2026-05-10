@@ -748,7 +748,7 @@
     function fitCanvasToViewport() {
       const cW = aaCanvas.width, cH = aaCanvas.height;
       if (!cW || !cH) return;
-      const scale = Math.min(window.innerWidth / cW, window.innerHeight / cH);
+      const scale = Math.max(window.innerWidth / cW, window.innerHeight / cH);
       aaCanvas.style.width  = Math.round(cW * scale) + 'px';
       aaCanvas.style.height = Math.round(cH * scale) + 'px';
     }
