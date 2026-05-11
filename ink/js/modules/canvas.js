@@ -258,12 +258,13 @@ export function applyTransform() {
 export function centerCanvas() {
     const pw = state.paperW || 2000;
     const ph = state.paperH || 2000;
-    
+
     state.scale = 1;
     state.translateX = Math.round((window.innerWidth - pw * state.scale) / 2);
     state.translateY = Math.round((window.innerHeight - ph * state.scale) / 2);
-    
+
     applyTransform();
+    resizeSelectionOverlay();
 }
 
 /**
