@@ -180,6 +180,7 @@ export function resizeViewport() {
     eventCanvas.style.width  = vw + 'px';
     eventCanvas.style.height = vh + 'px';
 
+    applyTransform();
     resizeSelectionOverlay();
 }
 
