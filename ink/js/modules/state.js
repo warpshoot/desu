@@ -409,7 +409,7 @@ export const state = {
     selectionStart: null,
     selectionEnd: null,
     confirmedSelection: null,
-    selectedScale: 1,
+    selectedScale: CANVAS_DPR,
 
     // Selection Tool
     selectionMask: null,          // { type:'rect'|'lasso', rect?:{x,y,w,h}, points?:[...] }

@@ -1,5 +1,6 @@
 import {
-    state
+    state,
+    CANVAS_DPR
 } from '../state.js';
 import { getCanvasPoint } from '../utils.js';
 import {
@@ -184,6 +185,10 @@ export function setupSaveUI() {
 
     // --- Scale Selection ---
     document.querySelectorAll('[data-scale]').forEach(btn => {
+        if (parseInt(btn.dataset.scale) === CANVAS_DPR) {
+            document.querySelectorAll('[data-scale]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
         btn.addEventListener('click', () => {
             document.querySelectorAll('[data-scale]').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
