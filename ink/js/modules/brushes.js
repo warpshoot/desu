@@ -21,24 +21,24 @@ export function makeDefaultBrushes() {
     return [
         {
             subTool: 'pen',
-            size: 2,
+            size: 4,
             opacity: 1.0,
             pressureSize: true,
             pressureDensity: false,
             binary: false,
             stippleDensity: 5,
-            pressureCurve: 1.2,
+            pressureCurve: 0.8,
             stabilizerEnabled: true,
             stabilizerDistance: 5,
-            stabStringVisible: true,
-            stabShowGuide: true,
+            stabStringVisible: false,
+            stabShowGuide: false,
             inkPooling: false,
             inkPoolingStrength: 1,
         },
         {
             subTool: 'pen',
             size: 8,
-            opacity: 0.2,
+            opacity: 0.1,
             pressureSize: false,
             pressureDensity: false,
             binary: true,
@@ -85,9 +85,9 @@ export function applyPressureCurve(pressure, gamma) {
 // =============================================
 export function makeDefaultFillSlots() {
     return [
-        { subTool: 'fill', opacity: 1.0, bucketEnabled: true, bucketTolerance: 'normal', bucketGapClose: 0, tonePresetId: 'coarse1', stabilizerEnabled: true, stabilizerDistance: 5, antiAlias: true },
-        { subTool: 'tone', opacity: 1.0, bucketEnabled: false, bucketTolerance: 'normal', bucketGapClose: 0, tonePresetId: 'coarse2', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
-        { subTool: 'fill', opacity: 0.1, bucketEnabled: true, bucketTolerance: 'normal', bucketGapClose: 0, tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 5, antiAlias: false },
+        { subTool: 'fill', opacity: 1.0, bucketEnabled: false, bucketTolerance: 'normal', bucketGapClose: 0, tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 10, antiAlias: false },
+        { subTool: 'tone', opacity: 1.0, bucketEnabled: true,  bucketTolerance: 'normal', bucketGapClose: 0, tonePresetId: 'coarse2', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
+        { subTool: 'fill', opacity: 0.1, bucketEnabled: false, bucketTolerance: 'normal', bucketGapClose: 0, tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 5,  antiAlias: false },
     ];
 }
 
@@ -106,8 +106,8 @@ const SUB_TOOL_ICONS = {
 // =============================================
 export function makeDefaultEraserSlots() {
     return [
-        { subTool: 'pen', stabilizerEnabled: false, stabilizerDistance: 20, stabStringVisible: true, stabShowGuide: true, pressureSize: true, pressureCurve: 1.0 },
-        { subTool: 'lasso', bucketEnabled: true, bucketTolerance: 'normal', bucketGapClose: 0, stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
+        { subTool: 'pen',   stabilizerEnabled: false, stabilizerDistance: 20, stabStringVisible: true, stabShowGuide: true, pressureSize: false, pressureCurve: 1.0, bucketEnabled: true,  bucketTolerance: 'normal', bucketGapClose: 0, antiAlias: false },
+        { subTool: 'lasso', bucketEnabled: false, bucketTolerance: 'normal', bucketGapClose: 0, stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false, stabStringVisible: true, stabShowGuide: true, pressureSize: true, pressureCurve: 1.0 },
         { subTool: 'clear', antiAlias: false },
     ];
 }
@@ -117,9 +117,9 @@ export function makeDefaultEraserSlots() {
 // =============================================
 export function makeDefaultShapeSlots() {
     return [
-        { subTool: 'line',   opacity: 1.0, size: 2,   isFill: false, isStroke: true,  antiAlias: true, rotation: 0, fromCenter: false },
-        { subTool: 'rect',   opacity: 1.0, size: 4,   isFill: false, isStroke: true,  antiAlias: true, rotation: 0, fromCenter: false },
-        { subTool: 'star',   opacity: 1.0, size: 4,   isFill: true,  isStroke: false, antiAlias: true, sides: 5, ratio: 0.5, rotation: 0, fromCenter: false },
+        { subTool: 'line', opacity: 1.0, size: 1, isFill: false, isStroke: false, antiAlias: true, rotation: 0, fromCenter: true,  sides: 5, ratio: 0.5 },
+        { subTool: 'rect', opacity: 1.0, size: 4, isFill: false, isStroke: true,  antiAlias: true, rotation: 0, fromCenter: false },
+        { subTool: 'star', opacity: 1.0, size: 1, isFill: false, isStroke: true,  antiAlias: true, sides: 5, ratio: 0.5, rotation: 0, fromCenter: false },
     ];
 }
 
