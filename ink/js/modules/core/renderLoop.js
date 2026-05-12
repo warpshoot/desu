@@ -179,6 +179,7 @@ export function addPendingPoints(pts) {
 export function setStraightLineEnd(pt) {
     _straightLineEnd = pt;
     if (pt) {
+        _lastStraightEnd = pt;
         const isEraser = state.mode === 'eraser';
         const brushSize = isEraser ? state.eraserSize : (state.activeBrush?.size ?? 4);
         const padding = brushSize / 2 + 2;
