@@ -207,7 +207,9 @@ async function handlePointerDown(e) {
         // 前置きに過ぎない。ここで didInteract=true にすると handleGestureTaps の
         // タップ判定が潰れ、2本指アンドゥ/3本指リドゥが効かなくなる。
         // 実際に移動・ピンチ・パンがあれば後続の handlePointerMove で didInteract が立つ。
-        if (state.isPenDrawing || state.isLassoing || state.isShapeDragging) {
+        // ペンシルで描画中に手のひらが触れた場合はキャンセルしない (palm rejection)
+        const _drawingType = state.activePointers.get(state.drawingPointerId)?.type;
+        if ((state.isPenDrawing || state.isLassoing || state.isShapeDragging) && _drawingType !== 'pen') {
             cancelCurrentOperation();
         }
         
