@@ -518,7 +518,10 @@ function _restoreSettings(s) {
         const defaults = makeDefaultBrushes();
         state.brushes = s.brushes.map((b, i) => ({ ...(defaults[i] || defaults[0]), ...b }));
     }
-    if (s.fillSlots) state.fillSlots = s.fillSlots;
+    if (s.fillSlots) {
+        const defaults = makeDefaultFillSlots();
+        state.fillSlots = s.fillSlots.map((slot, i) => ({ ...(defaults[i] || defaults[0]), ...slot }));
+    }
     if (s.eraserSlots) state.eraserSlots = s.eraserSlots;
     if (s.shapeSlots) state.shapeSlots = s.shapeSlots;
     if (s.activeShapeSlotIndex != null) state.activeShapeSlotIndex = s.activeShapeSlotIndex;

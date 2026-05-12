@@ -746,13 +746,13 @@ export function setupFillSettingsPanel() {
 
         const isTone = slot.subTool === 'tone';
         const bucketOn = bucketCheck.checked && !isTone;
-        
+
         const toggle = (id, show) => {
             const el = document.getElementById(id);
             if (el) el.style.display = show ? '' : 'none';
         };
 
-        toggle('fs-bucket-row', !isTone);
+        toggle('fs-bucket-row', true);
         toggle('fs-tolerance-row', bucketOn);
         toggle('fs-gap-close-row', bucketOn);
         toggle('fs-aa-row', !isTone);
@@ -814,7 +814,7 @@ export function openFillSettings(idx) {
     const isTone = slot.subTool === 'tone';
     const bucketOn = slot.bucketEnabled !== false;
     
-    document.getElementById('fs-bucket-row').style.display = isTone ? 'none' : '';
+    document.getElementById('fs-bucket-row').style.display = '';
     document.getElementById('fs-tolerance-row').style.display = (bucketOn && !isTone) ? '' : 'none';
     document.getElementById('fs-gap-close-row').style.display = (bucketOn && !isTone) ? '' : 'none';
     document.getElementById('fs-aa-row').style.display = !isTone ? '' : 'none';
