@@ -86,7 +86,7 @@ export function applyPressureCurve(pressure, gamma) {
 export function makeDefaultFillSlots() {
     return [
         { subTool: 'fill', opacity: 1.0, bucketEnabled: false, bucketTolerance: 'normal', bucketGapClose: 0, tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 10, antiAlias: false },
-        { subTool: 'tone', opacity: 1.0, bucketEnabled: true,  bucketTolerance: 'normal', bucketGapClose: 0, tonePresetId: 'coarse2', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
+        { subTool: 'tone', opacity: 1.0, bucketEnabled: false, bucketTolerance: 'normal', bucketGapClose: 0, tonePresetId: 'coarse2', stabilizerEnabled: false, stabilizerDistance: 20, antiAlias: false },
         { subTool: 'fill', opacity: 0.1, bucketEnabled: false, bucketTolerance: 'normal', bucketGapClose: 0, tonePresetId: 'coarse1', stabilizerEnabled: false, stabilizerDistance: 5,  antiAlias: false },
     ];
 }
