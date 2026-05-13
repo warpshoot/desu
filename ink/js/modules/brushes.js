@@ -117,7 +117,7 @@ export function makeDefaultEraserSlots() {
 // =============================================
 export function makeDefaultShapeSlots() {
     return [
-        { subTool: 'line', opacity: 1.0, size: 1, isFill: false, isStroke: false, antiAlias: true, rotation: 0, fromCenter: true,  sides: 5, ratio: 0.5 },
+        { subTool: 'line', opacity: 1.0, size: 1, isFill: false, isStroke: true,  antiAlias: true, rotation: 0, fromCenter: false, sides: 5, ratio: 0.5 },
         { subTool: 'rect', opacity: 1.0, size: 4, isFill: false, isStroke: true,  antiAlias: true, rotation: 0, fromCenter: false },
         { subTool: 'star', opacity: 1.0, size: 1, isFill: false, isStroke: true,  antiAlias: true, sides: 5, ratio: 0.5, rotation: 0, fromCenter: false },
     ];
