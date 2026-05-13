@@ -31,7 +31,7 @@ function _layerToBlob(layer, callback) {
 }
 
 import { resizePaper, centerCanvas } from './canvas.js';
-import { makeDefaultBrushes, makeDefaultFillSlots, makeDefaultEraserSlots } from './brushes.js';
+import { makeDefaultBrushes, makeDefaultFillSlots, makeDefaultEraserSlots, makeDefaultShapeSlots } from './brushes.js';
 
 const STORAGE_KEY = 'desu-draw-state';
 const BACKUP_KEY = 'desu-draw-state-backup';
@@ -523,7 +523,14 @@ function _restoreSettings(s) {
         state.fillSlots = s.fillSlots.map((slot, i) => ({ ...(defaults[i] || defaults[0]), ...slot }));
     }
     if (s.eraserSlots) state.eraserSlots = s.eraserSlots;
-    if (s.shapeSlots) state.shapeSlots = s.shapeSlots;
+    if (s.shapeSlots) {
+        const defaults = makeDefaultShapeSlots();
+        state.shapeSlots = s.shapeSlots.map((slot, i) => ({ ...(defaults[i] || defaults[0]), ...slot }));
+        // Migrate: fix line slots broken by isStroke=false default bug
+        for (const slot of state.shapeSlots) {
+            if (slot.subTool === 'line' && !slot.isStroke && !slot.isFill) slot.isStroke = true;
+        }
+    }
     if (s.activeShapeSlotIndex != null) state.activeShapeSlotIndex = s.activeShapeSlotIndex;
     if (s.activeBrushIndex != null) state.activeBrushIndex = s.activeBrushIndex;
     if (s.activeFillSlotIndex != null) state.activeFillSlotIndex = s.activeFillSlotIndex;
