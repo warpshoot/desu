@@ -1,4 +1,4 @@
-import { state, getActiveLayerCtx, getActiveLayer, strokeCanvas, strokeCtx, lassoCanvas, lassoCtx, CANVAS_DPR } from '../state.js';
+import { state, getActiveLayerCtx, getActiveLayer, getLayer, strokeCanvas, strokeCtx, lassoCanvas, lassoCtx, CANVAS_DPR } from '../state.js';
 import { drawBrushSegment } from '../brushes.js';
 import { markLayerDirty } from '../history.js';
 import { pushSelectionClip, popSelectionClip } from './selection.js';
@@ -9,6 +9,13 @@ let lastDrawnIndex = 0;
 let _strokeOpacity = 1.0;
 let _usingStrokeCanvas = false;
 let _strokeCtxSaved = false;
+
+// レイヤー直描き (消しゴム等) のストローク開始前ピクセルを退避するバッファ。
+// キャンセル時にこれで復元することで、未確定の saveState (履歴キューが非同期で
+// 走るため undoStack のトップがまだ古い場合がある) に依存せず、直前に確定した
+// ストロークを誤って消さずに済む。
+let _preStrokeBackup = null;
+let _preStrokeLayerId = null;
 let _strokeClipped = false;
 
 // バッチモード — 複数の drawPenLine() 呼び出しをまとめて 1 回の drawBrushSegment で描画
@@ -414,15 +421,50 @@ export function startPenDrawing(x, y, pressure = 0.5) {
     } else {
         const ctx = getActiveLayerCtx();
         if (!ctx) return;
-        
+
+        // レイヤー直描き: ストロークを描く前に現在のピクセルを退避しておく。
+        // キャンセル時はこのバッファから復元する (undoStack には依存しない)。
+        const layer = getActiveLayer();
+        if (layer) {
+            if (!_preStrokeBackup) _preStrokeBackup = document.createElement('canvas');
+            _preStrokeBackup.width = layer.canvas.width;
+            _preStrokeBackup.height = layer.canvas.height;
+            const bctx = _preStrokeBackup.getContext('2d');
+            bctx.clearRect(0, 0, _preStrokeBackup.width, _preStrokeBackup.height);
+            bctx.drawImage(layer.canvas, 0, 0);
+            _preStrokeLayerId = layer.id;
+        }
+
         const clipped = pushSelectionClip(ctx);
         drawBrushSegment(ctx, smoothedPoints, 0, true, brush, state.isErasing);
         if (clipped) popSelectionClip(ctx);
-        
+
         // レイヤー直描きの場合は即座にDirtyマーク
-        const layer = getActiveLayer();
         if (layer) markLayerDirty(layer.id);
     }
+}
+
+/**
+ * 進行中のストロークをキャンセルしてレイヤーを描画前の状態に戻す。
+ * - strokeCanvas 経由 (通常ペン): レイヤーは未変更なので何もしない。
+ *   undoStack のトップが古い (直前ストロークの saveState が非同期で未完了) 場合に
+ *   restoreLayer で復元すると確定済みのストロークまで消えてしまうため、それを防ぐ。
+ * - レイヤー直描き (消しゴム等): 開始時に退避したバッファから復元する。
+ */
+export function cancelCurrentPenStroke() {
+    if (!_usingStrokeCanvas && _preStrokeBackup && _preStrokeLayerId != null) {
+        const layer = getLayer(_preStrokeLayerId);
+        if (layer) {
+            const dpr = CANVAS_DPR;
+            layer.ctx.globalCompositeOperation = 'source-over';
+            layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
+            layer.ctx.imageSmoothingEnabled = false;
+            layer.ctx.drawImage(_preStrokeBackup, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
+            layer.ctx.imageSmoothingEnabled = true;
+        }
+    }
+    _preStrokeLayerId = null;
+    _usingStrokeCanvas = false;
 }
 
 export function drawPenLine(x, y, pressure = 0.5, options = {}) {

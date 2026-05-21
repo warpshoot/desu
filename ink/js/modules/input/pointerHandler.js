@@ -12,7 +12,6 @@ import { getCanvasPoint } from '../utils.js';
 import {
     saveState,
     commitRedoClear,
-    restoreLayer,
     syncLayerFingerprint,
     markLayerDirty
 } from '../history.js';
@@ -32,11 +31,12 @@ import { handlePinchPan, handleGestureTaps } from './gestureHandler.js';
 import { executeClearLayer, hideShapePreview } from '../ui/toolPanel.js';
 import { updateLayerThumbnail } from '../ui/layerPanel.js';
 import { 
-    startPenDrawing, 
-    endPenDrawing, 
-    drawPenLine, 
-    previewStraightLine, 
-    clearPenDirtyRect 
+    startPenDrawing,
+    endPenDrawing,
+    drawPenLine,
+    previewStraightLine,
+    clearPenDirtyRect,
+    cancelCurrentPenStroke
 } from '../tools/pen.js';
 import { 
     startStippleDrawing, 
@@ -701,7 +701,11 @@ function cancelCurrentOperation() {
     if (state.isPenDrawing) {
         const layer = getActiveLayer();
         if (layer) {
-            restoreLayer(layer.id);
+            // 進行中ストロークのみを取り消す。通常ペンは strokeCanvas に描いている
+            // ためレイヤーは無傷で、消しゴム等の直描きは開始前バッファから復元する。
+            // undoStack に依存しないため、直前ストロークの saveState が非同期で
+            // 未完了でも確定済みの内容を巻き込んで消すことがない。
+            cancelCurrentPenStroke();
             // ピクセルを復元した後、dirty フラグも同期させる。
             // これをしないと次の saveState が「差分あり」と誤判定し
             // 直前と同一内容のスナップショットを余分に積んでしまう。
