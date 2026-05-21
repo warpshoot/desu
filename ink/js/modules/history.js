@@ -377,9 +377,12 @@ function restoreSnapshot(snapshot) {
         layer.canvas.style.opacity = meta.opacity;
         layer.canvas.style.display = meta.visible ? 'block' : 'none';
 
-        // ピクセル復元
+        // ピクセル復元。
+        // 使用不能 (closed / メモリ破棄) な Bitmap では clearRect しない:
+        // 消すだけ消して描けないと、その層が復元不能なまま真っ白になる。
+        // 現在のピクセルを温存する方が安全。
         const bitmap = bitmaps.get(layer.id);
-        if (bitmap) {
+        if (_isUsableBitmap(bitmap)) {
             layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
             layer.ctx.imageSmoothingEnabled = false;
             layer.ctx.drawImage(bitmap, 0, 0, layer.canvas.width / dpr, layer.canvas.height / dpr);
@@ -407,7 +410,7 @@ export function restoreLayer(layerId) {
     const bitmap = bitmaps.get(layerId);
     const layer = getLayer(layerId);
 
-    if (bitmap && layer) {
+    if (_isUsableBitmap(bitmap) && layer) {
         const dpr = CANVAS_DPR;
         // 消しゴム等で汚染された合成モードをリセット
         layer.ctx.globalCompositeOperation = 'source-over';
@@ -444,6 +447,17 @@ export async function resetHistory() {
 // ============================================
 // Internal Helpers
 // ============================================
+
+/**
+ * Bitmap が描画に使える状態かを判定する。
+ * close() 済み (参照カウントのバグ) や、iOS のメモリ逼迫でバッキングストアが
+ * 破棄された ImageBitmap は width/height が 0 になる。これを描こうとすると
+ * clearRect 後に何も描かれず「真っ白・アンドゥ不能」の壊滅的な全消しになるため、
+ * 復元前に必ずこのガードを通す。
+ */
+function _isUsableBitmap(bitmap) {
+    return !!bitmap && bitmap.width > 0 && bitmap.height > 0;
+}
 
 function _closeAllBitmaps(snapshot) {
     const bitmaps = snapshot.bitmaps || snapshot;
