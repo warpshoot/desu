@@ -749,6 +749,7 @@ document.getElementById('tpBack').onclick = e => {
   if (state !== 4 && state !== 9 && state !== 10) return;
   if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
   hideText();
+  hideChoiceScreen();
   state = 4;
   document.getElementById('toolsScreen').classList.remove('show');
   state = 3;
@@ -926,6 +927,7 @@ document.body.addEventListener('click', e => {
   } else if (state === 4 || state === 9 || state === 10) {
     if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
     hideText();
+    hideChoiceScreen();
     document.getElementById('toolsScreen').classList.remove('show');
     state = 3;
   } else if (state === 5) {
@@ -983,7 +985,7 @@ document.addEventListener('keydown', e => {
     else if (state === 5) { document.getElementById('episodesScreen').classList.remove('show'); state = 3; }
     else if (state === 4 || state === 9 || state === 10) {
       if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
-      hideText(); document.getElementById('toolsScreen').classList.remove('show'); state = 3;
+      hideText(); hideChoiceScreen(); document.getElementById('toolsScreen').classList.remove('show'); state = 3;
     }
     else if (state === 6 || state === 11 || state === 12) {
       if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
