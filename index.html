@@ -1007,8 +1007,43 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// ── DEEP LINKS ──
+function openFromHash() {
+  const key = location.hash.replace('#', '').toLowerCase();
+  if (key !== 'records' && key !== 'intel' && key !== 'supplies' && key !== 'trades') return;
+  document.getElementById('startPrompt').classList.remove('show');
+  if (key === 'trades') {
+    state = 13;
+    pendingLink = 'https://minne.com/@warpshoot';
+    currentChoiceType = 'buy';
+    setTimeout(() => {
+      showText();
+      typeText(DIALOGUES.buy[lang], () => { state = 14; showChoiceScreen(); });
+    }, 600);
+    return;
+  }
+  document.getElementById('menuScreen').classList.add('show');
+  if (key === 'records') {
+    state = 5;
+    document.getElementById('menuScreen').classList.add('sub-active');
+    document.getElementById('episodesScreen').classList.add('show');
+  } else if (key === 'intel') {
+    state = 6;
+    document.getElementById('charScreen').classList.add('show');
+  } else {
+    state = 4;
+    document.getElementById('toolsScreen').classList.add('show');
+  }
+}
+[['btn-episodes', 'records'], ['btn-characters', 'intel'], ['btn-tools', 'supplies'], ['btn-buy', 'trades']].forEach(([id, key]) => {
+  document.getElementById(id).addEventListener('click', () => {
+    history.replaceState(null, '', '#' + key);
+  });
+});
+
 // ── INIT ──
 window.addEventListener('load', () => {
+  openFromHash();
   setTimeout(() => {
     document.getElementById('bg').classList.add('lit');
     document.getElementById('fadeOverlay').classList.add('out');
